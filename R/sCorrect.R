@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:11) 
+## Last-Updated: mar 28 2017 (17:08) 
 ##           By: Brice Ozenne
-##     Update #: 944
+##     Update #: 1023
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -170,10 +170,6 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      name.3deriv = dMoments$name.3deriv,
                      n.cluster = n.cluster,
                      index.Omega = NULL,
-                     adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,
-                     tol = tol,
-                     n.iter = n.iter,
                      score = score,
                      derivative = derivative,
                      args = args,
@@ -355,10 +351,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                      name.3deriv = name.3deriv,
                      n.cluster = n.cluster,
                      index.Omega = index.Omega,
-                     adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,
-                     tol = tol,
-                     n.iter = n.iter,
                      score = score,
                      derivative = derivative,
                      args = args,
@@ -384,7 +376,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                             tol = 1e-5, n.iter = 20, trace = 0,
                             ...){
 
-    ## ** Check valid lvm object
+### ** Check valid lvm object
     if("multigroupfit" %in% class(object)){
         stop("sCorrect does not handle multigroup models \n")
     }
@@ -404,7 +396,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
              "transformed variable(s): \"",paste(name.t, collapse = "\" \""),"\"\n")
     }
     
-    ## ** Extract quantities from object
+### ** Extract quantities from object
     name.endogenous <- endogenous(object)
 
     model.param <- lava::pars(object)
@@ -423,9 +415,10 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
 
     name.param <- names(model.param)
 
-    n.latent <- length(latent(object))
+    name.latent <- latent(object)
+    n.latent <- length(name.latent)
 
-    ### ** number of samples
+### ** number of samples
     test.NNA <- rowSums(is.na(data[,name.endogenous,drop=FALSE]))==0    
     if(any(test.NNA==FALSE) && !inherits(object,"lvm.missing")){ ## complete case analysis
         if(trace>0){
@@ -439,70 +432,54 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     
     n.cluster <- NROW(data)
 
-    ### ** Compute conditional moments and derivatives
+### ** Compute conditional moments and derivatives
     if(trace>0){
-        cat("* Compute conditional moments ")
+        cat("* Compute conditional moments and their derivative ")
     }
-    dMoments <- conditionalMoment(object, data = data, param = model.param,
-                                  first.order = TRUE, second.order = df, usefit = TRUE)
+    object$conditionalMoment <- conditionalMoment(object, data = data, param = model.param,
+                                                  first.order = TRUE, second.order = FALSE, usefit = TRUE)
+    if(df == TRUE && (numeric.derivative == FALSE)){
+        object$conditionalMoment$d2Moment.init <- skeletonDtheta2(lava::Model(object),
+                                                                  data = data,
+                                                                  df.param.all = object$conditionalMoment$df.param,
+                                                                  param2originalLink = object$conditionalMoment$param2originalLink,
+                                                                  name.latent = name.latent)
+    }
     if(trace>0){
         cat("- done \n")
     }
 
-    name.meanparam <- names(dMoments$dmu)
-    name.varparam <- names(dMoments$dOmega)
-
-    #### ** Compute residuals
+#### ** Compute residuals
     if(trace>0){
         cat("* Extract residuals ")
     }
-    epsilon <- .calcResidualsLVM(data = data, dMoments = dMoments,
-                                 n.latent = n.latent,
-                                 name.endogenous = name.endogenous)
+    epsilon <- as.matrix(data[, name.endogenous,drop=FALSE] - object$conditionalMoment$mu)
+    ## residuals(object) - epsilon
     if(trace>0){
         cat("- done \n")
     }
 
 ### ** Identify missing values
     if(any(test.NNA==FALSE) && inherits(object,"lvm.missing")){ ## full information
-            if(trace>0){
-                cat("* Identify missing values ")
-            }
-            index.Omega <- lapply(1:n.cluster,function(iC){which(!is.na(epsilon[iC,]))})
-            if(trace>0){
-                cat("- done \n")
-            }        
+        if(trace>0){
+            cat("* Identify missing values ")
+        }
+        index.Omega <- lapply(1:n.cluster,function(iC){which(!is.na(epsilon[iC,]))})
+        if(trace>0){
+            cat("- done \n")
+        }        
     }else{
         index.Omega <- NULL
     }
 
-    ### ** Compute residual variance covariance matrix
-    if(trace>0){
-        cat("* Reconstruct residual variance-covariance matrix ")
-    }
-
-    Omega <- .calcOmegaLVM(dMoments, n.latent = n.latent)
-
-    if(trace>0){
-        cat("- done \n")
-    }
-
-    ## ** param with non-zero third derivative
-    type.3deriv <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
-    index.keep <- intersect(which(!is.na(dMoments$df.param$lava)),
-                            which(dMoments$df.param$detail %in% type.3deriv)
-                            )
-    
-    name.3deriv <- dMoments$df.param[index.keep, "originalLink"]
-
-    ## ** args
+### ** args
     args <- list(adjust.Omega = adjust.Omega,
                  adjust.n = adjust.n,                     
                  df = df,
                  numeric.derivative = numeric.derivative,
                  tol = tol, n.iter = n.iter)
 
-    ## ** correction
+### ** correction
     if(df == FALSE){
         derivative <- "none"
     }else if(numeric.derivative){
@@ -511,26 +488,14 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         derivative <- "analytic"
     }
 
-   out <- .sCorrect(object,
+    out <- .sCorrect(object,
                      data = data,
                      param = model.param,
                      epsilon = epsilon,
-                     Omega = Omega,
-                     dmu = dMoments$dmu,
-                     dOmega = dMoments$dOmega,
-                     d2mu = dMoments$d2mu,
-                     d2Omega = dMoments$d2Omega,
                      name.param = name.param,
-                     name.meanparam = name.meanparam,
-                     name.varparam = name.varparam,
                      name.endogenous = name.endogenous,
-                     name.3deriv = name.3deriv,
                      n.cluster = n.cluster,
                      index.Omega = index.Omega,
-                     adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,
-                     tol = tol,
-                     n.iter = n.iter,
                      score = score,
                      derivative = derivative,
                      args = args,
@@ -549,10 +514,10 @@ sCorrect.lvmfit2 <- function(object, ...){
     return(sCorrect(object, ...))    
 }
 ## * .sCorrect
-.sCorrect <- function(object, data, param, epsilon, Omega, dmu, dOmega, d2mu, d2Omega, 
-                      name.param, name.meanparam, name.varparam, name.endogenous, name.3deriv,
+.sCorrect <- function(object, data, param, epsilon, 
+                      name.param, name.endogenous, 
                       n.cluster, index.Omega,
-                      adjust.Omega, adjust.n, tol, n.iter, score, derivative, args, trace){
+                      score, derivative, args, trace){
 
     n.param <- length(param)
     if(!is.null(index.Omega)){
@@ -560,62 +525,70 @@ sCorrect.lvmfit2 <- function(object, ...){
     }else{
         n.endogenous.cluster <- NULL
     }
-    ## ** order param names
+    name.3deriv <- object$conditionalMoment$name.3deriv
+    
+    ## ** check names of the mean and variance parameters
+    name.meanparam <- names(object$conditionalMoment$dmu)
     name.meanparam <- as.character(sort(factor(name.meanparam, levels = name.param)))
     if(any(is.na(name.meanparam))){
         stop("An element in name.meanparam is not in name.param. \n")
     }
-    if(length(name.meanparam)>0 && !identical(sort(name.meanparam),sort(names(dmu)))){
+    if(length(name.meanparam)>0 && !identical(sort(name.meanparam),sort(names(object$conditionalMoment$dmu)))){
         stop("Mismatch first derivative of the conditional mean and name.meanparam \n")
     }
-    dmu <- dmu[name.meanparam]    
-
+    
+    name.varparam <- names(object$conditionalMoment$dOmega)
     name.varparam <- as.character(sort(factor(name.varparam, levels = name.param)))
     if(any(is.na(name.varparam))){
         stop("An element in name.varparam is not in name.param. \n")
     }
-    if(length(name.varparam)>0 && !identical(sort(name.varparam),sort(names(dOmega)))){
+    if(length(name.varparam)>0 && !identical(sort(name.varparam),sort(names(object$conditionalMoment$dOmega)))){
         stop("Mismatch first derivative of the conditional variance and name.varparam \n")
     }
-    dOmega <- dOmega[name.varparam]
-
+    
     ## ** corrected ML estimates
-    out  <- adjustEstimate(epsilon = epsilon,
-                           Omega = Omega,
-                           dmu = dmu,
-                           dOmega = dOmega,
-                           n.cluster = n.cluster,
-                           name.param = name.param,
-                           name.meanparam = name.meanparam,
-                           name.varparam = name.varparam,
-                           name.endogenous = name.endogenous,
-                           index.Omega = index.Omega, ## mode2
-                           adjust.Omega = adjust.Omega,
-                           adjust.n = adjust.n,
-                           tol = tol, n.iter = n.iter,
-                           trace = trace)    
-    out$param <- param
+    object  <- .estimate2(object = object,
+                          epsilon = epsilon,
+                          n.cluster = n.cluster,
+                          name.param = name.param,
+                          name.meanparam = name.meanparam,
+                          name.varparam = name.varparam,
+                          name.endogenous = name.endogenous,
+                          index.Omega = index.Omega, ## mode2
+                          adjust.Omega = args$adjust.Omega,
+                          adjust.n = args$adjust.n,
+                          tol = args$tol, n.iter = args$n.iter,
+                          trace = trace)
 
+    Omega <- object$conditionalMoment$Omega    
+    if(!is.null(index.Omega)){
+        OmegaM1 <- lapply(1:n.cluster, function(iC){
+            return(solve(Omega[index.Omega[[iC]],index.Omega[[iC]]]))
+        })    
+    }else{
+        OmegaM1 <- chol2inv(chol(Omega))
+    }
+    
     ## ** corrected score
     if(score){
         if(trace>0){
-            if(adjust.n == FALSE && adjust.Omega == FALSE){
+            if(args$adjust.n == FALSE && args$adjust.Omega == FALSE){
                 cat("* Compute score ")
             }else{
                 cat("* Compute corrected score ")
             }
         }
-        out$score <- .score2(epsilon = out$epsilon,
-                             Omega = out$Omega,
-                             OmegaM1 = out$OmegaM1,
-                             dmu = dmu,
-                             dOmega = dOmega,
-                             name.param = name.param,
-                             name.meanparam = name.meanparam,
-                             name.varparam = name.varparam,
-                             index.Omega = index.Omega, ## mode2
-                             n.cluster = n.cluster,
-                             indiv = TRUE)
+        object$dVcov$score <- .score2(epsilon = object$dVcov$residuals,
+                                      Omega = Omega,
+                                      OmegaM1 = OmegaM1,
+                                      dmu = object$conditionalMoment$dmu,
+                                      dOmega = object$conditionalMoment$dOmega,
+                                      name.param = name.param,
+                                      name.meanparam = name.meanparam,
+                                      name.varparam = name.varparam,
+                                      index.Omega = index.Omega, ## mode2
+                                      n.cluster = n.cluster,
+                                      indiv = TRUE)
         if(trace>0){
             cat("- done \n")
         }
@@ -634,12 +607,6 @@ sCorrect.lvmfit2 <- function(object, ...){
             warning("The numerical derivative of the information matrix is computed ignoring the small sample correction \n")
         }
 
-        if("lvmfit" %in% class(object)){
-            object$conditionalMoment <- conditionalMoment(lava::Model(object), data = data,
-                                                          first.order = TRUE, second.order = FALSE, usefit = FALSE, 
-                                                          name.endogenous = endogenous(object),
-                                                          name.latent = latent(object))
-        }
         args.tempo <- args
         args.tempo$data <- data
         args.tempo$df <- FALSE
@@ -664,35 +631,40 @@ sCorrect.lvmfit2 <- function(object, ...){
         jac.param <- param[name.3deriv]
         res.numDeriv <- numDeriv::jacobian(calcVcov, x = jac.param, method = "Richardson")
         
-        out$dVcov.param <- array(res.numDeriv,
-                                 dim = c(n.param,n.param,length(name.3deriv)),
-                                 dimnames = list(name.param, name.param, name.3deriv))
-         if(trace>0){
+        object$dVcov$dVcov.param <- array(res.numDeriv,
+                                          dim = c(n.param,n.param,length(name.3deriv)),
+                                          dimnames = list(name.param, name.param, name.3deriv))
+        if(trace>0){
             cat("- done \n")
-         }
+        }
         
     }else if(derivative == "analytic"){
         if(trace>0){
             cat("* Compute first derivative of the information matrix using analytic formula ")
         }
 
-        dInfo.dtheta <- .dInformation2(dmu = dmu,
-                                       d2mu = d2mu,
-                                       dOmega = dOmega,
-                                       d2Omega = d2Omega,
-                                       Omega = out$Omega,
-                                       OmegaM1 = out$OmegaM1,
-                                       n.corrected = out$n.corrected,
+        ## update conditional moments
+        resD2 <- skeletonDtheta2(object,
+                                 name.endogenous = name.endogenous,
+                                 name.latent = name.latent)
+        
+        dInfo.dtheta <- .dInformation2(dmu = object$conditionalMoment$dmu,
+                                       d2mu = resD2$d2mu,
+                                       dOmega = object$conditionalMoment$dOmega,
+                                       d2Omega = resD2$d2Omega,
+                                       Omega = Omega,
+                                       OmegaM1 = OmegaM1,
+                                       n.corrected = object$dVcov$n.corrected,
                                        n.cluster = n.cluster,
                                        index.Omega = index.Omega,
-                                       leverage = out$leverage,
+                                       leverage = object$dVcov$leverage,
                                        name.param  = name.param,
                                        name.3deriv = name.3deriv)
         p3 <- dim(dInfo.dtheta)[3]
-        out$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
+        object$dVcov$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
         
         for(iP in 1:p3){
-            out$dVcov.param[,,iP] <- - out$vcov.param %*% dInfo.dtheta[,,iP] %*% out$vcov.param 
+            object$dVcov$dVcov.param[,,iP] <- - object$dVcov$vcov.param %*% dInfo.dtheta[,,iP] %*% object$dVcov$vcov.param 
         }
 
         if(trace>0){
@@ -701,8 +673,8 @@ sCorrect.lvmfit2 <- function(object, ...){
     }
        
     ## ** export
-    out$args <- args
-    return(out)
+    object$dVcov$args <- args
+    return(object$dVcov)
 }
 
 ## * sCorrect<-
@@ -743,13 +715,21 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lvmfit` <- function(x, ..., value){
-    x$sCorrect <-  try(sCorrect(x, ..., adjust.Omega = value, adjust.n = value), silent = TRUE)
-    if(value == TRUE && inherits(x$sCorrect,"try-error")){
-        warn <- x$sCorrect
-        x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = FALSE)
-        attr(x$sCorrect,"warning") <- warn
-        warning("sCorrect failed and has been re-run setting the argument \'adjust.n\' to FALSE \n",
-                "see the attribute \"warning\" of object$sCorrect for the error message \n")
+    dots <- list(...)
+    safeMode <- dots$safeMode
+    dots[["safeMode"]] <- NULL
+    
+    if(identical(safeMode,TRUE)){
+        x$sCorrect <-  try(do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = value), dots) ), silent = TRUE)
+        if(value == TRUE && inherits(x$sCorrect,"try-error")){
+            warn <- x$sCorrect
+            x$sCorrect <- do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = FALSE), dots) )
+            attr(x$sCorrect,"warning") <- warn
+            warning("sCorrect failed and has been re-run setting the argument \'adjust.n\' to FALSE \n",
+                    "see the attribute \"warning\" of object$sCorrect for the error message \n")
+        }
+    }else{
+        x$sCorrect <-  do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = value), dots) )
     }
     class(x) <- append("lvmfit2",class(x))
 
@@ -768,32 +748,7 @@ sCorrect.lvmfit2 <- function(object, ...){
     return(x)
 }
 
-## * .calcResidualsLVM
-.calcResidualsLVM <- function(data, dMoments, n.latent, name.endogenous){
 
-    ## ** fitted value
-    object.fitted <- dMoments$value$nu.XK
-    if(n.latent>0){
-        object.fitted <- object.fitted + dMoments$value$alpha.XGamma.iIB %*% dMoments$value$Lambda
-    }
-
-    ## ** residuals
-    out <- data[, name.endogenous] - object.fitted
-    
-    ## ** export
-    return(as.matrix(out))
-
-}
-
-## * .calcOmegaLVM
-.calcOmegaLVM <- function(dMoments, n.latent){
-    if(n.latent>0){
-        Omega <- dMoments$value$tLambda.tiIB.Psi.iIB %*% dMoments$value$Lambda + dMoments$value$Sigma
-    }else{
-        Omega <- dMoments$value$Sigma
-    }
-    return(Omega)
-}
 
 ##----------------------------------------------------------------------
 ### sCorrect.R ends here

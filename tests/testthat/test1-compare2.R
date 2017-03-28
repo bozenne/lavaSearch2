@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: mar 26 2018 (17:55) 
+## last-updated: feb  4 2016 (16:55) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 222
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -217,7 +217,7 @@ e.lvm <- estimate(m, d)
 
 e.lmer <- lmerTest::lmer(value ~ variable + X1 + Gender + (1|Id),
                          data = dLred, REML = FALSE)
-
+e2.lmer <- update(e.lmer, REML = TRUE)
 e.lme <- nlme::lme(value ~ variable + X1 + Gender, random = ~ 1|Id,
                    data = dLred, method = "ML")
 
@@ -270,15 +270,16 @@ test_that("mixed model: Satterthwaite ",{
 test_that("mixed model: KR-like correction",{
     ## does not work when running test
     ## GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
-    GS <- contestMD(update(e.lmer, REML = TRUE),
-                    L = c(0,1,0,0,0), rhs = 0, ddf = "Kenward-Roger")
-
+    GS <- do.call(rbind,lapply(1:5, function(x){ ## x <- 3
+        C <- rep(0,5) ; C[x] <- 1;
+        tempo <- lmerTest::contestMD(e2.lmer, L = C, rhs = 0, ddf = "Kenward-Roger")
+        return(data.frame(df = tempo[["DenDF"]], statistic = sqrt(tempo[["F value"]])))
+    })) ## disagreement
+    
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
     name.param <- names(coef(e.lvm))
     df.lvm <- compare2(e.lvm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
-
-
     name.param <- names(.coef2(e.lme))
     df.lme <- compare2(e.lme, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.lme$statistic, df.lvm$statistic, tol = 1e-5)
@@ -289,6 +290,30 @@ test_that("mixed model: KR-like correction",{
     expect_equal(df.gls$statistic[1:5], df.lvm$statistic[1:5], tol = 1e-5)
     expect_equal(df.gls$df[1:5], df.lvm$df[1:5], tol = 1e-5)
 })
+
+### ** compare to SAS
+if(FALSE){
+    ## setwd("c:/Users/hpl802/AppData/Roaming/R")
+    write.table(dLred, file = "mydata.txt", row.names = FALSE)
+    ## /* Define path */
+    ## %Let NomEtude = %Str(C:\Users\hpl802\AppData\Roaming\R\);
+
+    ## /* Define path to file */
+    ## FILENAME Fichier "&NomEtude.%Str(mydata.txt)";
+    
+    ## /* Importation of the data */
+    ## Data mydata; 
+    ## Infile Fichier FirstObs=2 obs=151; /* if no FirstObs : will read all first lines */
+    ## input Id $ X1 X2 X3 Gender $ variable $ value; 
+    ## Run;
+
+    ## /* Fit mixed model */
+    ## PROC Mixed Data = mydata;
+    ## Class Id Gender variable ;
+    ## Model value = variable X1 Gender / SOLUTION DDFM=KR;
+    ## Repeated variable / SUBJECT = id TYPE = CS R RCORR;
+    ## RUN; 
+}
 
 ## * Mixed model: Unstructured with different variance
 m <- lvm(Y1~1*eta,

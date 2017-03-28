@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar 26 2018 (17:24) 
+## last-updated: mar 27 2018 (15:48) 
 ##           By: Brice Ozenne
-##     Update #: 957
+##     Update #: 1019
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -300,34 +300,34 @@ conditionalMoment.lvm <- function(object, data,
     }
     
 ### ** Initialize conditional moments   
-    skeleton <- skeleton(object,
-                         name.endogenous = name.endogenous, 
-                         name.latent = name.latent, 
-                         as.lava = TRUE)
-    
+    Moment <- skeleton(object,
+                       name.endogenous = name.endogenous, 
+                       name.latent = name.latent, 
+                       as.lava = TRUE)
+
 ### ** Initialize partial derivatives of the conditional moments
     if(first.order){
-        dtheta <- skeletonDtheta(object, data = data,
-                                 df.param.all = skeleton$df.param,
-                                 param2originalLink = skeleton$param2originalLink,
-                                 name.endogenous = name.endogenous, 
-                                 name.latent = name.latent)
+        dMoment <- skeletonDtheta(object, data = data,
+                                  df.param.all = Moment$df.param,
+                                  param2originalLink = Moment$param2originalLink,
+                                  name.endogenous = name.endogenous, 
+                                  name.latent = name.latent)
     }else{
-        dtheta <- NULL
+        dMoment <- NULL
     }
     
 ### ** Initialize second order partial derivatives of the conditional moments
     if(second.order){
-        d2theta <- skeletonDtheta2(object, data = data,
-                                   df.param.all = skeleton$df.param,
-                                   param2originalLink = skeleton$param2originalLink,
-                                   name.latent = name.latent)
+        d2Moment <- skeletonDtheta2(object, data = data,
+                                    df.param.all = Moment$df.param,
+                                    param2originalLink = Moment$param2originalLink,
+                                    name.latent = name.latent)
     }else{
-        d2theta <- NULL
+        d2Moment <- NULL
     }
 
 ### ** Export
-    return(list(skeleton = skeleton, dtheta = dtheta, d2theta = d2theta))
+    return(c(Moment, list(dMoment.init = dMoment, d2Moment.init = d2Moment)))
 }
     
     
@@ -338,11 +338,6 @@ conditionalMoment.lvmfit <- function(object, data, param,
                                      first.order, second.order, usefit,
                                      ...){
 
-    if(first.order == FALSE && second.order == TRUE){
-        stop("Cannot pre-compute quantities for the second order derivatives ",
-             "without those for the first order derivatives \n")
-    }
-    
 ### ** normalize arguments
     name.endogenous <- endogenous(object)
     n.endogenous <- length(name.endogenous)
@@ -352,70 +347,64 @@ conditionalMoment.lvmfit <- function(object, data, param,
     data <- as.matrix(data[,lava::manifest(object),drop=FALSE])
 
 ### ** initialize
-    if(!is.null(object$conditionalMoment)){
-        out <- object$conditionalMoment
-    }else{
-        out <- conditionalMoment(lava::Model(object),
-                                 data = data,
-                                 first.order = first.order,
-                                 second.order = second.order,
-                                 name.endogenous = name.endogenous,
-                                 name.latent = name.latent)
+    if(is.null(object$conditionalMoment)){       
+        object$conditionalMoment <- conditionalMoment(lava::Model(object),
+                                                      data = data,
+                                                      first.order = first.order,
+                                                      second.order = second.order,
+                                                      name.endogenous = name.endogenous,
+                                                      name.latent = name.latent)
+
+        ##  param with non-zero third derivative
+        type.3deriv <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
+        index.keep <- intersect(which(!is.na(object$conditionalMoment$df.param$lava)),
+                                which(object$conditionalMoment$df.param$detail %in% type.3deriv)
+                                )    
+        object$conditionalMoment$name.3deriv <- object$conditionalMoment$df.param[index.keep, "originalLink"]
     }
 
 ### ** update according to the value of the model coefficients
     if(usefit){
 
-### ** Update skeleton
-        out$skeleton <- skeleton(object, skeleton = out$skeleton,
-                                 data = data, param = param,
-                                 name.endogenous = name.endogenous, 
-                                 name.latent = name.latent)
-        out$skeleton$skeleton <- NULL ## cleaning
- 
-### ** Update first order partial derivatives
-        if(first.order){
-            out$dtheta <- skeletonDtheta(object, dtheta = out$dtheta,
-                                         name.endogenous = name.endogenous, 
-                                         name.latent = name.latent,
-                                         B = out$skeleton$value$B,
-                                         alpha.XGamma = out$skeleton$value$alpha.XGamma,
-                                         Lambda = out$skeleton$value$Lambda,
-                                         Psi = out$skeleton$value$Psi)
+        ## *** conditional moments
+        object$conditionalMoment$value <- skeleton(object, data = data, param = param,
+                                                   name.endogenous = name.endogenous, 
+                                                   name.latent = name.latent)
+        if(object$conditionalMoment$skeleton$toUpdate["param"]){
+            object$conditionalMoment$param <- coef(object)
         }
-        
-### ** Compute second order partial derivatives
-        if(second.order){
-            out$d2theta <- skeletonDtheta2(object,
-                                           dtheta = out$dtheta,
-                                           d2theta = out$d2theta,
-                                           name.endogenous = name.endogenous,
-                                           name.latent = name.latent,
-                                           B = out$skeleton$value$B,
-                                           Lambda = out$skeleton$value$Lambda,
-                                           Psi = out$skeleton$value$Psi)
-        }
-    }
-    
-### ** Post process
-    if(usefit){
-        if(first.order){
-            out$skeleton$value$alpha.XGamma.iIB <- out$dtheta$alpha.XGamma.iIB
-            out$skeleton$value$tLambda.tiIB.Psi.iIB <- out$dtheta$tLambda.tiIB.Psi.iIB
-            out$dtheta <- out$dtheta[c("dmu","dOmega")]
-        }else{
-            if(n.latent>0){
-                iIB <- solve(diag(1, n.latent, n.latent) - out$skeleton$value$B)
-                out$skeleton$value$alpha.XGamma.iIB <- out$skeleton$value$alpha.XGamma %*% iIB
-                out$skeleton$value$tLambda.tiIB.Psi.iIB <- t(out$skeleton$value$Lambda) %*% t(iIB) %*% out$skeleton$value$Psi %*% iIB
+        if(object$conditionalMoment$skeleton$toUpdate["mu"]){
+            if(n.latent==0){
+                object$conditionalMoment$mu <- object$conditionalMoment$value$nu.XK
+            }else{
+                object$conditionalMoment$mu <- object$conditionalMoment$value$nu.XK + object$conditionalMoment$value$alpha.XGamma.iIB %*% object$conditionalMoment$value$Lambda
             }            
         }
-        if(second.order){
-            out$d2theta <- out$d2theta[c("d2mu","d2Omega")]
+        if(object$conditionalMoment$skeleton$toUpdate["Omega"]){
+            object$conditionalMoment$Omega <- getVarCov2(object)
         }
+
+        ## *** first order derivatives
+        if(first.order){
+            out <- skeletonDtheta(object,
+                                  name.endogenous = name.endogenous, 
+                                  name.latent = name.latent)
+            object$conditionalMoment$dmu <- out$dmu
+            object$conditionalMoment$dOmega <- out$dOmega            
+        }
+
+        ## *** second order derivatives
+        if(second.order){
+            out2 <- skeletonDtheta2(object,
+                                    name.endogenous = name.endogenous,
+                                    name.latent = name.latent)
+            object$conditionalMoment$d2mu <- out2$d2mu
+            object$conditionalMoment$d2Omega <- out2$d2Omega
+        }
+       
     }
-    
+     
 ### ** Export
-    return(c(out[["skeleton"]], out[["dtheta"]], out[["d2theta"]]))    
+    return(object$conditionalMoment)
 }
 
