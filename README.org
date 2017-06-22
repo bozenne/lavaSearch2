@@ -1,0 +1,6 @@
+#+BEGIN_HTML
+<a href="https://travis-ci.org/bozenne/lavaSearch2"><img src="https://travis-ci.org/bozenne/lavaSearch2.svg?branch=master"></a>
+#+END_HTML
+
+* lavaSeach2
+

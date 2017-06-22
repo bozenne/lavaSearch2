@@ -1,0 +1,29 @@
+Package: lavaSearch2
+Type: Package
+Title: Tools for model specification in the latent variable framework
+Version: 0.0
+Date: 2017-06-22
+Author: Brice Ozenne[aut, cre]
+Maintainer: brice ozenne <brice.ozenne@orange.fr>
+Description: Tools for model specification in the latent variable framework (add-on for the lava package).
+License: GPL-3
+Depends:
+    R (>= 2.10),
+    lava,
+    data.table
+Imports:
+    doSNOW,
+    foreach,
+    ggplot2,
+    MASS,
+    mvtnorm,
+    numDeriv,
+    optimx,
+    parallel,
+    qqtest,
+    stats,
+    tmvtnorm,
+    utils
+Suggests: 
+    testthat
+RoxygenNote: 6.0.1

@@ -1,0 +1,12 @@
+language: r
+sudo: required
+
+r_check_args: --as-cran 
+
+r_github_packages:
+- kkholst/lava@fixNR
+
+after_success:
+  - Rscript -e 'library("covr");codecov(type="all")'
+
+
