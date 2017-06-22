@@ -20,6 +20,8 @@ select.regressor(x, ...)
 Return the regressor variables contained in the formula
 }
 \examples{
+\dontrun{
+# select.regressor <- lavaSearch2:::select.regressor
 select.regressor(Y1~X1+X2)
 select.regressor(Y1~X1+X2, type = "vars")
 
@@ -28,4 +30,5 @@ select.regressor(Y1+Y2~X1+Y1, type = "vars")
 
 select.regressor(~X1+X2)
 select.regressor(~X1+X2, type = "vars")
+}
 }

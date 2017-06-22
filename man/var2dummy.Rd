@@ -28,7 +28,7 @@ When dealing with categorical variables, the \code{estimate} function convert th
 This function convert a set of variable names to their corresponding name in the model with dummy variables
 }
 \examples{
-\donttest{
+\dontrun{
 # var2dummy <- lavaSearch2:::var2dummy
 m <- lvm()
 regression(m) <- c(y1,y2,y3)~u

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: jun 22 2017 (16:24) 
+## last-updated: jun 22 2017 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 6
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,7 +27,7 @@
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # var2dummy <- lavaSearch2:::var2dummy
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u

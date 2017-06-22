@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: jun 22 2017 (16:20) 
+## last-updated: jun 22 2017 (16:40) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 32
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@ modelsearchLR <- function (x, data = NULL, restricted, link, directive,
                            ls.LVMargs = NULL, method.p.adjust = "bonferroni",                           
                            display.warnings = TRUE, trace = 1){
 
-     statistic <- p.value <- adjusted.p.value <- NULL # for CRAN check
+    statistic <- p.value <- adjusted.p.value <- NULL # for CRAN check
 
     # {{{ initialisation
     n.link <- length(link)
@@ -59,7 +59,6 @@ modelsearchLR <- function (x, data = NULL, restricted, link, directive,
     if(trace > 0){pb <- utils::txtProgressBar(max = n.link, style = 3) }
   
     for (iterI in 1:n.link) {
-    
         ls.LVMargs$x <- addLink(x$model, var1 = restricted[iterI,1], var2 = restricted[iterI,2],
                                 covariance = (1-directive[iterI]))
         
@@ -76,7 +75,7 @@ modelsearchLR <- function (x, data = NULL, restricted, link, directive,
         }
     
         if("lvmfit" %in% class(newfit)){ # test lvmfit is not an error
-            if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
+            if(newfit$opt$convergence == 0 && !is.na(logLik(newfit))){ # test whether lvmfit has correctly converged
                 compareT <- lava::compare(x,newfit)
                 dt.test[iterI,`statistic` := compareT$statistic[[1]]]
                 dt.test[iterI,`p.value` := compareT$p.value[[1]]]

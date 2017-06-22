@@ -43,12 +43,20 @@
 #' e <- estimate(m, df)
 #'
 #' ## score
+#' \dontrun{
 #' resScore <- modelsearch2(e, statistic = "score")
 #' resLR <- modelsearch2(e, statistic = "LR")
 #'
 #' e <- estimate(m, df, robust = TRUE, cluster = "Id")
 #' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
-#'
+#' }
+#' \dontshow{
+#' links <- c(u~x1,u~x2C,y3~x2C)
+#' resScore <- modelsearch2(e, statistic = "score", link = links)
+#' resLR <- modelsearch2(e, statistic = "LR", link = links)
+#' e <- estimate(m, df, robust = TRUE, cluster = "Id")
+#' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", link = links)
+#' }
 #' set.seed(10)
 #' system.time(
 #' resMax1 <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")

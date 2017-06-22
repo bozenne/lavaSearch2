@@ -126,7 +126,9 @@ initVar_links <- function(var1, format = "list"){
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
 #' @param ... additional arguments to be passed to lower levels functions.
 #'
-#' @examples 
+#' @examples
+#' \dontrun{
+#' # select.response <- lavaSearch2:::select.response
 #' select.response(Y1~X1+X2)
 #' select.response(Y1~X1+X2, type = "vars")
 #' 
@@ -135,6 +137,7 @@ initVar_links <- function(var1, format = "list"){
 #' 
 #' select.response(~X1+X2)
 #' select.response(~X1+X2, type = "vars")
+#' }
 
 #' @rdname select.response
 #' @export
@@ -168,7 +171,9 @@ select.response.formula <- function(x, type = "call"){
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
-#' @examples 
+#' @examples
+#' \dontrun{
+#' # select.regressor <- lavaSearch2:::select.regressor
 #' select.regressor(Y1~X1+X2)
 #' select.regressor(Y1~X1+X2, type = "vars")
 #' 
@@ -177,6 +182,7 @@ select.response.formula <- function(x, type = "call"){
 #' 
 #' select.regressor(~X1+X2)
 #' select.regressor(~X1+X2, type = "vars")
+#' }
 
 
 #' @rdname select.regressor
