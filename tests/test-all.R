@@ -1,5 +1,5 @@
-library("lavaPenalty")
+library("lavaSearch2")
 suppressPackageStartupMessages(library("testthat"))
 source("FCT.R")
-test_check("lavaPenalty")
+test_check("lavaSearch2")
 
