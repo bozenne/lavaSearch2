@@ -30,7 +30,6 @@
 #' }
 #' \dontshow{
 #' summary(cvCheck(m, dd, ncpus = 1, n.init = 10))
-#' summary(cvCheck(m, dd, ncpus = 4, n.init = 10))
 #' }
 #' 
 #' @export
