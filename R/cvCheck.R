@@ -26,11 +26,12 @@
 #'
 #' \dontrun{
 #' summary(cvCheck(m, dd, ncpus = 1))
-#' summary(cvCheck(m, dd, ncpus = 4))
+#' # summary(cvCheck(m, dd, ncpus = 4))
 #' }
 #' \dontshow{
 #' summary(cvCheck(m, dd, ncpus = 1, n.init = 10))
 #' }
+#'
 #' 
 #' @export
 cvCheck <- function (object, ...) {

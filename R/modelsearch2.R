@@ -18,6 +18,7 @@
 #' @param alpha the significance threshold for retaining a new link
 #' @param method.p.adjust the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.
 #' @param method.max the method used to compute the distribution of the max statistic \code{integration}.
+#' @param method.iid the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).
 #' @param ncpus the number of cpus that can be used for the computations.
 #' @param display.warnings should warnings be display? May occur when dealing with categorical variables or when fitting an extended model.
 #' @param trace should the execution be traced?
@@ -26,7 +27,15 @@
 #'
 #' @return a latent variable model
 #' 
-#' @examples 
+#' @examples
+#'
+#' #### linear regression ####
+#'
+#'
+#' #### Cox model ####
+#' 
+#' #### LVM ####
+#' 
 #' mSim <- lvm()
 #' regression(mSim) <- c(y1,y2,y3)~u
 #' regression(mSim) <- u~x1+x2
@@ -46,23 +55,14 @@
 #' \dontrun{
 #' resScore <- modelsearch2(e, statistic = "score")
 #' resLR <- modelsearch2(e, statistic = "LR")
-#'
-#' e <- estimate(m, df, robust = TRUE, cluster = "Id")
 #' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
 #' }
 #' \dontshow{
 #' links <- c(u~x1,u~x2C,y3~x2C)
 #' resScore <- modelsearch2(e, statistic = "score", link = links)
 #' resLR <- modelsearch2(e, statistic = "LR", link = links)
-#' e <- estimate(m, df, robust = TRUE, cluster = "Id")
-#' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", link = links)
+#' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", method.iid = "iid", link = links)
 #' }
-#' set.seed(10)
-#' system.time(
-#' resMax1 <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
-#' )
-#' resMax1$lastTest
-#' resMax1
 #'
 #' @export
 `modelsearch2` <-
@@ -73,7 +73,7 @@
 modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = NULL, 
                                 link = NULL, exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
                                 nStep = NULL, na.omit = TRUE,
-                                alpha = 0.05, method.max = "integration", method.p.adjust = "bonferroni",
+                                alpha = 0.05, method.max = "integration", method.iid = "iidJack", method.p.adjust = "bonferroni",
                                 ncpus = 1,
                                 display.warnings = TRUE, trace = 2, export.iid = FALSE, ...){
 
@@ -84,7 +84,8 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
     if(any(exposure %in% names(coef(x)) == FALSE)){
         stop("exposure does not correspond to a coefficient in \'x\' \n")
     }
-
+    method.max <- match.arg(method.max, c("integration","bootstrap","boot-norm","boot-wild"))
+    
     # {{{ define all possible links newlinks
     if(is.null(link)){
         res.find <- findNewLink(x$model,
@@ -99,7 +100,6 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
         ## directive <- res.find$directional
         ## restricted <- res.find$M.links
         ## link <- res.find$link
-
     }else{
         restricted <- do.call(cbind,initVar_links(link))
         
@@ -138,8 +138,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
             }
         }
 
-    }
-    
+    }    
     # }}}
       
     # {{{ arguments LVM
@@ -175,9 +174,15 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
     ## output
     dt.testOverModel <- NULL
 
-    ## criterion
+    ## criterion    
     cv <- FALSE
+
+    ## cpus
+    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
+    cl <- parallel::makeCluster(ncpus)
+    doSNOW::registerDoSNOW(cl)
     # }}}
+    
     # {{{ loop over the models
     while(iStep <= nStep && NROW(iRestricted)>0 && cv==FALSE){
 
@@ -201,19 +206,19 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
             res.search$dt.test[, adjusted.p.value := p.adjust(p.value, method = method.p.adjust)]
             # }}}                
         }else if(statistic == "LR"){
-            # {{{ run modelsearchLR
-            
+            # {{{ run modelsearchLR            
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
-                                         ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust,
+                                        ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust,
                                         display.warnings = display.warnings, trace = trace-1)
     
             # }}}
         }else if(statistic == "max"){
             # {{{ run modelsearchMax
-           res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, alpha = alpha,
-                                         ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust, method.max = method.max,
+            res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, alpha = alpha,
+                                         ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust, method.max = method.max, method.iid = method.iid,
                                          conditional = conditional, mu.conditional = mu.conditional, iid.conditional = iid.conditional,
-                                         export.iid = max(1,export.iid), trace = trace-1, ncpus = ncpus)
+                                         export.iid = max(1,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE, ...
+                                         )
             # }}}
         }
 
@@ -321,7 +326,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
                                    mu = c(mu.conditional,newBeta), 
                                    conditional = c(mu.conditional,rep(0,length(exposure))),
                                    method = method.max,
-                                   n.sim = n.sim, ncpus = ncpus, trace = trace)
+                                   n.sim = n.sim, ncpus = ncpus, initCpus = FALSE, trace = trace)
             
             dt.exposure[,`p.value` := resQmax$p.adjust]
             z <- resQmax$z
@@ -344,6 +349,10 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
         z <- NULL
     }
     # }}}
+
+    ## end job
+    parallel::stopCluster(cl)
+
     #### export
     output <- list(lvm = iObject,
                    sequenceTest = dt.testOverModel,

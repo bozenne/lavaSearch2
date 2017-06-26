@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jun 22 2017 (16:44) 
+## last-updated: jun 23 2017 (19:58) 
 ##           By: Brice Ozenne
-##     Update #: 221
+##     Update #: 265
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,14 +25,17 @@
 #' @seealso \code{link{modelsearch2}}
 #' 
 #' @keywords internal
-modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.max = "boot-wild", alpha = 0.05,
+#'
+
+#' @rdname modelsearchMax
+modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.max = "integration", method.iid = "iidJack", alpha = 0.05,
                             ls.LVMargs = NULL, method.p.adjust = "bonferroni", n.sim = 1e4,
                             conditional = NULL, mu.conditional = NULL, iid.conditional = NULL, 
-                            export.iid = 1, trace = 1, ncpus = 1){
+                            export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
 
     `p.value (Wald)` <- `statistic (Wald)` <- statistic <- p.value <- adjusted.p.value <- `adjusted.p.value (Wald)` <- coefBeta <- NULL # for CRAN check
 
-    # {{{ initialisation
+                                        # {{{ initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- length(link)
     nObs <- x$data$n
@@ -45,18 +48,7 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                           "adjusted.p.value (Wald)" = as.numeric(rep(NA,n.link))
                           )
 
-    if(!is.null(ls.LVMargs)){
-        add.args <- setdiff(names(x$call), c("","x","data","control"))
-        ls.LVMargs <- lapply(add.args, function(arg){x$call[[arg]]})
-        names(ls.LVMargs) <- add.args
-        if(is.null(data)){
-            ls.LVMargs$data <- x$data$model.frame
-        }else{
-            ls.LVMargs$data <- data
-        }
-        ls.LVMargs$control <- x$control
-        ls.LVMargs$control$trace <- FALSE
-    }
+    
 
     best.test <- -Inf
     best.model <- NULL    
@@ -65,7 +57,7 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
     # }}}
 
    
-    # {{{ wraper                                 
+                                        # {{{ wraper                                 
     warper <- function(iterI){ # iterI <- 2
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
@@ -103,10 +95,10 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                # if(restricted[iterI,2] %in% endogenous(x) && restricted[iterI,1] %in% endogenous(x)){
                #     nameNewlink <- restricted[iterI,2]
                # }else{
-                    nameNewlink <- link[iterI]
-                # }
+                 nameNewlink <- link[iterI]
+                                        # }
                 out$dt[1, coefBeta := coef(newfit)[nameNewlink]]
-                out$iid <- sqrt(nObs)*iid(newfit)[,nameNewlink,drop=FALSE]
+                out$iid <- sqrt(nObs)*do.call(method.iid, args = list(newfit, cpus = 1))[,nameNewlink,drop=FALSE]
                 SeBeta <- sd(out$iid,na.rm=TRUE) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
                 out$dt[1,`statistic` := abs(coefBeta/SeBeta)]
 
@@ -117,16 +109,18 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                 out$dt[1,`p.value (Wald)` := summary(newfit)$coef[nameNewlink,4]]                
             }
         }
-        # }}}
+                                        # }}}
         return(out)
     }
-    # }}}
+                                        # }}}
 
-    #  sqrt(nObs)*
-    # {{{ parallel computations 
-    cl <- parallel::makeCluster(ncpus)
-    doSNOW::registerDoSNOW(cl)
-
+                                        #  sqrt(nObs)*
+                                        # {{{ parallel computations
+    if(initCpus){
+        cl <- parallel::makeCluster(ncpus)
+        doSNOW::registerDoSNOW(cl)
+    }
+    
     if(trace > 0){
         cat("gather influence functions \n")
         pb <- utils::txtProgressBar(max = n.link, style = 3)
@@ -151,9 +145,7 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                         {
                             return(warper(i))
                         })
-    
-    parallel::stopCluster(cl)
-    
+   
     dt.test <- cbind(link = link, res$dt)
     iid.link <- res$iid
     
@@ -166,7 +158,7 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
     ## }
 
     
-    # {{{ adjust p.value
+                                        # {{{ adjust p.value
     dt.test[cv==0, `adjusted.p.value (Wald)` := p.adjust(`p.value (Wald)`, method = method.p.adjust)]
     dt.test[cv==0, p.value := 2*(1-pnorm(abs(statistic)))]
 
@@ -175,14 +167,18 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
     iid.all <- iid.all[index.NNA,,drop=FALSE]
     mu.all <- c(mu.conditional,dt.test[cv==0,coefBeta])
     mu.conditional.all <- c(conditional,rep(0,n.link))
-
-    resQmax <- calcDistMax(dt.test[cv==0,statistic], iid = iid.all, mu = mu.all, alpha = alpha,
+    resQmax <- calcDistMax(dt.test[cv==0,statistic], iid = iid.all, mu = mu.all,
+                           df = degreeOfFreedom(x, conservative = TRUE)-1, alpha = alpha,
                            conditional = mu.conditional.all, method = method.max,
-                           n.sim = n.sim, ncpus = ncpus, trace = trace)
+                           n.sim = n.sim, ncpus = ncpus, initCpus = FALSE, trace = trace)
    
     dt.test[cv==0,adjusted.p.value := resQmax$p.adjust]
     z <- resQmax$z
+
     
+    if(initCpus){
+        parallel::stopCluster(cl)
+    } 
     # }}}
     
     #### export
@@ -194,9 +190,6 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                 z = z)
     return(out)
 }
-
-
-
 
 #----------------------------------------------------------------------
 ### Lava_modelsearchMax.R ends here

@@ -11,8 +11,9 @@ modelsearch2(x, ...)
   exposure = NULL, link = NULL, exclude.var = NULL,
   rm.latent_latent = FALSE, rm.endo_endo = FALSE, rm.latent_endo = FALSE,
   nStep = NULL, na.omit = TRUE, alpha = 0.05,
-  method.max = "integration", method.p.adjust = "bonferroni", ncpus = 1,
-  display.warnings = TRUE, trace = 2, export.iid = FALSE, ...)
+  method.max = "integration", method.iid = "iidJack",
+  method.p.adjust = "bonferroni", ncpus = 1, display.warnings = TRUE,
+  trace = 2, export.iid = FALSE, ...)
 }
 \arguments{
 \item{x}{a lvm model}
@@ -43,6 +44,8 @@ modelsearch2(x, ...)
 
 \item{method.max}{the method used to compute the distribution of the max statistic \code{integration}.}
 
+\item{method.iid}{the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).}
+
 \item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
 
 \item{ncpus}{the number of cpus that can be used for the computations.}
@@ -60,6 +63,14 @@ a latent variable model
 Add all relevant path between the variables present in a lvm.
 }
 \examples{
+
+#### linear regression ####
+
+
+#### Cox model ####
+
+#### LVM ####
+
 mSim <- lvm()
 regression(mSim) <- c(y1,y2,y3)~u
 regression(mSim) <- u~x1+x2
@@ -79,22 +90,13 @@ e <- estimate(m, df)
 \dontrun{
 resScore <- modelsearch2(e, statistic = "score")
 resLR <- modelsearch2(e, statistic = "LR")
-
-e <- estimate(m, df, robust = TRUE, cluster = "Id")
 resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
 }
 \dontshow{
 links <- c(u~x1,u~x2C,y3~x2C)
 resScore <- modelsearch2(e, statistic = "score", link = links)
 resLR <- modelsearch2(e, statistic = "LR", link = links)
-e <- estimate(m, df, robust = TRUE, cluster = "Id")
-resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", link = links)
+resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", method.iid = "iid", link = links)
 }
-set.seed(10)
-system.time(
-resMax1 <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
-)
-resMax1$lastTest
-resMax1
 
 }

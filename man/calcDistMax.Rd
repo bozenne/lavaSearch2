@@ -4,8 +4,8 @@
 \alias{calcDistMax}
 \title{Adjust the p.values using the quantiles of the max statistic}
 \usage{
-calcDistMax(statistic, iid, mu, conditional, method, alpha, ncpus, n.sim, trace,
-  n.repMax = 100)
+calcDistMax(statistic, iid, mu, conditional, df, method, alpha, ncpus, initCpus,
+  n.sim, trace, n.repMax = 100)
 }
 \arguments{
 \item{statistic}{the observed statistic}
@@ -17,12 +17,16 @@ calcDistMax(statistic, iid, mu, conditional, method, alpha, ncpus, n.sim, trace,
 \item{conditional}{values to condition on. 
 If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.}
 
+\item{df}{the degree of freedom for the t statistic.}
+
 \item{method}{the method used to compute the p.values. Can be \code{"integration"}, \code{"boot-wild"}, or \code{"boot-norm"}.
 See the detail section.}
 
 \item{alpha}{the significance threshold for retaining a new link}
 
 \item{ncpus}{the number of cpu to use for parellel computations}
+
+\item{initCpus}{should the cpus be initialized.}
 
 \item{n.sim}{the total number of simulations.}
 
@@ -41,9 +45,9 @@ p <- 5
 X.iid <- rmvnorm(n, mean = rep(0,p), sigma = diag(1,p))
 
 calcDistMax(1:p, iid = X.iid, mu = rep(1,p), conditional =  NULL, method = "integration",
-            trace = FALSE, alpha = 0.05, ncpus = 1)
+            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, df = 1e6)
 
 calcDistMax(1:p, iid = X.iid, mu = rep(1,p), conditional =  NULL, method = "boot-wild",
-            trace = FALSE, alpha = 0.05, ncpus = 1, n.sim = 10)
+            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = 10, df = 1e6)
 
 }
