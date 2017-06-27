@@ -45,6 +45,9 @@ iid1 <- iidJack(m)
 iid2 <- iidCox(m)$IFbeta
 
 apply(iid1,2,sd)
+
+print(iid2)
+
 apply(iid2,2,sd)
 
 #### LVM ####
