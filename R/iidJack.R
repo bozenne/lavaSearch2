@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: jun 27 2017 (11:47) 
+## last-updated: jun 27 2017 (12:52) 
 ##           By: Brice Ozenne
-##     Update #: 67
+##     Update #: 68
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,6 +46,9 @@
 #' iid2 <- iidCox(m)$IFbeta
 #' 
 #' apply(iid1,2,sd)
+#'
+#' print(iid2)
+#' 
 #' apply(iid2,2,sd)
 #'
 #' #### LVM ####
