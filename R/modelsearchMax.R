@@ -1,11 +1,12 @@
+
 ### Lava_modelsearchMax.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jun 23 2017 (19:58) 
+## last-updated: jun 27 2017 (11:51) 
 ##           By: Brice Ozenne
-##     Update #: 265
+##     Update #: 306
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,18 +29,19 @@
 #'
 
 #' @rdname modelsearchMax
-modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.max = "integration", method.iid = "iidJack", alpha = 0.05,
-                            ls.LVMargs = NULL, method.p.adjust = "bonferroni", n.sim = 1e4,
+modelsearchMax <- function (x, restricted, link, directive, packages,
+                            update.FCT, update.args, iid.FCT,
+                            method.max = "integration", n.sim = 1e4, alpha = 0.05, method.p.adjust = "bonferroni", 
                             conditional = NULL, mu.conditional = NULL, iid.conditional = NULL, 
                             export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
 
     `p.value (Wald)` <- `statistic (Wald)` <- statistic <- p.value <- adjusted.p.value <- `adjusted.p.value (Wald)` <- coefBeta <- NULL # for CRAN check
 
-                                        # {{{ initialisation
+    # {{{ initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
-    n.link <- length(link)
-    nObs <- x$data$n
-    dt.test <- data.table("link" = link,
+    n.link <- NROW(restricted)
+    nObs <- NROW(update.args$data)
+    dt.test <- data.table("link" = as.character(rep(NA,n.link)),
                           "statistic" = as.numeric(rep(NA,n.link)),
                           "p.value" = as.numeric(rep(NA,n.link)),
                           "adjusted.p.value" = as.numeric(rep(NA,n.link)),
@@ -48,16 +50,13 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                           "adjusted.p.value (Wald)" = as.numeric(rep(NA,n.link))
                           )
 
-    
-
     best.test <- -Inf
     best.model <- NULL    
     iid.link <- NULL
     cv <- rep(NA,n.link)
     # }}}
-
-   
-                                        # {{{ wraper                                 
+    
+    # {{{ wraper
     warper <- function(iterI){ # iterI <- 2
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
@@ -70,52 +69,45 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                     iid = NULL)
 
         # {{{ fit new model
-        ls.LVMargs$x <- addLink(x$model, var1 = restricted[iterI,1], var2 = restricted[iterI,2],
-                                covariance = (1-directive[iterI]))
-
-        suppressWarnings(
-            newfit <- tryCatch(do.call(estimate, args = ls.LVMargs),
-                               error = function(x){NA},
-                               finally = function(x){x})
-        )
-        if(newfit$opt$convergence>0){
-            ls.LVMargs$control$start <- NULL
-            suppressWarnings(
-                newfit <- tryCatch(do.call(estimate, args = ls.LVMargs),
-                                   error = function(x){NA},
-                                   finally = function(x){x})
-            )
-        }
+        newfit <- update.FCT(x, args = update.args, restricted = restricted[iterI,], directive = directive[iterI])
         out$dt[1,cv := newfit$opt$convergence]
         # }}}
 
         # {{{ extract influence function
-        if("lvmfit" %in% class(newfit)){ # test lvmfit is not an error
+        if(class(newfit) != "try-error"){ # test whether the model was estimated
             if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
-               # if(restricted[iterI,2] %in% endogenous(x) && restricted[iterI,1] %in% endogenous(x)){
-               #     nameNewlink <- restricted[iterI,2]
-               # }else{
-                 nameNewlink <- link[iterI]
-                                        # }
-                out$dt[1, coefBeta := coef(newfit)[nameNewlink]]
-                out$iid <- sqrt(nObs)*do.call(method.iid, args = list(newfit, cpus = 1))[,nameNewlink,drop=FALSE]
+                new.coef <- coef(newfit)
+                if(link[iterI] %in% names(new.coef) == FALSE){
+                    stop("Coefficient ",link[iterI]," not found \n",
+                         "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
+                }
+                new.coef <- new.coef[link[iterI]]
+                sd.coef <- sqrt(vcov(newfit)[link[iterI],link[iterI]])
+                rdf <- df.residual(newfit, conservative = FALSE)
+                if(is.null(rdf)){
+                    p.coef <- 2*(1-pnorm(abs(new.coef/sd.coef)))
+                }else{
+                    p.coef <- 2*(1-pt(abs(new.coef/sd.coef), df = rdf))
+                }
+                
+                out$dt[1, coefBeta := new.coef]
+                out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                 SeBeta <- sd(out$iid,na.rm=TRUE) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
                 out$dt[1,`statistic` := abs(coefBeta/SeBeta)]
 
                 #IF.beta <- sqrt(nObs)*iid(newfit)[,nameNewlink,drop=FALSE]
                 #SeBeta <- sd(IF.beta)
 
-                out$dt[1,`statistic (Wald)` := summary(newfit)$coef[nameNewlink,1]/summary(newfit)$coef[nameNewlink,2]]
-                out$dt[1,`p.value (Wald)` := summary(newfit)$coef[nameNewlink,4]]                
+                out$dt[1,`statistic (Wald)` := new.coef/sd.coef]
+                out$dt[1,`p.value (Wald)` := p.coef]                
             }
         }
-                                        # }}}
+        # }}}
         return(out)
     }
-                                        # }}}
-
-                                        #  sqrt(nObs)*
-                                        # {{{ parallel computations
+    # }}}
+    
+    # {{{ parallel computations
     if(initCpus){
         cl <- parallel::makeCluster(ncpus)
         doSNOW::registerDoSNOW(cl)
@@ -135,11 +127,12 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
                     iid = cbind(res1$iid,res2$iid))
         return(res)
     }
-    vec.packages <- c("lava", "lavaSearch2", "data.table")
+
+    vec.packages <- c("lavaSearch2", "data.table", packages)
     i <- NULL
     res <- foreach::`%dopar%`(
                         foreach::foreach(i = 1:n.link, .packages =  vec.packages,
-                                         .export = c("ls.LVMargs"),
+                                        # .export = c("ls.LVMargs"),
                                          .combine = FCTcombine,
                                          .options.snow = opts),
                         {
@@ -158,7 +151,7 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
     ## }
 
     
-                                        # {{{ adjust p.value
+    # {{{ adjust p.value
     dt.test[cv==0, `adjusted.p.value (Wald)` := p.adjust(`p.value (Wald)`, method = method.p.adjust)]
     dt.test[cv==0, p.value := 2*(1-pnorm(abs(statistic)))]
 
@@ -167,8 +160,9 @@ modelsearchMax <- function (x, data = NULL, restricted, link, directive, method.
     iid.all <- iid.all[index.NNA,,drop=FALSE]
     mu.all <- c(mu.conditional,dt.test[cv==0,coefBeta])
     mu.conditional.all <- c(conditional,rep(0,n.link))
+
     resQmax <- calcDistMax(dt.test[cv==0,statistic], iid = iid.all, mu = mu.all,
-                           df = degreeOfFreedom(x, conservative = TRUE)-1, alpha = alpha,
+                           df = df.residual(x, conservative = TRUE), alpha = alpha,
                            conditional = mu.conditional.all, method = method.max,
                            n.sim = n.sim, ncpus = ncpus, initCpus = FALSE, trace = trace)
    

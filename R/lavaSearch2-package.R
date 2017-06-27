@@ -14,9 +14,10 @@
 #' @importFrom numDeriv jacobian hessian
 #' @importFrom parallel detectCores makeCluster stopCluster
 #' @importFrom qqtest qqtest
-#' @importFrom stats as.formula coef cov dist hclust logLik model.frame na.omit p.adjust pnorm predict qqnorm quantile rnorm sd setNames uniroot update vcov 
+#' @importFrom riskRegression iidCox
+#' @importFrom stats anova as.formula coef cov df.residual dist formula hclust logLik model.frame na.omit p.adjust pnorm predict qqnorm quantile pt rnorm sd setNames uniroot update vcov 
 #' @importFrom tmvtnorm ptmvnorm
-#' @importFrom utils txtProgressBar setTxtProgressBar
+#' @importFrom utils methods setTxtProgressBar txtProgressBar
 #' 
 NULL
 

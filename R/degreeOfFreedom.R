@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: jun 26 2017 (10:36) 
+## last-updated: jun 27 2017 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 21
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,12 +15,11 @@
 ## 
 ### Code:
 
-#' @title Approximate the degree of freedoms of a lvm model
-#' @description Approximate the degree of freedoms of a lvm model
-#'
-#' @name degreeOfFreedom
+#' @title Approximate degree of freedoms of a model
+#' @description Approximate the degree of freedoms of a model
+#' @name df.residual
 #' 
-#' @param x model object
+#' @param object model object
 #' @param conservative If true the total number of parameter is substracted from the number of observations. If false only the number of mean parameters is substracted.
 #' @param ... additional arguments
 #' @examples
@@ -30,21 +29,19 @@
 #' m <- lvm(Y~X1+X2+X3)
 #' d <- sim(m, n)
 #' e <- estimate(m, data = d)
-#' degreeOfFreedom(e, conservative = FALSE)
-#' degreeOfFreedom(e, conservative = TRUE)
-#' 
-#' @export
-degreeOfFreedom <- function(x,...) UseMethod("degreeOfFreedom")
+#' df.residual(e, conservative = FALSE)
+#' df.residual(e, conservative = TRUE)
 
-#' @rdname degreeOfFreedom
+#' @rdname df.residual
+#' @method df.residual lvmfit
 #' @export
-degreeOfFreedom.lvmfit <- function(x,conservative,...) {
+df.residual.lvmfit <- function(object, conservative,...) {
 
-    n <- x$data$n
-    x.coef <- coef(x, level = 9)
-    p.mean <- sum(attr(x.coef,"type")=="regression")
-    p.intercept <- sum(attr(x.coef,"type")=="intercept")
-    p.variance <- sum(attr(x.coef,"type")=="variance")
+    n <- object$data$n
+    object.coef <- coef(object, level = 9)
+    p.mean <- sum(attr(object.coef,"type")=="regression")
+    p.intercept <- sum(attr(object.coef,"type")=="intercept")
+    p.variance <- sum(attr(object.coef,"type")=="variance")
 
     if(conservative){
         p.effective <- p.mean+p.intercept
@@ -52,6 +49,17 @@ degreeOfFreedom.lvmfit <- function(x,conservative,...) {
         p.effective <- p.mean+p.intercept+p.variance
     }
 
+    
+    return(n-p.effective)
+}
+
+#' @rdname df.residual
+#' @method df.residual coxph
+#' @export
+df.residual.coxph <- function(object, ...) {
+    n <- riskRegression::CoxN(object)    
+    object.coef <- coef(object)
+    p.effective <- length(object.coef)
     
     return(n-p.effective)
 }

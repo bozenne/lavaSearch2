@@ -4,9 +4,8 @@
 \alias{modelsearchLR}
 \title{Model searching using a likelihood ratio test}
 \usage{
-modelsearchLR(x, data = NULL, restricted, link, directive,
-  ls.LVMargs = NULL, method.p.adjust = "bonferroni",
-  display.warnings = TRUE, trace = 1)
+modelsearchLR(x, data, restricted, link, directive, update.FCT, update.args,
+  method.p.adjust, display.warnings, trace)
 }
 \value{
 a list

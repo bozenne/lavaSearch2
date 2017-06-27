@@ -131,6 +131,7 @@ initVar_links <- function(var1, format = "list"){
 #' # select.response <- lavaSearch2:::select.response
 #' select.response(Y1~X1+X2)
 #' select.response(Y1~X1+X2, type = "vars")
+#' select.response(Surv(event,time)~X1+X2, type = "vars")
 #' 
 #' select.response(Y1~X1+Y1)
 #' select.response(Y1+Y2~X1+Y1, type = "vars")

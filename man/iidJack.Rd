@@ -7,14 +7,17 @@
 \usage{
 iidJack(x, ...)
 
-\method{iidJack}{default}(x, ncpus = 1, initCpus, trace = TRUE, ...)
+\method{iidJack}{default}(x, data = NULL, ncpus = 1, initCpus,
+  trace = TRUE, ...)
 }
 \arguments{
-\item{x}{model object}
+\item{x}{model object.}
 
-\item{...}{additional arguments}
+\item{...}{additional arguments.}
 
-\item{ncpus}{number of cpus available for parallel computation}
+\item{data}{dataset used to perform the jacknife.}
+
+\item{ncpus}{number of cpus available for parallel computation.}
 
 \item{initCpus}{should the parallel computation be initialized?}
 
@@ -26,12 +29,25 @@ Extract i.i.d. decomposition (influence function) from model object
 \examples{
 n <- 20
 
+#### glm ####
 m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
 d <- sim(m,n)
 g <- glm(y~x+z,data=d,family="binomial")
 iidJack(g)
 
+#### Cox model ####
+library(survival)
+library(riskRegression)
+data(Melanoma, package = "riskRegression")
+m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+iid1 <- iidJack(m)
+iid2 <- iidCox(m)$IFbeta
+
+apply(iid1,2,sd)
+apply(iid2,2,sd)
+
+#### LVM ####
 set.seed(10)
 m <- lvm(Y~X1+X2+X3)
 d <- sim(m, n)
@@ -42,6 +58,6 @@ attr(iid2, "bread") <- NULL
 
 apply(iid1,2,sd)
 apply(iid2,2,sd)
-
+quantile(iid2 - iid1)
 
 }

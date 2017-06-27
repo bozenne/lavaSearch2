@@ -3,17 +3,24 @@
 \name{modelsearch2}
 \alias{modelsearch2}
 \alias{modelsearch2.lvmfit}
+\alias{modelsearch2.default}
+\alias{.modelsearch2}
 \title{Automatic extension of the lvm}
 \usage{
 modelsearch2(x, ...)
 
-\method{modelsearch2}{lvmfit}(x, data = NULL, statistic = "score",
-  exposure = NULL, link = NULL, exclude.var = NULL,
-  rm.latent_latent = FALSE, rm.endo_endo = FALSE, rm.latent_endo = FALSE,
-  nStep = NULL, na.omit = TRUE, alpha = 0.05,
-  method.max = "integration", method.iid = "iidJack",
+\method{modelsearch2}{lvmfit}(x, data = NULL, link = NULL,
+  method.iid = "iidJack", exclude.var = NULL, rm.latent_latent = FALSE,
+  rm.endo_endo = FALSE, rm.latent_endo = FALSE, ...)
+
+\method{modelsearch2}{default}(x, link, data = NULL, method.iid = "iidJack",
+  statistic = "max", ...)
+
+.modelsearch2(x, link, restricted, directive, update.FCT, update.args, iid.FCT,
+  packages = NULL, statistic = "score", exposure = NULL, nStep = NULL,
+  na.omit = TRUE, alpha = 0.05, method.max = "integration",
   method.p.adjust = "bonferroni", ncpus = 1, display.warnings = TRUE,
-  trace = 2, export.iid = FALSE, ...)
+  trace = 2, export.iid = FALSE)
 }
 \arguments{
 \item{x}{a lvm model}
@@ -22,11 +29,9 @@ modelsearch2(x, ...)
 
 \item{data}{the dataset used to identify the model}
 
-\item{statistic}{test statistic used to perform the test. Can the likelihood ratio test (LR), the score (score) or the max statistic (max).}
-
-\item{exposure}{the links to be tested at the end of the variable selection process.}
-
 \item{link}{the links to consider when expanding the model}
+
+\item{method.iid}{the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).}
 
 \item{exclude.var}{see the documentation of \code{\link{findNewLink}}.}
 
@@ -36,6 +41,22 @@ modelsearch2(x, ...)
 
 \item{rm.latent_endo}{see the documentation of \code{\link{findNewLink}}.}
 
+\item{statistic}{test statistic used to perform the test. Can the likelihood ratio test (LR), the score (score) or the max statistic (max).}
+
+\item{restricted}{internal argument.}
+
+\item{directive}{internal argument.}
+
+\item{update.FCT}{internal argument.}
+
+\item{update.args}{internal argument.}
+
+\item{iid.FCT}{internal argument.}
+
+\item{packages}{name of the R packages to be exported to each CPU.}
+
+\item{exposure}{the links to be tested at the end of the variable selection process.}
+
 \item{nStep}{the maximum number of links that can be added to the model.}
 
 \item{na.omit}{should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.}
@@ -43,8 +64,6 @@ modelsearch2(x, ...)
 \item{alpha}{the significance threshold for retaining a new link}
 
 \item{method.max}{the method used to compute the distribution of the max statistic \code{integration}.}
-
-\item{method.iid}{the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).}
 
 \item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
 
@@ -64,13 +83,28 @@ Add all relevant path between the variables present in a lvm.
 }
 \examples{
 
-#### linear regression ####
+# to save computation time 
+method.iid <- "iid"
 
+#### linear regression ####
+mSim <- lvm(Y~X1+X2+X3+X4)
+addvar(mSim) <- ~Z1+Z2
+d <- sim(mSim,1e2)
+eLM <- lm(Y~X1,data = d)
+
+res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+             statistic = "LR")
+res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+             statistic = "max", method.iid = method.iid)
 
 #### Cox model ####
+library(survival)
+data(Melanoma, package = "riskRegression")
+m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+modelsearch2(m, link = c(status~epicel,status~sex),
+             method.iid = method.iid, packages = "survival")
 
 #### LVM ####
-
 mSim <- lvm()
 regression(mSim) <- c(y1,y2,y3)~u
 regression(mSim) <- u~x1+x2

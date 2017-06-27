@@ -1,4 +1,4 @@
-# {{{ modelsearch2
+# {{{ documentation
 #' @title Automatic extension of the lvm
 #' @description Add all relevant path between the variables present in a lvm.
 #' 
@@ -22,20 +22,42 @@
 #' @param ncpus the number of cpus that can be used for the computations.
 #' @param display.warnings should warnings be display? May occur when dealing with categorical variables or when fitting an extended model.
 #' @param trace should the execution be traced?
+#' @param packages name of the R packages to be exported to each CPU.
 #' @param export.iid should the iid decomposition of the retained coefficient be export. Only relevant when statistic is set to max.
 #' @param ... additional arguments to be passed to lower levels functions.
 #'
+#' @param restricted internal argument.
+#' @param directive internal argument.
+#' @param update.FCT internal argument.
+#' @param update.args internal argument.
+#' @param iid.FCT internal argument.
+#' 
 #' @return a latent variable model
 #' 
 #' @examples
 #'
+#' # to save computation time 
+#' method.iid <- "iid"
+#' 
 #' #### linear regression ####
+#' mSim <- lvm(Y~X1+X2+X3+X4)
+#' addvar(mSim) <- ~Z1+Z2
+#' d <- sim(mSim,1e2)
+#' eLM <- lm(Y~X1,data = d)
 #'
+#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+#'              statistic = "LR")
+#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+#'              statistic = "max", method.iid = method.iid)
 #'
 #' #### Cox model ####
+#' library(survival)
+#' data(Melanoma, package = "riskRegression")
+#' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+#' modelsearch2(m, link = c(status~epicel,status~sex),
+#'              method.iid = method.iid, packages = "survival")
 #' 
 #' #### LVM ####
-#' 
 #' mSim <- lvm()
 #' regression(mSim) <- c(y1,y2,y3)~u
 #' regression(mSim) <- u~x1+x2
@@ -67,26 +89,17 @@
 #' @export
 `modelsearch2` <-
   function(x, ...) UseMethod("modelsearch2")
+# }}}
 
+# {{{ modelsearch2.lvmfit
 #' @rdname modelsearch2
 #' @export
-modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = NULL, 
-                                link = NULL, exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
-                                nStep = NULL, na.omit = TRUE,
-                                alpha = 0.05, method.max = "integration", method.iid = "iidJack", method.p.adjust = "bonferroni",
-                                ncpus = 1,
-                                display.warnings = TRUE, trace = 2, export.iid = FALSE, ...){
+modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
+                                method.iid = "iidJack",
+                                exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
+                                ...){
 
-    `Estimate` <- `Robust SE` <- n.sim <- n <- coefBeta <- p.value <- adjusted.p.value <- NULL # for CRAN check
-    
-    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
-    match.arg(statistic, choices = c("score","LR", "max"))
-    if(any(exposure %in% names(coef(x)) == FALSE)){
-        stop("exposure does not correspond to a coefficient in \'x\' \n")
-    }
-    method.max <- match.arg(method.max, c("integration","bootstrap","boot-norm","boot-wild"))
-    
-    # {{{ define all possible links newlinks
+    #### normalize the links ####
     if(is.null(link)){
         res.find <- findNewLink(x$model,
                                 data = model.frame(x),
@@ -97,9 +110,6 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
         directive <- res.find$directional
         restricted <- res.find$M.links
         link <- res.find$link
-        ## directive <- res.find$directional
-        ## restricted <- res.find$M.links
-        ## link <- res.find$link
     }else{
         restricted <- do.call(cbind,initVar_links(link))
         
@@ -139,24 +149,222 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
         }
 
     }    
-    # }}}
-      
-    # {{{ arguments LVM
+
+    #### arguments of the call ####
     add.args <- setdiff(names(x$call), c("","x","data","control"))
-    ls.LVMargs <- lapply(add.args, function(arg){x$call[[arg]]})
-    names(ls.LVMargs) <- add.args
+    ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
+    names(ls.call) <- add.args
     if(is.null(data)){
-        ls.LVMargs$data <- x$data$model.frame
+        ls.call$data <- x$data$model.frame
     }else{
-        ls.LVMargs$data <- data
+        ls.call$data <- data
     }
-    ls.LVMargs$control <- x$control
-    ls.LVMargs$control$trace <- FALSE
-    # }}}
+    ls.call$control <- x$control
+    ls.call$control$trace <- FALSE
+
+
+    #### update the model ####
+    update.FCT <- function(x, args, restricted, directive){
+        args$x <- addLink(x$model, var1 = restricted[1], var2 = restricted[2],
+                          covariance = 1-directive)
+
+        ## first attempt
+        args$start <- coef(x)
+        suppressWarnings(
+            newx <- tryCatch(do.call(estimate, args = args),
+                             error = function(x){NA},
+                             finally = function(x){x})
+        )
+        
+        ## second attempt
+        if(newx$opt$convergence>0){
+            args$control$start <- NULL
+            suppressWarnings(
+                newx <- tryCatch(do.call(estimate, args = args),
+                                 error = function(x){NA},
+                                 finally = function(x){x})
+            )
+        }
+        return(newx)
+    }
+    # res <- update.x(x, ls.call, restricted = restricted[1,], directive[1])
+
+     iid.FCT <- function(x){
+                res <- lava::iid(x)
+                attr(res, "bread") <- NULL
+                return(res)
+     }
     
+    #### run modelsearch ####
+    out <- .modelsearch2(x, 
+                         link = link, restricted = restricted, directive = directive,
+                         update.FCT = update.FCT, update.args = ls.call, iid.FCT = iid.FCT,...)
+
+    #### export ####
+    return(out)
+}
+# }}}
+
+# {{{ modelsearch2.default
+#' @rdname modelsearch2
+#' @export
+modelsearch2.default <- function(x, link, data = NULL,
+                                 method.iid = "iidJack", statistic = "max", ...){
+
+    if(class(x) %in% c("coxph","cph","phreg")){            
+        test.cox <- try(riskRegression::iidCox(x), silent = TRUE)
+        if(class(test.cox) == "try-error"){
+           print(test.cox)
+        }
+    }else if (!any(paste("score", class(x), sep = ".") %in% methods("score"))) {        
+        stop("Extraction of the iid decomposition failed \n",
+                "No iid method for models of class ",class(x)," \n")
+    }
+    statistic <-  match.arg(statistic, c("max","LR"))
+    
+    #### get data ####
+    if(is.null(data)){
+        data <- eval(x$call$data)
+    }
+
+    #### get model vars ####
+    model.var <- all.vars(formula(x))
+    
+    #### normalize the links ####
+    restricted <- do.call(cbind,initVar_links(link))
+    allVars <- union(model.var, names(data))
+    link <- restricted[,2] # does not handle categorical variables    
+    directive <- TRUE        
+    
+    if(any(unique(as.vector(restricted)) %in% allVars == FALSE)){
+        wrong.var <- unique(as.vector(restricted))[unique(as.vector(restricted)) %in% allVars == FALSE]
+        stop("Some links contains variables that are not in the latent variable model \n",
+             "variables(s) : \"",paste(wrong.var,collapse ="\" \""),"\"\n")
+    }
+    
+    if(any(restricted[,2] %in% model.var)){
+        stop("link(s) already in the models: ",paste0(link[restricted[,2] %in% model.var],collapse = " "),"\n")
+    }
+
+    ## take care of categorical variables
+    for(iLink in 1:length(link)){ # iLink <- 1
+        if(is.numeric(data[[link[iLink]]])==FALSE){
+            iUlevel <- levels(as.factor(data[[link[iLink]]]))
+            if(length(iUlevel)>2){
+                stop("Cannot deal with categorical variables with more than 2 levels \n")
+            }else{
+                link[iLink] <- paste0(link[iLink], iUlevel[2])
+            }
+        }        
+    }
+    
+    #### arguments of the call ####
+    add.args <- setdiff(names(x$call), c("","formula","data"))
+    if(length(add.args)>1){
+        ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
+        names(ls.call) <- add.args        
+    }else{
+        ls.call <- list()
+    }
+    ls.call$data <- data
+
+    #### update the model ####
+    update.FCT <- function(x, args, restricted, directive){
+        FCT.estimate <- as.character(x$call[[1]])
+
+        ## update the formula
+        f <- eval(x$call$formula)
+        if(is.list(f)){
+            test.Y <-  lapply(f, function(ff){
+                restricted[1] %in% select.response(ff)
+            })
+            index.Y <- which(unlist(test.Y))
+            f[[index.Y]] <- update(f[[index.Y]], as.formula(paste0(".~",restricted[2])))
+            
+        }else{
+           f <- update(f, as.formula(paste0(".~.+",restricted[2])))
+        }
+
+        ## update the arguments
+        if(length(args)>0){
+            for(callArg in names(args)){
+                x$call[[callArg]] <- args[[callArg]]
+            }
+        }
+        
+        suppressWarnings(
+            newx <- update(x, formula = f)
+        )
+        newx$opt$convergence <- 0
+        return(newx)
+    }
+
+    #### get iid ####
+    if(class(x) %in% c("coxph","cph")){
+        
+        if(method.iid == "iid"){
+            iid.FCT <- function(x){
+                riskRegression::iidCox(x, tauHazard = 0)$IFbeta
+            }
+        }else{
+            iid.FCT <- function(x){
+                iidJack(x)
+            }
+        }
+        
+    }else{
+
+        if(method.iid == "iid"){
+            iid.FCT <- function(x){
+                res <- lava::iid(x)
+                attr(res, "bread") <- NULL
+                return(res)
+            }
+        }else{
+            iid.FCT <- function(x){
+                iidJack(x)
+            }
+        }
+        
+    }
+    # iid.FCT(x) 
+    
+    #### run modelsearch ####
+    out <- .modelsearch2(x, statistic = statistic,
+                         link = link, restricted = restricted, directive = directive,
+                         update.FCT = update.FCT, update.args = ls.call, iid.FCT = iid.FCT, ...)
+
+
+    #### export ####
+    return(out)
+}    
+# }}}
+
+# {{{ .modelsearch2
+#' @rdname modelsearch2
+#' @export
+.modelsearch2 <- function(x, link, restricted, directive, update.FCT, update.args, iid.FCT, packages = NULL,
+                          statistic = "score", exposure = NULL,                           
+                          nStep = NULL, na.omit = TRUE,
+                          alpha = 0.05, method.max = "integration", method.p.adjust = "bonferroni",
+                          ncpus = 1,
+                          display.warnings = TRUE, trace = 2, export.iid = FALSE){
+    
+    # for CRAN check
+    `Estimate` <- `Robust SE` <- n.sim <- n <- coefBeta <- p.value <- adjusted.p.value <- NULL
+    
+    # {{{ preliminary tests    
+    method.max <- match.arg(method.max, lava.options()$calcDistMax.method)
+    statistic <-  match.arg(statistic, choices = c("score","LR", "max"))
+    if(any(exposure %in% names(coef(x)) == FALSE)){
+        stop("exposure does not correspond to a coefficient in \'x\' \n")
+    }    
+    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
+    # }}}
+
     # {{{ initialisation
     if(is.null(nStep)){
-        nStep <- length(link)
+        nStep <- NROW(restricted)
     }
     iStep <- 1
     iRestricted <- restricted
@@ -182,18 +390,16 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
     cl <- parallel::makeCluster(ncpus)
     doSNOW::registerDoSNOW(cl)
     # }}}
-    
     # {{{ loop over the models
     while(iStep <= nStep && NROW(iRestricted)>0 && cv==FALSE){
 
-        if(trace >= 1){cat("Step ",iStep,":\n",sep="")}
-        ls.LVMargs$start <- coef(iObject)
+        if(trace >= 1){cat("Step ",iStep,":\n",sep="")}        
 
         if(statistic == "score"){
             # {{{ run modelsearch
             res.search <- modelsearch(iObject, link = iLink, silent = (trace <= 1))
 
-            iN.link <- length(iLink)        
+            iN.link <- NROW(iRestricted)        
             res.search$dt.test <- data.table("link" = iLink,
                                              "statistic" = as.numeric(rep(NA,iN.link)),
                                              "p.value" = as.numeric(rep(NA,iN.link)),
@@ -208,18 +414,17 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
         }else if(statistic == "LR"){
             # {{{ run modelsearchLR            
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
-                                        ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust,
-                                        display.warnings = display.warnings, trace = trace-1)
+                                        update.FCT = update.FCT, update.args = update.args,
+                                        method.p.adjust = method.p.adjust, display.warnings = display.warnings, trace = trace-1)
     
             # }}}
         }else if(statistic == "max"){
             # {{{ run modelsearchMax
-            res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, alpha = alpha,
-                                         ls.LVMargs = ls.LVMargs, method.p.adjust = method.p.adjust, method.max = method.max, method.iid = method.iid,
+            res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, packages = packages, alpha = alpha,
+                                         update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
+                                         method.p.adjust = method.p.adjust, method.max = method.max,
                                          conditional = conditional, mu.conditional = mu.conditional, iid.conditional = iid.conditional,
-                                         export.iid = max(1,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE, ...
-                                         )
-            # }}}
+                                         export.iid = max(1,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE)            # }}}
         }
 
 #        names(res.search)
@@ -238,36 +443,19 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
                 test.na <- FALSE
             }
         }
-        if(cv==FALSE){
+        
+        if(cv==FALSE){            
             index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
-            
+
             if(statistic == "max"){
                 mu.conditional <- c(mu.conditional, res.search$dt.test[index.rm,coefBeta])
                 conditional <- c(conditional,setNames(res.search$z,iLink[index.rm]))        
                 iid.conditional <- cbind(iid.conditional, res.search$iid.link)
             }
             ## update the model
-            ls.LVMargs$x <- addLink(iObject$model, var1 = iRestricted[index.rm,1], var2 = iRestricted[index.rm,2],
-                                    covariance = iDirective[index.rm])
-            ls.LVMargs$start <- coef(iObject)
-                        
-             
-            suppressWarnings(
-                res.search$best.model <- tryCatch(do.call(estimate, args = ls.LVMargs),
-                                                  error = function(x){NA},
-                                                  finally = function(x){x})
-            )
-            if(res.search$best.model$opt$convergence>0){
-                ls.LVMargs$control$start <- NULL
-                suppressWarnings(
-                    res.search$best.model <- tryCatch(do.call(estimate, args = ls.LVMargs),
-                                                      error = function(x){NA},
-                                                      finally = function(x){x})
-                )
-            }
-
-            iObject <- res.search$best.model
-            iLink <- iLink[-index.rm]
+            iObject <- update.FCT(iObject, args = update.args,
+                                  restricted = iRestricted[index.rm,], directive = iDirective[index.rm])
+            if(!is.null(iLink)){iLink <- iLink[-index.rm]}
             iRestricted <- iRestricted[-index.rm,,drop=FALSE]
             iDirective <- iDirective[-index.rm]
             dt.testOverModel <- rbind(dt.testOverModel, res.search$dt.test[index.rm])
@@ -367,9 +555,6 @@ modelsearch2.lvmfit <- function(x, data = NULL, statistic = "score", exposure = 
     class(output) <- "modelsearch2"
     return(output)
 }
-# }}}
-
-
 
 
 # {{{ print.modelsearch2
