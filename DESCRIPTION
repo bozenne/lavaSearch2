@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for model specification in the latent variable framework
 Version: 0.0.1
-Date: 2017-06-27
+Date: 2017-07-06
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 Description: Tools for model specification in the latent variable framework (add-on for the lava package).
@@ -26,5 +26,6 @@ Imports:
     tmvtnorm,
     utils
 Suggests: 
-    testthat, survival
+    testthat,
+    survival
 RoxygenNote: 6.0.1

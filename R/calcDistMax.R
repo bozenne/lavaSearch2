@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: jun 26 2017 (10:30) 
+## last-updated: jul 18 2017 (17:04) 
 ##           By: Brice Ozenne
-##     Update #: 41
+##     Update #: 44
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,6 +16,7 @@
 ### Code:
 
 # {{{ documentation
+
 #' @title Adjust the p.values using the quantiles of the max statistic
 #' @description Adjust the p.values using the quantiles of the max statistic.
 #' @name calcDistMax
@@ -48,6 +49,7 @@
 #' calcDistMax(1:p, iid = X.iid, mu = rep(1,p), conditional =  NULL, method = "boot-wild",
 #'             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = 10, df = 1e6)
 #' 
+
 # }}}
 
 
@@ -65,8 +67,8 @@ calcDistMax <- function(statistic, iid, mu, conditional, df,
   if(method == "integration"){
     if(trace > 0){ cat("Computation of multivariate normal probabilities to adjust the p.values: ") }
       
-    iid.statistic <- sapply(1:p.iid, function(col){(mu[col]+iid[,col])/sd(iid[,col])})
-    Sigma.statistic <- cov(iid.statistic)
+    iid.statistic <- sapply(1:p.iid, function(col){(mu[col]+iid[,col])/sd(iid[,col],na.rm=TRUE)})
+    Sigma.statistic <- cov(iid.statistic, use = "pairwise.complete.obs")
     # mean(iid.statistic)-statistic
 
     vec.lower <- rep(-Inf,p.iid)

@@ -44,9 +44,9 @@ df.residual.lvmfit <- function(object, conservative,...) {
     p.variance <- sum(attr(object.coef,"type")=="variance")
 
     if(conservative){
-        p.effective <- p.mean+p.intercept
+      p.effective <- p.mean+p.intercept+p.variance
     }else{
-        p.effective <- p.mean+p.intercept+p.variance
+      p.effective <- p.mean+p.intercept
     }
 
     

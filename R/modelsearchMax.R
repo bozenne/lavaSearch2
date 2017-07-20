@@ -4,9 +4,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jun 27 2017 (11:51) 
+## last-updated: jul 18 2017 (16:59) 
 ##           By: Brice Ozenne
-##     Update #: 306
+##     Update #: 308
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,6 +38,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     `p.value (Wald)` <- `statistic (Wald)` <- statistic <- p.value <- adjusted.p.value <- `adjusted.p.value (Wald)` <- coefBeta <- NULL # for CRAN check
 
     # {{{ initialisation
+
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
@@ -54,6 +55,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     best.model <- NULL    
     iid.link <- NULL
     cv <- rep(NA,n.link)
+
     # }}}
     
     # {{{ wraper
@@ -108,6 +110,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     # }}}
     
     # {{{ parallel computations
+
     if(initCpus){
         cl <- parallel::makeCluster(ncpus)
         doSNOW::registerDoSNOW(cl)
@@ -143,6 +146,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     iid.link <- res$iid
     
     if(trace > 0){  close(pb) }                                           
+
     # }}}
     
     ## if(na.omit){

@@ -34,7 +34,12 @@ m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
 d <- sim(m,n)
 g <- glm(y~x+z,data=d,family="binomial")
-iidJack(g)
+iid1 <- iidJack(g)
+iid2 <- iid(g)
+quantile(iid1-iid2)
+vcov(g)
+colSums(iid2^2)
+colSums(iid1^2)/n^2
 
 #### Cox model ####
 library(survival)
@@ -43,7 +48,7 @@ data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 iid1 <- iidJack(m)
 iid2 <- iidCox(m)$IFbeta
-
+  
 apply(iid1,2,sd)
 
 print(iid2)

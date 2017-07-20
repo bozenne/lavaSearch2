@@ -1,7 +1,7 @@
 .onLoad <- function(lib, pkg="lavaSearch2") {
 
     # available methods to compute the distribution of the max statistic
-    lava::lava.options(calcDistMax.method = c("integration","boostrap","boot-norm","boot-wild"))
+    lava::lava.options(calcDistMax.method = c("integration","bootstrap","boot-norm","boot-wild"))
 }
 
 

@@ -5,7 +5,7 @@
 ## Version: 
 ## last-updated: jun 27 2017 (12:52) 
 ##           By: Brice Ozenne
-##     Update #: 68
+##     Update #: 69
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,8 +35,13 @@
 #' distribution(m, ~y+z) <- binomial.lvm("logit")
 #' d <- sim(m,n)
 #' g <- glm(y~x+z,data=d,family="binomial")
-#' iidJack(g)
-#'
+#' iid1 <- iidJack(g)
+#' iid2 <- iid(g)
+#' quantile(iid1-iid2)
+#' vcov(g)
+#' colSums(iid2^2)
+#' colSums(iid1^2)/n^2
+#' 
 #' #### Cox model ####
 #' library(survival)
 #' library(riskRegression)
@@ -44,7 +49,7 @@
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 #' iid1 <- iidJack(m)
 #' iid2 <- iidCox(m)$IFbeta
-#' 
+#'   
 #' apply(iid1,2,sd)
 #'
 #' print(iid2)
@@ -83,20 +88,26 @@ iidJack.default <- function(x,data=NULL,ncpus=1,initCpus,trace=TRUE,...) {
         }
     }
     n.obs <- NROW(data)
-    coef.x <- coef(x)
+    if(class(x) %in% "lme"){
+      coef.x <- fixef(x)
+    }else{
+      coef.x <- coef(x)
+    }
+    names.coef <- names(coef.x)
+    n.coef <- length(coef.x)
     # }}}
 
     # {{{ warper
     warper <- function(i){ # i <- 1
         xnew <- update(x, data = data[-i,])
-        return(c(coef.x-coef(xnew)))
+        return(coef(xnew))
         ## return(c(coef(xnew)-coef.x,
         ##          mu = predict(xnew, data = data[i,,drop=FALSE]))
         ##        )
     }
     # }}}
     
-    # {{{ parallel computations
+    # {{{ parallel computations: get jackknife coef
     if(ncpus>1){
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
@@ -135,8 +146,15 @@ iidJack.default <- function(x,data=NULL,ncpus=1,initCpus,trace=TRUE,...) {
         coefJack <- do.call(rbind, coefJack)
     }
     # }}}
+    
+    # {{{ post treatment: from jackknife coef to IF
+    iidJack <- (n.obs-1)/n.obs*sapply(1:n.coef, function(iCoef){
+      coef.x[iCoef]-coefJack[,iCoef]
+      })
+    colnames(iidJack) <- names.coef
+    # }}}
 
-    return(coefJack)
+    return(iidJack)
 }
     
 #----------------------------------------------------------------------
