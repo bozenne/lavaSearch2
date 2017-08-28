@@ -14,13 +14,13 @@ modelsearch2(x, ...)
   rm.endo_endo = FALSE, rm.latent_endo = FALSE, ...)
 
 \method{modelsearch2}{default}(x, link, data = NULL, method.iid = "iidJack",
-  statistic = "max", ...)
+  statistic = "Wald", ...)
 
 .modelsearch2(x, link, restricted, directive, update.FCT, update.args, iid.FCT,
-  packages = NULL, statistic = "score", exposure = NULL, nStep = NULL,
-  na.omit = TRUE, alpha = 0.05, method.max = "integration",
-  method.p.adjust = "bonferroni", ncpus = 1, display.warnings = TRUE,
-  trace = 2, export.iid = FALSE)
+  packages = NULL, statistic = "Wald", conditional = FALSE,
+  exposure = NULL, method.p.adjust = "max", nStep = NULL,
+  na.omit = TRUE, alpha = 0.05, method.max = "integration", ncpus = 1,
+  display.warnings = TRUE, trace = 1, export.iid = FALSE)
 }
 \arguments{
 \item{x}{a lvm model}
@@ -55,7 +55,11 @@ modelsearch2(x, ...)
 
 \item{packages}{name of the R packages to be exported to each CPU.}
 
-\item{exposure}{the links to be tested at the end of the variable selection process.}
+\item{conditional}{should the p.values be corrected for sequential testing. Experimental.}
+
+\item{exposure}{the links to be tested at the end of the variable selection process. Not functional for now.}
+
+\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
 
 \item{nStep}{the maximum number of links that can be added to the model.}
 
@@ -64,8 +68,6 @@ modelsearch2(x, ...)
 \item{alpha}{the significance threshold for retaining a new link}
 
 \item{method.max}{the method used to compute the distribution of the max statistic \code{integration}.}
-
-\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
 
 \item{ncpus}{the number of cpus that can be used for the computations.}
 
@@ -93,9 +95,12 @@ d <- sim(mSim,1e2)
 eLM <- lm(Y~X1,data = d)
 
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "LR")
+             statistic = "LR", method.p.adjust = "holm")
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "max", method.iid = method.iid)
+             statistic = "Wald", method.p.adjust = "holm",
+             method.iid = method.iid)
+res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+                    method.iid = method.iid)
 
 #### Cox model ####
 library(survival)
@@ -122,15 +127,18 @@ e <- estimate(m, df)
 
 ## score
 \dontrun{
-resScore <- modelsearch2(e, statistic = "score")
-resLR <- modelsearch2(e, statistic = "LR")
-resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max")
+resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
+resLR <- modelsearch2(e, statistic = "LR", method.p.adjust = "holm")
+resMax <- modelsearch2(e, rm.endo_endo = TRUE,
+                        method.iid = method.iid, statistic = "Wald")
+# resMax <- modelsearch2(e, rm.endo_endo = TRUE,
+#                        method.iid = method.iid, statistic = "Wald", conditional = TRUE)
 }
 \dontshow{
 links <- c(u~x1,u~x2C,y3~x2C)
-resScore <- modelsearch2(e, statistic = "score", link = links)
-resLR <- modelsearch2(e, statistic = "LR", link = links)
-resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "max", method.iid = "iid", link = links)
+resScore <- modelsearch2(e, statistic = "score", link = links, method.p.adjust = "holm")
+resLR <- modelsearch2(e, statistic = "LR", link = links, method.p.adjust = "holm")
+resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", method.iid = "iid", link = links)
 }
 
 }

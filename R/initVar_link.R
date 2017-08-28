@@ -95,13 +95,17 @@ initVar_link <- function(var1, var2, repVar1 = FALSE, format = "list",
 # {{{ initVar_links
 #' @rdname initVar
 #' @export
-initVar_links <- function(var1, format = "list"){
+initVar_links <- function(var1, format = "list",
+                          Slink = lava.options()$symbols[1],
+                          Scov = lava.options()$symbols[2]){
         
     if("formula" %in% class(var1)){
-        res <- initVar_link(var1, repVar1 = TRUE, format = format)
+        res <- initVar_link(var1, repVar1 = TRUE, format = format,
+                            Slink = Slink, Scov = Scov)
     }else {
         res <- sapply(var1, function(x){
-            initVar_link(x, repVar1 = TRUE, format = format)
+            initVar_link(x, repVar1 = TRUE, format = format,
+                         Slink = Slink, Scov = Scov)
         })
         if(format == "list"){
             res <- list(var1 = unname(unlist(res["var1",])),

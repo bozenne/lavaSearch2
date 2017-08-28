@@ -5,7 +5,7 @@
 ## Version: 
 ## last-updated: jun 22 2017 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 6
+##     Update #: 12
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -49,6 +49,7 @@ var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
     var <- setNames(var,var)
     ## convertion to dummy variable name for categorical variables
     factor.var <- names(x$x$attributes$labels)
+    
     if(!is.null(var) && any(var %in% factor.var)){
         subvar <- var[var %in% factor.var]
         for(iFactor in subvar){ # iFactor <- "X1"
@@ -67,7 +68,30 @@ var2dummy.lvm <- function(x, data = NULL, ...){
     if(is.null(data)){
         data <- sim(x,1)
     }
-    res <- var2dummy(lava_categorical2dummy(x, data), ...)
+
+    x2 <- lava_categorical2dummy(x, data)
+
+    ## recover attributes for models not defined using categorical
+    obsvars <- setdiff(vars(x2$x),latent(x))
+    if(any(obsvars %in% names(data) == FALSE)){
+        missing.vars <- obsvars[obsvars %in% names(data) == FALSE]
+        test.num <- sapply(1:NCOL(data), function(col){is.numeric(data[[col]])})
+        possible.match <- names(data)[test.num==FALSE]
+        n.possible.match <- length(possible.match)
+        
+        ls.labels <- list()
+        for(iMatch in 1:n.possible.match){ # iMatch <- 1
+            iVar <- possible.match[iMatch]
+            iLabel <- levels(as.factor(data[[iVar]]))
+            if(any(paste0(iVar,iLabel) %in% missing.vars)){
+                ls.labels[[iVar]] <- iLabel
+            }
+        }
+
+        x2$x$attributes$labels <- ls.labels
+    }
+    
+    res <- var2dummy(x2, ...)
     return(res)
 }
 

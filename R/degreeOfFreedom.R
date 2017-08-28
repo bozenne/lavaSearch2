@@ -39,9 +39,10 @@ df.residual.lvmfit <- function(object, conservative,...) {
 
     n <- object$data$n
     object.coef <- coef(object, level = 9)
-    p.mean <- sum(attr(object.coef,"type")=="regression")
-    p.intercept <- sum(attr(object.coef,"type")=="intercept")
-    p.variance <- sum(attr(object.coef,"type")=="variance")
+    index.keep <- which(rownames(object.coef) %in% names(coef(object)))
+    p.mean <- sum(attr(object.coef,"type")[index.keep]=="regression")
+    p.intercept <- sum(attr(object.coef,"type")[index.keep]=="intercept")
+    p.variance <- sum(attr(object.coef,"type")[index.keep]=="variance")
 
     if(conservative){
       p.effective <- p.mean+p.intercept+p.variance

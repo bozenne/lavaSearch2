@@ -7,8 +7,8 @@
 \usage{
 iidJack(x, ...)
 
-\method{iidJack}{default}(x, data = NULL, ncpus = 1, initCpus,
-  trace = TRUE, ...)
+\method{iidJack}{default}(x, data = NULL, grouping = NULL, ncpus = 1,
+  initCpus = TRUE, trace = TRUE, ...)
 }
 \arguments{
 \item{x}{model object.}
@@ -16,6 +16,8 @@ iidJack(x, ...)
 \item{...}{additional arguments.}
 
 \item{data}{dataset used to perform the jacknife.}
+
+\item{grouping}{variable defining cluster of observations that will be simultaneously removed by the jackknife.}
 
 \item{ncpus}{number of cpus available for parallel computation.}
 
@@ -30,6 +32,7 @@ Extract i.i.d. decomposition (influence function) from model object
 n <- 20
 
 #### glm ####
+set.seed(10)
 m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
 d <- sim(m,n)
@@ -39,7 +42,7 @@ iid2 <- iid(g)
 quantile(iid1-iid2)
 vcov(g)
 colSums(iid2^2)
-colSums(iid1^2)/n^2
+colSums(iid1^2)
 
 #### Cox model ####
 library(survival)
@@ -57,9 +60,19 @@ apply(iid2,2,sd)
 
 #### LVM ####
 set.seed(10)
-m <- lvm(Y~X1+X2+X3)
-d <- sim(m, n)
-e <- estimate(m, data = d)
+
+mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
+latent(mSim) <- ~eta
+categorical(mSim, K=2) <- ~G
+dW <- as.data.table(sim(mSim, n, latent = FALSE))
+dW[,Id := as.character(1:.N)]
+dL <- melt(dW, id.vars = c("G","Id"), variable.name = "time", value.name = "Y")
+dL[,time := gsub("Y","",time)]
+
+m1 <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
+latent(m1) <- ~eta
+regression(m1) <- eta ~ G
+e <- estimate(m1, data = dW)
 iid1 <- iidJack(e)
 iid2 <- iid(e)
 attr(iid2, "bread") <- NULL
@@ -67,5 +80,11 @@ attr(iid2, "bread") <- NULL
 apply(iid1,2,sd)
 apply(iid2,2,sd)
 quantile(iid2 - iid1)
+
+library(nlme)
+e2 <- lme(Y~G+time, random = ~1|Id, weights = varIdent(form =~ 1|Id), data = dL)
+e2 <- lme(Y~G, random = ~1|Id, data = dL)
+iid3 <- iidJack(e2)
+apply(iid3,2,sd)
 
 }

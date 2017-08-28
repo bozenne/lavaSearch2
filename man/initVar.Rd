@@ -9,7 +9,8 @@
 initVar_link(var1, var2, repVar1 = FALSE, format = "list",
   Slink = lava.options()$symbols[1], Scov = lava.options()$symbols[2])
 
-initVar_links(var1, format = "list")
+initVar_links(var1, format = "list", Slink = lava.options()$symbols[1],
+  Scov = lava.options()$symbols[2])
 }
 \arguments{
 \item{var1}{a character indicating the endogeneous variable or a formula}

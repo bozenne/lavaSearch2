@@ -10,7 +10,7 @@
 #' @importFrom graphics par plot text
 #' @importFrom optimx optimx
 #' @importFrom MASS mvrnorm
-#' @importFrom mvtnorm pmvnorm qmvnorm rmvnorm
+#' @importFrom mvtnorm pmvnorm qmvnorm rmvnorm qmvt
 #' @importFrom numDeriv jacobian hessian
 #' @importFrom parallel detectCores makeCluster stopCluster
 #' @importFrom qqtest qqtest

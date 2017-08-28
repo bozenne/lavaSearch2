@@ -4,9 +4,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jul 18 2017 (16:59) 
+## last-updated: aug 28 2017 (09:30) 
 ##           By: Brice Ozenne
-##     Update #: 308
+##     Update #: 380
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,11 +31,9 @@
 #' @rdname modelsearchMax
 modelsearchMax <- function (x, restricted, link, directive, packages,
                             update.FCT, update.args, iid.FCT,
-                            method.max = "integration", n.sim = 1e4, alpha = 0.05, method.p.adjust = "bonferroni", 
-                            conditional = NULL, mu.conditional = NULL, iid.conditional = NULL, 
+                            method.p.adjust, method.max = "integration", n.sim = 1e4, alpha = 0.05,  
+                            seqIID = list(), seqSelected = NULL, seqQuantile = list(), 
                             export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
-
-    `p.value (Wald)` <- `statistic (Wald)` <- statistic <- p.value <- adjusted.p.value <- `adjusted.p.value (Wald)` <- coefBeta <- NULL # for CRAN check
 
     # {{{ initialisation
 
@@ -45,37 +43,32 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     dt.test <- data.table("link" = as.character(rep(NA,n.link)),
                           "statistic" = as.numeric(rep(NA,n.link)),
                           "p.value" = as.numeric(rep(NA,n.link)),
-                          "adjusted.p.value" = as.numeric(rep(NA,n.link)),
-                          "statistic (Wald)" = as.numeric(rep(NA,n.link)),
-                          "p.value (Wald)" = as.numeric(rep(NA,n.link)),
-                          "adjusted.p.value (Wald)" = as.numeric(rep(NA,n.link))
+                          "adjusted.p.value" = as.numeric(rep(NA,n.link))
                           )
 
     best.test <- -Inf
     best.model <- NULL    
     iid.link <- NULL
-    cv <- rep(NA,n.link)
+    convergence <- rep(NA,n.link)
 
     # }}}
     
     # {{{ wraper
     warper <- function(iterI){ # iterI <- 2
+        
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
                                     adjusted.p.value = as.numeric(NA),
-                                    `statistic (Wald)` = as.numeric(NA),
-                                    `p.value (Wald)` = as.numeric(NA),
-                                    `adjusted.p.value (Wald)` = as.numeric(NA),
-                                    cv = as.numeric(NA),
+                                    convergence = as.numeric(NA),
                                     coefBeta = as.numeric(NA)),
                     iid = NULL)
 
         # {{{ fit new model
         newfit <- update.FCT(x, args = update.args, restricted = restricted[iterI,], directive = directive[iterI])
-        out$dt[1,cv := newfit$opt$convergence]
+        out$dt[1, c("convergence") := newfit$opt$convergence]
         # }}}
 
-        # {{{ extract influence function
+        # {{{ extract influence function        
         if(class(newfit) != "try-error"){ # test whether the model was estimated
             if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
                 new.coef <- coef(newfit)
@@ -84,24 +77,13 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                          "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
                 }
                 new.coef <- new.coef[link[iterI]]
-                sd.coef <- sqrt(vcov(newfit)[link[iterI],link[iterI]])
+                #sd.coef <- sqrt(vcov(newfit)[link[iterI],link[iterI]])
                 rdf <- df.residual(newfit, conservative = FALSE)
-                if(is.null(rdf)){
-                    p.coef <- 2*(1-pnorm(abs(new.coef/sd.coef)))
-                }else{
-                    p.coef <- 2*(1-pt(abs(new.coef/sd.coef), df = rdf))
-                }
                 
-                out$dt[1, coefBeta := new.coef]
+                out$dt[1, c("coefBeta") := new.coef]
                 out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
-                SeBeta <- sd(out$iid,na.rm=TRUE) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
-                out$dt[1,`statistic` := abs(coefBeta/SeBeta)]
-
-                #IF.beta <- sqrt(nObs)*iid(newfit)[,nameNewlink,drop=FALSE]
-                #SeBeta <- sd(IF.beta)
-
-                out$dt[1,`statistic (Wald)` := new.coef/sd.coef]
-                out$dt[1,`p.value (Wald)` := p.coef]                
+                SeBeta <- sqrt(sum(out$iid^2,na.rm=TRUE)/sum(!is.na(out$iid))) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
+                out$dt[1, c("statistic") := abs(.SD$coefBeta/.SD$SeBeta)]               
             }
         }
         # }}}
@@ -110,7 +92,6 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     # }}}
     
     # {{{ parallel computations
-
     if(initCpus){
         cl <- parallel::makeCluster(ncpus)
         doSNOW::registerDoSNOW(cl)
@@ -132,7 +113,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     }
 
     vec.packages <- c("lavaSearch2", "data.table", packages)
-    i <- NULL
+    i <- NULL # for CRAN check
     res <- foreach::`%dopar%`(
                         foreach::foreach(i = 1:n.link, .packages =  vec.packages,
                                         # .export = c("ls.LVMargs"),
@@ -148,45 +129,50 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     if(trace > 0){  close(pb) }                                           
 
     # }}}
-    
-    ## if(na.omit){
-    ##     index.NNA <- which(rowSums(!is.na(dt.test))>0)
-    ##     dt.test <- dt.test[index.NNA]
-    ## }
 
-    
+    # {{{ p.value
+    df.model <- df.residual(x, conservative = TRUE)
+
+    if(is.null(df.model)){
+        dt.test[.SD$convergence==0, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
+    }else{
+        dt.test[.SD$convergence==0, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
+    }
+    # }}}
+
     # {{{ adjust p.value
-    dt.test[cv==0, `adjusted.p.value (Wald)` := p.adjust(`p.value (Wald)`, method = method.p.adjust)]
-    dt.test[cv==0, p.value := 2*(1-pnorm(abs(statistic)))]
+    if(method.p.adjust == "max"){
+        nameN0 <- dt.test[convergence==0][["link"]]
+        statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
+        resQmax <- calcDistMax(link = nameN0, statistic = statisticN0,
+                               iid = iid.link, seqIID = seqIID, seqSelected = seqSelected, seqQuantile = seqQuantile, 
+                               df = df.model, method = method.max, alpha = alpha,
+                               ncpus = ncpus, initCpus = FALSE, n.sim = n.sim, trace = trace)
 
-    iid.all <- cbind(iid.conditional,iid.link)
-    index.NNA <- which(rowSums(is.na(iid.all))==0)
-    iid.all <- iid.all[index.NNA,,drop=FALSE]
-    mu.all <- c(mu.conditional,dt.test[cv==0,coefBeta])
-    mu.conditional.all <- c(conditional,rep(0,n.link))
+        dt.test[convergence==0,c("adjusted.p.value") := resQmax$p.adjust]
+        dt.test[convergence==0,c("quantile") := resQmax$z]
+        Sigma <- resQmax$Sigma
+        rownames(Sigma) <- dt.test[convergence==0][["link"]]
+        colnames(Sigma) <- dt.test[convergence==0][["link"]]
+        
+        if(initCpus){
+            parallel::stopCluster(cl)
+        }
+        
+    }else{
 
-    resQmax <- calcDistMax(dt.test[cv==0,statistic], iid = iid.all, mu = mu.all,
-                           df = df.residual(x, conservative = TRUE), alpha = alpha,
-                           conditional = mu.conditional.all, method = method.max,
-                           n.sim = n.sim, ncpus = ncpus, initCpus = FALSE, trace = trace)
-   
-    dt.test[cv==0,adjusted.p.value := resQmax$p.adjust]
-    z <- resQmax$z
-
-    
-    if(initCpus){
-        parallel::stopCluster(cl)
-    } 
+        dt.test[.SD$convergence==0, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
+        Sigma <- NULL
+        
+    }    
     # }}}
     
-    #### export
-    name.max <- dt.test[which.max(abs(dt.test[["statistic"]])),link]
-    
+    # {{{ export
     out <- list(dt.test = dt.test,
-                iid.all = if(export.iid>1){iid.link}else{NULL},
-                iid.link = if(export.iid>0){iid.link[,name.max,drop=FALSE]}else{NULL},
-                z = z)
+                iid = if(export.iid){iid.link}else{NULL},
+                Sigma = Sigma)
     return(out)
+    # }}}
 }
 
 #----------------------------------------------------------------------

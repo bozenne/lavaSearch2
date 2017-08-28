@@ -4,17 +4,21 @@
 \alias{calcDistMax}
 \title{Adjust the p.values using the quantiles of the max statistic}
 \usage{
-calcDistMax(statistic, iid, mu, conditional, df, method, alpha, ncpus, initCpus,
-  n.sim, trace, n.repMax = 100)
+calcDistMax(link, statistic, iid, seqIID, seqSelected, seqQuantile, df, method,
+  alpha, ncpus, initCpus, n.sim, trace, n.repMax = 100)
 }
 \arguments{
-\item{statistic}{the observed statistic}
+\item{link}{the name of the coefficients to test.}
+
+\item{statistic}{the observed statistic relative to the coefficients to test.}
 
 \item{iid}{zero-mean iid decomposition of the observed coefficients used to compute the statistic.}
 
-\item{mu}{estimated value for the coefficients}
+\item{seqIID}{zero-mean iid decomposition of the tests to condition on.}
 
-\item{conditional}{values to condition on. 
+\item{seqSelected}{the vector of coefficients that have already been selected.}
+
+\item{seqQuantile}{critical threshold of the tests to condition on.
 If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.}
 
 \item{df}{the degree of freedom for the t statistic.}
@@ -40,14 +44,42 @@ Adjust the p.values using the quantiles of the max statistic.
 \examples{
 library(mvtnorm)
 
+set.seed(10)
 n <- 100
 p <- 5
-X.iid <- rmvnorm(n, mean = rep(0,p), sigma = diag(1,p))
+link <- letters[1:p]
 
-calcDistMax(1:p, iid = X.iid, mu = rep(1,p), conditional =  NULL, method = "integration",
+X.iid <- rmvnorm(n, mean = rep(0,p), sigma = diag(1,p))
+colnames(X.iid) <- link
+statistic <- setNames(1:p,link)
+
+
+\dontrun{
+ n.sim <- 1e3
+}
+\dontshow{
+ n.sim <- 10
+}
+
+r1 <- calcDistMax(link, statistic = statistic, iid = X.iid, 
+            seqIID = NULL, seqQuantile =  NULL, method = "integration",
             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, df = 1e6)
 
-calcDistMax(1:p, iid = X.iid, mu = rep(1,p), conditional =  NULL, method = "boot-wild",
-            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = 10, df = 1e6)
+r2 <- calcDistMax(link, statistic = statistic, iid = X.iid,
+            seqIID = NULL, seqQuantile =  NULL, method = "boot-wild",
+            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+
+r3 <- calcDistMax(link, statistic = statistic, iid = X.iid,
+            seqIID = NULL, seqQuantile =  NULL, method = "boot-norm",
+            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+
+r4 <- calcDistMax(link, statistic = statistic, iid = X.iid,
+            seqIID = NULL, seqQuantile =  NULL, method = "bootstrap",
+            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+
+rbind(integration = c(r1$p.adjust, quantile = r1$z),
+      bootWild    = c(r2$p.adjust, quantile = r2$z),
+      bootNorm    = c(r3$p.adjust, quantile = r3$z),
+      boostrap    = c(r4$p.adjust, quantile = r4$z))
 
 }

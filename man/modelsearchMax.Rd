@@ -5,10 +5,10 @@
 \title{Model searching using the max statistic}
 \usage{
 modelsearchMax(x, restricted, link, directive, packages, update.FCT,
-  update.args, iid.FCT, method.max = "integration", n.sim = 10000,
-  alpha = 0.05, method.p.adjust = "bonferroni", conditional = NULL,
-  mu.conditional = NULL, iid.conditional = NULL, export.iid = 1,
-  trace = 1, ncpus = 1, initCpus = TRUE)
+  update.args, iid.FCT, method.p.adjust, method.max = "integration",
+  n.sim = 10000, alpha = 0.05, seqIID = list(), seqSelected = NULL,
+  seqQuantile = list(), export.iid = 1, trace = 1, ncpus = 1,
+  initCpus = TRUE)
 }
 \value{
 an object of class lvmfit
