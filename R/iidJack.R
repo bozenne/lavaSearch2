@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: aug 28 2017 (11:42) 
+## last-updated: aug 28 2017 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 185
+##     Update #: 186
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -226,7 +226,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     }else{
         if(trace>0){
             requireNamespace("pbapply")
-            coefJack <- pblapply(Ugrouping, warper)
+            coefJack <- pbapply::pblapply(Ugrouping, warper)
         }else{
             coefJack <- lapply(Ugrouping, warper)
         }

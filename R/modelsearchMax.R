@@ -4,9 +4,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: aug 28 2017 (11:42) 
+## last-updated: aug 28 2017 (11:48) 
 ##           By: Brice Ozenne
-##     Update #: 404
+##     Update #: 405
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -129,7 +129,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     }else{
         if(trace>0){
             requireNamespace("pbapply")
-            coefJack <- pblapply(1:n.link, warper)
+            coefJack <- pbapply::pblapply(1:n.link, warper)
         }else{
             coefJack <- lapply(1:n.link, warper)
         }
