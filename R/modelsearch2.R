@@ -59,8 +59,9 @@
 #' library(survival)
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
-#' modelsearch2(m, link = c(status~epicel,status~sex),
+#' res <- modelsearch2(m, link = c(status~epicel,status~sex),
 #'              method.iid = method.iid, packages = "survival")
+#' res
 #' 
 #' #### LVM ####
 #' mSim <- lvm()
@@ -245,10 +246,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     match.arg(method.iid, choices = c("iidJack","iid"))
     
     if(class(x) %in% c("coxph","cph","phreg")){            
-        test.cox <- try(riskRegression::iidCox(x), silent = TRUE)
-        if(class(test.cox) == "try-error"){
-           print(test.cox)
-        }
+        ##
     }else if (!any(paste("score", class(x), sep = ".") %in% methods("score"))) {        
         stop("Extraction of the iid decomposition failed \n",
                 "No iid method for models of class ",class(x)," \n")
@@ -487,10 +485,10 @@ modelsearch2.default <- function(x, link, data = NULL,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          seqSelected = vec.seqSelected, seqQuantile = M.seqQuantile,
                                          seqIID = ls.seqIID,
-                                         export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE)
-            # }}}
+                                         export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE) 
+           # }}}
         }
-        
+
         # {{{ update according the most significant p.value
         ## check convergence
         if(na.omit){
@@ -514,11 +512,13 @@ modelsearch2.default <- function(x, link, data = NULL,
         res.search$dt.test[,c("selected") := .I==index.rm*(1-cv)]
         res.search$dt.test[,c("nTests") := .N]
         setkey(res.search$dt.test,statistic)
+        rowSelected <- res.search$dt.test[, .I[.SD$selected==TRUE]]
+		
         ls.seqTests[[iStep]] <- copy(res.search$dt.test)
         if(method.p.adjust == "max"){
             ls.seqIID[[iStep]] <- res.search$iid
             ls.seqSigma[[iStep]] <- res.search$Sigma
-            vec.seqSelected <- c(vec.seqSelected,ls.seqTests[[iStep]][.SD$selected==TRUE,link])
+            vec.seqSelected <- c(vec.seqSelected,ls.seqTests[[iStep]][rowSelected,link])
             vec.quantiles <- setNames(rep(NA, length(link)), link)
             vec.quantiles[res.search$dt.test$link] <- res.search$dt.test$quantile
             M.seqQuantile <- cbind(M.seqQuantile, step = vec.quantiles)            
@@ -533,13 +533,14 @@ modelsearch2.default <- function(x, link, data = NULL,
             iDirective <- iDirective[-index.rm]            
         }
         ls.seqModels[[iStep]] <- iObject
-   
+
         ## display results
         if(trace > 0){
             if(cv==FALSE){
-                cat("add ",ls.seqTests[[iStep]][.SD$selected==TRUE][["link"]],
-                    " (statistic = ",ls.seqTests[[iStep]][.SD$selected==TRUE][["statistic"]],
-                    ", adjusted.p.value = ",ls.seqTests[[iStep]][.SD$selected==TRUE][["adjusted.p.value"]],
+                
+                cat("add ",ls.seqTests[[iStep]][rowSelected, .SD$link],
+                    " (statistic = ",ls.seqTests[[iStep]][rowSelected,.SD$statistic],
+                    ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected,.SD$adjusted.p.value],
                     ")\n",sep="")
             }else{
                 if(test.na){

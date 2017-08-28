@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: aug 28 2017 (09:28) 
+## last-updated: aug 28 2017 (11:42) 
 ##           By: Brice Ozenne
-##     Update #: 146
+##     Update #: 185
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -99,18 +99,14 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     
     # {{{ extract data
     if(is.null(data)){
-        if("lvmfit" %in% class(x)){
-            data <- model.frame(x, all = TRUE)
-        }else{
-            data <- eval(x$call$data)
-        }
-    }
-    if(is.data.table(data)){
-        data <- copy(data)
+        myData <- extractData(x, coxExpand = FALSE, convert2dt = TRUE) 
+    }else if(is.data.table(data)){
+        myData <-  copy(data)
     }else{
-        data <- as.data.table(data)
+        myData <-  as.data.table(data)
     }
-    n.obs <- NROW(data)
+    
+    n.obs <- NROW(myData)
     if(any(class(x) %in% "lme")){
         getCoef <- nlme::fixef
     }else{
@@ -121,56 +117,66 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     n.coef <- length(coef.x)
     # }}}
 
+    # {{{ extract model
+    if("lvmfit" %in% class(x)){
+        modelName <- as.character(x$call$x)
+        if(modelName %in% ls() == FALSE){
+            assign(modelName, value = findINparent(modelName))
+        }         
+    }
+    # }}}
+
     # {{{ define the grouping level for the data
     if(is.null(grouping)){
         if(any(class(x)%in%c("lme","gls","nlme"))){
-            data[, c("XXXgroupingXXX") := as.vector(apply(x$groups,2,interaction))]
+            myData[, c("XXXgroupingXXX") := as.vector(apply(x$groups,2,interaction))]
         }else{
-            data[, c("XXXgroupingXXX") := 1:NROW(data)]
+            myData[, c("XXXgroupingXXX") := 1:n.obs]
         }
         grouping <- "XXXgroupingXXX"        
     }else{
         if(length(grouping)>1){
             stop("grouping must refer to only one variable \n")
         }
-        if(grouping %in% names(data) == FALSE){
+        if(grouping %in% names(myData) == FALSE){
             stop("variable defined in grouping not found in data \n")
         }
     }
-    data[, c(grouping) := as.character(.SD$grouping)]
-    Ugrouping <- unique(data[[grouping]])
+    myData[, c(grouping) := as.character(.SD[[grouping]])]
+    Ugrouping <- unique(myData[[grouping]])
     n.group <- length(Ugrouping)
     # }}}
-    
+
     # {{{ warper
-    warper <- function(i){ # i <- 1
-        xnew <- try(update(x, data = data[data[[grouping]]!=i,]), silent = TRUE)
-        if(class(xnew)!="try-error"){
-            return(getCoef(xnew))
-        }else{
+    warper <- function(i){ # i <- "1"
+        assign(as.character(x$call$data), value = myData[myData[[grouping]]!=i,])
+        xnew <- try(update(x),silent = TRUE)
+        if("try-error" %in% class(xnew)){
             return(rep(NA, n.coef))
+        }else{
+            return(getCoef(xnew))
         }
-        ## return(c(coef(xnew)-coef.x,
-        ##          mu = predict(xnew, data = data[i,,drop=FALSE]))
-        ##        )
     }
+    # warper("2")
     # }}}
+
+
     
     # {{{ parallel computations: get jackknife coef
-   ## if(ncpus>1){
-        if(initCpus){
-            cl <- parallel::makeCluster(ncpus)
-            doSNOW::registerDoSNOW(cl)
-        }
+    if(ncpus>1){
+    if(initCpus){
+        cl <- parallel::makeCluster(ncpus)
+        doSNOW::registerDoSNOW(cl)
+    }
     
-        if(trace > 0){
-            cat("jacknife \n")
-            pb <- utils::txtProgressBar(max = n.group, style = 3)
-            progress <- function(n) setTxtProgressBar(pb, n)
-            opts <- list(progress = progress)
-        }else{
-            opts <- NULL
-        }
+    if(trace > 0){
+        cat("jacknife \n")
+        pb <- utils::txtProgressBar(max = n.group, style = 3)
+        progress <- function(n) setTxtProgressBar(pb, n)
+        opts <- list(progress = progress)
+    }else{
+        opts <- NULL
+    }
 
 
     estimator <- as.character(x$call[[1]]) 
@@ -216,11 +222,17 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
         parallel::stopCluster(cl)
     }
     if(trace > 0){ close(pb) }                                           
+
+    }else{
+        if(trace>0){
+            requireNamespace("pbapply")
+            coefJack <- pblapply(Ugrouping, warper)
+        }else{
+            coefJack <- lapply(Ugrouping, warper)
+        }
+        coefJack <- do.call(rbind, coefJack)
+    }
     rownames(coefJack) <- 1:n.group
-       ## }else{
-       ##     coefJack <- lapply(Ugrouping, warper)
-       ##     coefJack <- do.call(rbind, coefJack)
-       ## }
     # }}}
 
     # {{{ post treatment: from jackknife coef to IF

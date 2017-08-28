@@ -139,7 +139,8 @@ createGrid <- function(n, xmin, xmax, plot = FALSE){
     grid[, c("x_max") := .SD$x+by/2]
     grid[, c("y_max") := .SD$y+by/2]
     grid[, c("weight") := 1]
-    grid[.SD$y == .SD$height & .SD$y_max>.SD$x_min, c("weight") := 1/2]
+	indexYheight <- grid[,.I[.SD$y == .SD$height]]
+    grid[indexYheight & .SD$y_max>.SD$x_min, c("weight") := 1/2]
     grid[, c("index") := 1:.N]
     #grid[x==0&y==0,c("y_min","ymax",weight) := c(0,0,0)]
 

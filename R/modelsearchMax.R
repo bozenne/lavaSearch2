@@ -4,9 +4,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: aug 28 2017 (09:30) 
+## last-updated: aug 28 2017 (11:42) 
 ##           By: Brice Ozenne
-##     Update #: 380
+##     Update #: 404
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -83,7 +83,7 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                 out$dt[1, c("coefBeta") := new.coef]
                 out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                 SeBeta <- sqrt(sum(out$iid^2,na.rm=TRUE)/sum(!is.na(out$iid))) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
-                out$dt[1, c("statistic") := abs(.SD$coefBeta/.SD$SeBeta)]               
+                out$dt[1, c("statistic") := abs(.SD$coefBeta/SeBeta)]               
             }
         }
         # }}}
@@ -92,68 +92,80 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     # }}}
     
     # {{{ parallel computations
-    if(initCpus){
-        cl <- parallel::makeCluster(ncpus)
-        doSNOW::registerDoSNOW(cl)
-    }
+    if(ncpus>1){
+
+        FCTcombine <- function(res1,res2){
+            res <- list(dt = rbind(res1$dt,res2$dt),
+                        iid = cbind(res1$iid,res2$iid))
+            return(res)
+        }
+
+        if(initCpus){
+            cl <- parallel::makeCluster(ncpus)
+            doSNOW::registerDoSNOW(cl)
+        }
     
-    if(trace > 0){
-        cat("gather influence functions \n")
-        pb <- utils::txtProgressBar(max = n.link, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-    }else{
-        opts <- NULL
-    }
+        if(trace > 0){
+            cat("gather influence functions \n")
+            pb <- utils::txtProgressBar(max = n.link, style = 3)
+            progress <- function(n) setTxtProgressBar(pb, n)
+            opts <- list(progress = progress)
+        }else{
+            opts <- NULL
+        }
 
-    FCTcombine <- function(res1,res2){
-        res <- list(dt = rbind(res1$dt,res2$dt),
-                    iid = cbind(res1$iid,res2$iid))
-        return(res)
-    }
-
-    vec.packages <- c("lavaSearch2", "data.table", packages)
-    i <- NULL # for CRAN check
-    res <- foreach::`%dopar%`(
-                        foreach::foreach(i = 1:n.link, .packages =  vec.packages,
-                                        # .export = c("ls.LVMargs"),
-                                         .combine = FCTcombine,
-                                         .options.snow = opts),
-                        {
-                            return(warper(i))
-                        })
+        vec.packages <- c("lavaSearch2", "data.table", packages)
+        i <- NULL # for CRAN check
+        res <- foreach::`%dopar%`(
+                            foreach::foreach(i = 1:n.link, .packages =  vec.packages,
+                                             # .export = c("ls.LVMargs"),
+                                             .combine = FCTcombine,
+                                             .options.snow = opts),
+                            {
+                                return(warper(i))
+                            })
    
+        if(trace > 0){  close(pb) }                                           
+    }else{
+        if(trace>0){
+            requireNamespace("pbapply")
+            coefJack <- pblapply(1:n.link, warper)
+        }else{
+            coefJack <- lapply(1:n.link, warper)
+        }
+        res <- list(dt = data.table::rbindlist(lapply(coefJack,"[[","dt")),
+                    iid = do.call(cbind,lapply(coefJack,"[[","iid")))
+    }
     dt.test <- cbind(link = link, res$dt)
     iid.link <- res$iid
     
-    if(trace > 0){  close(pb) }                                           
-
     # }}}
 
     # {{{ p.value
     df.model <- df.residual(x, conservative = TRUE)
+    indexCV <- dt.test[, .I[.SD$convergence==0]]
 
     if(is.null(df.model)){
-        dt.test[.SD$convergence==0, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
+        dt.test[indexCV, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
     }else{
-        dt.test[.SD$convergence==0, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
+        dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
     }
     # }}}
 
     # {{{ adjust p.value
     if(method.p.adjust == "max"){
-        nameN0 <- dt.test[convergence==0][["link"]]
+        nameN0 <- dt.test[indexCV, .SD$link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
         resQmax <- calcDistMax(link = nameN0, statistic = statisticN0,
                                iid = iid.link, seqIID = seqIID, seqSelected = seqSelected, seqQuantile = seqQuantile, 
                                df = df.model, method = method.max, alpha = alpha,
                                ncpus = ncpus, initCpus = FALSE, n.sim = n.sim, trace = trace)
 
-        dt.test[convergence==0,c("adjusted.p.value") := resQmax$p.adjust]
-        dt.test[convergence==0,c("quantile") := resQmax$z]
+        dt.test[indexCV,c("adjusted.p.value") := resQmax$p.adjust]
+        dt.test[indexCV,c("quantile") := resQmax$z]
         Sigma <- resQmax$Sigma
-        rownames(Sigma) <- dt.test[convergence==0][["link"]]
-        colnames(Sigma) <- dt.test[convergence==0][["link"]]
+        rownames(Sigma) <- dt.test[indexCV,.SD$link]
+        colnames(Sigma) <- dt.test[indexCV,.SD$link]
         
         if(initCpus){
             parallel::stopCluster(cl)

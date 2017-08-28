@@ -106,8 +106,9 @@ res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 library(survival)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
-modelsearch2(m, link = c(status~epicel,status~sex),
+res <- modelsearch2(m, link = c(status~epicel,status~sex),
              method.iid = method.iid, packages = "survival")
+res
 
 #### LVM ####
 mSim <- lvm()
