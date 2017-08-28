@@ -21,12 +21,14 @@
 Approximate the degree of freedoms of a model
 }
 \examples{
-n <- 20
+n <- 1000
 
 set.seed(10)
-m <- lvm(Y~X1+X2+X3)
+m <- lvm(Y~X1+X2+X3+X4)
 d <- sim(m, n)
 e <- estimate(m, data = d)
 df.residual(e, conservative = FALSE)
 df.residual(e, conservative = TRUE)
+
+
 }

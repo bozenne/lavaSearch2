@@ -225,7 +225,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         }
         attr(iid.FCT,"method.iid") <- "iidJack"
     }
-    
+
     #### run modelsearch ####
     out <- .modelsearch2(x, 
                          link = link, restricted = restricted, directive = directive,
@@ -385,7 +385,7 @@ modelsearch2.default <- function(x, link, data = NULL,
                           alpha = 0.05, method.max = "integration", 
                           ncpus = 1,
                           display.warnings = TRUE, trace = 1, export.iid = FALSE){
-    
+
     # {{{ preliminary tests    
     method.max <- match.arg(method.max, lava.options()$calcDistMax.method)
     statistic <-  match.arg(statistic, choices = c("score","LR", "Wald"))    

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: aug 28 2017 (11:47) 
+## last-updated: aug 28 2017 (13:34) 
 ##           By: Brice Ozenne
-##     Update #: 186
+##     Update #: 193
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -117,8 +117,8 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     n.coef <- length(coef.x)
     # }}}
 
-    # {{{ extract model
-    if("lvmfit" %in% class(x)){
+    # {{{ extract model (if defined by a variable)
+    if("lvmfit" %in% class(x) && "lvm" %in% class(x$call$x) == FALSE){
         modelName <- as.character(x$call$x)
         if(modelName %in% ls() == FALSE){
             assign(modelName, value = findINparent(modelName))
@@ -149,8 +149,9 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
 
     # {{{ warper
     warper <- function(i){ # i <- "1"
-        assign(as.character(x$call$data), value = myData[myData[[grouping]]!=i,])
-        xnew <- try(update(x),silent = TRUE)
+#        assign(as.character(x$call$data), value = myData[myData[[grouping]]!=i,])
+#        xnew <- try(update(x),silent = TRUE)        
+        xnew <- try(update(x, data = myData[myData[[grouping]]!=i,]),silent = TRUE)
         if("try-error" %in% class(xnew)){
             return(rep(NA, n.coef))
         }else{

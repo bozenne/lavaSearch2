@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: jun 27 2017 (11:38) 
+## last-updated: aug 28 2017 (12:05) 
 ##           By: Brice Ozenne
-##     Update #: 21
+##     Update #: 23
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,12 +26,13 @@
 #' n <- 20
 #' 
 #' set.seed(10)
-#' m <- lvm(Y~X1+X2+X3)
+#' m <- lvm(Y~X1+X2+X3+X4)
 #' d <- sim(m, n)
 #' e <- estimate(m, data = d)
 #' df.residual(e, conservative = FALSE)
 #' df.residual(e, conservative = TRUE)
-
+#'
+#' 
 #' @rdname df.residual
 #' @method df.residual lvmfit
 #' @export
