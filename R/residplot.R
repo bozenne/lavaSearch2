@@ -1,4 +1,4 @@
-### fitplot.R --- 
+### residplot.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
@@ -46,7 +46,7 @@
 #' dd <- sim(m,100) ## Simulate 100 observations from model
 #' e <- estimate(m, dd) ## Estimate parameters
 #'
-#' res <- fitplot(e)
+#' res <- residplot(e)
 #' residplot(e, obs.variables = "x1")
 #'
 #' m <- lvm(y~x)
@@ -115,7 +115,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
     #predicted[, "XXXXIdXXXX" := 1:.N]
 
     ## residuals values
-    predicted <- as.data.table(residuals(object)[,res.variables])
+    predicted <- as.data.table(stats::residuals(object)[,res.variables])
     names(predicted) <- res.variables
     predicted[, "XXXXIdXXXX" := 1:.N]
 
@@ -133,12 +133,13 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
             by = "endogenous"]
     
     ## display
-    gg <- ggplot(dtL.all, aes(x = observed, y = fitted))
+    gg <- ggplot(dtL.all, aes_string(x = "observed", y = "fitted"))
     gg <- gg + geom_point()
     if(smooth.mean){
         gg <- gg + geom_smooth(method = "lm",aes(color = "mean"))
     }
     if(smooth.sd){
+        sdY <- NULL ## for CRAN check (don't want to move to aes_string because color is indeed a character)
         gg <- gg + geom_line(aes(y = sdY, color = "standard devation"))
     }
     if(is.null(ncol)){
@@ -160,7 +161,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
 smoothSD <- function(Y, time, sd.kernel, kernel, plot.weights){
 
     n <- length(Y)    
-    dt <- data.table(Y=Y,time=scale(time, center = median(time), scale = mad(time)), index = 1:n)
+    dt <- data.table(Y=Y,time=scale(time, center = stats::median(time), scale = stats::mad(time)), index = 1:n)
     dt[,time:=time-min(time)]
     setkey(dt,time)
     
@@ -169,7 +170,7 @@ smoothSD <- function(Y, time, sd.kernel, kernel, plot.weights){
         #weight[weight<1e-6] <- 0
         weight <- weight/sum(weight)
         if(plot.weights){plot(weight)}
-        w.mean <- weighted.mean(Y, weight)
+        w.mean <- stats::weighted.mean(Y, weight)
         w.sd <- sqrt(sum(weight * (Y - w.mean)^2))
         return(w.sd)
     })
@@ -177,4 +178,4 @@ smoothSD <- function(Y, time, sd.kernel, kernel, plot.weights){
 }
 
 #----------------------------------------------------------------------
-### fitplot.R ends here
+### residplot.R ends here

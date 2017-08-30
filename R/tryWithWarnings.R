@@ -39,6 +39,7 @@
 ##' tryWithWarnings(FctTest(xxxx))
 ##'
 ##' @author Brice Ozenne
+##' @export
 tryWithWarnings <- function(expr) {
     myWarnings <- NULL
     myError <- NULL

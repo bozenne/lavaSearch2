@@ -93,6 +93,8 @@
 iidJack <- function(x,...) UseMethod("iidJack")
 # }}}
 
+#' @rdname iidJack
+#' @export
 iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
                             keep.warnings=TRUE, keep.error=TRUE,
                             initCpus=TRUE,trace=TRUE,...) {

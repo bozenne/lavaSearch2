@@ -41,7 +41,7 @@
 #' @rdname findNewLink
 findNewLink.lvm <- function(x, data = NULL,
                             exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
-                            output = "names"){
+                            output = "names", ...){
 
      match.arg(output, choices = c("names","index"))
 
