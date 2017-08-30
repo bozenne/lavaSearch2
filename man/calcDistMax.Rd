@@ -83,4 +83,3 @@ rbind(integration = c(r1$p.adjust, quantile = r1$z),
       boostrap    = c(r4$p.adjust, quantile = r4$z))
 
 }
-

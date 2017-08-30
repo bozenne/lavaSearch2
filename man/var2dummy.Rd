@@ -41,4 +41,3 @@ var2dummy(m, var = c("X1","X2"))
 }
 
 }
-

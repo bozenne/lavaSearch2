@@ -35,4 +35,3 @@ tryWithWarnings(FctTest(xxxx))
 \author{
 Brice Ozenne
 }
-

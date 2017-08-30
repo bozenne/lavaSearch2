@@ -52,4 +52,3 @@ summary(cvCheck(m, dd, ncpus = 1, n.init = 10))
 
 
 }
-

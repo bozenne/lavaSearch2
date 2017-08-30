@@ -52,4 +52,3 @@ initVar_links(c(y ~ x1,y ~ x2), format = "formula")
 initVar_links(c("y ~ x1","y~ x2"), format = "txt.formula")
 initVar_links(c(y ~ x1,y ~ x2), format = "txt.formula")
 }
-

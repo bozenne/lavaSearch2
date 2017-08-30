@@ -9,7 +9,7 @@ findNewLink(x, ...)
 
 \method{findNewLink}{lvm}(x, data = NULL, exclude.var = NULL,
   rm.latent_latent = FALSE, rm.endo_endo = FALSE, rm.latent_endo = FALSE,
-  output = "names")
+  output = "names", ...)
 }
 \arguments{
 \item{x}{a lvm model}
@@ -53,4 +53,3 @@ findNewLink(m, rm.endo = TRUE)
 findNewLink(m, rm.endo = TRUE, output = "index")
 }
 }
-

@@ -14,4 +14,3 @@ a list
 Model searching using a likelihood ratio test
 }
 \keyword{internal}
-

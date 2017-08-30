@@ -33,4 +33,3 @@ select.response(~X1+X2)
 select.response(~X1+X2, type = "vars")
 }
 }
-

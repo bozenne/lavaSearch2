@@ -2,9 +2,14 @@
 % Please edit documentation in R/iidJack.R
 \name{iidJack}
 \alias{iidJack}
+\alias{iidJack.default}
 \title{Jacknife i.i.d. decomposition (influence function) from model object}
 \usage{
 iidJack(x, ...)
+
+\method{iidJack}{default}(x, data = NULL, grouping = NULL, ncpus = 1,
+  keep.warnings = TRUE, keep.error = TRUE, initCpus = TRUE,
+  trace = TRUE, ...)
 }
 \arguments{
 \item{x}{model object.}
@@ -88,4 +93,3 @@ iid3 <- iidJack(e2)
 apply(iid3,2,sd)
 
 }
-

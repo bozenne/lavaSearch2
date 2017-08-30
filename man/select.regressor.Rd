@@ -32,4 +32,3 @@ select.regressor(~X1+X2)
 select.regressor(~X1+X2, type = "vars")
 }
 }
-

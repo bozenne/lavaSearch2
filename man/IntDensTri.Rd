@@ -54,4 +54,3 @@ IntDensTri(mu = mu, Sigma = Sigma, n=5, xmin=c(0,0), xmax=c(10,10))-1/2
 \author{
 Brice Ozenne
 }
-

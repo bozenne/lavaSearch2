@@ -25,8 +25,9 @@ n <- 101
 #### linear regression ####
 Y1 <- rnorm(n, mean = 0)
 Y2 <- rnorm(n, mean = 0.3)
-df <- rbind(data.frame(Y=Y1,G="1",Id = 1:5),
-           data.frame(Y=Y2,G="2",Id = 1:5)
+Id <- findInterval(runif(n), seq(0.1,1,0.1))
+df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
+           data.frame(Y=Y2,G="2",Id = Id)
            )
 m.lm <- lm(Y ~ G, data = df)
 extractData(m.lm, model.frame = TRUE)
@@ -62,4 +63,3 @@ fct2 <- function(m){
 }
 fct1(m.gls)
 }
-

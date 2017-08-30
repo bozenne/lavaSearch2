@@ -2,8 +2,8 @@
 % Please edit documentation in R/degreeOfFreedom.R
 \name{df.residual}
 \alias{df.residual}
-\alias{df.residual.coxph}
 \alias{df.residual.lvmfit}
+\alias{df.residual.coxph}
 \title{Approximate degree of freedoms of a model}
 \usage{
 \method{df.residual}{lvmfit}(object, conservative, ...)
@@ -32,4 +32,3 @@ df.residual(e, conservative = TRUE)
 
 
 }
-

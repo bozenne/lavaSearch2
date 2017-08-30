@@ -8,4 +8,3 @@
 \description{
 Tools for model specification in the latent variable framework (add-on for the lava package).
 }
-

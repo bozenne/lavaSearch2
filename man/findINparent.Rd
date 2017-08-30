@@ -14,4 +14,3 @@ findINparent(name, envir)
 \description{
 Internal function
 }
-
