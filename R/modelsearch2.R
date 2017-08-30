@@ -436,19 +436,21 @@ modelsearch2.default <- function(x, link, data = NULL,
     # }}}
 
     # {{{ display a summary of the call
-    cat("\n",
-        "** Sequential variable selection using the ",statistic," statistic ** \n",
-        " Number of possible additional links         : ",length(link)," \n",
-        " Maximum number of steps                     : ",nStep,"\n",        
-        " Adjustment method for multiple comparisons  : ",method.p.adjust,"\n",
-        if(method.p.adjust=="max"){
-            paste0(" Method for extracting the influence function: ",method.iid,"\n",
-                   " Method for computing the quantile           : ",method.max,"\n",
-                   " Correction for sequential testing           : ",conditional,"\n")
-        },
-        " Confidence level                            : ",1-alpha,"\n",
-        " Number of cpus                              : ",ncpus,"\n\n",
-        sep="")
+    if(trace>0){
+        cat("\n",
+            "** Sequential variable selection using the ",statistic," statistic ** \n",
+            " Number of possible additional links         : ",length(link)," \n",
+            " Maximum number of steps                     : ",nStep,"\n",        
+            " Adjustment method for multiple comparisons  : ",method.p.adjust,"\n",
+            if(method.p.adjust=="max"){
+                paste0(" Method for extracting the influence function: ",method.iid,"\n",
+                       " Method for computing the quantile           : ",method.max,"\n",
+                       " Correction for sequential testing           : ",conditional,"\n")
+            },
+            " Confidence level                            : ",1-alpha,"\n",
+            " Number of cpus                              : ",ncpus,"\n\n",
+            sep="")
+    }
     # }}}
     
     # {{{ loop over the models
