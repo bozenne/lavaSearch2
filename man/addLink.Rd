@@ -53,3 +53,4 @@ addLink(m2, "y1", "x1")
 coef(addLink(m, "y1", "y2", covariance = TRUE))
 }
 }
+

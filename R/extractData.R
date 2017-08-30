@@ -4,24 +4,23 @@
 #' If it fails it will try to extract it by its name according to \code{model$call$data}.
 #' 
 #' @param object the fitted model.
-#' @param coxExpand should the dataset be exported as a start/stop?
-#' Otherwise it will be exported as a Surv column
+#' @param model.frame should the data be extracted after transformation (e.g. using model frame)
+#' or should the original dataset be extracted.
 #' @param convert2dt should the object containing the data be converted into a data.table?
-#' @param force if \code{TRUE} and if the first attempt to extract the data failed, 
-#' then the data are extracted using the name of the dataset.
-#' 
+#'  
 #' @examples
 #' set.seed(10)
-#' n <- 100
+#' n <- 101
 #'
 #' #### linear regression ####
 #' Y1 <- rnorm(n, mean = 0)
 #' Y2 <- rnorm(n, mean = 0.3)
-#' df <- rbind(data.frame(Y=Y1,G=1,Id = 1:5),
-#'            data.frame(Y=Y2,G=2,Id = 1:5)
+#' df <- rbind(data.frame(Y=Y1,G="1",Id = 1:5),
+#'            data.frame(Y=Y2,G="2",Id = 1:5)
 #'            )
 #' m.lm <- lm(Y ~ G, data = df)
-#' extractData(m.lm)
+#' extractData(m.lm, model.frame = TRUE)
+#' extractData(m.lm, model.frame = FALSE)
 #' 
 #' library(nlme)
 #' m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = df)
@@ -32,15 +31,17 @@
 #' library(lava)
 #' e <- estimate(lvm(Y ~ G), data = df)
 #' extractData(e)
+#' extractData(e, model.frame = TRUE)
 #' 
 #' #### survival ####
 #' library(riskRegression)
 #' library(survival)
 #' dt.surv <- sampleData(n, outcome = "survival")
 #' m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-#' extractData(m.cox)
+#' extractData(m.cox, model.frame = FALSE)
+#' extractData(m.cox, model.frame = TRUE)
 #' m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-#' xx <- extractData(m.cox)
+#' extractData(m.cox, model.frame = TRUE)
 #' 
 #' #### nested fuuctions ####
 #' fct1 <- function(m){
@@ -51,67 +52,61 @@
 #' }
 #' fct1(m.gls)
 #' @export
-extractData <- function(object, coxExpand = FALSE, force = FALSE, convert2dt = TRUE){
-  
-  ## use extractors 
-  if(any(class(object) %in% c("gls","gnls","lme","lmList","nlme","nls"))){ # nlme package
-    
-    name.data <- as.character(object$call$data)
-    
-      # assign the dataset to the object if not in the current environment
-      if(name.data %in% ls() == FALSE){
-          object$data <- findINparent(name.data, environment())
-      }
-    
-    data <- try(nlme::getData(object), silent = TRUE)
-
-  }else if(any(class(object) %in% c("coxph","cph"))){
-
-      if(coxExpand){
-          requireNamespace("riskRegression")
-          data <- try(riskRegression::CoxDesign(object), silent = TRUE)
-          strataVar <- riskRegression::CoxVariableName(object)$stratavars.original
-    
-          if(length(strataVar)>0){ 
+extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
+   
+    if(model.frame){ ## use extractors 
+        if(any(class(object) %in% c("gls","gnls","lme","lmList","nlme","nls"))){ # nlme package
       
-              if(as.character(object$call$data) %in% ls()){
-                  data2 <- eval(object$call$data)
-              }else{
-                  data2 <- findINparent(as.character(object$call$data), environment())
-              }
+            name.data <- as.character(object$call$data)
       
-              data2 <- as.data.table(data2)
-              data <- cbind(data, data2[,.SD,.SDcols = strataVar])
-              
-          }
-          
-      }else{
-          data <- try(model.frame(object), silent = TRUE)
-          if("try-error" %in% class(data) == FALSE){
-              data <- as.data.table(data.frame(as.matrix(data[[1]]),data[-1]))
-          }
-      }
+            # assign the dataset to the object if not in the current environment
+            if(name.data %in% ls() == FALSE){
+                object$data <- findINparent(name.data, environment())
+            }
+      
+            data <- try(nlme::getData(object), silent = TRUE)
+      
+        }else if(any(class(object) %in% c("coxph","cph"))){
+      
+            requireNamespace("riskRegression")
+            data <- try(riskRegression::CoxDesign(object), silent = TRUE)
+            strataVar <- riskRegression::CoxVariableName(object)$stratavars.original
+      
+            if(length(strataVar)>0){ 
+        
+                if(as.character(object$call$data) %in% ls()){
+                    data2 <- eval(object$call$data)
+                }else{
+                    data2 <- findINparent(as.character(object$call$data), environment())
+                }
+        
+                data2 <- as.data.table(data2)
+                data <- cbind(data, data2[,.SD,.SDcols = strataVar])
+        
+            }
+        }else{
+            data <- try(model.frame(object), silent = TRUE)
+        }
     
-  }else{
-      data <- try(model.frame(object), silent = TRUE)
-  }
-  
-  ## check error
-  if(force == FALSE && "try-error" %in% class(data)){
-    stop(data)
-  }
-  
-  
-  ## recovery solution (could also try to search for object$data if not in object$call$data)
-  if("try-error" %in% class(data) || class(data) %in% c("data.frame","data.table") == FALSE){
-    data <- findINparent(as.character(object$call$data), environment())
+        ## check error
+        if("try-error" %in% class(data)){
+            stop(data)
+        }
     
-    if(is.null(data)){
-        stop("Could not extract the data from the model \n",
-             "Specify the dataset used to fit the model using the argument \'data\' \n")
-    }
-  }
-  
+    }else{
+
+        if(length(object$call$data)>1){      ## search for dataset by name 
+            data <- object$call$data
+            
+        }else if(length(object$call$data)==1){
+            data <- findINparent(as.character(object$call$data), environment())
+            # (could also try to search for object$data if not in object$call$data)            
+        }else{
+            stop("Could not find the data in $call$data \n")            
+        }   
+
+  }  
+    
   ## conversion to data.table
   if(convert2dt){
     if(data.table::is.data.table(data)){

@@ -2,13 +2,9 @@
 % Please edit documentation in R/iidJack.R
 \name{iidJack}
 \alias{iidJack}
-\alias{iidJack.default}
 \title{Jacknife i.i.d. decomposition (influence function) from model object}
 \usage{
 iidJack(x, ...)
-
-\method{iidJack}{default}(x, data = NULL, grouping = NULL, ncpus = 1,
-  initCpus = TRUE, trace = TRUE, ...)
 }
 \arguments{
 \item{x}{model object.}
@@ -20,6 +16,10 @@ iidJack(x, ...)
 \item{grouping}{variable defining cluster of observations that will be simultaneously removed by the jackknife.}
 
 \item{ncpus}{number of cpus available for parallel computation.}
+
+\item{keep.warnings}{keep warning messages obtained when estimating the model with the jackknife samples.}
+
+\item{keep.error}{keep error messages obtained when estimating the model with the jackknife samples.}
 
 \item{initCpus}{should the parallel computation be initialized?}
 
@@ -37,7 +37,7 @@ m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
 d <- sim(m,n)
 g <- glm(y~x+z,data=d,family="binomial")
-iid1 <- iidJack(g)
+iid1 <- iidJack(g, ncpus = 1)
 iid2 <- iid(g)
 quantile(iid1-iid2)
 vcov(g)
@@ -51,7 +51,7 @@ data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 iid1 <- iidJack(m)
 iid2 <- iidCox(m)$IFbeta
-  
+
 apply(iid1,2,sd)
 
 print(iid2)
@@ -88,3 +88,4 @@ iid3 <- iidJack(e2)
 apply(iid3,2,sd)
 
 }
+

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: aug 28 2017 (13:34) 
+## last-updated: aug 29 2017 (10:39) 
 ##           By: Brice Ozenne
-##     Update #: 193
+##     Update #: 239
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,8 @@
 #' @param data dataset used to perform the jacknife.
 #' @param grouping variable defining cluster of observations that will be simultaneously removed by the jackknife.
 #' @param ncpus number of cpus available for parallel computation.
+#' @param keep.warnings keep warning messages obtained when estimating the model with the jackknife samples.
+#' @param keep.error keep error messages obtained when estimating the model with the jackknife samples.
 #' @param initCpus should the parallel computation be initialized?
 #' @param trace should a progress bar be used to trace the execution of the function
 #' @param ... additional arguments.
@@ -37,7 +39,7 @@
 #' distribution(m, ~y+z) <- binomial.lvm("logit")
 #' d <- sim(m,n)
 #' g <- glm(y~x+z,data=d,family="binomial")
-#' iid1 <- iidJack(g)
+#' iid1 <- iidJack(g, ncpus = 1)
 #' iid2 <- iid(g)
 #' quantile(iid1-iid2)
 #' vcov(g)
@@ -51,7 +53,7 @@
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 #' iid1 <- iidJack(m)
 #' iid2 <- iidCox(m)$IFbeta
-#'   
+#'
 #' apply(iid1,2,sd)
 #'
 #' print(iid2)
@@ -91,15 +93,15 @@
 iidJack <- function(x,...) UseMethod("iidJack")
 # }}}
 
-#' @rdname iidJack
-#' @export
-iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trace=TRUE,...) {
+iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
+                            keep.warnings=TRUE, keep.error=TRUE,
+                            initCpus=TRUE,trace=TRUE,...) {
     
     estimate.lvm <- lava_estimate.lvm
-    
+
     # {{{ extract data
     if(is.null(data)){
-        myData <- extractData(x, coxExpand = FALSE, convert2dt = TRUE) 
+        myData <- extractData(x, model.frame = FALSE, convert2dt = TRUE) 
     }else if(is.data.table(data)){
         myData <-  copy(data)
     }else{
@@ -117,12 +119,12 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     n.coef <- length(coef.x)
     # }}}
 
-    # {{{ extract model (if defined by a variable)
-    if("lvmfit" %in% class(x) && "lvm" %in% class(x$call$x) == FALSE){
-        modelName <- as.character(x$call$x)
+    # {{{ update formula/model when defined by a variable and not in the current namespace
+    if(length(x$call[[2]])==1){
+        modelName <- as.character(x$call[[2]])
         if(modelName %in% ls() == FALSE){
             assign(modelName, value = findINparent(modelName))
-        }         
+        }
     }
     # }}}
 
@@ -148,91 +150,93 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     # }}}
 
     # {{{ warper
-    warper <- function(i){ # i <- "1"
-#        assign(as.character(x$call$data), value = myData[myData[[grouping]]!=i,])
-#        xnew <- try(update(x),silent = TRUE)        
-        xnew <- try(update(x, data = myData[myData[[grouping]]!=i,]),silent = TRUE)
-        if("try-error" %in% class(xnew)){
-            return(rep(NA, n.coef))
+    warper <- function(i){ # i <- "31"
+        xnew <- tryWithWarnings(update(x, data = myData[myData[[grouping]]!=i,]))
+        if(!is.null(xnew$error)){
+            xnew$value <- rep(NA, n.coef)
         }else{
-            return(getCoef(xnew))
+            xnew$value <- getCoef(xnew$value)
         }
+        return(xnew)
     }
-    # warper("2")
+    # warper("31")
     # }}}
 
 
     
     # {{{ parallel computations: get jackknife coef
     if(ncpus>1){
-    if(initCpus){
-        cl <- parallel::makeCluster(ncpus)
-        doSNOW::registerDoSNOW(cl)
-    }
+        if(initCpus){
+            cl <- parallel::makeCluster(ncpus)
+            doSNOW::registerDoSNOW(cl)
+        }
+ 
+        if(trace > 0){
+            cat("jacknife \n")
+            pb <- utils::txtProgressBar(max = n.group, style = 3)
+            progress <- function(n) setTxtProgressBar(pb, n)
+            opts <- list(progress = progress)
+        }else{
+            opts <- NULL
+        }
+
+
+        estimator <- as.character(x$call[[1]]) 
+
+        vec.packages <- c("lava")
+        possiblePackage <- gsub("package:","",utils::getAnywhere(estimator)$where[1])
+        existingPackage <- as.character(utils::installed.packages()[,"Package"])
+
+        ls.call <- as.list(x$call)
+        test.length <- which(unlist(lapply(ls.call, length))==1)
+        test.class <- which(unlist(lapply(ls.call, function(cc){
+            (class(c) %in% c("numeric","character","logical")) == FALSE
+        })))
+        test.class <- which(unlist(lapply(ls.call, class)) %in% c("numeric","character","logical") == FALSE)
     
-    if(trace > 0){
-        cat("jacknife \n")
-        pb <- utils::txtProgressBar(max = n.group, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
+        indexExport <- intersect(test.class,test.length)
+        toExport <- sapply(ls.call[indexExport], as.character)
+    
+        if(possiblePackage %in% existingPackage){
+            vec.packages <- c(vec.packages,possiblePackage)
+        }
+        if(length(x$call$data)==1){
+            toExport <- c(toExport,as.character(x$call$data))
+        }
+        if(length(x$call$formula)==1){
+            toExport <- c(toExport,as.character(x$call$formula))
+        }
+        if(length(x$call$fixed)==1){
+            toExport <- c(toExport,as.character(x$call$fixed))        
+        }
+        toExport <- c(unique(toExport),"tryWithWarnings")
+        
+        #sapply(as.list(x$call),as.character)
+        i <- NULL # for CRAN check
+        resLoop <- foreach::`%dopar%`(
+                                foreach::foreach(i = 1:n.group, .packages =  vec.packages,
+                                                 .export = toExport,
+                                                 .options.snow = opts),{                                                      
+                                                     warper(Ugrouping[i])
+                                                 })
+    
+        if(initCpus){
+            parallel::stopCluster(cl)
+        }
+        if(trace > 0){ close(pb) }                                           
+
     }else{
-        opts <- NULL
-    }
-
-
-    estimator <- as.character(x$call[[1]]) 
-
-    vec.packages <- c("lava")
-    possiblePackage <- gsub("package:","",utils::getAnywhere(estimator)$where[1])
-    existingPackage <- as.character(utils::installed.packages()[,"Package"])
-
-    ls.call <- as.list(x$call)
-    test.length <- which(unlist(lapply(ls.call, length))==1)
-    test.class <- which(unlist(lapply(ls.call, function(cc){
-                                 (class(c) %in% c("numeric","character","logical")) == FALSE
-    })))
-    test.class <- which(unlist(lapply(ls.call, class)) %in% c("numeric","character","logical") == FALSE)
-    
-    indexExport <- intersect(test.class,test.length)
-    toExport <- sapply(ls.call[indexExport], as.character)
-    
-    if(possiblePackage %in% existingPackage){
-        vec.packages <- c(vec.packages,possiblePackage)
-    }
-    if(length(x$call$data)==1){
-        toExport <- c(toExport,as.character(x$call$data))
-    }
-    if(length(x$call$formula)==1){
-        toExport <- c(toExport,as.character(x$call$formula))
-    }
-    if(length(x$call$fixed)==1){
-        toExport <- c(toExport,as.character(x$call$fixed))        
-    }
-
-    #sapply(as.list(x$call),as.character)
-    i <- NULL # for CRAN check
-    coefJack <- foreach::`%dopar%`(
-                             foreach::foreach(i = Ugrouping, .packages =  vec.packages,
-                                              .export = toExport,
-                                              .combine = "rbind",
-                                              .options.snow = opts),{
-                                                  warper(i)
-                                              })
-    
-    if(initCpus){
-        parallel::stopCluster(cl)
-    }
-    if(trace > 0){ close(pb) }                                           
-
-    }else{
+        
         if(trace>0){
             requireNamespace("pbapply")
-            coefJack <- pbapply::pblapply(Ugrouping, warper)
+            resLoop <- pbapply::pblapply(Ugrouping, warper)
         }else{
-            coefJack <- lapply(Ugrouping, warper)
+            resLoop <- lapply(Ugrouping, warper)
         }
-        coefJack <- do.call(rbind, coefJack)
+        
+
     }
+    coefJack <- do.call(rbind, lapply(resLoop,"[[","value"))
     rownames(coefJack) <- 1:n.group
     # }}}
 
@@ -243,6 +247,18 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,initCpus=TRUE,trac
     colnames(iidJack) <- names.coef
     # }}}
 
+    if(keep.warnings){
+        ls.warnings <- lapply(resLoop,"[[","warnings")
+        names(ls.warnings) <- 1:n.group
+        ls.warnings <- Filter(Negate(is.null), ls.warnings)
+        attr(iidJack,"warnings") <- ls.warnings
+    }
+    if(keep.error){
+        ls.error <- lapply(resLoop,"[[","error")
+        names(ls.error) <- 1:n.group
+        ls.error <- Filter(Negate(is.null), ls.error)
+        attr(iidJack,"error") <- ls.error
+    }
     return(iidJack)
 }
     

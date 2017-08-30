@@ -4,16 +4,13 @@
 \alias{extractData}
 \title{Extract data from a model}
 \usage{
-extractData(object, coxExpand = FALSE, force = FALSE, convert2dt = TRUE)
+extractData(object, model.frame = FALSE, convert2dt = TRUE)
 }
 \arguments{
 \item{object}{the fitted model.}
 
-\item{coxExpand}{should the dataset be exported as a start/stop?
-Otherwise it will be exported as a Surv column}
-
-\item{force}{if \code{TRUE} and if the first attempt to extract the data failed, 
-then the data are extracted using the name of the dataset.}
+\item{model.frame}{should the data be extracted after transformation (e.g. using model frame)
+or should the original dataset be extracted.}
 
 \item{convert2dt}{should the object containing the data be converted into a data.table?}
 }
@@ -23,16 +20,17 @@ If it fails it will try to extract it by its name according to \code{model$call$
 }
 \examples{
 set.seed(10)
-n <- 100
+n <- 101
 
 #### linear regression ####
 Y1 <- rnorm(n, mean = 0)
 Y2 <- rnorm(n, mean = 0.3)
-df <- rbind(data.frame(Y=Y1,G=1,Id = 1:5),
-           data.frame(Y=Y2,G=2,Id = 1:5)
+df <- rbind(data.frame(Y=Y1,G="1",Id = 1:5),
+           data.frame(Y=Y2,G="2",Id = 1:5)
            )
 m.lm <- lm(Y ~ G, data = df)
-extractData(m.lm)
+extractData(m.lm, model.frame = TRUE)
+extractData(m.lm, model.frame = FALSE)
 
 library(nlme)
 m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = df)
@@ -43,15 +41,17 @@ extractData(m.lme)
 library(lava)
 e <- estimate(lvm(Y ~ G), data = df)
 extractData(e)
+extractData(e, model.frame = TRUE)
 
 #### survival ####
 library(riskRegression)
 library(survival)
 dt.surv <- sampleData(n, outcome = "survival")
 m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-extractData(m.cox)
+extractData(m.cox, model.frame = FALSE)
+extractData(m.cox, model.frame = TRUE)
 m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-xx <- extractData(m.cox)
+extractData(m.cox, model.frame = TRUE)
 
 #### nested fuuctions ####
 fct1 <- function(m){
@@ -62,3 +62,4 @@ fct2 <- function(m){
 }
 fct1(m.gls)
 }
+

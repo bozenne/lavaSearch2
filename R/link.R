@@ -37,6 +37,7 @@
 `findNewLink` <-
   function(x, ...) UseMethod("findNewLink")
 
+#' @export
 #' @rdname findNewLink
 findNewLink.lvm <- function(x, data = NULL,
                             exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,

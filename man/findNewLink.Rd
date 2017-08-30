@@ -53,3 +53,4 @@ findNewLink(m, rm.endo = TRUE)
 findNewLink(m, rm.endo = TRUE, output = "index")
 }
 }
+

@@ -4,9 +4,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: aug 28 2017 (11:48) 
+## last-updated: aug 29 2017 (10:45) 
 ##           By: Brice Ozenne
-##     Update #: 405
+##     Update #: 410
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -55,7 +55,6 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     
     # {{{ wraper
     warper <- function(iterI){ # iterI <- 2
-        
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
                                     adjusted.p.value = as.numeric(NA),
@@ -81,6 +80,8 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                 rdf <- df.residual(newfit, conservative = FALSE)
                 
                 out$dt[1, c("coefBeta") := new.coef]
+                # test <- iidJack(newfit)
+                
                 out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                 SeBeta <- sqrt(sum(out$iid^2,na.rm=TRUE)/sum(!is.na(out$iid))) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
                 out$dt[1, c("statistic") := abs(.SD$coefBeta/SeBeta)]               

@@ -221,7 +221,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         attr(iid.FCT,"method.iid") <- "iid"
     }else if(method.iid == "iidJack"){
         iid.FCT <- function(x){
-            iidJack(x)
+            iidJack(x, keep.warnings = FALSE, keep.error = FALSE, trace = FALSE)
         }
         attr(iid.FCT,"method.iid") <- "iidJack"
     }
@@ -341,7 +341,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             attr(iid.FCT, "method.iid") <- "iid"
         }else if(method.iid == "iidJack"){
             iid.FCT <- function(x){
-                iidJack(x)
+                iidJack(x, keep.warnings = FALSE, keep.error = FALSE, trace = FALSE)
             }
             attr(iid.FCT, "method.iid") <- "iidJack"
         }
@@ -357,7 +357,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             attr(iid.FCT, "method.iid") <- "iid"
         }else if(method.iid == "iidJack"){
             iid.FCT <- function(x){
-                iidJack(x)
+                iidJack(x, keep.warnings = FALSE, keep.error = FALSE, trace = FALSE)
             }
             attr(iid.FCT, "method.iid") <- "iidJack"
         }
@@ -504,7 +504,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             }
         }
 
-        ## identify most promising test
+        ## identify most pryomising test
         index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
 
         ## update the output

@@ -21,3 +21,4 @@ Create a mesh for the integration
 \examples{
 dt.res <- lavaSearch2:::createGrid(20, xmin = 0, xmax = 4)
 }
+

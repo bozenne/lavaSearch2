@@ -20,3 +20,4 @@ Model searching using the max statistic to retain or not a link
 \code{link{modelsearch2}}
 }
 \keyword{internal}
+
