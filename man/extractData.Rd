@@ -15,7 +15,7 @@ or should the original dataset be extracted.}
 \item{convert2dt}{should the object containing the data be converted into a data.table?}
 }
 \description{
-Extract data from a model using \code{nlme::getData}, \code{riskRegression::CoxDesign} or \code{model.frame}.. 
+Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
 If it fails it will try to extract it by its name according to \code{model$call$data}.
 }
 \examples{

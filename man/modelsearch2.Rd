@@ -10,10 +10,10 @@
 modelsearch2(x, ...)
 
 \method{modelsearch2}{lvmfit}(x, data = NULL, link = NULL,
-  method.iid = "iidJack", exclude.var = NULL, rm.latent_latent = FALSE,
+  method.iid = "iid", exclude.var = NULL, rm.latent_latent = FALSE,
   rm.endo_endo = FALSE, rm.latent_endo = FALSE, ...)
 
-\method{modelsearch2}{default}(x, link, data = NULL, method.iid = "iidJack",
+\method{modelsearch2}{default}(x, link, data = NULL, method.iid = "iid",
   statistic = "Wald", ...)
 
 .modelsearch2(x, link, restricted, directive, update.FCT, update.args, iid.FCT,
@@ -65,7 +65,7 @@ modelsearch2(x, ...)
 
 \item{na.omit}{should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.}
 
-\item{alpha}{the significance threshold for retaining a new link}
+\item{alpha}{the significance threshold for retaining a new link.}
 
 \item{method.max}{the method used to compute the distribution of the max statistic \code{integration}.}
 
@@ -101,6 +101,10 @@ res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
              method.iid = method.iid)
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
                     method.iid = method.iid)
+res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+                    nStep = 2, 
+                    method.iid = method.iid, conditional = TRUE)
+res$sequenceTest[[2]]
 
 #### Cox model ####
 library(survival)

@@ -6,8 +6,8 @@
 \usage{
 modelsearchMax(x, restricted, link, directive, packages, update.FCT,
   update.args, iid.FCT, method.p.adjust, method.max = "integration",
-  n.sim = 10000, alpha = 0.05, seqIID = list(), seqSelected = NULL,
-  seqQuantile = list(), export.iid = 1, trace = 1, ncpus = 1,
+  n.sim = 1000, alpha = 0.05, iid.previous = NULL,
+  quantile.previous = NULL, export.iid = 1, trace = 1, ncpus = 1,
   initCpus = TRUE)
 }
 \value{

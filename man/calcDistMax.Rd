@@ -2,29 +2,28 @@
 % Please edit documentation in R/calcDistMax.R
 \name{calcDistMax}
 \alias{calcDistMax}
+\alias{calcDistMaxIntegral}
+\alias{calcDistMaxBootstrap}
 \title{Adjust the p.values using the quantiles of the max statistic}
 \usage{
-calcDistMax(link, statistic, iid, seqIID, seqSelected, seqQuantile, df, method,
-  alpha, ncpus, initCpus, n.sim, trace, n.repMax = 100)
+calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
+  quantile.previous = NULL, alpha, ncpus = 1, initCpus = TRUE, trace)
+
+calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
+  quantile.previous = NULL, method, alpha, ncpus = 1, initCpus = TRUE,
+  n.sim, trace, n.repMax = 100)
 }
 \arguments{
-\item{link}{the name of the coefficients to test.}
-
 \item{statistic}{the observed statistic relative to the coefficients to test.}
 
 \item{iid}{zero-mean iid decomposition of the observed coefficients used to compute the statistic.}
 
-\item{seqIID}{zero-mean iid decomposition of the tests to condition on.}
-
-\item{seqSelected}{the vector of coefficients that have already been selected.}
-
-\item{seqQuantile}{critical threshold of the tests to condition on.
-If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.}
-
 \item{df}{the degree of freedom for the t statistic.}
 
-\item{method}{the method used to compute the p.values. Can be \code{"integration"}, \code{"boot-wild"}, or \code{"boot-norm"}.
-See the detail section.}
+\item{iid.previous}{zero-mean iid decomposition of the previous step to condition on.}
+
+\item{quantile.previous}{critical threshold of the previous step to condition on.
+If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.}
 
 \item{alpha}{the significance threshold for retaining a new link}
 
@@ -32,9 +31,12 @@ See the detail section.}
 
 \item{initCpus}{should the cpus be initialized.}
 
-\item{n.sim}{the total number of simulations.}
-
 \item{trace}{should the execution of the function be traced.}
+
+\item{method}{the method used to compute the p.values. Can be \code{"integration"}, \code{"boot-wild"}, or \code{"boot-norm"}.
+See the detail section.}
+
+\item{n.sim}{the total number of simulations.}
 
 \item{n.repMax}{the maximum number of rejection when using "\code{"boot-wild"} or \code{"boot-norm"}.}
 }
@@ -46,40 +48,62 @@ library(mvtnorm)
 
 set.seed(10)
 n <- 100
-p <- 5
+p <- 4
 link <- letters[1:p]
+n.sim <- 1e3 # number of bootstrap simulations 
 
+#### test - not conditional ####
 X.iid <- rmvnorm(n, mean = rep(0,p), sigma = diag(1,p))
 colnames(X.iid) <- link
 statistic <- setNames(1:p,link)
 
 
-\dontrun{
- n.sim <- 1e3
-}
-\dontshow{
- n.sim <- 10
-}
+r1 <- calcDistMaxIntegral(statistic = statistic, iid = X.iid, 
+            trace = FALSE, alpha = 0.05, df = 1e6)
 
-r1 <- calcDistMax(link, statistic = statistic, iid = X.iid, 
-            seqIID = NULL, seqQuantile =  NULL, method = "integration",
-            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, df = 1e6)
+r2 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            method = "naive",
+            trace = FALSE, alpha = 0.05, n.sim = n.sim)
 
-r2 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-            seqIID = NULL, seqQuantile =  NULL, method = "boot-wild",
-            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+r3 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            method = "residual",
+            trace = FALSE, alpha = 0.05, n.sim = n.sim)
 
-r3 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-            seqIID = NULL, seqQuantile =  NULL, method = "boot-norm",
-            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
-
-r4 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-            seqIID = NULL, seqQuantile =  NULL, method = "bootstrap",
-            trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+r4 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            method = "wild",
+            trace = FALSE, alpha = 0.05, initCpus = TRUE, n.sim = n.sim)
 
 rbind(integration = c(r1$p.adjust, quantile = r1$z),
-      bootWild    = c(r2$p.adjust, quantile = r2$z),
-      bootNorm    = c(r3$p.adjust, quantile = r3$z),
-      boostrap    = c(r4$p.adjust, quantile = r4$z))
+      bootNaive    = c(r2$p.adjust, quantile = r2$z),
+      bootResidual = c(r3$p.adjust, quantile = r3$z),
+      bootWild    = c(r4$p.adjust, quantile = r4$z))
+
+#### test - conditional ####
+\dontrun{
+Z.iid <- rmvnorm(n, mean = rep(0,p+1), sigma = diag(1,p+1))
+seqQuantile <- qmvnorm(p = 0.95, delta = rep(0,p+1), sigma = diag(1,p+1), 
+                    tail = "both.tails")$quantile
+
+r1c <- calcDistMaxIntegral(statistic = statistic, iid = X.iid,
+            iid.previous = Z.iid, quantile.previous =  seqQuantile, 
+            trace = FALSE, alpha = 0.05, df = NULL)
+
+r2c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "naive",
+            trace = FALSE, alpha = 0.05, n.sim = n.sim)
+
+r3c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "residual",
+            trace = FALSE, alpha = 0.05, n.sim = n.sim)
+
+r4c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+            iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "wild",
+            trace = FALSE, alpha = 0.05, n.sim = n.sim)
+
+rbind(integration = c(r1c$p.adjust, quantile = r1c$z),
+      bootNaive    = c(r2c$p.adjust, quantile = r2c$z),
+      bootResidual = c(r3c$p.adjust, quantile = r3c$z),
+      bootWild    = c(r4c$p.adjust, quantile = r4c$z))
+}
 
 }

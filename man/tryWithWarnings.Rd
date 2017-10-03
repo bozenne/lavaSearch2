@@ -30,7 +30,7 @@ FctTest <- function(x){
 tryWithWarnings(FctTest(-1))
 tryWithWarnings(FctTest(1))
 tryWithWarnings(FctTest(xxxx))
-
+' '
 }
 \author{
 Brice Ozenne

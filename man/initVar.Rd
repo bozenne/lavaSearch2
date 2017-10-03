@@ -2,14 +2,14 @@
 % Please edit documentation in R/initVar_link.R
 \name{initVar}
 \alias{initVar}
-\alias{initVar_link}
-\alias{initVar_links}
+\alias{initVarLink}
+\alias{initVarLinks}
 \title{Normalize var1 and var2}
 \usage{
-initVar_link(var1, var2, repVar1 = FALSE, format = "list",
+initVarLink(var1, var2, repVar1 = FALSE, format = "list",
   Slink = lava.options()$symbols[1], Scov = lava.options()$symbols[2])
 
-initVar_links(var1, format = "list", Slink = lava.options()$symbols[1],
+initVarLinks(var1, format = "list", Slink = lava.options()$symbols[1],
   Scov = lava.options()$symbols[2])
 }
 \arguments{
@@ -32,23 +32,23 @@ Convert var1 and var2 from formula or covariance to character
 See test file test/testthat/test-Reduce.R for examples
 }
 \examples{
-initVar_link(y ~ x1)
-initVar_link("y ~ x1")
-initVar_link(y ~ x1 + x2)
-initVar_link("y ~ x1 + x2")
-initVar_link(y ~ x1 + x2, repVar1 = TRUE)
-initVar_link(y ~ x1 + x2, repVar1 = TRUE, format = "formula")
-initVar_link(y ~ x1 + x2, repVar1 = TRUE, format = "txt.formula")
-initVar_link("y", "x1", format = "formula")
+initVarLink(y ~ x1)
+initVarLink("y ~ x1")
+initVarLink(y ~ x1 + x2)
+initVarLink("y ~ x1 + x2")
+initVarLink(y ~ x1 + x2, repVar1 = TRUE)
+initVarLink(y ~ x1 + x2, repVar1 = TRUE, format = "formula")
+initVarLink(y ~ x1 + x2, repVar1 = TRUE, format = "txt.formula")
+initVarLink("y", "x1", format = "formula")
 
-initVar_link("y ~ x1:0|1")
+initVarLink("y ~ x1:0|1")
 
-initVar_links(y ~ x1)
-initVar_links("y ~ x1")
-initVar_links(c("y ~ x1","y~ x2"))
-initVar_links(c(y ~ x1,y ~ x2))
-initVar_links(c("y ~ x1","y~ x2"), format = "formula")
-initVar_links(c(y ~ x1,y ~ x2), format = "formula")
-initVar_links(c("y ~ x1","y~ x2"), format = "txt.formula")
-initVar_links(c(y ~ x1,y ~ x2), format = "txt.formula")
+initVarLinks(y ~ x1)
+initVarLinks("y ~ x1")
+initVarLinks(c("y ~ x1","y~ x2"))
+initVarLinks(c(y ~ x1,y ~ x2))
+initVarLinks(c("y ~ x1","y~ x2"), format = "formula")
+initVarLinks(c(y ~ x1,y ~ x2), format = "formula")
+initVarLinks(c("y ~ x1","y~ x2"), format = "txt.formula")
+initVarLinks(c(y ~ x1,y ~ x2), format = "txt.formula")
 }
