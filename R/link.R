@@ -1,4 +1,5 @@
-# {{{ findNewLink
+## * findNewLink
+## ** doc findNewLink
 #' @title Find the new possible links between variables (copied from lava::modelsearch)
 #' @description Find the new possible links between variables (copied from lava::modelsearch)
 #' 
@@ -37,23 +38,25 @@
 `findNewLink` <-
   function(x, ...) UseMethod("findNewLink")
 
+## ** method findNewLink.lvm
 #' @export
 #' @rdname findNewLink
 findNewLink.lvm <- function(x, data = NULL,
                             exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
                             output = "names", ...){
 
-     match.arg(output, choices = c("names","index"))
-
+    match.arg(output, choices = c("names","index"))
     if(is.null(data)){        
-        data <- sim(x,1)
+        data <- lava::sim(x, n = 1)
     }
+   
+    ## *** convertion to dummy variable name for categorical variables
     xF <- lava_categorical2dummy(x, data)
     AP <- with(lava::index(xF$x), A + t(A) + P)
 
-    ## convertion to dummy variable name for categorical variables
+
     if(!is.null(exclude.var)){
-       exclude.var <- var2dummy(xF, exclude.var)
+        exclude.var <- var2dummy(xF, exclude.var)
     }
     
     if( any(exclude.var %in% colnames(AP) == FALSE) ){
@@ -61,7 +64,8 @@ findNewLink.lvm <- function(x, data = NULL,
         stop("unknown variable to exclude \n",
              "variable(s): \"",paste(wrong.var, collapse = "\" \""),"\"\n")
         }
-  
+
+    ## *** loop over links
     restricted <- c()
     directional <- c()
     for (i in seq_len(ncol(AP) - 1)){
@@ -100,7 +104,8 @@ findNewLink.lvm <- function(x, data = NULL,
             }
         }
     }
-  
+
+    ## *** export  
     out <- list(M.links = restricted,
                 links = NULL,
                 directional = directional)
@@ -116,10 +121,9 @@ findNewLink.lvm <- function(x, data = NULL,
    
     return(out)  
 }
-# }}}
 
-
-# {{{ addLink
+## * addLink
+## ** doc addLink
 #' @title Add a new link between two variables in a lvm
 #' @rdname addLink
 #' @description Generic interface to add links to a lvm.
@@ -158,6 +162,7 @@ findNewLink.lvm <- function(x, data = NULL,
 `addLink` <-
     function(x, ...) UseMethod("addLink")
 
+## ** method addLink.lvm
 #' @export
 #' @rdname addLink
 addLink.lvm <- function(x,
@@ -168,7 +173,7 @@ addLink.lvm <- function(x,
                         warnings = FALSE,
                         ...){
     
-    res <- initVar_link(var1, var2, format = "list")
+    res <- initVarLink(var1, var2, format = "list")
     var1 <- res$var1
     var2 <- res$var2
     
@@ -239,14 +244,14 @@ addLink.lvm <- function(x,
     return(x)
 }
 
+## ** method addLink.lvm.reduced
 #' @rdname addLink
 addLink.lvm.reduced <- function(x, ...){
   return(addLink.lvm(x, allVars = vars(x, lp = FALSE, xlp = TRUE) , ...))
 }
-# }}}
 
-
-# {{{ setLink
+## * setLink
+## ** doc setLink
 #' @title Affect a given value to a link between two variables in a lvm
 #' @name setLink
 #' @description Generic interface to set a value to a link in a lvm.
@@ -279,10 +284,11 @@ addLink.lvm.reduced <- function(x, ...){
 `setLink` <-
   function(x, ...) UseMethod("setLink")
 
+## ** method setLink.lvm
 #' @rdname setLink
 setLink.lvm <- function(x, var1, var2, value, warnings = FALSE){
 
-  res <- initVar_link(var1, var2)
+  res <- initVarLink(var1, var2)
   var1 <- res$var1
   var2 <- res$var2
   
@@ -305,7 +311,7 @@ setLink.lvm <- function(x, var1, var2, value, warnings = FALSE){
   
   return(x)
 }
-# }}}
+
 
 
 

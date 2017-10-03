@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: aug 28 2017 (12:05) 
+## last-updated: okt  3 2017 (09:50) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 24
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,7 +59,7 @@ df.residual.lvmfit <- function(object, conservative,...) {
 #' @method df.residual coxph
 #' @export
 df.residual.coxph <- function(object, ...) {
-    n <- riskRegression::CoxN(object)    
+    n <- riskRegression::coxN(object)    
     object.coef <- coef(object)
     p.effective <- length(object.coef)
     

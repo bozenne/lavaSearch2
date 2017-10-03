@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (09:52) 
 ## Version: 
-## last-updated: aug 29 2017 (10:09) 
+## last-updated: sep 13 2017 (17:43) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 16
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 ##' tryWithWarnings(FctTest(-1))
 ##' tryWithWarnings(FctTest(1))
 ##' tryWithWarnings(FctTest(xxxx))
-##'
+##'' '
 ##' @author Brice Ozenne
 ##' @export
 tryWithWarnings <- function(expr) {

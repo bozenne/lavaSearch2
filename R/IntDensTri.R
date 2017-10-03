@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: aug 28 2017 (09:50) 
+## last-updated: sep  6 2017 (12:00) 
 ##           By: Brice Ozenne
-##     Update #: 93
+##     Update #: 438
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,19 +15,39 @@
 ## 
 ### Code:
 
-
-##' @title Integration of a density over a triangle
-##'
-##' @description Integration of a density over a triangle
+# {{{ description
+##' @title Integrate a gaussian/student density over a triangle
+##' @name IntDensTri
+##' @description Consider a univariate random variable X,
+##' two multivariate random variables Y and Z,
+##' and t1 and t2 two real numbers.
+##' This function can compute either
+##' P[|X|>t1,|X]>|Y1|,...,|X]>|Yp|] if zmin is not specified,
+##' P[|Z1|<t2,...,|Zq|<t2,|X|>t1,|X]>|Y1|,...,|X]>|Yp|] if zmin is specified.
 ##' 
-##' @param mu the mean vector
-##' @param Sigma the variance-covariance matrix
-##' @param df degree of freedom for a student distribution.
-##' @param n number of points in one direction for the mesh
-##' @param xmin the minimum value along the x axis
-##' @param xmax the maximum value along the x axis
+##' @param mu vector of means.
+##' @param Sigma variance-covariance matrix
+##' @param df degree of freedoms (only used for the student distribution).
+##' @param n number of points in the x directions. 
+##' @param x.min the minimum value along the x axis
+##' @param z.max the maximum value along the z axis. Define the dimension of Z.
+##' @param type the type of mesh to be used. Can be \"raw\", \"double\", or \"fine\".
+##' @param prune number of standard deviations after which the domain ends along the x axis. 
+##' @param proba.min the probability used to find the maximum value along the x axis. Only used if \code{prune} is not specified.
 ##' @param distribution Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (student's t distribution)
+##' 
+##' @details
+##' Argument \code{type}: \itemize{
+##' \item \code{\"raw\"}: mesh with points inside the domain
+##' \item \code{\"double\"}: mesh with points outside the domain
+##' \item \code{\"fine\"}: mesh with points inside the domain plus additional rectangles trying to fill the mising domain.
+##' }
 ##'
+##' Argument \code{Sigma} and \code{mu}:
+##' define the mean and variance-covariance of the random variables X, Y, Z
+##' (in this order). The length of the argument \code{z.max} is used to define the dimension of Z.
+##' The dimension of X is always 1.
+##'  
 ##' @examples
 ##' library(mvtnorm)
 ##' 
@@ -39,31 +59,76 @@
 ##' z2 <- qmvt(0.975, mean = mu, sigma = Sigma, df = 1e3)$quantile
 ##'
 ##' # compute integral
-##' IntDensTri(mu = mu, Sigma = Sigma, n=5, xmin=0, xmax=3)-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, n=5, xmin=0, xmax=5)-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, n=5, xmin=0, xmax=100)-1/2
+##' IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min=0, type = "fine")$value-1/2
+##' IntDensTri(mu = mu, Sigma = Sigma, n=30, x.min=0, type = "raw")$value-1/2
+##' IntDensTri(mu = mu, Sigma = Sigma, n=50, x.min=0, type = "raw")$value-1/2
 ##'
-##' IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, xmin=0, xmax=3, distribution = "pmvt")-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, xmin=0, xmax=5, distribution = "pmvt")-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, xmin=0, xmax=100, distribution = "pmvt")-1/2
-##'
+##' IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, x.min=0, distribution = "pmvt")$value-1/2
+##' res <- IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=10, x.min=0, distribution = "pmvt")
+##' res$value-1/2
+##' ggplot2::autoplot(res)
+##' 
 ##' ## trivariate normal distribution
 ##' p <- 3
 ##' Sigma <- diag(p)
 ##' mu <- rep(0, p)
 ##'
-##' IntDensTri(mu = mu, Sigma = Sigma, n=5, xmin=c(0,0), xmax=c(10,10))-1/2
+##' res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 0, z.max = 10)
+##' ggplot2::autoplot(res2)
+##' ggplot2::autoplot(res2, coord.plot = c("x","z1"))
+##' res2
+##' 
+##' #### when the distribution is far from 0
+##' eq1 <- IntDensTri(mu = c(10,0), Sigma = diag(1,2), 
+##'                   x.min = 2, n=10)
+##' eq1$value-1
+##' ggplot2::autoplot(eq1)
+##'
+##' eq2 <- IntDensTri(mu = c(10,0,0), Sigma = diag(1,3),
+##'                   x.min=2, z.max = 10, type = "raw",
+##'                   n=10)
+##' ggplot2::autoplot(eq2, coord.plot = c("y1","z1"))
+##' eq2$value-1
+##'
+##' ## more variables
+##' p <- 5
+##' Sigma <- diag(p)
+##' mu <- rep(0, p)
+##'
+##' res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 1, z.max = c(2,2))
+##' res2$grid
 ##' 
 ##' @author Brice Ozenne
-##' @export 
-IntDensTri <- function(mu, Sigma, df, n, xmin, xmax, 
-                       distribution = "pmvnorm"){
+##'
+# }}}
 
-    p <- length(mu)
+# {{{ IntDensTri
+##' @rdname IntDensTri
+##' @export 
+IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
+                       type = "double", proba.min = 1e-6, prune = NULL, distribution = "pmvnorm"){
+
+    interior <- NULL
     
-    ## create the grid of points to integrate over
-    grid <- createGrid(n, xmin[1], xmax[1], plot = FALSE)
-    ## integrate the density over the grid
+    # {{{ normalize arguments
+    type <- match.arg(type, c("raw","fine","double"))
+    
+    p <- length(mu)
+    d.z <- length(z.max)
+    d.y <- p - d.z - 1
+    z.max <- unique(z.max)
+    
+    if(is.null(prune)){
+        if(distribution=="pmvnorm"){
+            prune <- ceiling(abs(qmvnorm(proba.min, sigma = diag(1,d.y))$quantile))
+        }else if(distribution=="pmvt"){
+            prune <- ceiling(abs(qmvt(proba.min, sigma = diag(1,d.y), df = df)$quantile))
+        }else {
+            stop("distribution must be either \"pmvnorm\" or \"pmvt\" \n")
+        }
+    }
+    coordX.max <- (mu[1]+x.min) + prune * sqrt(diag(Sigma)[1])
+    
     ls.args <- list(mu,Sigma)    
     if(distribution=="pmvt"){
         names(ls.args) <- c("delta","sigma")
@@ -72,140 +137,131 @@ IntDensTri <- function(mu, Sigma, df, n, xmin, xmax,
         names(ls.args) <- c("mean","sigma")
     }
 
-    total.area <- 0
-    if(p==2){
-        grid$area <- apply(grid, 1, function(x){
-            do.call(distribution, args = c(lower = list(c(x["x_min"],x["y_min"])),
-                                           upper = list(c(x["x_max"],x["y_max"])),
-                                           ls.args))
-        })
-        total.area <- grid[,sum(.SD$area*.SD$weight)]
-    }else{
-
-        gridZ <- data.frame(z_min = c(xmin[-1],-xmax[-1]),
-                            z_max = c(xmax[-1],-xmin[-1]))
-        nZ.grid <- NROW(gridZ)
-
-        for(iZ in 1:nZ.grid){ # iZ <- 1
-            grid$area <- apply(grid, 1, function(x){
-                do.call(distribution, args = c(lower = list(c(x["x_min"],x["y_min"],gridZ[iZ,"z_min"])),
-                                               upper = list(c(x["x_max"],x["y_max"],gridZ[iZ,"z_max"])),
-                                               ls.args))
-            })
-            total.area <- total.area + grid[,sum(.SD$area*.SD$weight)]
-        }
-
-    }
-        
-    return(total.area)
-}
-
-#' @title Create a mesh for the integration
-#' @description Create a mesh for the integration
-#'
-#' @param n the number of points for the mesh in one direction.
-#' @param xmin the minimal x value.
-#' @param xmax the maximal x value.
-#' @param plot should the mesh be displayed
-#' 
-#' @examples
-#' dt.res <- lavaSearch2:::createGrid(20, xmin = 0, xmax = 4)
-createGrid <- function(n, xmin, xmax, plot = FALSE){
-
-    if(xmin==0){
-        by <- xmax/n
-    }else{
-        seqTry <- seq(0,xmax, length.out = n)
-        by <- xmin/sum(seqTry<xmin)
-    }
+    # }}}
     
-    seqPointsX <- seq(xmin,xmax, by = by)
-    n.seqX <- length(seqPointsX)
-    seqPointsY <- seq(0,xmax, by = by)
-    delay <- max(0,which.min(abs(seqPointsX[1]-seqPointsY))-1)
-    grid <- NULL
-  
-    for(iX in 1:n.seqX){ # iX <- 1
-        grid <- rbind(grid,
-                      cbind(x = seqPointsX[iX],
-                            y = seqPointsY[1:(delay + iX)])
-                      )
+    # {{{ create the grid of points to integrate over
+    resGrid <- createGrid(n,
+                          xmin = x.min, xmax = coordX.max, d.y = d.y, 
+                          d.z = d.z, zmax = z.max, 
+                          fine = (type=="fine"), double = FALSE
+                          )
+    grid <- resGrid$grid
+    seqNames.min <- resGrid$seqNames.min
+    seqNames.max <- resGrid$seqNames.max
+
+    if(type=="double"){
+        grid.double <- createGrid(n,
+                                  xmin = x.min, xmax = coordX.max, d.y = d.y, 
+                                  d.z = d.z, zmax = z.max, 
+                                  fine = FALSE, double = TRUE
+                                  )$grid
+        grid <- rbind(cbind(grid,interior=TRUE),
+                      cbind(grid.double,interior=FALSE))
+    }
+    # }}}
+
+    # {{{ integration
+    total.area <- 0
+    grid$area <- apply(grid, 1, function(x){
+        do.call(distribution, args = c(lower = list(c(x[seqNames.min])),
+                                       upper = list(c(x[seqNames.max])),
+                                       ls.args))
+    })
+
+    if(type=="double"){
+        area.interior <- grid[interior==TRUE,sum(.SD$area*.SD$weight)]
+        area.exterior <- grid[interior==FALSE,sum(.SD$area*.SD$weight)]
+        total.area <- area.interior + (area.exterior-area.interior)/2
+    }else{
+        total.area <- grid[,sum(.SD$area*.SD$weight)]
     }
 
-    grid <- unique(as.data.table(grid))
-    grid[, c("height") := max(.SD$y), by = "x"]
-    grid[, c("x_min") := pmax(xmin,.SD$x-by/2)]
-    grid[, c("y_min") := pmax(0,.SD$y-by/2)]
-    grid[, c("x_max") := .SD$x+by/2]
-    grid[, c("y_max") := .SD$y+by/2]
-    grid[, c("weight") := 1]
-	indexYheight <- grid[,.I[.SD$y == .SD$height]]
-    grid[indexYheight & .SD$y_max>.SD$x_min, c("weight") := 1/2]
-    grid[, c("index") := 1:.N]
-    #grid[x==0&y==0,c("y_min","ymax",weight) := c(0,0,0)]
+    # }}}
+    out <- list()
+    out$value <- total.area    
+    out$prune <- prune
+    out$type <- type
+    out$grid <- grid
+    class(out) <- "IntDensTri"
+    return(out)
+}
+# }}}
+
+# {{{ autoplot.IntDensTri
+
+#' @title 2D-display of the domain used to compute the integral
+#' @description 2D-display of the domain used to compute the integral
+#'
+#' @param object output of the function \code{IntDensTri}.
+#' @param coord.plot the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{IntDensTri}.
+#' @param plot should the plot be displayed.
+#' @param ... additional argument that are ignored.
+#' 
+#' @method autoplot IntDensTri
+#' @export
+autoplot.IntDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...){
+
+    x.min <- x.max <- weight <- NULL
+    
+    if(length(coord.plot) != 2){
+        stop("coord.plot must have length 2 \n")
+    }
+
+    gg.data <- copy(object$grid)
+    gg.data[,index:=as.factor(index)]
+    gg.data[,weight:=as.factor(weight)]
+    if("x" %in% coord.plot == FALSE){
+        x.ref <- min(abs(unique(gg.data$x.min)))
+        gg.data <- rbind(gg.data[x.min == x.ref],gg.data[x.max == -x.ref])
+    }
+
+    if(object$type=="fine"){
+        gg.grid <- ggplot(gg.data, aes_string(xmin = paste0(coord.plot[1],".min"), ymin = paste0(coord.plot[2],".min"),
+                                              xmax = paste0(coord.plot[1],".max"), ymax = paste0(coord.plot[2],".max"),
+                                              fill = "index", alpha = "weight"))
+        gg.grid <- gg.grid + scale_alpha_manual(values = c(0.45,1))
+    }else if(object$type=="raw"){
+        gg.grid <- ggplot(gg.data, aes_string(xmin = paste0(coord.plot[1],".min"), ymin = paste0(coord.plot[2],".min"),
+                                              xmax = paste0(coord.plot[1],".max"), ymax = paste0(coord.plot[2],".max"),
+                                              fill = "index"))        
+    }else if(object$type=="double"){
+        gg.grid <- ggplot(gg.data, aes_string(xmin = paste0(coord.plot[1],".min"), ymin = paste0(coord.plot[2],".min"),
+                                              xmax = paste0(coord.plot[1],".max"), ymax = paste0(coord.plot[2],".max"),
+                                              fill = "index", alpha = "interior"))
+        gg.grid <- gg.grid + scale_alpha_manual(values = c(0.4,1))
+    }
+    gg.grid <- gg.grid + geom_rect() + xlab(coord.plot[1]) + ylab(coord.plot[2])
+    gg.grid <- gg.grid + geom_abline(slope = 1,color = "black") + geom_abline(slope = -1,color = "black")
 
     if(plot){
-        plot(grid[,list(.SD$x,.SD$y)], pch = 20+2*grid$weight, xlim = c(0,max(grid$x_max)), ylim = c(0,max(grid$y_max)))
-        graphics::points(grid[,list(.SD$x_min,.SD$y_min)], col = grDevices::rainbow(max(grid$index)), pch = 20)
-        graphics::points(grid[,list(.SD$x_min,.SD$y_max)], col = grDevices::rainbow(max(grid$index)), pch = 20)
-        graphics::points(grid[,list(.SD$x_max,.SD$y_min)], col = grDevices::rainbow(max(grid$index)), pch = 20)
-        graphics::points(grid[,list(.SD$x_max,.SD$y_max)], col = grDevices::rainbow(max(grid$index)), pch = 20)
+        print(gg.grid)
     }
-
-    # duplicate the grid for negative y
-    grid.YnegXpos <- copy(grid)
-    grid.YnegXpos[, c("y","y_min","y_max"):= list(-.SD$y,-.SD$y_max,-.SD$y_min)]
-    # duplicate the grid for negative x
-    grid.pos <- rbind(grid,grid.YnegXpos)
-    grid.neg <- copy(grid.pos)
-    grid.neg[, c("x","x_min","x_max"):= list(-.SD$x,-.SD$x_max,-.SD$x_min)]
-
-    fullGrid <- rbind(grid.pos,grid.neg)
-
-    return(fullGrid)
+    return(invisible(gg.grid))
 }
 
-#' 
-#' MCintGaus(c(0,0),diag(1,2),n=1e4)
-#' MCintGaus(c(0,0),diag(1,2),n=1e4, xmax = 10)
-#'
-#' 
-## MCintGaus <- function(mu, Sigma, n, xmin, xmax = 5,
-##                       distribution = "dmvnorm"){
+                                        # }}}
 
-##   p <- length(mu)
-##   X <- GenerateSpherePoints(nrPoints = n, nrDim = p, r = xmax)
-##   X <- X[apply(abs(X),1,which.max)==1,]
-##   out <- sum(apply(X,1,dmvnorm,mean = mu, sigma = Sigma)*pi*xmax^2)/n
-##   return(out)
-  
-## }
+# {{{ print.IntDensTri
 
-## # https://stackoverflow.com/questions/5016806/generating-multidimensional-data
-## GenerateSpherePoints <- function(nrPoints,nrDim,center=rep(0,nrDim),r=1){
-##   #generate the polar coordinates!
-##   x <-  matrix(runif(nrPoints*nrDim,-pi,pi),ncol=nrDim)
-##   x[,nrDim] <- x[,nrDim]/2
-##   #recalculate them to cartesians
-##   sin.x <- sin(x)
-##   cos.x <- cos(x)
-##   cos.x[,nrDim] <- 1  # see the formula for n.spheres
-  
-##   y <- sapply(1:nrDim, function(i){
-##     if(i==1){
-##       cos.x[,1]
-##     } else {
-##       cos.x[,i]*apply(sin.x[,1:(i-1),drop=F],1,prod)
-##     }
-##   })*sqrt(runif(nrPoints,0,r^2))
-  
-##   y <-  as.data.frame(
-##     t(apply(y,1,'+',center))
-##   )
-  
-##   names(y) <- make.names(seq_len(nrDim))
-##   y
-## }
+#' @method print IntDensTri
+#' @export
+print.IntDensTri <- function(x, ...){
+    interior <- NULL
+    
+    x.min <- min(abs(x$grid$x.min))
+    x.max <- max(abs(x$grid$x.max))
+    n.rectangle <- switch(x$type,
+                          "double" = NROW(x$grid[interior==TRUE]),
+                          NROW(x$grid)
+                          )
+    
+    cat("integral=",x$value,"\n",
+        "computed with ",n.rectangle," rectangles \n",
+        "with x ranging from ",x.min," to ",x.max,"\n",
+        sep = "")
 
+    return(NULL)
+}
+# }}}
 #----------------------------------------------------------------------
 ### InTriGauss.R ends here

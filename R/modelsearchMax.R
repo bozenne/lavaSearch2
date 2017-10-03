@@ -1,12 +1,11 @@
-
 ### Lava_modelsearchMax.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: aug 29 2017 (10:45) 
+## last-updated: okt  3 2017 (09:49) 
 ##           By: Brice Ozenne
-##     Update #: 410
+##     Update #: 452
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,6 +15,7 @@
 ## 
 ### Code:
 
+## * Documentation - modelsearchMax
 #' @title Model searching using the max statistic
 #' @description Model searching using the max statistic to retain or not a link
 #' 
@@ -28,32 +28,26 @@
 #' @keywords internal
 #'
 
+## * Function - modelsearchMax
 #' @rdname modelsearchMax
-modelsearchMax <- function (x, restricted, link, directive, packages,
-                            update.FCT, update.args, iid.FCT,
-                            method.p.adjust, method.max = "integration", n.sim = 1e4, alpha = 0.05,  
-                            seqIID = list(), seqSelected = NULL, seqQuantile = list(), 
-                            export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
+modelsearchMax <- function(x, restricted, link, directive, packages,
+                           update.FCT, update.args, iid.FCT,
+                           method.p.adjust, method.max = "integration", n.sim = 1e3, alpha = 0.05,  
+                           iid.previous = NULL, quantile.previous = NULL, 
+                           export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
 
-    # {{{ initialisation
-
+    ## ** initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
-    dt.test <- data.table("link" = as.character(rep(NA,n.link)),
-                          "statistic" = as.numeric(rep(NA,n.link)),
-                          "p.value" = as.numeric(rep(NA,n.link)),
-                          "adjusted.p.value" = as.numeric(rep(NA,n.link))
-                          )
-
+ 
     best.test <- -Inf
     best.model <- NULL    
     iid.link <- NULL
     convergence <- rep(NA,n.link)
 
-    # }}}
     
-    # {{{ wraper
+    ## ** wraper
     warper <- function(iterI){ # iterI <- 2
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
@@ -61,13 +55,11 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                                     convergence = as.numeric(NA),
                                     coefBeta = as.numeric(NA)),
                     iid = NULL)
-
-        # {{{ fit new model
+        ## *** fit new model
         newfit <- update.FCT(x, args = update.args, restricted = restricted[iterI,], directive = directive[iterI])
         out$dt[1, c("convergence") := newfit$opt$convergence]
-        # }}}
 
-        # {{{ extract influence function        
+        ## *** extract influence function        
         if(class(newfit) != "try-error"){ # test whether the model was estimated
             if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
                 new.coef <- coef(newfit)
@@ -81,18 +73,20 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                 
                 out$dt[1, c("coefBeta") := new.coef]
                 # test <- iidJack(newfit)
-                
+
                 out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                 SeBeta <- sqrt(sum(out$iid^2,na.rm=TRUE)/sum(!is.na(out$iid))) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
                 out$dt[1, c("statistic") := abs(.SD$coefBeta/SeBeta)]               
             }
         }
-        # }}}
         return(out)
     }
-    # }}}
     
-    # {{{ parallel computations
+    ## ** get influence function
+    if(trace>0){
+        cat("gather influence functions \n")
+    }
+            
     if(ncpus>1){
 
         FCTcombine <- function(res1,res2){
@@ -107,7 +101,6 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
         }
     
         if(trace > 0){
-            cat("gather influence functions \n")
             pb <- utils::txtProgressBar(max = n.link, style = 3)
             progress <- function(n) setTxtProgressBar(pb, n)
             opts <- list(progress = progress)
@@ -126,8 +119,10 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
                                 return(warper(i))
                             })
    
-        if(trace > 0){  close(pb) }                                           
+        if(trace > 0){  close(pb) }
+        
     }else{
+        
         if(trace>0){
             requireNamespace("pbapply")
             coefJack <- pbapply::pblapply(1:n.link, warper)
@@ -136,13 +131,12 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
         }
         res <- list(dt = data.table::rbindlist(lapply(coefJack,"[[","dt")),
                     iid = do.call(cbind,lapply(coefJack,"[[","iid")))
+        
     }
-    dt.test <- cbind(link = link, res$dt)
+    dt.test <- cbind(link = link, res$dt)    
     iid.link <- res$iid
     
-    # }}}
-
-    # {{{ p.value
+    ## ** p.value
     df.model <- df.residual(x, conservative = TRUE)
     indexCV <- dt.test[, .I[.SD$convergence==0]]
 
@@ -151,17 +145,29 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
     }else{
         dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
     }
-    # }}}
 
-    # {{{ adjust p.value
+    ## ** adjust p.value
     if(method.p.adjust == "max"){
         nameN0 <- dt.test[indexCV, .SD$link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
-        resQmax <- calcDistMax(link = nameN0, statistic = statisticN0,
-                               iid = iid.link, seqIID = seqIID, seqSelected = seqSelected, seqQuantile = seqQuantile, 
-                               df = df.model, method = method.max, alpha = alpha,
-                               ncpus = ncpus, initCpus = FALSE, n.sim = n.sim, trace = trace)
 
+        if(method.max=="integration"){
+            args(calcDistMaxIntegral)
+            resQmax <- calcDistMaxIntegral(statistic = statisticN0, iid = iid.link, df = df.model,
+                                           iid.previous = iid.previous, quantile.previous = quantile.previous, 
+                                           alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
+        }else{
+            method.boot <- switch(method.max,
+                                  "boot-naive" = "naive",
+                                  "boot-residual" = "residual",
+                                  "boot-wild" = "wild")
+            
+            resQmax <- calcDistMaxBootstrap(statistic = statisticN0, iid = iid.link, method = method.boot, n.sim = n.sim,
+                                            iid.previous = iid.previous, quantile.previous = quantile.previous, 
+                                            alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
+        }
+
+        dt.test[indexCV,c("corrected.level") := resQmax$correctedLevel]
         dt.test[indexCV,c("adjusted.p.value") := resQmax$p.adjust]
         dt.test[indexCV,c("quantile") := resQmax$z]
         Sigma <- resQmax$Sigma
@@ -173,19 +179,16 @@ modelsearchMax <- function (x, restricted, link, directive, packages,
         }
         
     }else{
-
-        dt.test[.SD$convergence==0, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
-        Sigma <- NULL
-        
+        dt.test[dt.test$convergence==0, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
+        dt.test[indexCV,c("quantile") := as.numeric(NA)]
+        Sigma <- NULL        
     }    
-    # }}}
     
-    # {{{ export
+    ## ** export
     out <- list(dt.test = dt.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)
     return(out)
-    # }}}
 }
 
 #----------------------------------------------------------------------

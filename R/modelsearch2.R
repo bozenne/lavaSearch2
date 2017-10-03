@@ -1,5 +1,4 @@
-# {{{ documentation
-
+## * Documentation - modelsearch2
 #' @title Automatic extension of the lvm
 #' @description Add all relevant path between the variables present in a lvm.
 #' 
@@ -16,7 +15,7 @@
 #' @param rm.latent_endo see the documentation of \code{\link{findNewLink}}.
 #' @param nStep the maximum number of links that can be added to the model.
 #' @param na.omit should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
-#' @param alpha the significance threshold for retaining a new link
+#' @param alpha the significance threshold for retaining a new link.
 #' @param method.p.adjust the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.
 #' @param method.max the method used to compute the distribution of the max statistic \code{integration}.
 #' @param method.iid the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).
@@ -54,7 +53,11 @@
 #'              method.iid = method.iid)
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 #'                     method.iid = method.iid)
-#'
+#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
+#'                     nStep = 2, 
+#'                     method.iid = method.iid, conditional = TRUE)
+#' res$sequenceTest[[2]]
+#' 
 #' #### Cox model ####
 #' library(survival)
 #' data(Melanoma, package = "riskRegression")
@@ -99,19 +102,18 @@
 `modelsearch2` <-
   function(x, ...) UseMethod("modelsearch2")
 
-# }}}
-
-# {{{ modelsearch2.lvmfit
+## * method modelsearch2.lvmfit
 #' @rdname modelsearch2
 #' @export
 modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
-                                method.iid = "iidJack",
+                                method.iid = "iid",
                                 exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
                                 ...){
 
-    match.arg(method.iid, choices = c("iidJack","iid"))
-    
-    #### normalize the links ####
+    ## ** normalise arguments
+    method.iid <- match.arg(method.iid, lava.options()$search.iid)
+
+    ## ** normalize the links
     if(is.null(link)){
         res.find <- findNewLink(x$model,
                                 data = model.frame(x),
@@ -122,8 +124,12 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         directive <- res.find$directional
         restricted <- res.find$M.links
         link <- res.find$link
+        if(is.null(link)){
+            stop("Automatic search has not found any possible additional link \n",
+                 "Consider specifying manually the argument \'link\' \n")
+        }
     }else{
-        restricted <- do.call(cbind,initVar_links(link))
+        restricted <- do.call(cbind,initVarLinks(link))
         directive <- rep(TRUE, length(link))
         index.Ndir <- grep(lava.options()$symbols[2],link,fixed=TRUE)
         if(length(index.Ndir)>0){
@@ -169,7 +175,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
 
     }    
 
-    #### arguments of the call ####
+    ## ** arguments of the call
     add.args <- setdiff(names(x$call), c("","x","data","control"))
     ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
     names(ls.call) <- add.args
@@ -185,33 +191,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
     ls.call$control <- x$control
     ls.call$control$trace <- FALSE
 
-
-    #### update the model ####
-    update.FCT <- function(x, args, restricted, directive){
-        args$x <- addLink(x$model, var1 = restricted[1], var2 = restricted[2],
-                          covariance = 1-directive)
-
-        ## first attempt
-        args$start <- coef(x)
-        suppressWarnings(
-            newx <- tryCatch(do.call(estimate, args = args),
-                             error = function(x){NA},
-                             finally = function(x){x})
-        )
-        
-        ## second attempt
-        if(newx$opt$convergence>0){
-            args$control$start <- NULL
-            suppressWarnings(
-                newx <- tryCatch(do.call(estimate, args = args),
-                                 error = function(x){NA},
-                                 finally = function(x){x})
-            )
-        }
-        return(newx)
-    }
-    # res <- update.x(x, ls.call, restricted = restricted[1,], directive[1])
-
+    ## ** extract influence function
     if(method.iid == "iid"){
         iid.FCT <- function(x){
             res <- lava::iid(x)
@@ -226,43 +206,48 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         attr(iid.FCT,"method.iid") <- "iidJack"
     }
 
-    #### run modelsearch ####
+    ## ** run modelsearch
     out <- .modelsearch2(x, 
                          link = link, restricted = restricted, directive = directive,
-                         update.FCT = update.FCT, update.args = ls.call, iid.FCT = iid.FCT,...)
+                         update.FCT = .updateModelLink.lvm, update.args = ls.call, iid.FCT = iid.FCT,...)
 
-    #### export ####
+    ## ** export
     return(out)
 }
-# }}}
 
-# {{{ modelsearch2.default
-
+## * method modelsearch2.default
 #' @rdname modelsearch2
 #' @export
 modelsearch2.default <- function(x, link, data = NULL,
-                                 method.iid = "iidJack", statistic = "Wald", ...){
+                                 method.iid = "iid", statistic = "Wald", ...){
 
-    match.arg(method.iid, choices = c("iidJack","iid"))
-    
+    ## ** normalise arguments
+    method.iid <- match.arg(method.iid, lava.options()$search.iid)
+    if("lvm" %in% class(x)){
+        stop("Cannot apply modelsearch2 to a \"lvm\" object \n",
+             "Run the function \'estimate\' first and then \'modelsearch2\' \n")
+    }
+    if("lvmfit" %in% class(x) == FALSE && statistic == "score"){
+        stop("Can only use the score statistic with lvmfit objects \n",
+             "Consider changing argument \'statistic\' \n")
+    }
     if(class(x) %in% c("coxph","cph","phreg")){            
         ##
     }else if (!any(paste("score", class(x), sep = ".") %in% methods("score"))) {        
         stop("Extraction of the iid decomposition failed \n",
-                "No iid method for models of class ",class(x)," \n")
+             "No iid method for models of class ",class(x)," \n")
     }
-    statistic <-  match.arg(statistic, c("Wald","LR"))
-    
-    #### get data ####
+      
+    ## ** get data
     if(is.null(data)){
         data <- eval(x$call$data)
     }
 
-    #### get model vars ####
+    ## ** get model vars
     model.var <- all.vars(formula(x))
     
-    #### normalize the links ####
-    restricted <- do.call(cbind,initVar_links(link, Slink = "~"))
+    ## ** normalize the links
+    restricted <- do.call(cbind,initVarLinks(link, Slink = "~"))
     allVars <- union(model.var, names(data))
     link <- restricted[,2] # does not handle categorical variables    
     directive <- TRUE        
@@ -290,7 +275,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         }        
     }
     
-    #### arguments of the call ####
+    ## ** arguments of the call
     add.args <- setdiff(names(x$call), c("","formula","data"))
     if(length(add.args)>1){
         ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
@@ -300,43 +285,12 @@ modelsearch2.default <- function(x, link, data = NULL,
     }
     ls.call$data <- data
 
-    #### update the model ####
-    update.FCT <- function(x, args, restricted, directive){
-        FCT.estimate <- as.character(x$call[[1]])
-
-        ## update the formula
-        f <- eval(x$call$formula)
-        if(is.list(f)){
-            test.Y <-  lapply(f, function(ff){
-                restricted[1] %in% select.response(ff)
-            })
-            index.Y <- which(unlist(test.Y))
-            f[[index.Y]] <- update(f[[index.Y]], as.formula(paste0(".~",restricted[2])))
-            
-        }else{
-           f <- update(f, as.formula(paste0(".~.+",restricted[2])))
-        }
-
-        ## update the arguments
-        if(length(args)>0){
-            for(callArg in names(args)){
-                x$call[[callArg]] <- args[[callArg]]
-            }
-        }
-        
-        suppressWarnings(
-            newx <- update(x, formula = f)
-        )
-        newx$opt$convergence <- 0
-        return(newx)
-    }
-
-    #### get iid ####
+    ## ** extract influence function
     if(class(x) %in% c("coxph","cph")){
         
         if(method.iid == "iid"){
             iid.FCT <- function(x){
-                riskRegression::iidCox(x, tauHazard = 0)$IFbeta
+                riskRegression::iidCox(x, tau.hazard = 0)$IFbeta
             }
             attr(iid.FCT, "method.iid") <- "iid"
         }else if(method.iid == "iidJack"){
@@ -364,19 +318,17 @@ modelsearch2.default <- function(x, link, data = NULL,
         
     } 
     
-    #### run modelsearch ####
+    ## ** run modelsearch
     out <- .modelsearch2(x, statistic = statistic,
                          link = link, restricted = restricted, directive = directive,
-                         update.FCT = update.FCT, update.args = ls.call, iid.FCT = iid.FCT, ...)
+                         update.FCT = .updateModelLink.default, update.args = ls.call, iid.FCT = iid.FCT, ...)
 
 
-    #### export ####
+    ## ** export
     return(out)
 }    
 
-# }}}
-
-# {{{ .modelsearch2
+## * function .modelsearch2
 #' @rdname modelsearch2
 #' @export
 .modelsearch2 <- function(x, link, restricted, directive, update.FCT, update.args, iid.FCT, packages = NULL,
@@ -386,9 +338,11 @@ modelsearch2.default <- function(x, link, data = NULL,
                           ncpus = 1,
                           display.warnings = TRUE, trace = 1, export.iid = FALSE){
 
-    # {{{ preliminary tests    
-    method.max <- match.arg(method.max, lava.options()$calcDistMax.method)
-    statistic <-  match.arg(statistic, choices = c("score","LR", "Wald"))    
+    ## ** preliminary tests    
+    method.max <- match.arg(method.max, lava.options()$search.calcMaxDist)
+    method.p.adjust <- match.arg(method.p.adjust, lava.options()$search.p.adjust)
+    statistic <-  match.arg(statistic, choices = lava.options()$search.statistic)
+
     if(any(exposure %in% names(coef(x)) == FALSE)){
         stop("exposure does not correspond to a coefficient in \'x\' \n")
     }    
@@ -396,7 +350,8 @@ modelsearch2.default <- function(x, link, data = NULL,
     if(method.p.adjust == "max" && statistic != "Wald"){
         stop("Adjustment for multiple testing using the distribution of the max statistic \n",
              "is only available for when specifying statistic=\"Wald\" \n",
-             "proposed statistic: ",statistic,"\n")
+             "proposed statistic: ",statistic,"\n",
+             "consider changing the value of the argument \'method.p.adjust\' \n")
     }
     if(statistic != "Wald"){
         method.iid <- NULL
@@ -405,9 +360,8 @@ modelsearch2.default <- function(x, link, data = NULL,
         method.iid <- attr(iid.FCT,"method.iid")
         attr(iid.FCT,"method.iid") <- NULL
     }
-    # }}}
 
-    # {{{ initialisation
+    ## ** initialisation
     if(is.null(nStep)){
         nStep <- NROW(restricted)
     }
@@ -417,8 +371,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     iLink <- link
     iObject <- x
     nObs <- x$data$n
-    M.seqQuantile <- NULL # for conditional testing
-    vec.seqSelected <- NULL
+    vec.seqQuantile <- NULL # for conditional testing
     
     ## output
     ls.seqTests <- list()
@@ -431,11 +384,12 @@ modelsearch2.default <- function(x, link, data = NULL,
 
     ## cpus
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
-    cl <- parallel::makeCluster(ncpus)
-    doSNOW::registerDoSNOW(cl)
-    # }}}
-
-    # {{{ display a summary of the call
+    if(ncpus>1){
+        cl <- parallel::makeCluster(ncpus)
+        doSNOW::registerDoSNOW(cl)
+    }
+    
+    ## ** display a summary of the call
     if(trace>0){
         cat("\n",
             "** Sequential variable selection using the ",statistic," statistic ** \n",
@@ -451,48 +405,57 @@ modelsearch2.default <- function(x, link, data = NULL,
             " Number of cpus                              : ",ncpus,"\n\n",
             sep="")
     }
-    # }}}
-    
-    # {{{ loop over the models
+
+    ## ** loop over the models
     while(iStep <= nStep && NROW(iRestricted)>0 && cv==FALSE){
 
         if(trace >= 1){cat("Step ",iStep,":\n",sep="")}        
 
         if(statistic == "score"){
-            # {{{ run modelsearch
-            res.search <- modelsearch(iObject, link = iLink, silent = (trace <= 1))
+            ## *** run modelsearch
+            res.search <- modelsearch(iObject,
+                                      link = gsub("~~","~",iLink),
+                                      silent = (trace <= 1))
 
             iN.link <- NROW(iRestricted)        
             res.search$dt.test <- data.table("link" = iLink,
                                              "statistic" = as.numeric(rep(NA,iN.link)),
                                              "p.value" = as.numeric(rep(NA,iN.link)),
-                                             "adjusted.p.value" = as.numeric(rep(NA,iN.link))
+                                             "adjusted.p.value" = as.numeric(rep(NA,iN.link)),
+                                             "convergence" = 1,
+                                             "coefBeta" = as.numeric(rep(NA,iN.link)),
+                                             "quantile" = as.numeric(rep(NA,iN.link))
                                              )
             index.match <- match(gsub("~~","~",iLink), res.search$res[,"Index"])
             # res.search$res[index.match,"Index"]
             res.search$dt.test[, c("statistic") := res.search$test[index.match,"Test Statistic"]]
             res.search$dt.test[, c("p.value") := res.search$test[index.match,"P-value"]]
             res.search$dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
-            # }}}                
         }else if(statistic == "LR"){
-            # {{{ run modelsearchLR            
+            ## *** run modelsearchLR            
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
                                         update.FCT = update.FCT, update.args = update.args,
                                         method.p.adjust = method.p.adjust, display.warnings = display.warnings, trace = trace-1)
-            # }}}
+
         }else if(statistic == "Wald"){
-            # {{{ run modelsearchMax
+            ## *** run modelsearchMax
+            if(conditional && iStep>1){
+                iid.previous <- ls.seqIID[[iStep-1]]
+                quantile.previous <- vec.seqQuantile[iStep-1]
+            }else{
+                iid.previous <- NULL
+                quantile.previous <- NULL
+            }
             res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, packages = packages, alpha = alpha,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
-                                         seqSelected = vec.seqSelected, seqQuantile = M.seqQuantile,
-                                         seqIID = ls.seqIID,
+                                         iid.previous = iid.previous, quantile.previous = quantile.previous,
                                          export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE) 
-           # }}}
+           
         }
 
-        # {{{ update according the most significant p.value
-        ## check convergence
+        ## ** update according the most significant p.value
+        ### *** check convergence
         if(na.omit){
             cv <- all(na.omit(res.search$dt.test[["adjusted.p.value"]]) > alpha)
             test.na <- FALSE
@@ -506,10 +469,10 @@ modelsearch2.default <- function(x, link, data = NULL,
             }
         }
 
-        ## identify most pryomising test
+        ### *** identify most pryomising test
         index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
 
-        ## update the output
+        ### *** update the output
         dt.tempo <- res.search$dt.test[index.rm]
         res.search$dt.test[,c("selected") := .I==index.rm*(1-cv)]
         res.search$dt.test[,c("nTests") := .N]
@@ -520,13 +483,10 @@ modelsearch2.default <- function(x, link, data = NULL,
         if(method.p.adjust == "max"){
             ls.seqIID[[iStep]] <- res.search$iid
             ls.seqSigma[[iStep]] <- res.search$Sigma
-            vec.seqSelected <- c(vec.seqSelected,ls.seqTests[[iStep]][rowSelected,link])
-            vec.quantiles <- setNames(rep(NA, length(link)), link)
-            vec.quantiles[res.search$dt.test$link] <- res.search$dt.test$quantile
-            M.seqQuantile <- cbind(M.seqQuantile, step = vec.quantiles)            
+            vec.seqQuantile <- c(vec.seqQuantile,unique(res.search$dt.test$quantile))
         }
         
-        ## update the model
+        ### *** update the model
         if(cv==FALSE){
             iObject <- update.FCT(iObject, args = update.args,
                                   restricted = iRestricted[index.rm,], directive = iDirective[index.rm])
@@ -536,7 +496,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         }
         ls.seqModels[[iStep]] <- iObject
 
-        ## display results
+        ### *** display results
         if(trace > 0){
             if(cv==FALSE){
                 
@@ -553,11 +513,10 @@ modelsearch2.default <- function(x, link, data = NULL,
             }
         }
         iStep <- iStep + 1
-        # }}}
-    }
-    # }}}
         
-    # {{{ Test treatment effect
+    }
+        
+    ## * Test treatment effect
     if(!is.null(exposure) && FALSE){
         if(statistic == "Wald" && method.p.adjust == "max"){
             ## dt.exposure <- data.table("link" = exposure,
@@ -606,15 +565,17 @@ modelsearch2.default <- function(x, link, data = NULL,
             ## }
         }
     }
-    # }}}
-
-    ## end job
-    parallel::stopCluster(cl)
-
-    #### export
+    ## * end job
+    if(ncpus>1){
+        parallel::stopCluster(cl)
+    }
+    
+    ## * export
+    if(length(ls.seqIID)==0){ls.seqIID <- NULL}
+    if(length(ls.seqSigma)==0){ls.seqSigma <- NULL}
     output <- list(sequenceTest = ls.seqTests,
                    sequenceModel = ls.seqModels,
-                   sequenceQuantile = M.seqQuantile,
+                   sequenceQuantile = vec.seqQuantile,
                    sequenceIID = ls.seqIID,
                    sequenceSigma = ls.seqSigma,
                    statistic = statistic,
@@ -627,5 +588,62 @@ modelsearch2.default <- function(x, link, data = NULL,
 }
 
 
+
+
+## * .updateModelLink.lvm
+.updateModelLink.lvm <- function(x, args, restricted, directive){
+    args$x <- addLink(x$model, var1 = restricted[1], var2 = restricted[2],
+                      covariance = 1-directive)
+
+    ## first attempt
+    args$start <- coef(x)
+    suppressWarnings(
+        newx <- tryCatch(do.call(estimate, args = args),
+                         error = function(x){NA},
+                         finally = function(x){x})
+    )
+        
+    ## second attempt
+    if(newx$opt$convergence>0){
+        args$control$start <- NULL
+        suppressWarnings(
+            newx <- tryCatch(do.call(estimate, args = args),
+                             error = function(x){NA},
+                             finally = function(x){x})
+        )
+    }
+    return(newx)
+}
+
+## * .updateModelLink.default
+.updateModelLink.default <- function(x, args, restricted, directive){
+    FCT.estimate <- as.character(x$call[[1]])
+
+    ## update the formula
+    f <- eval(x$call$formula)
+    if(is.list(f)){
+        test.Y <-  lapply(f, function(ff){
+            restricted[1] %in% selectResponse(ff)
+        })
+        index.Y <- which(unlist(test.Y))
+        f[[index.Y]] <- update(f[[index.Y]], as.formula(paste0(".~",restricted[2])))
+            
+    }else{
+        f <- update(f, as.formula(paste0(".~.+",restricted[2])))
+    }
+
+    ## update the arguments
+    if(length(args)>0){
+        for(callArg in names(args)){
+            x$call[[callArg]] <- args[[callArg]]
+        }
+    }
+        
+    suppressWarnings(
+        newx <- update(x, formula = f)
+    )
+    newx$opt$convergence <- 0
+    return(newx)
+}
 
 

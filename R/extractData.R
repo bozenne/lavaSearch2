@@ -1,6 +1,6 @@
 #' @title Extract data from a model
 #' 
-#' @description Extract data from a model using \code{nlme::getData}, \code{riskRegression::CoxDesign} or \code{model.frame}.. 
+#' @description Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
 #' If it fails it will try to extract it by its name according to \code{model$call$data}.
 #' 
 #' @param object the fitted model.
@@ -62,7 +62,7 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
       
             # assign the dataset to the object if not in the current environment
             if(name.data %in% ls() == FALSE){
-                object$data <- findINparent(name.data, environment())
+                object$data <- findInParent(name.data, environment())
             }
       
             data <- try(nlme::getData(object), silent = TRUE)
@@ -70,15 +70,15 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
         }else if(any(class(object) %in% c("coxph","cph"))){
       
             requireNamespace("riskRegression")
-            data <- try(riskRegression::CoxDesign(object), silent = TRUE)
-            strataVar <- riskRegression::CoxVariableName(object)$stratavars.original
+            data <- try(riskRegression::coxDesign(object), silent = TRUE)
+            strataVar <- riskRegression::coxVariableName(object)$stratavars.original
       
             if(length(strataVar)>0){ 
         
                 if(as.character(object$call$data) %in% ls()){
                     data2 <- eval(object$call$data)
                 }else{
-                    data2 <- findINparent(as.character(object$call$data), environment())
+                    data2 <- findInParent(as.character(object$call$data), environment())
                 }
         
                 data2 <- as.data.table(data2)
@@ -95,15 +95,10 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
         }
     
     }else{
-
-        if(length(object$call$data)>1){      ## search for dataset by name 
-            data <- object$call$data
-            
-        }else if(length(object$call$data)==1){
-            data <- findINparent(as.character(object$call$data), environment())
+        data <- try(eval(object$call$data), silent = TRUE)
+        if("try-error" %in% class(data)){
+            data <- findInParent(deparse(object$call$data), environment())
             # (could also try to search for object$data if not in object$call$data)            
-        }else{
-            stop("Could not find the data in $call$data \n")            
         }   
 
   }  
@@ -127,7 +122,7 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
 #' 
 #' @param name character string containing the name of the object to get.
 #' @param envir the environment from which to look for the object.
-findINparent <- function(name, envir){
+findInParent <- function(name, envir){
 
     frames <- sys.status()
     all.frames <- sapply(1:length(frames$sys.frames), function(x){identical(parent.frame(x),globalenv())})

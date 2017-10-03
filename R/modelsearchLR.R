@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: aug 25 2017 (14:29) 
+## last-updated: sep 25 2017 (11:21) 
 ##           By: Brice Ozenne
-##     Update #: 60
+##     Update #: 64
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,7 +34,9 @@ modelsearchLR <- function (x, data, restricted, link, directive,
                           "statistic" = as.numeric(rep(NA,n.link)),
                           "p.value" = as.numeric(rep(NA,n.link)),
                           "adjusted.p.value" = as.numeric(rep(NA,n.link)),
-                          "convergence" = as.numeric(rep(NA,n.link))
+                          "convergence" = as.numeric(rep(NA,n.link)),
+                          "coefBeta" = as.numeric(rep(NA,n.link)),
+                          "quantile" = as.numeric(rep(NA,n.link))
                           )
 
     best.test <- -Inf
@@ -50,6 +52,8 @@ modelsearchLR <- function (x, data, restricted, link, directive,
         if(class(newfit) != "try-error" && !is.na(logLik(newfit))){ 
 
             if(newfit$opt$convergence == 0 ){ # test whether the model has correctly converged
+                newCoef.tempo <- coef(newfit)[setdiff(names(coef(newfit)),names(coef(x)))]
+                dt.test[iterI, c("coefBeta") := newCoef.tempo]
                 if(class(newfit) == "lvmfit"){
                     compareT <- lava::compare(x,newfit)
                     dt.test[iterI, c("statistic") := compareT$statistic[[1]]]
@@ -61,10 +65,7 @@ modelsearchLR <- function (x, data, restricted, link, directive,
                 }
                 dt.test[iterI, c("convergence") := 0]
             }else{
-                dt.test[iterI, c("statistic") := NA]
-                dt.test[iterI, c("p.value") := NA]
-                dt.test[iterI, c("convergence") := 1]
-                
+                dt.test[iterI, c("convergence") := 1]                
             }
  
             if(!is.na(dt.test[iterI][["statistic"]]) && dt.test[iterI][["statistic"]]>best.test){

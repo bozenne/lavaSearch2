@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: aug 28 2017 (09:42) 
+## last-updated: okt  3 2017 (09:46) 
 ##           By: Brice Ozenne
-##     Update #: 134
+##     Update #: 350
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,18 +15,15 @@
 ## 
 ### Code:
 
-# {{{ documentation
-
+## * documentation
 #' @title Adjust the p.values using the quantiles of the max statistic
 #' @description Adjust the p.values using the quantiles of the max statistic.
 #' @name calcDistMax
 #'
-#' @param link the name of the coefficients to test.
 #' @param statistic the observed statistic relative to the coefficients to test.
 #' @param iid zero-mean iid decomposition of the observed coefficients used to compute the statistic.
-#' @param seqSelected the vector of coefficients that have already been selected.
-#' @param seqIID zero-mean iid decomposition of the tests to condition on.
-#' @param seqQuantile critical threshold of the tests to condition on.
+#' @param iid.previous zero-mean iid decomposition of the previous step to condition on.
+#' @param quantile.previous critical threshold of the previous step to condition on.
 #' If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.
 #' @param df the degree of freedom for the t statistic.
 #' @param method the method used to compute the p.values. Can be \code{"integration"}, \code{"boot-wild"}, or \code{"boot-norm"}.
@@ -43,179 +40,136 @@
 #'
 #' set.seed(10)
 #' n <- 100
-#' p <- 5
+#' p <- 4
 #' link <- letters[1:p]
-#' 
+#' n.sim <- 1e3 # number of bootstrap simulations 
+#'
+#' #### test - not conditional ####
 #' X.iid <- rmvnorm(n, mean = rep(0,p), sigma = diag(1,p))
 #' colnames(X.iid) <- link
 #' statistic <- setNames(1:p,link)
 #'
 #' 
-#' \dontrun{
-#'  n.sim <- 1e3
-#' }
-#' \dontshow{
-#'  n.sim <- 10
-#' }
+#' r1 <- calcDistMaxIntegral(statistic = statistic, iid = X.iid, 
+#'             trace = FALSE, alpha = 0.05, df = 1e6)
 #' 
-#' r1 <- calcDistMax(link, statistic = statistic, iid = X.iid, 
-#'             seqIID = NULL, seqQuantile =  NULL, method = "integration",
-#'             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, df = 1e6)
-#' 
-#' r2 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-#'             seqIID = NULL, seqQuantile =  NULL, method = "boot-wild",
-#'             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+#' r2 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             method = "naive",
+#'             trace = FALSE, alpha = 0.05, n.sim = n.sim)
 #'
-#' r3 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-#'             seqIID = NULL, seqQuantile =  NULL, method = "boot-norm",
-#'             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+#' r3 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             method = "residual",
+#'             trace = FALSE, alpha = 0.05, n.sim = n.sim)
 #'
-#' r4 <- calcDistMax(link, statistic = statistic, iid = X.iid,
-#'             seqIID = NULL, seqQuantile =  NULL, method = "bootstrap",
-#'             trace = FALSE, alpha = 0.05, ncpus = 1, initCpus = TRUE, n.sim = n.sim, df = 1e6)
+#' r4 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             method = "wild",
+#'             trace = FALSE, alpha = 0.05, initCpus = TRUE, n.sim = n.sim)
 #' 
 #' rbind(integration = c(r1$p.adjust, quantile = r1$z),
-#'       bootWild    = c(r2$p.adjust, quantile = r2$z),
-#'       bootNorm    = c(r3$p.adjust, quantile = r3$z),
-#'       boostrap    = c(r4$p.adjust, quantile = r4$z))
+#'       bootNaive    = c(r2$p.adjust, quantile = r2$z),
+#'       bootResidual = c(r3$p.adjust, quantile = r3$z),
+#'       bootWild    = c(r4$p.adjust, quantile = r4$z))
+#'
+#' #### test - conditional ####
+#' \dontrun{
+#' Z.iid <- rmvnorm(n, mean = rep(0,p+1), sigma = diag(1,p+1))
+#' seqQuantile <- qmvnorm(p = 0.95, delta = rep(0,p+1), sigma = diag(1,p+1), 
+#'                     tail = "both.tails")$quantile
 #' 
-# }}}
+#' r1c <- calcDistMaxIntegral(statistic = statistic, iid = X.iid,
+#'             iid.previous = Z.iid, quantile.previous =  seqQuantile, 
+#'             trace = FALSE, alpha = 0.05, df = NULL)
+#' 
+#' r2c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "naive",
+#'             trace = FALSE, alpha = 0.05, n.sim = n.sim)
+#' 
+#' r3c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "residual",
+#'             trace = FALSE, alpha = 0.05, n.sim = n.sim)
+#'
+#' r4c <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
+#'             iid.previous = Z.iid, quantile.previous =  seqQuantile, method = "wild",
+#'             trace = FALSE, alpha = 0.05, n.sim = n.sim)
+#'
+#' rbind(integration = c(r1c$p.adjust, quantile = r1c$z),
+#'       bootNaive    = c(r2c$p.adjust, quantile = r2c$z),
+#'       bootResidual = c(r3c$p.adjust, quantile = r3c$z),
+#'       bootWild    = c(r4c$p.adjust, quantile = r4c$z))
+#' }
+#' 
 
 
+## * calcDistMaxIntegral
 #' @rdname calcDistMax
 #' @export
-calcDistMax <- function(link, statistic, iid, seqIID, seqSelected, seqQuantile, df,
-                        method, alpha, ncpus, initCpus, n.sim, trace, n.repMax = 100){
+calcDistMaxIntegral <- function(statistic, iid, df, 
+                                iid.previous = NULL, quantile.previous = NULL, 
+                                alpha, ncpus = 1, initCpus = TRUE, trace){
 
+    ## ** normalize arguments
     p.iid <- NCOL(iid)
     n <- NROW(iid)
-    conditional <- length(seqIID)>0
+    conditional <- length(quantile.previous)
+    if(length(quantile.previous)>1){
+        stop("Can only condition on one previous step \n")
+    }
+    
+    if(is.null(df)){
+        distribution.statistic <- "gaussian"
+    }else{
+        distribution.statistic <- "student"
+    }
+    
+    iid.all <- cbind(iid,iid.previous)
+    index.new <- 1:NCOL(iid)
+    index.previous <- setdiff(1:NCOL(iid.all),index.new)
+    p.iid.all <- NCOL(iid.all)
 
-    iid.statistic <- scale(iid, center = FALSE, scale = TRUE)        
+    ## ** Compute the correlation matrix between the test statistics
+    # center to be under the null
+    # scale since we want the distribution of the Wald statistic (i.e. statistic with unit variance)
+    iid.statistic <- scale(iid.all, center = TRUE, scale = TRUE)
     Sigma.statistic <- cov(iid.statistic, use = "pairwise.complete.obs")
+    out <- list(p.adjust = NULL, z = NULL, Sigma = Sigma.statistic[index.new,index.new,drop=FALSE])
     
-    out <- list(p.adjust = NULL, z = NULL, Sigma = Sigma.statistic)
-    
-    if(method == "integration"){
-        if(trace > 0){ cat("Computation of multivariate normal probabilities to adjust the p.values: ") }
+    ## ** Definition of the functions used to compute the quantiles
+    warperQ <- function(alpha){
+        .calcQmaxIntegration(alpha = alpha, p = p.iid,
+                             Sigma = Sigma.statistic[index.new,index.new,drop=FALSE],
+                             df = df, distribution = distribution.statistic)
+    }
+    warperP <- function(index){
+        .calcPmaxIntegration(statistic = statistic[index], p = p.iid,
+                             Sigma = Sigma.statistic[index.new,index.new,drop=FALSE],
+                             df = df, distribution = distribution.statistic)
+    }
         
-        # {{{ warper
-        if(conditional==FALSE){
-            # {{{ first step
-           
-            ## compute significance threshold
-            out$z <- mvtnorm::qmvt(1-alpha, delta = rep(0,p.iid), sigma = Sigma.statistic, df = df, tail = "both.tails")$quantile
-       
-            ## adjust p.values
-            warperP <- function(name){
-                value <- abs(statistic[name])
-                if(!is.na(value)){
-                    p <- mvtnorm::pmvt(lower = -value, upper = value,
-                                       delta = rep(0, p.iid), sigma = Sigma.statistic, df = df)
-                    return(1-p)
-                }else{
-                    return(NA)
-                }   
-            }
-            # }}}          
-        }else{
+    ## ** correction for conditioning on the previous steps
+    if(conditional==TRUE){
+        out$correctedLevel <- calcType1postSelection(1-alpha, quantile.previous =  quantile.previous,
+                                                      mu = rep(0,p.iid.all), Sigma = Sigma.statistic,
+                                                      distribution =  distribution.statistic,
+                                                      df = df)
+        alpha <- 1-out$correctedLevel
+    }else{
+        out$correctedLevel <- 1-alpha
+    }
 
-            stop("conditional not implemented \n")
-            # {{{ following steps
-            n.conditional <- NCOL(seqQuantile)
-            seqQuantile.selected <- sapply(1:n.conditional, function(iC){
-                seqQuantile[seqSelected[iC],iC]
-            })
-            
-            ## truncation
-            vec.lower <- rep(-Inf,p.iid)
-            vec.upper <- rep(+Inf,p.iid)
-            vecSelected.lower <- rep(-Inf,n.conditional)
-            vecSelected.upper <- rep(+Inf,n.conditional)
-            vecNselected.lower <- -seqQuantile.selected
-            vecNselected.upper <- seqQuantile.selected
-            vecAll.lower <- c(vec.lower,vecSelected.lower,vecNselected.lower)
-            vecAll.upper <- c(vec.upper,vecSelected.upper,vecNselected.upper)
-
-            pAll.iid <- length(vecAll.upper)
-            
-            ## limit of integration            
-            vecSelected.lowerX <- -seqQuantile.selected
-            vecSelected.upperX <- seqQuantile.selected
-            vecNselected.lowerX <- rep(-Inf,n.conditional)
-            vecNselected.upperX <- rep(+Inf,n.conditional)
-
-            ## influence function
-            seqIID.statistic <- lapply(seqIID, scale, center = FALSE, scale = TRUE)
-            iidSelected.statistic <- sapply(1:n.conditional, function(iC){
-                seqIID.statistic[[iC]][,seqSelected[iC],drop=FALSE]
-            })
-                
-            ## compute significance threshold
-            wraperQ <- function(v){
-                resV <- 1-tmvtnorm::ptmvnorm(lower = vec.lower, upper = vec.upper,
-                                             lowerx = rep(-v,p.iid), upperx = rep(+v,p.iid), 
-                                             mean = rep(0,p.iid), sigma = Sigma.statistic)
-                return(alpha-resV)
-            }
-
-            ## adjust p.values
-            warperP <- function(name){ # name <- link[1]
-                value <- abs(statistic[name])
-                
-                if(!is.na(value)){
-                    vec.lowerX <-rep(-value,p.iid)
-                    vec.upperX <-rep(value,p.iid)
-                    vecAll.lowerX <- c(vec.lowerX,vecSelected.lowerX,vecNselected.lowerX)
-                    vecAll.upperX <- c(vec.upperX,vecSelected.upperX,vecNselected.upperX)
-                    vecAll.lowerX2 <- vecAll.lowerX
-                    vecAll.lowerX2[1:p.iid] <- -Inf
-                    vecAll.upperX2 <- vecAll.upperX
-                    vecAll.upperX2[1:p.iid] <- +Inf
-                    
-                    iidNSelected.statistic <- sapply(1:n.conditional, function(iC){
-                        seqIID.statistic[[iC]][,name]
-                    })
-                    SigmaAll.statistic <- cov(cbind(iid.statistic,iidSelected.statistic,iidNSelected.statistic),
-                                              use = "pairwise.complete.obs")
-
-                    ## P[Tnew>znew|Tselected>zold,Tnselected<zold] < P[Tnew>znew|Tselected>zold,Tnselected<Tselected]
-                    ## P[Tnew>znew|Tselected>zold,Tnselected<zold]
-                    ## = P[Tnew>znew,Tselected>zold|Tnselected<zold]/P[Tselected>zold|Tnselected<zold]
-                    ## = (1-P[Tnew<znew,Tselected<zold|Tnselected<zold])/(1-P[Tselected<zold|Tnselected<zold])
-                    p0 <- mvtnorm::pmvt(lower = vec.lowerX, upper = vec.upperX,
-                                        delta = rep(0,p.iid), sigma = Sigma.statistic, df = df)
-                    
-                    p1 <- tmvtnorm::ptmvt(lower = vecAll.lower, upper = vecAll.upper,
-                                          lowerx = vecAll.lowerX, upperx = vecAll.upperX,
-                                          mean = rep(0,pAll.iid), sigma = SigmaAll.statistic, df = df)
-                    p2 <- tmvtnorm::ptmvt(lower = vecAll.lower, upper = vecAll.upper,
-                                          lowerx = vecAll.lowerX2, upperx = vecAll.upperX2,
-                                          mean = rep(0,pAll.iid), sigma = SigmaAll.statistic)
-
-
-                    p1 <- mvtnorm::pmvt(lower = c(-0.01,-2), upper = c(0.01,2),
-                                        delta = c(0,0), sigma = diag(1,2), df = df)
-                    p2 <- mvtnorm::pmvt(lower = c(-Inf,-2), upper = c(Inf,2),
-                                        delta = c(0,0), sigma = diag(1,2), df = df)
-                    return( (1-p1)/(1-p2) )
-                }else{
-                    return(NA)
-                }   
-            }       
-            # }}}
-        }
-        # }}}
-
-        # {{{ parallel computations
+    ## ** Computation
+    out$z <- warperQ(alpha)
+        
+    if(ncpus > 1){
+        ## *** parallel computations
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
             doSNOW::registerDoSNOW(cl)
         }
 
         value <- NULL # for CRAN check
+        if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values: ") }
         out$p.adjust <- foreach::`%dopar%`(
-                                     foreach::foreach(value = link,
+                                     foreach::foreach(value = index.new,
                                                       .packages = c("tmvtnorm","mvtnorm"),
                                                       .export = "calcDistMax",
                                                       .combine = "c"),
@@ -226,70 +180,182 @@ calcDistMax <- function(link, statistic, iid, seqIID, seqSelected, seqQuantile, 
         if(initCpus){
             parallel::stopCluster(cl)
         }
-    
-        if(trace > 0){ cat("done \n") }
-        # }}}
+            
+    }else{
+            
+        ## *** sequential computations
+        if(trace>0){
+            requireNamespace("pbapply")
+            out$p.adjust <- pbapply::pbsapply(index.new, warperP)
+        }else{
+            out$p.adjust <- sapply(index.new, warperP)
+        }
+                        
+    }
         
-  }else{
+    if(trace > 0){ cat("done \n") }
 
-      # {{{ bootstrap
-      if(method %in% "boot-norm"){
-          Sigma.iid <- cov(iid)
-      }else{
-          Sigma.iid <- NULL
-      }
+    ## ** export
+    return(out)
+}
+
+## * calcDistMaxBootstrap
+#' @rdname calcDistMax
+#' @export
+calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.previous = NULL,
+                                 method, alpha, ncpus = 1, initCpus = TRUE, n.sim, trace, n.repMax = 100){
+
+    ## ** normalize arguments
+    n <- NROW(iid)
+    conditional <- length(quantile.previous)>0
+    if(length(quantile.previous)>1){
+        stop("Can only condition on one previous step \n")
+    }
+
+    iid.all <- cbind(iid,iid.previous)
+    index.new <- 1:NCOL(iid)
+    index.previous <- setdiff(1:NCOL(iid.all),index.new)
+
+    ## ** Function used for the simulations
+    warperBoot <- .bootMaxDist
     
-      if(ncpus>1){
-          n.simCpus <- rep(round(n.sim/ncpus),ncpus)
-          n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
-      }else{
-          n.simCpus <- n.sim
-      }
-    
-      warper <- function(iid, sigma, n, method){
-          if(method == "boot-wild"){
-              e <- rnorm(n,mean=0,sd=1)
-              iid.sim <- sapply(1:p.iid,function(x){e*iid[,x]})        
-          }else if(method == "boot-norm"){
-              iid.sim <- MASS::mvrnorm(n,rep(0,p.iid),sigma)            
-          }else if(method == "bootstrap"){
-              iid.sim <- iid[sample.int(n, replace = TRUE),]
-          }
-          # apply(iid.sim,2,mean)
-          # apply(iid.sim,2,sd)
-          Test <- apply(iid.sim,2,function(x){sqrt(n)*mean(x)/sd(x)})                
-          return(max(abs(Test)))
-      }
-    
-      if(trace > 0){ cat("simulation to get the 95% quantile of the max statistic: ") }
-      
-      if(initCpus){
+    ## ** Compute the correlation matrix between the test statistics
+    # center to be under the null
+    # scale since we want the distribution of the Wald statistic (i.e. statistic with unit variance)
+    iid.statistic <- scale(iid.all, center = TRUE, scale = TRUE)
+    Sigma.statistic <- cov(iid.statistic, use = "pairwise.complete.obs")
+
+    ## ** Computation
+    if(trace > 0){ cat("Bootsrap simulations to get the 95% quantile of the max statistic: ") }
+
+    if(ncpus>1){
+        n.simCpus <- rep(round(n.sim/ncpus),ncpus)
+        n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
+
+        if(initCpus){
           cl <- parallel::makeCluster(ncpus)
           doSNOW::registerDoSNOW(cl)
       }
-      
-      i <- NULL # for CRAN check
-      distMax <- foreach::`%dopar%`(
-                              foreach::foreach(i = 1:ncpus, .packages =  c("MASS"),
-                                               .export = "calcDistMax",
-                                               .combine = "c"),
-                              {
-                                  replicate(n.simCpus[i], warper(iid = iid,
-                                                                 sigma = Sigma.iid,
-                                                                 n = n, method = method))
-                              })
+  
+        i <- NULL # for CRAN check
+        distMax <- foreach::`%dopar%`(
+                                foreach::foreach(i = 1:ncpus, .packages =  c("MASS"),
+                                                 .export = "calcDistMax",
+                                                 .combine = "c"),{
+                                                     replicate(n.simCpus[i],
+                                                               warperBoot(iid = iid.all, sigma = Sigma.statistic,
+                                                                          n = n, method = method,
+                                                                          index.new = index.new, index.previous = index.previous,
+                                                                          quantile.previous = quantile.previous, n.repMax = n.repMax))
+                                                 })
 
-      if(initCpus){
-          parallel::stopCluster(cl)
-      }
+        if(initCpus){
+            parallel::stopCluster(cl)
+        }
+        
+    }else{
 
-      if(trace > 0){ cat("done \n") }
-      out$z <- quantile(distMax, probs = 1-alpha)
-      out$p.adjust <- sapply(abs(statistic), function(x){mean(distMax>x)})
-      # }}}
-  }
+       if(trace>0){
+            requireNamespace("pbapply")
+            distMax <- pbapply::pbsapply(1:n.sim, warperBoot, method = method,
+                                         iid = iid.all, sigma = Sigma.statistic, n = n,                                         
+                                         index.new = index.new, index.previous = index.previous,
+                                         quantile.previous = quantile.previous, n.repMax = n.repMax)
+       }else{
+           distMax <- sapply(1:n.sim, warperBoot, method = method,
+                             iid = iid.all, sigma = Sigma.statistic, n = n,
+                             index.new = index.new, index.previous = index.previous,
+                             quantile.previous = quantile.previous, n.repMax = n.repMax)
+       }
+        
+    }
+     
+    if(trace > 0){ cat("done \n") }
 
+    ## ** export
+    out <- list()
+    out$z <- quantile(distMax, probs = 1-alpha, na.rm = TRUE)
+    out$p.adjust <- sapply(abs(statistic), function(x){mean(distMax>x,na.rm=TRUE)})
+    out$Sigma <- Sigma.statistic
     return(out)
+}
+    
+## * .calcQmaxIntegration: numerical integration to compute the critical threshold
+.calcQmaxIntegration <- function(alpha, p, Sigma, df, distribution){
+
+    if(distribution == "gaussian"){
+        q.alpha <- mvtnorm::qmvnorm(1-alpha,
+                                    mean = rep(0,p),
+                                    corr = Sigma,
+                                    tail = "both.tails")$quantile
+    }else if(distribution == "student"){
+        q.alpha <- mvtnorm::qmvt(1-alpha,
+                                 delta = rep(0,p),
+                                 corr = Sigma,
+                                 df = df,
+                                 tail = "both.tails")$quantile
+    }
+
+    return(q.alpha)
+}
+    
+## * .calcPmaxIntegration_firstStep: numerical integration to compute the p.values
+.calcPmaxIntegration <- function(statistic, p, Sigma, df, distribution){
+    value <- abs(statistic)
+    if(!is.na(value)){
+        if(distribution == "gaussian"){
+            p <- mvtnorm::pmvnorm(lower = -value, upper = value,
+                                  mean = rep(0, p), corr = Sigma)
+        }else if(distribution == "student"){
+            p <- mvtnorm::pmvt(lower = -value, upper = value,
+                               delta = rep(0, p), corr = Sigma, df = df)
+        }
+        return(1-p)
+    }else{
+        return(NA)
+    }   
+}
+
+## * .bootMaxDist: bootstrap simulation
+.bootMaxDist <- function(iid, sigma, n, method,
+                         index.new, index.previous, quantile.previous, n.repMax,
+                         ...){
+
+    iRep <- 0
+    cv <- FALSE
+    while(iRep < n.repMax && cv == FALSE){
+        
+        ## ** resample to obtain a new influence function
+        if(method == "naive"){
+            iid.sim <- iid[sample.int(n, replace = TRUE),]
+        }else if(method == "residual"){
+            iid.sim <- MASS::mvrnorm(n,rep(0,NCOL(sigma)),sigma)                    
+        }else if(method == "wild"){
+            e <- rnorm(n,mean=0,sd=1)
+            iid.sim <- sapply(1:NCOL(sigma),function(x){e*iid[,x]})        
+        }
+        if(!is.null(quantile.previous)){
+            iid.previous <- iid.sim[,index.previous]
+            test.previous <- apply(iid.previous,2,function(x){sqrt(n)*mean(x)/sd(x)})
+            max.previous <- max(abs(test.previous))        
+            if(max.previous<quantile.previous){
+                iRep <- iRep + 1
+            }else{
+                iid.sim <- iid.sim[,index.new]
+                cv <- TRUE
+            }
+        }else{
+            cv <- TRUE
+        }
+    }
+    
+    ## ** compute the bootstrap test statistic
+    if(cv){
+        Test <- apply(iid.sim,2,function(x){sqrt(n)*mean(x)/sd(x)})
+    }else{
+        Test <- NA
+    }
+    return(max(abs(Test)))
 }
 
 

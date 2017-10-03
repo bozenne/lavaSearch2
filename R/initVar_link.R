@@ -13,29 +13,29 @@
 #' @details See test file test/testthat/test-Reduce.R for examples
 #'
 #' @examples
-#' initVar_link(y ~ x1)
-#' initVar_link("y ~ x1")
-#' initVar_link(y ~ x1 + x2)
-#' initVar_link("y ~ x1 + x2")
-#' initVar_link(y ~ x1 + x2, repVar1 = TRUE)
-#' initVar_link(y ~ x1 + x2, repVar1 = TRUE, format = "formula")
-#' initVar_link(y ~ x1 + x2, repVar1 = TRUE, format = "txt.formula")
-#' initVar_link("y", "x1", format = "formula")
+#' initVarLink(y ~ x1)
+#' initVarLink("y ~ x1")
+#' initVarLink(y ~ x1 + x2)
+#' initVarLink("y ~ x1 + x2")
+#' initVarLink(y ~ x1 + x2, repVar1 = TRUE)
+#' initVarLink(y ~ x1 + x2, repVar1 = TRUE, format = "formula")
+#' initVarLink(y ~ x1 + x2, repVar1 = TRUE, format = "txt.formula")
+#' initVarLink("y", "x1", format = "formula")
 #'
-#' initVar_link("y ~ x1:0|1")
+#' initVarLink("y ~ x1:0|1")
 #'
-#' initVar_links(y ~ x1)
-#' initVar_links("y ~ x1")
-#' initVar_links(c("y ~ x1","y~ x2"))
-#' initVar_links(c(y ~ x1,y ~ x2))
-#' initVar_links(c("y ~ x1","y~ x2"), format = "formula")
-#' initVar_links(c(y ~ x1,y ~ x2), format = "formula")
-#' initVar_links(c("y ~ x1","y~ x2"), format = "txt.formula")
-#' initVar_links(c(y ~ x1,y ~ x2), format = "txt.formula")
+#' initVarLinks(y ~ x1)
+#' initVarLinks("y ~ x1")
+#' initVarLinks(c("y ~ x1","y~ x2"))
+#' initVarLinks(c(y ~ x1,y ~ x2))
+#' initVarLinks(c("y ~ x1","y~ x2"), format = "formula")
+#' initVarLinks(c(y ~ x1,y ~ x2), format = "formula")
+#' initVarLinks(c("y ~ x1","y~ x2"), format = "txt.formula")
+#' initVarLinks(c(y ~ x1,y ~ x2), format = "txt.formula")
 
 #' @rdname initVar
 #' @export
-initVar_link <- function(var1, var2, repVar1 = FALSE, format = "list",
+initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
                          Slink = lava.options()$symbols[1],
                          Scov = lava.options()$symbols[2]){
 
@@ -43,8 +43,8 @@ initVar_link <- function(var1, var2, repVar1 = FALSE, format = "list",
     
     if(missing(var2)){
         if(class(var1) == "formula"){
-            var2 <- select.regressor(var1, type = "vars")
-            var1 <- select.response(var1, type = "vars")
+            var2 <- selectRegressor(var1, type = "vars")
+            var1 <- selectResponse(var1, type = "vars")
             sep <- if(format == "formula"){"~"}else{Slink}
         }else if(grepl(Scov,var1,fixed=TRUE)==TRUE){ ## covariance
             varSplit <- strsplit(var1, split = Scov)[[1]]
@@ -92,19 +92,19 @@ initVar_link <- function(var1, var2, repVar1 = FALSE, format = "list",
 }
 # }}}
 
-# {{{ initVar_links
+# {{{ initVarLinks
 #' @rdname initVar
 #' @export
-initVar_links <- function(var1, format = "list",
+initVarLinks <- function(var1, format = "list",
                           Slink = lava.options()$symbols[1],
                           Scov = lava.options()$symbols[2]){
         
     if("formula" %in% class(var1)){
-        res <- initVar_link(var1, repVar1 = TRUE, format = format,
+        res <- initVarLink(var1, repVar1 = TRUE, format = format,
                             Slink = Slink, Scov = Scov)
     }else {
         res <- sapply(var1, function(x){
-            initVar_link(x, repVar1 = TRUE, format = format,
+            initVarLink(x, repVar1 = TRUE, format = format,
                          Slink = Slink, Scov = Scov)
         })
         if(format == "list"){
@@ -121,10 +121,10 @@ initVar_links <- function(var1, format = "list",
 # }}}
 
 
-# {{{ select.response
+# {{{ selectResponse
 #' @title Response variable of a formula
 #' @description Return the reponse variable contained in the formula
-#' @name select.response
+#' @name selectResponse
 #' 
 #' @param x a formula
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
@@ -132,25 +132,25 @@ initVar_links <- function(var1, format = "list",
 #'
 #' @examples
 #' \dontrun{
-#' # select.response <- lavaSearch2:::select.response
-#' select.response(Y1~X1+X2)
-#' select.response(Y1~X1+X2, type = "vars")
-#' select.response(Surv(event,time)~X1+X2, type = "vars")
+#' # selectResponse <- lavaSearch2:::selectResponse
+#' selectResponse(Y1~X1+X2)
+#' selectResponse(Y1~X1+X2, type = "vars")
+#' selectResponse(Surv(event,time)~X1+X2, type = "vars")
 #' 
-#' select.response(Y1~X1+Y1)
-#' select.response(Y1+Y2~X1+Y1, type = "vars")
+#' selectResponse(Y1~X1+Y1)
+#' selectResponse(Y1+Y2~X1+Y1, type = "vars")
 #' 
-#' select.response(~X1+X2)
-#' select.response(~X1+X2, type = "vars")
+#' selectResponse(~X1+X2)
+#' selectResponse(~X1+X2, type = "vars")
 #' }
 
-#' @rdname select.response
+#' @rdname selectResponse
 #' @export
-`select.response` <-  function(x, ...) UseMethod("select.response")
+`selectResponse` <-  function(x, ...) UseMethod("selectResponse")
 
-#' @rdname select.response
-#' @method select.response formula
-select.response.formula <- function(x, type = "call"){
+#' @rdname selectResponse
+#' @method selectResponse formula
+selectResponse.formula <- function(x, type = "call"){
   
   match.arg(type, c("call","vars"))
   
@@ -167,10 +167,10 @@ select.response.formula <- function(x, type = "call"){
 }
 # }}}
 
-# {{{ select.regressor
+# {{{ selectRegressor
 #' @title Regressor of a formula
 #' @description Return the regressor variables contained in the formula
-#' @name select.regressor
+#' @name selectRegressor
 #' 
 #' @param x a formula
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
@@ -178,25 +178,25 @@ select.response.formula <- function(x, type = "call"){
 #' 
 #' @examples
 #' \dontrun{
-#' # select.regressor <- lavaSearch2:::select.regressor
-#' select.regressor(Y1~X1+X2)
-#' select.regressor(Y1~X1+X2, type = "vars")
+#' # selectRegressor <- lavaSearch2:::selectRegressor
+#' selectRegressor(Y1~X1+X2)
+#' selectRegressor(Y1~X1+X2, type = "vars")
 #' 
-#' select.regressor(Y1~X1+Y1)
-#' select.regressor(Y1+Y2~X1+Y1, type = "vars")
+#' selectRegressor(Y1~X1+Y1)
+#' selectRegressor(Y1+Y2~X1+Y1, type = "vars")
 #' 
-#' select.regressor(~X1+X2)
-#' select.regressor(~X1+X2, type = "vars")
+#' selectRegressor(~X1+X2)
+#' selectRegressor(~X1+X2, type = "vars")
 #' }
 
 
-#' @rdname select.regressor
+#' @rdname selectRegressor
 #' @export
-`select.regressor` <-  function(x, ...) UseMethod("select.regressor")
+`selectRegressor` <-  function(x, ...) UseMethod("selectRegressor")
 
-#' @rdname select.regressor
-#' @method select.regressor formula
-select.regressor.formula <- function(x, type = "call"){
+#' @rdname selectRegressor
+#' @method selectRegressor formula
+selectRegressor.formula <- function(x, type = "call"){
   
   match.arg(type, c("call","vars"))
   

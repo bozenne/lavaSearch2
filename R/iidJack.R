@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: aug 29 2017 (10:39) 
+## last-updated: okt  3 2017 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 239
+##     Update #: 244
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-# {{{ Documentation
+## * documentation - iidJack
 #' @title Jacknife i.i.d. decomposition (influence function) from model object
 #' @description Extract i.i.d. decomposition (influence function) from model object
 #'
@@ -91,8 +91,8 @@
 #'
 #' @export
 iidJack <- function(x,...) UseMethod("iidJack")
-# }}}
 
+## * method iidJack.default
 #' @rdname iidJack
 #' @export
 iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
@@ -101,9 +101,9 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     
     estimate.lvm <- lava_estimate.lvm
 
-    # {{{ extract data
+    ## ** extract data
     if(is.null(data)){
-        myData <- extractData(x, model.frame = FALSE, convert2dt = TRUE) 
+      myData <- extractData(x, model.frame = FALSE, convert2dt = TRUE) 
     }else if(is.data.table(data)){
         myData <-  copy(data)
     }else{
@@ -119,18 +119,16 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     coef.x <- getCoef(x)
     names.coef <- names(coef.x)
     n.coef <- length(coef.x)
-    # }}}
 
-    # {{{ update formula/model when defined by a variable and not in the current namespace
+    ## ** update formula/model when defined by a variable and not in the current namespace
     if(length(x$call[[2]])==1){
         modelName <- as.character(x$call[[2]])
         if(modelName %in% ls() == FALSE){
-            assign(modelName, value = findINparent(modelName))
+            assign(modelName, value = findInParent(modelName))
         }
     }
-    # }}}
 
-    # {{{ define the grouping level for the data
+    ## ** define the grouping level for the data
     if(is.null(grouping)){
         if(any(class(x)%in%c("lme","gls","nlme"))){
             myData[, c("XXXgroupingXXX") := as.vector(apply(x$groups,2,interaction))]
@@ -149,9 +147,8 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     myData[, c(grouping) := as.character(.SD[[grouping]])]
     Ugrouping <- unique(myData[[grouping]])
     n.group <- length(Ugrouping)
-    # }}}
 
-    # {{{ warper
+    ## ** warper
     warper <- function(i){ # i <- "31"
         xnew <- tryWithWarnings(update(x, data = myData[myData[[grouping]]!=i,]))
         if(!is.null(xnew$error)){
@@ -162,11 +159,8 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
         return(xnew)
     }
     # warper("31")
-    # }}}
-
-
     
-    # {{{ parallel computations: get jackknife coef
+    ## ** parallel computations: get jackknife coef
     if(ncpus>1){
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
@@ -240,14 +234,12 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     }
     coefJack <- do.call(rbind, lapply(resLoop,"[[","value"))
     rownames(coefJack) <- 1:n.group
-    # }}}
 
-    # {{{ post treatment: from jackknife coef to IF
+    ## ** post treatment: from jackknife coef to IF
     # defined as (n-1)*(coef-coef(-i))
     # division by n to match output of lava, i.e. IF/n
     iidJack <- -(n.group-1)/n.group*sweep(coefJack, MARGIN = 2, STATS = coef.x, FUN = "-")
     colnames(iidJack) <- names.coef
-    # }}}
 
     if(keep.warnings){
         ls.warnings <- lapply(resLoop,"[[","warnings")

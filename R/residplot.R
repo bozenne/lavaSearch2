@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
 ## Version: 
-## last-updated: aug 29 2017 (18:23) 
+## last-updated: sep 18 2017 (12:02) 
 ##           By: Brice Ozenne
-##     Update #: 99
+##     Update #: 106
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -115,14 +115,15 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
     #predicted[, "XXXXIdXXXX" := 1:.N]
 
     ## residuals values
-    predicted <- as.data.table(stats::residuals(object)[,res.variables])
-    names(predicted) <- res.variables
-    predicted[, "XXXXIdXXXX" := 1:.N]
+    dt.residuals <- as.data.table(stats::residuals(object)[,res.variables])
+    ## dt.residuals <- as.data.table(stats::predict(object)[,res.variables])
+    names(dt.residuals) <- res.variables
+    dt.residuals[, "XXXXIdXXXX" := 1:.N]
 
-    dtL.predicted <- melt(predicted, id.vars = "XXXXIdXXXX",
+    dtL.residuals <- melt(dt.residuals, id.vars = "XXXXIdXXXX",
                           variable.name = "endogenous")
     
-    dtL.all <- merge(x = dtL.data, y = dtL.predicted, by = c("XXXXIdXXXX","endogenous"))
+    dtL.all <- merge(x = dtL.data, y = dtL.residuals, by = c("XXXXIdXXXX","endogenous"))
     setnames(dtL.all, old = c("value.x","value.y"), new = c("observed","fitted"))
     
     ## compute standard deviation

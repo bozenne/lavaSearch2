@@ -10,14 +10,14 @@
 #' @importFrom graphics par plot text
 #' @importFrom optimx optimx
 #' @importFrom MASS mvrnorm
-#' @importFrom mvtnorm pmvnorm qmvnorm rmvnorm qmvt
+#' @importFrom mvtnorm pmvnorm qmvnorm rmvnorm qmvt pmvt
 #' @importFrom numDeriv jacobian hessian
 #' @importFrom parallel detectCores makeCluster stopCluster
 #' @importFrom qqtest qqtest
 #' @importFrom riskRegression iidCox
-#' @importFrom stats anova as.formula coef cov df.residual dist formula hclust logLik model.frame na.omit p.adjust pnorm predict qqnorm quantile pt rnorm sd setNames uniroot update vcov 
+#' @importFrom stats anova as.formula coef cov df.residual dist formula hclust logLik model.frame na.omit optim p.adjust pnorm predict qqnorm quantile pt rnorm sd setNames uniroot update vcov 
 #' @importFrom tmvtnorm ptmvnorm
-#' @importFrom utils methods setTxtProgressBar txtProgressBar
+#' @importFrom utils methods setTxtProgressBar tail txtProgressBar
 #' 
 NULL
 
