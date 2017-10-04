@@ -173,7 +173,8 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = dt)
 #' res.x <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm", nStep = 2)
-#' res.y <- modelsearch2(getStep(res.x, slot = "sequenceModel"), statistic = "score", method.p.adjust = "holm")
+#' res.y <- modelsearch2(getStep(res.x, slot = "sequenceModel"), 
+#'                       statistic = "score", method.p.adjust = "holm")
 #' res.xy <- merge(res.x,res.y)
 #'
 #' modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
