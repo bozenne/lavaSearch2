@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: okt  3 2017 (09:49) 
+## last-updated: okt  4 2017 (15:10) 
 ##           By: Brice Ozenne
-##     Update #: 452
+##     Update #: 468
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,20 +16,21 @@
 ### Code:
 
 ## * Documentation - modelsearchMax
-#' @title Model searching using the max statistic
-#' @description Model searching using the max statistic to retain or not a link
-#' 
-#' @name modelsearchMax
-#'
-#' @return an object of class lvmfit
-#'
-#' @seealso \code{link{modelsearch2}}
-#' 
-#' @keywords internal
-#'
+## ' @title Model searching using the max statistic
+## ' @description Model searching using the max statistic to retain or not a link
+## ' 
+## ' @name modelsearchMax
+## '
+## ' @return an object of class lvmfit
+## '
+## ' @seealso \code{link{modelsearch2}}
+## ' 
+## ' @keywords internal
+## '
+
 
 ## * Function - modelsearchMax
-#' @rdname modelsearchMax
+## ' @rdname modelsearchMax
 modelsearchMax <- function(x, restricted, link, directive, packages,
                            update.FCT, update.args, iid.FCT,
                            method.p.adjust, method.max = "integration", n.sim = 1e3, alpha = 0.05,  
@@ -40,13 +41,13 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
- 
+
     best.test <- -Inf
     best.model <- NULL    
     iid.link <- NULL
     convergence <- rep(NA,n.link)
 
-    
+
     ## ** wraper
     warper <- function(iterI){ # iterI <- 2
         out <- list(dt = data.table(statistic = as.numeric(NA),
@@ -70,12 +71,12 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 new.coef <- new.coef[link[iterI]]
                 #sd.coef <- sqrt(vcov(newfit)[link[iterI],link[iterI]])
                 rdf <- df.residual(newfit, conservative = FALSE)
-                
-                out$dt[1, c("coefBeta") := new.coef]
-                # test <- iidJack(newfit)
+
+            out$dt[1, c("coefBeta") := new.coef]
+            # test <- iidJack(newfit)
 
                 out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
-                SeBeta <- sqrt(sum(out$iid^2,na.rm=TRUE)/sum(!is.na(out$iid))) # note n/n-1 vs. sqrt(vcov(newfit)[iLink[iterI],iLink[iterI]])
+                SeBeta <- sd(out$iid,na.rm = TRUE)
                 out$dt[1, c("statistic") := abs(.SD$coefBeta/SeBeta)]               
             }
         }
@@ -136,17 +137,17 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     dt.test <- cbind(link = link, res$dt)    
     iid.link <- res$iid
     
-    ## ** p.value
-    df.model <- df.residual(x, conservative = TRUE)
-    indexCV <- dt.test[, .I[.SD$convergence==0]]
+## ** p.value
+df.model <- df.residual(x, conservative = TRUE)
+indexCV <- dt.test[, .I[.SD$convergence==0]]
 
-    if(is.null(df.model)){
-        dt.test[indexCV, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
-    }else{
-        dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
-    }
+if(is.null(df.model)){
+    dt.test[indexCV, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
+}else{
+    dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
+}
 
-    ## ** adjust p.value
+## ** adjust p.value
     if(method.p.adjust == "max"){
         nameN0 <- dt.test[indexCV, .SD$link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
@@ -184,12 +185,12 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         Sigma <- NULL        
     }    
     
-    ## ** export
+## ** export
     out <- list(dt.test = dt.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)
     return(out)
 }
 
-#----------------------------------------------------------------------
-### Lava_modelsearchMax.R ends here
+## ----------------------------------------------------------------------
+## Lava_modelsearchMax.R ends here

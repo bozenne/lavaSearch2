@@ -192,6 +192,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         }
                         
     }
+    out$p.adjust <- setNames(out$p.adjust, names(statistic))
         
     if(trace > 0){ cat("done \n") }
 
