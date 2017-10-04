@@ -53,12 +53,14 @@
 ##'                         mu = mu, Sigma = Sigma, correct = TRUE)
 ##'
 ##' ## strong selection
+##' \dontrun{
 ##' mu <- c(0,0,0)
 ##' levelC <- calcType1postSelection(0.95, quantile.previous = z2, distribution = "gaussian",
 ##'                         mu = mu, Sigma = Sigma)
 ##' print(levelC) # more liberal than without selection
 ##' calcType1postSelection(levelC, quantile.previous = z2, distribution = "gaussian",
 ##'                         mu = mu, Sigma = Sigma, correct = FALSE)
+##' }
 ##'
 ##' #### 3 tests
 ##' Sigma <- diag(1,5,5)
@@ -70,6 +72,7 @@
 ##' z2 <- qmvnorm(0.95, mean = mu[1:3], sigma = Sigma[1:3,1:3], tails = "both.tails")$quantile
 ##' 
 ##' ## no selection since strong effect
+##' \dontrun{
 ##' mu <- c(10,0,0,0,0)
 ##' calcType1postSelection(0.95, quantile.previous = z2, distribution = "gaussian",
 ##'                         mu = mu, Sigma = Sigma, correct = TRUE)
@@ -80,7 +83,7 @@
 ##'                         mu = mu, Sigma = Sigma, distribution = "gaussian")
 ##' calcType1postSelection(levelC, quantile.previous = z2, distribution = "gaussian",
 ##'                         mu = mu, Sigma = Sigma, correct = FALSE)
-##'
+##' }
 ##'
 ##' 
 ##' @export

@@ -29,7 +29,7 @@
 #' # summary(cvCheck(m, dd, ncpus = 4))
 #' }
 #' \dontshow{
-#' summary(cvCheck(m, dd, ncpus = 1, n.init = 10))
+#' summary(cvCheck(m, dd, ncpus = 1, n.init = 3))
 #' }
 #'
 #' 
@@ -103,30 +103,40 @@ cvCheck.lvm <- function(object,
     # }}}
 
     # {{{ parallel computations
-    cl <- parallel::makeCluster(ncpus)
-    doSNOW::registerDoSNOW(cl)
-
-    if(trace > 0){
+    if(ncpus>1){
+      cl <- parallel::makeCluster(ncpus)
+      doSNOW::registerDoSNOW(cl)
+      
+      if(trace > 0){
         pb <- utils::txtProgressBar(max = n.init, style = 3)
         progress <- function(n) setTxtProgressBar(pb, n)
         opts <- list(progress = progress)
-    }else{
+      }else{
         opts <- NULL
+      }
+      
+      i <- NULL # for CRAN check
+      Mres <- foreach::`%dopar%`(
+        foreach::foreach(i = 1:n.init,
+                         .packages =  "lava",
+                         .export = "dots",
+                         .combine = "cbind",
+                         .options.snow = opts),
+        {                                
+          return(warper(i))
+        })
+      
+      if(trace > 0){  close(pb) }
+      parallel::stopCluster(cl)
+    }else{
+      if(trace>0){
+        requireNamespace("pbapply")
+        resLoop <- pbapply::pblapply(1:n.init, warper)
+      }else{
+        resLoop <- lapply(1:n.init, warper)
+      }
+      Mres <- do.call("cbind",resLoop)
     }
-
-    i <- NULL # for CRAN check
-    Mres <- foreach::`%dopar%`(
-                         foreach::foreach(i = 1:n.init,
-                                          .packages =  "lava",
-                                          .export = "dots",
-                                          .combine = "cbind",
-                                          .options.snow = opts),
-                         {                                
-                             return(warper(i))
-                         })
-    
-    if(trace > 0){  close(pb) }
-    parallel::stopCluster(cl)
     # }}}
 
     # {{{ postprocess and export

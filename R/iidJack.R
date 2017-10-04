@@ -51,6 +51,8 @@
 #' library(riskRegression)
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+#' 
+#' \dontrun{
 #' iid1 <- iidJack(m)
 #' iid2 <- iidCox(m)$IFbeta
 #'
@@ -59,7 +61,8 @@
 #' print(iid2)
 #' 
 #' apply(iid2,2,sd)
-#'
+#' }
+#' 
 #' #### LVM ####
 #' set.seed(10)
 #'
@@ -75,6 +78,7 @@
 #' latent(m1) <- ~eta
 #' regression(m1) <- eta ~ G
 #' e <- estimate(m1, data = dW)
+#' \dontrun{
 #' iid1 <- iidJack(e)
 #' iid2 <- iid(e)
 #' attr(iid2, "bread") <- NULL
@@ -82,13 +86,15 @@
 #' apply(iid1,2,sd)
 #' apply(iid2,2,sd)
 #' quantile(iid2 - iid1)
-#'
+#' }
+#' 
 #' library(nlme)
 #' e2 <- lme(Y~G+time, random = ~1|Id, weights = varIdent(form =~ 1|Id), data = dL)
 #' e2 <- lme(Y~G, random = ~1|Id, data = dL)
+#' \dontrun{
 #' iid3 <- iidJack(e2)
 #' apply(iid3,2,sd)
-#'
+#' }
 #' @export
 iidJack <- function(x,...) UseMethod("iidJack")
 

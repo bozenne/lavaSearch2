@@ -51,12 +51,14 @@
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 #'              statistic = "Wald", method.p.adjust = "holm",
 #'              method.iid = method.iid)
+#' \dontrun{
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 #'                     method.iid = method.iid)
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 #'                     nStep = 2, 
 #'                     method.iid = method.iid, conditional = TRUE)
 #' res$sequenceTest[[2]]
+#' }
 #' 
 #' #### Cox model ####
 #' library(survival)
