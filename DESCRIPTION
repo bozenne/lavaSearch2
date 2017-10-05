@@ -1,8 +1,8 @@
 Package: lavaSearch2
 Type: Package
 Title: Tools for model specification in the latent variable framework
-Version: 0.1.1
-Date: 2017-10-03
+Version: 0.1.2
+Date: 2017-10-05
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 Description: Tools for model specification in the latent variable framework
@@ -17,6 +17,7 @@ Imports:
     foreach,
     ggplot2,
     MASS,
+    methods,
     mvtnorm,
     nlme,
     numDeriv,
