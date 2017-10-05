@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: okt  5 2017 (12:42) 
+## last-updated: okt  5 2017 (15:39) 
 ##           By: Brice Ozenne
-##     Update #: 166
+##     Update #: 186
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,8 +91,11 @@ compareSearch <- function(object, alpha = 0.05,
             currentStep <- nStep(ls.search$Wald)
             vec.tempo <- getStep(ls.search$Wald, step = currentStep, slot = "sequenceTest")
             maxStep <- list(...)$nStep
+            vec.p.adjust <- sapply(setdiff(method.p.adjust,"max"), function(iAdj){
+                min(p.adjust(vec.tempo$p.value, method = iAdj))
+            })
             if(is.null(maxStep)){maxStep <- Inf}
-            if(any(vec.tempo$p.value < alpha) && (vec.tempo$selected==FALSE) && (currentStep<maxStep) ){ # continue the modelsearch
+            if(any(vec.p.adjust < alpha) && (vec.tempo$selected==FALSE) && (currentStep<maxStep) ){ # continue the modelsearch
 
                 ## ** add the link of the last test to the model (avoid to repeat step)
                 model.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceModel")
@@ -134,19 +137,23 @@ compareSearch <- function(object, alpha = 0.05,
         }
     }
     
-
 ### ** Adjust p.values
     ls.searchAll <- list()    
     for(iStatistic in statistic){ # iStatistic <- statistic[1]
+      ##  print(iStatistic)
         for(iAdjust in method.p.adjust){ # iAdjust <- method.p.adjust[1]
+        ##    print(iAdjust)
             if(iAdjust == "max" && iStatistic != "Wald"){next}
-            list.tempo <- list(.adjustModelSearch(ls.search[[iStatistic]], method.p.adjust = iAdjust, alpha  = alpha))
+            list.tempo <- list(.adjustModelSearch(ls.search[[iStatistic]],
+                                                  model0 = object,
+                                                  method.p.adjust = iAdjust,
+                                                  alpha  = alpha))
             names(list.tempo) <- paste0(iStatistic,"-",iAdjust)
             ls.searchAll <- c(ls.searchAll,list.tempo)
         }
             
     }
-   
+
 ### ** Merge results
     ## newlinks
     ls.newlinks <- lapply(ls.searchAll,getNewLink)
@@ -172,10 +179,10 @@ compareSearch <- function(object, alpha = 0.05,
 }
 
 ## * adjustModelSearch
-.adjustModelSearch <- function(object, method.p.adjust, alpha){
+.adjustModelSearch <- function(object,model0,  method.p.adjust, alpha){
 
     object <- copy(object)
-    
+  
     ## ** adjust p.value
     seqP.value <- sapply(object$sequenceTest, function(x){        
         if(method.p.adjust!="max"){            
@@ -186,8 +193,12 @@ compareSearch <- function(object, alpha = 0.05,
 
     ## ** stop search when necessary
     index.keepTest <- union(1, which(seqP.value<alpha)+1)
+    index.keepTest <- index.keepTest[sapply(index.keepTest, function(x){
+        all(1:x %in% index.keepTest) # remove non consecutive steps
+    })]
     index.keepTest <- index.keepTest[index.keepTest<=nStep(object)] # remove extra step due to early stop
-    
+
+    seqP.value <- seqP.value[index.keepTest]
     object$sequenceTest <- object$sequenceTest[index.keepTest]
     object$sequenceModel <- object$sequenceModel[index.keepTest]
     if(method.p.adjust=="max"){ # max never activated
@@ -198,8 +209,12 @@ compareSearch <- function(object, alpha = 0.05,
 
     ## ** update final model
     index.finalModel <- tail(which(seqP.value<alpha),1)
-    object$sequenceModel[[length(object$sequenceModel)]] <- object$sequenceModel[[index.finalModel]]
-
+    if( length(index.finalModel) == 0 ){
+        object$sequenceModel[[1]] <- model0
+    }else{
+        object$sequenceModel[[length(object$sequenceModel)]] <- object$sequenceModel[[index.finalModel]]
+    }
+    
     ## ** update adjustement
     object$method.p.adjust <- method.p.adjust
     

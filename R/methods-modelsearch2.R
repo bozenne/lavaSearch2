@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: okt  5 2017 (11:34) 
+## last-updated: okt  5 2017 (15:35) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 105
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,9 @@
 #' @rdname nStep
 #' @export
 nStep.modelsearch2 <- function(object){
+
     return(length(object$sequenceTest))
+    
 }
 
 ## * getStep
@@ -76,7 +78,7 @@ nStep.modelsearch2 <- function(object){
 #' @rdname getStep
 #' @export
 getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...){
-
+    
     ## ** normalize arguments
     lastStep <- nStep(object)
     if(step %in% 1:lastStep == FALSE){
