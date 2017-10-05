@@ -140,7 +140,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
 
         ## all vars
         if(is.null(data)){            
-            data <- getInParentEnv(as.character(x$call$data), envir = environment())             
+            data <- evalInParentEnv(x$call$data, envir = environment())             
             if(is.null(data)){
                 data <- lava::sim(x,1)
             }            
@@ -239,7 +239,7 @@ modelsearch2.default <- function(x, link, data = NULL,
       
     ## ** get data
     if(is.null(data)){
-        data <- getInParentEnv(as.character(x$call$data), envir = environment())
+        data <- evalInParentEnv(x$call$data, envir = environment())
         if(is.null(data)){
             stop("x$call$data not found in the current environment or its parents \n",
                  "consider specify the argument \'data\' \n")
@@ -622,7 +622,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     FCT.estimate <- as.character(x$call[[1]])
 
     ## update the formula
-    f <- formula(x) #getInParentEnv(x$call$formula, envir = environment())
+    f <- formula(x) #evalInParentEnv(x$call$formula, envir = environment())
     if(is.list(f)){
         test.Y <-  lapply(f, function(ff){
             restricted[1] %in% selectResponse(ff)

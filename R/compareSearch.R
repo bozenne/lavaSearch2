@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: okt  5 2017 (11:31) 
+## last-updated: okt  5 2017 (12:42) 
 ##           By: Brice Ozenne
-##     Update #: 165
+##     Update #: 166
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -99,7 +99,7 @@ compareSearch <- function(object, alpha = 0.05,
                 link.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceTest")
                 newLink.tempo <- link.tempo[which.min(p.value),link]
 
-                ls.args <- lapply(model.tempo$call[-(1:2)], getInParentEnv)
+                ls.args <- lapply(model.tempo$call[-(1:2)], evalInParentEnv)
                 restricted.tempo <- unlist(initVarLink(newLink.tempo))
                 directive.tempo <- length(grep(lava.options()$symbols[2],newLink.tempo,fixed=TRUE))==0
                 

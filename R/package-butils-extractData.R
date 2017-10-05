@@ -54,91 +54,70 @@
 #' fct1(m.gls)
 #' @export
 extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
+  
+  ## check arguments
+  validLogical(convert2dt, valid.length = 1)
+  validLogical(model.frame, valid.length = 1)
 
-    ## check arguments
-    validLogical(convert2dt, valid.length = 1)
-    validLogical(model.frame, valid.length = 1)
-    
     if(model.frame){ ## use extractors 
         if(any(class(object) %in% c("gls","gnls","lme","lmList","nlme","nls"))){ # nlme package
       
-            name.data <- as.character(object$call$data)
       
-            # assign the dataset to the object if not in the current environment
-            if(name.data %in% ls() == FALSE){
-                object$data <- findInParent(name.data, environment())
-            }
+      # assign the dataset to the object if not in the current environment
+      name.data <- as.character(object$call$data)
+      if((length(name.data) == 1) && (name.data %in% ls() == FALSE)){
+        object$data <- evalInParentEnv(object$call$data, environment())
+      }
       
-            data <- try(nlme::getData(object), silent = TRUE)
+      data <- try(nlme::getData(object), silent = TRUE)
       
-        }else if(any(class(object) %in% c("coxph","cph"))){
+    }else if(any(class(object) %in% c("coxph","cph"))){
       
-            requireNamespace("riskRegression")
-            data <- try(riskRegression::coxDesign(object), silent = TRUE)
-            strataVar <- riskRegression::coxVariableName(object)$stratavars.original
+      requireNamespace("riskRegression")
+      data <- try(riskRegression::coxDesign(object), silent = TRUE)
+      strataVar <- riskRegression::coxVariableName(object)$stratavars.original
       
-            if(length(strataVar)>0){ 
+      if(length(strataVar)>0){ 
         
-                data2 <- getInParentEnv(as.character(object$call$data), environment())
+        data2 <- evalInParentEnv(object$call$data, environment())
         
-                data2 <- as.data.table(data2)
-                data <- cbind(data, data2[,.SD,.SDcols = strataVar])
+        data2 <- as.data.table(data2)
+        data <- cbind(data, data2[,.SD,.SDcols = strataVar])
         
-            }
-        }else{
-            data <- try(model.frame(object), silent = TRUE)
-        }
+      }
+    }else{
+      data <- try(model.frame(object), silent = TRUE)
+    }
     
-        ## check error
-        if("try-error" %in% class(data)){
-            stop(data)
-        }
+    ## check error
+    if("try-error" %in% class(data)){
+      stop(data)
+    }
     
     }else{
-        data <- getInParentEnv(as.character(object$call$data), environment())
-    
+        data <- try(eval(object$call$data), silent = TRUE)        
+        ## useful when object$call$data = dt[x %in% "a"] which is incompatible with as.character
+        if("try-error" %in% class(data)){
+            data <- evalInParentEnv(object$call$data, environment())
+        }
+        if("function" %in% class(data)){
+            stop("data has the same name as a function \n",
+                 "consider renaming data before generating object \n")
+        }
         if(is.null(data)){
             stop("Could not extract the data from the model \n")
-        }  
-
-  }  
-    
-  ## conversion to data.table
-  if(convert2dt){
-    if(data.table::is.data.table(data)){
-      data <- copy(data)
-    }else{
-      data <- as.data.table(data)
+        }      
+    }  
+    ## conversion to data.table
+    if(convert2dt){
+        if(data.table::is.data.table(data)){
+            data <- copy(data)
+        }else{
+            data <- as.data.table(data)
+        }
     }
-  }
   
   ## export
   return(data)
 }
 
-#' @title Find object in the parent environments
-#' 
-#' @description Internal function
-#' 
-#' @param name character string containing the name of the object to get.
-#' @param envir the environment from which to look for the object.
-findInParent <- function(name, envir){
-
-    frames <- sys.status()
-    all.frames <- sapply(1:length(frames$sys.frames), function(x){identical(parent.frame(x),globalenv())})
-    index.parents <- which(all.frames==FALSE)
-    n.parents <- length(index.parents)
-    
-    iParent <- 1
-    res <- NULL
-    while(iParent <= n.parents){ # iParent <- 1
-      if(name %in% ls(envir = parent.frame(iParent))){
-        res <- get(name, envir = parent.frame(iParent))
-        iParent <- n.parents + 1
-      }else{
-        iParent <- iParent + 1     
-      }
-    }
-    
-    return(res)
-}

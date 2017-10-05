@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: okt  5 2017 (11:44) 
+## last-updated: okt  5 2017 (13:47) 
 ##           By: Brice Ozenne
-##     Update #: 247
+##     Update #: 248
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -130,7 +130,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     if(length(x$call[[2]])==1){
         modelName <- as.character(x$call[[2]])
         if(modelName %in% ls() == FALSE){
-            assign(modelName, value = findInParent(modelName))
+            assign(modelName, value = evalInParentEnv(x$call[[2]]))
         }
     }
 
