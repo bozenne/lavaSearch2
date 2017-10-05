@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: okt  4 2017 (15:10) 
+## last-updated: okt  5 2017 (09:06) 
 ##           By: Brice Ozenne
-##     Update #: 468
+##     Update #: 472
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,17 +137,17 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     dt.test <- cbind(link = link, res$dt)    
     iid.link <- res$iid
     
-## ** p.value
-df.model <- df.residual(x, conservative = TRUE)
-indexCV <- dt.test[, .I[.SD$convergence==0]]
+### ** p.value
+    df.model <- df.residual(x, conservative = TRUE)
+    indexCV <- dt.test[, .I[.SD$convergence==0]]
 
-if(is.null(df.model)){
-    dt.test[indexCV, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
-}else{
-    dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
-}
+    if(is.null(df.model)){
+        dt.test[indexCV, c("p.value") := 2*(1-pnorm(abs(.SD$statistic)))]
+    }else{
+        dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
+    }
 
-## ** adjust p.value
+    ### ** adjust p.value
     if(method.p.adjust == "max"){
         nameN0 <- dt.test[indexCV, .SD$link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
@@ -180,6 +180,7 @@ if(is.null(df.model)){
         }
         
     }else{
+        dt.test[indexCV,c("corrected.level") := NA]
         dt.test[dt.test$convergence==0, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
         dt.test[indexCV,c("quantile") := as.numeric(NA)]
         Sigma <- NULL        

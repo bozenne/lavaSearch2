@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: okt  3 2017 (09:50) 
+## last-updated: okt  5 2017 (11:32) 
 ##           By: Brice Ozenne
-##     Update #: 24
+##     Update #: 25
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,7 +27,7 @@
 #' 
 #' set.seed(10)
 #' m <- lvm(Y~X1+X2+X3+X4)
-#' d <- sim(m, n)
+#' d <- lava::sim(m, n)
 #' e <- estimate(m, data = d)
 #' df.residual(e, conservative = FALSE)
 #' df.residual(e, conservative = TRUE)

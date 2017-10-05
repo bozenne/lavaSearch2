@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
 ## Version: 
-## last-updated: sep 18 2017 (12:02) 
+## last-updated: okt  5 2017 (11:59) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 110
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,7 +43,7 @@
 #' @examples 
 #' m <- lvm(y1~eta+x1,y2~eta,y3~eta+x3)
 #' latent(m) <- ~ eta
-#' dd <- sim(m,100) ## Simulate 100 observations from model
+#' dd <- lava::sim(m,100) ## Simulate 100 observations from model
 #' e <- estimate(m, dd) ## Estimate parameters
 #'
 #' res <- residplot(e)
@@ -51,7 +51,7 @@
 #'
 #' m <- lvm(y~x)
 #' distribution(m,~y) <- function(n,mean,x) rnorm(n,mean,exp(x)^.5)
-#' d <- sim(m,1e3)
+#' d <- lava::sim(m,1e3)
 #' 
 #' e <- estimate(m,data = d)
 #'
@@ -70,13 +70,13 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
                              sd.kernel = 0.5, kernel = "dnorm", plot.weights = FALSE, ncol = NULL,
                              smooth.mean = TRUE, smooth.sd = TRUE, plot = TRUE,...){
 
-    if(any(obs.variables %in% vars(object) == FALSE)){
-        missing.var <- obs.variables[obs.variables %in% vars(object) == FALSE]
+    if(any(obs.variables %in% lava::vars(object) == FALSE)){
+        missing.var <- obs.variables[obs.variables %in% lava::vars(object) == FALSE]
         stop("variable \"",paste(missing.var, collapse = "\"\""),"\" not found \n",
              "all obs.variables must be in the model \n")
     }
-    if(any(res.variables %in% endogenous(object) == FALSE)){
-        missing.var <- res.variables[res.variables %in% endogenous(object) == FALSE]
+    if(any(res.variables %in% lava::endogenous(object) == FALSE)){
+        missing.var <- res.variables[res.variables %in% lava::endogenous(object) == FALSE]
         stop("outcome \"",paste(missing.var, collapse = "\"\""),"\" not found \n",
              "all res.variables must be endogenous \n")
     }
@@ -96,7 +96,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
     }else{
         x.lab <- "observed outcome"
     }
-    
+
     ## observed values
     res <- model.frame(object)
     if(is.data.table(res)){

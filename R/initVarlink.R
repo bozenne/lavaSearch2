@@ -9,6 +9,7 @@
 #' @param format should the name of the variable be return (format = "list"), a vector of character formula ("txt.formula") or a list of formula ("formula")
 #' @param Slink the symbol for regression link
 #' @param Scov the symbol for covariance link
+#' @param ... argument to be passed to lower level functions
 #' 
 #' @details See test file test/testthat/test-Reduce.R for examples
 #'
@@ -28,7 +29,7 @@
 #' initVarLinks("y ~ x1")
 #' initVarLinks(c("y ~ x1","y~ x2"))
 #' initVarLinks(c(y ~ x1,y ~ x2))
-#' initVarLinks(c("y ~ x1","y~ x2"), format = "formula")
+#' initVarLinks(c("y ~ x1","y ~ x2"), format = "formula")
 #' initVarLinks(c(y ~ x1,y ~ x2), format = "formula")
 #' initVarLinks(c("y ~ x1","y~ x2"), format = "txt.formula")
 #' initVarLinks(c(y ~ x1,y ~ x2), format = "txt.formula")
@@ -36,22 +37,27 @@
 #' @rdname initVar
 #' @export
 initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
-                         Slink = lava.options()$symbols[1],
+                         Slink = c(lava.options()$symbols[1],"~"),
                          Scov = lava.options()$symbols[2]){
 
     format <- match.arg(format, c("list","txt.formula","formula"))
-    
+    test.formula <- (class(var1) == "formula")
+    test.covariance <- sapply(Scov,grepl,x=var1,fixed=TRUE)
+    test.regression <- sapply(Slink,grepl,x=var1,fixed=TRUE)
+
     if(missing(var2)){
-        if(class(var1) == "formula"){
+        if(test.formula){
             var2 <- selectRegressor(var1, type = "vars")
             var1 <- selectResponse(var1, type = "vars")
             sep <- if(format == "formula"){"~"}else{Slink}
-        }else if(grepl(Scov,var1,fixed=TRUE)==TRUE){ ## covariance
+        }else if(any(test.covariance)){ ## covariance
+            Scov <- Scov[test.covariance][1]
             varSplit <- strsplit(var1, split = Scov)[[1]]
             var1 <- trimws(varSplit[1])
             var2 <- trimws(varSplit[2])
             sep <- if(format == "formula"){"~"}else{Scov}
-        } else if(grepl(Slink,var1,fixed=TRUE)==TRUE){ ## regression
+        } else if(any(test.regression)){ ## regression
+            Slink <- Slink[test.regression][1]
             varSplit <- strsplit(var1, split = Slink)[[1]]
             var1 <- trimws(varSplit[1])
             var2 <- trimws(varSplit[2])
@@ -69,11 +75,13 @@ initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
     }
   
   
-  #### convert to format
-  if(format == "formula"){
-    n.var2 <- length(var2)
-    var1 <- rep(var1, times = n.var2)
-    res <- sapply(1:n.var2, function(i){stats::as.formula(paste(var1[i], var2[i], sep = sep))})
+#### convert to format
+    if(format == "formula"){
+        n.var2 <- length(var2)
+        var1 <- rep(var1, times = n.var2)
+        res <- sapply(1:n.var2, function(i){
+            stats::as.formula(paste(var1[i], var2[i], sep = sep))
+        })
     
   }else if(format == "txt.formula"){
     n.var2 <- length(var2)
@@ -95,17 +103,15 @@ initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
 # {{{ initVarLinks
 #' @rdname initVar
 #' @export
-initVarLinks <- function(var1, format = "list",
-                          Slink = lava.options()$symbols[1],
-                          Scov = lava.options()$symbols[2]){
+initVarLinks <- function(var1, format = "list",...){
         
     if("formula" %in% class(var1)){
         res <- initVarLink(var1, repVar1 = TRUE, format = format,
-                            Slink = Slink, Scov = Scov)
+                           ...)
     }else {
         res <- sapply(var1, function(x){
             initVarLink(x, repVar1 = TRUE, format = format,
-                         Slink = Slink, Scov = Scov)
+                        ...)
         })
         if(format == "list"){
             res <- list(var1 = unname(unlist(res["var1",])),

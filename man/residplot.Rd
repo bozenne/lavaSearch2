@@ -48,7 +48,7 @@ Plot the residuals for each outcome of a lvm object
 \examples{
 m <- lvm(y1~eta+x1,y2~eta,y3~eta+x3)
 latent(m) <- ~ eta
-dd <- sim(m,100) ## Simulate 100 observations from model
+dd <- lava::sim(m,100) ## Simulate 100 observations from model
 e <- estimate(m, dd) ## Estimate parameters
 
 res <- residplot(e)
@@ -56,7 +56,7 @@ residplot(e, obs.variables = "x1")
 
 m <- lvm(y~x)
 distribution(m,~y) <- function(n,mean,x) rnorm(n,mean,exp(x)^.5)
-d <- sim(m,1e3)
+d <- lava::sim(m,1e3)
 
 e <- estimate(m,data = d)
 

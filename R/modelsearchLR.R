@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: sep 25 2017 (11:21) 
+## last-updated: okt  4 2017 (19:57) 
 ##           By: Brice Ozenne
-##     Update #: 64
+##     Update #: 66
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,6 +36,7 @@ modelsearchLR <- function (x, data, restricted, link, directive,
                           "adjusted.p.value" = as.numeric(rep(NA,n.link)),
                           "convergence" = as.numeric(rep(NA,n.link)),
                           "coefBeta" = as.numeric(rep(NA,n.link)),
+                          "corrected.level" = as.numeric(rep(NA,n.link)),
                           "quantile" = as.numeric(rep(NA,n.link))
                           )
 

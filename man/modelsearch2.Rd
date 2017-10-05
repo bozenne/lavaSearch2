@@ -91,7 +91,7 @@ method.iid <- "iid"
 #### linear regression ####
 mSim <- lvm(Y~X1+X2+X3+X4)
 addvar(mSim) <- ~Z1+Z2
-d <- sim(mSim,1e2)
+d <- lava::sim(mSim,1e2)
 eLM <- lm(Y~X1,data = d)
 
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
@@ -99,12 +99,14 @@ res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
              statistic = "Wald", method.p.adjust = "holm",
              method.iid = method.iid)
+\dontrun{
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
                     method.iid = method.iid)
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
                     nStep = 2, 
                     method.iid = method.iid, conditional = TRUE)
 res$sequenceTest[[2]]
+}
 
 #### Cox model ####
 library(survival)
@@ -121,7 +123,7 @@ regression(mSim) <- u~x1+x2
 categorical(mSim,labels=c("A","B","C")) <- "x2"
 latent(mSim) <- ~u
 covariance(mSim) <- y1~y2
-df <- sim(mSim, 1e2)
+df <- lava::sim(mSim, 1e2)
 df$Id <- 1:NROW(df)
 
 m <- lvm(c(y1,y2,y3)~u)

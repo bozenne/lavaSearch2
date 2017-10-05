@@ -40,10 +40,10 @@ n <- 20
 set.seed(10)
 m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
-d <- sim(m,n)
+d <- lava::sim(m,n)
 g <- glm(y~x+z,data=d,family="binomial")
 iid1 <- iidJack(g, ncpus = 1)
-iid2 <- iid(g)
+iid2 <- lava::iid(g)
 quantile(iid1-iid2)
 vcov(g)
 colSums(iid2^2)
@@ -54,6 +54,8 @@ library(survival)
 library(riskRegression)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+
+\dontrun{
 iid1 <- iidJack(m)
 iid2 <- iidCox(m)$IFbeta
 
@@ -62,6 +64,7 @@ apply(iid1,2,sd)
 print(iid2)
 
 apply(iid2,2,sd)
+}
 
 #### LVM ####
 set.seed(10)
@@ -69,7 +72,7 @@ set.seed(10)
 mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 latent(mSim) <- ~eta
 categorical(mSim, K=2) <- ~G
-dW <- as.data.table(sim(mSim, n, latent = FALSE))
+dW <- as.data.table(lava::sim(mSim, n, latent = FALSE))
 dW[,Id := as.character(1:.N)]
 dL <- melt(dW, id.vars = c("G","Id"), variable.name = "time", value.name = "Y")
 dL[,time := gsub("Y","",time)]
@@ -78,6 +81,7 @@ m1 <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 latent(m1) <- ~eta
 regression(m1) <- eta ~ G
 e <- estimate(m1, data = dW)
+\dontrun{
 iid1 <- iidJack(e)
 iid2 <- iid(e)
 attr(iid2, "bread") <- NULL
@@ -85,11 +89,13 @@ attr(iid2, "bread") <- NULL
 apply(iid1,2,sd)
 apply(iid2,2,sd)
 quantile(iid2 - iid1)
+}
 
 library(nlme)
 e2 <- lme(Y~G+time, random = ~1|Id, weights = varIdent(form =~ 1|Id), data = dL)
 e2 <- lme(Y~G, random = ~1|Id, data = dL)
+\dontrun{
 iid3 <- iidJack(e2)
 apply(iid3,2,sd)
-
+}
 }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: okt  3 2017 (17:51) 
+## last-updated: okt  5 2017 (11:44) 
 ##           By: Brice Ozenne
-##     Update #: 244
+##     Update #: 247
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,10 +37,10 @@
 #' set.seed(10)
 #' m <- lvm(y~x+z)
 #' distribution(m, ~y+z) <- binomial.lvm("logit")
-#' d <- sim(m,n)
+#' d <- lava::sim(m,n)
 #' g <- glm(y~x+z,data=d,family="binomial")
 #' iid1 <- iidJack(g, ncpus = 1)
-#' iid2 <- iid(g)
+#' iid2 <- lava::iid(g)
 #' quantile(iid1-iid2)
 #' vcov(g)
 #' colSums(iid2^2)
@@ -69,7 +69,7 @@
 #' mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 #' latent(mSim) <- ~eta
 #' categorical(mSim, K=2) <- ~G
-#' dW <- as.data.table(sim(mSim, n, latent = FALSE))
+#' dW <- as.data.table(lava::sim(mSim, n, latent = FALSE))
 #' dW[,Id := as.character(1:.N)]
 #' dL <- melt(dW, id.vars = c("G","Id"), variable.name = "time", value.name = "Y")
 #' dL[,time := gsub("Y","",time)]

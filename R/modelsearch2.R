@@ -43,7 +43,7 @@
 #' #### linear regression ####
 #' mSim <- lvm(Y~X1+X2+X3+X4)
 #' addvar(mSim) <- ~Z1+Z2
-#' d <- sim(mSim,1e2)
+#' d <- lava::sim(mSim,1e2)
 #' eLM <- lm(Y~X1,data = d)
 #'
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
@@ -75,7 +75,7 @@
 #' categorical(mSim,labels=c("A","B","C")) <- "x2"
 #' latent(mSim) <- ~u
 #' covariance(mSim) <- y1~y2
-#' df <- sim(mSim, 1e2)
+#' df <- lava::sim(mSim, 1e2)
 #' df$Id <- 1:NROW(df)
 #' 
 #' m <- lvm(c(y1,y2,y3)~u)
@@ -140,13 +140,10 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
 
         ## all vars
         if(is.null(data)){            
-            data <- try(eval(x$call$data), silent = TRUE)            
-            if("try-error" %in% class(data)){
-                data <- try(eval(x$call$data, envir = parent.frame()), silent = TRUE)            
-                if("try-error" %in% class(data)){
-                    data <- sim(x,1)
-                }
-            }
+            data <- getInParentEnv(as.character(x$call$data), envir = environment())             
+            if(is.null(data)){
+                data <- lava::sim(x,1)
+            }            
         }
         ## take care of categorical variables
         ls.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){
@@ -242,7 +239,11 @@ modelsearch2.default <- function(x, link, data = NULL,
       
     ## ** get data
     if(is.null(data)){
-        data <- eval(x$call$data)
+        data <- getInParentEnv(as.character(x$call$data), envir = environment())
+        if(is.null(data)){
+            stop("x$call$data not found in the current environment or its parents \n",
+                 "consider specify the argument \'data\' \n")
+        }
     }
 
     ## ** get model vars
@@ -252,8 +253,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     restricted <- do.call(cbind,initVarLinks(link, Slink = "~"))
     allVars <- union(model.var, names(data))
     link <- restricted[,2] # does not handle categorical variables    
-    directive <- TRUE        
-
+    directive <- rep(TRUE, length(link))
    
     if(any(unique(as.vector(restricted)) %in% allVars == FALSE)){
         wrong.var <- unique(as.vector(restricted))[unique(as.vector(restricted)) %in% allVars == FALSE]
@@ -426,7 +426,8 @@ modelsearch2.default <- function(x, link, data = NULL,
                                              "adjusted.p.value" = as.numeric(rep(NA,iN.link)),
                                              "convergence" = 1,
                                              "coefBeta" = as.numeric(rep(NA,iN.link)),
-                                             "quantile" = as.numeric(rep(NA,iN.link))
+                                             "quantile" = as.numeric(rep(NA,iN.link)),
+                                             "corrected.level" = as.numeric(rep(NA,iN.link))
                                              )
             index.match <- match(gsub("~~","~",iLink), res.search$res[,"Index"])
             # res.search$res[index.match,"Index"]
@@ -434,7 +435,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             res.search$dt.test[, c("p.value") := res.search$test[index.match,"P-value"]]
             res.search$dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
         }else if(statistic == "LR"){
-            ## *** run modelsearchLR            
+            ## *** run modelsearchLR
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
                                         update.FCT = update.FCT, update.args = update.args,
                                         method.p.adjust = method.p.adjust, display.warnings = display.warnings, trace = trace-1)
@@ -475,7 +476,6 @@ modelsearch2.default <- function(x, link, data = NULL,
         index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
 
         ### *** update the output
-        dt.tempo <- res.search$dt.test[index.rm]
         res.search$dt.test[,c("selected") := .I==index.rm*(1-cv)]
         res.search$dt.test[,c("nTests") := .N]
         setkey(res.search$dt.test,statistic)
@@ -517,7 +517,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         iStep <- iStep + 1
         
     }
-        
+         
     ## * Test treatment effect
     if(!is.null(exposure) && FALSE){
         if(statistic == "Wald" && method.p.adjust == "max"){
@@ -622,7 +622,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     FCT.estimate <- as.character(x$call[[1]])
 
     ## update the formula
-    f <- eval(x$call$formula)
+    f <- formula(x) #getInParentEnv(x$call$formula, envir = environment())
     if(is.list(f)){
         test.Y <-  lapply(f, function(ff){
             restricted[1] %in% selectResponse(ff)

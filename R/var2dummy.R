@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: jun 22 2017 (16:51) 
+## last-updated: okt  5 2017 (11:35) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 13
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,7 +66,7 @@ var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
 var2dummy.lvm <- function(x, data = NULL, ...){
 
     if(is.null(data)){
-        data <- sim(x,1)
+        data <- lava::sim(x,1)
     }
 
     x2 <- lava_categorical2dummy(x, data)

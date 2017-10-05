@@ -54,7 +54,11 @@
 #' fct1(m.gls)
 #' @export
 extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
-   
+
+    ## check arguments
+    validLogical(convert2dt, valid.length = 1)
+    validLogical(model.frame, valid.length = 1)
+    
     if(model.frame){ ## use extractors 
         if(any(class(object) %in% c("gls","gnls","lme","lmList","nlme","nls"))){ # nlme package
       
@@ -75,11 +79,7 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
       
             if(length(strataVar)>0){ 
         
-                if(as.character(object$call$data) %in% ls()){
-                    data2 <- eval(object$call$data)
-                }else{
-                    data2 <- findInParent(as.character(object$call$data), environment())
-                }
+                data2 <- getInParentEnv(as.character(object$call$data), environment())
         
                 data2 <- as.data.table(data2)
                 data <- cbind(data, data2[,.SD,.SDcols = strataVar])
@@ -95,11 +95,11 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
         }
     
     }else{
-        data <- try(eval(object$call$data), silent = TRUE)
-        if("try-error" %in% class(data)){
-            data <- findInParent(deparse(object$call$data), environment())
-            # (could also try to search for object$data if not in object$call$data)            
-        }   
+        data <- getInParentEnv(as.character(object$call$data), environment())
+    
+        if(is.null(data)){
+            stop("Could not extract the data from the model \n")
+        }  
 
   }  
     
@@ -141,5 +141,4 @@ findInParent <- function(name, envir){
     }
     
     return(res)
-  }
-
+}

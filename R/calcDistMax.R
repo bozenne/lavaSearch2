@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: okt  3 2017 (09:46) 
+## last-updated: okt  5 2017 (09:07) 
 ##           By: Brice Ozenne
-##     Update #: 350
+##     Update #: 352
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -153,7 +153,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
                                                       df = df)
         alpha <- 1-out$correctedLevel
     }else{
-        out$correctedLevel <- 1-alpha
+        out$correctedLevel <- NA
     }
 
     ## ** Computation
@@ -278,6 +278,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     out$z <- quantile(distMax, probs = 1-alpha, na.rm = TRUE)
     out$p.adjust <- sapply(abs(statistic), function(x){mean(distMax>x,na.rm=TRUE)})
     out$Sigma <- Sigma.statistic
+    out$correctedLevel <- NA
     return(out)
 }
     

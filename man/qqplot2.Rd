@@ -36,7 +36,7 @@ Simulation is based on a multivariate truncated normal law (even though it is no
 m <- lvm(list(y~v1+v2+v3+v4,c(v1,v2,v3,v4)~x))
 covariance(m) <- v1~v2+v3+v4
 latent(m) <- ~ x
-dd <- sim(m,100) ## Simulate 100 observations from model
+dd <- lava::sim(m,100) ## Simulate 100 observations from model
 e <- estimate(m, dd) ## Estimate parameters
 
 qqplot2(e)

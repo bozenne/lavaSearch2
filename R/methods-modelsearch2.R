@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: okt  3 2017 (17:54) 
+## last-updated: okt  5 2017 (11:34) 
 ##           By: Brice Ozenne
-##     Update #: 85
+##     Update #: 100
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' @examples
 #'  mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(sim(mSim, 1e2))
+#' dt <- as.data.table(lava::sim(mSim, 1e2))
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
@@ -57,7 +57,7 @@ nStep.modelsearch2 <- function(object){
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(sim(mSim, 1e2))
+#' dt <- as.data.table(lava::sim(mSim, 1e2))
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
@@ -121,7 +121,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(sim(mSim, 1e2))
+#' dt <- as.data.table(lava::sim(mSim, 1e2))
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
@@ -167,7 +167,7 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(sim(mSim, 1e2))
+#' dt <- as.data.table(lava::sim(mSim, 1e2))
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
@@ -186,8 +186,8 @@ merge.modelsearch2 <- function(x, y, ...){
 
     ## ** merge
     x$sequenceTest <- c(x$sequenceTest,y$sequenceTest)
-    x$sequenceModel <- c(x$sequenceTest,y$sequenceModel)
-                
+    x$sequenceModel <- c(x$sequenceModel,y$sequenceModel)
+
     if(sum(c(y$method.p.adjust,x$method.p.adjust) == "max") == 1){
         if(x$method.p.adjust != "max"){
             lastStep.x <- nStep(x)
@@ -195,9 +195,10 @@ merge.modelsearch2 <- function(x, y, ...){
             nLink.x <- NROW(Mtest.x)
             name.x <- Mtest.x[["link"]]
 
-            x$sequenceQuantile <- matrix(NA, nrow = nLink.x, ncol = lastStep.x,
-                                         dimnames = list(name.x, rep("step",lastStep.x)))            
-            x$sequenceIID <- vector(mode = "list", length = lastStep.x)
+            x$sequenceQuantile <- rep(NA, times = lastStep.x)
+            if(!is.null(y$sequenceIID)){
+                x$sequenceIID <- vector(mode = "list", length = lastStep.x)
+            }
             x$sequenceSigma <- vector(mode = "list", length = lastStep.x)            
         }
         if(y$method.p.adjust != "max"){
@@ -206,25 +207,13 @@ merge.modelsearch2 <- function(x, y, ...){
             nLink.y <- NROW(Mtest.y)
             name.y <- Mtest.y[["link"]]
 
-            y$sequenceQuantile <- matrix(NA, nrow = nLink.y, ncol = lastStep.y,
-                                         dimnames = list(name.y, rep("step",lastStep.y)))            
-            y$sequenceIID <- vector(mode = "list", length = lastStep.y)
+            y$sequenceQuantile <- rep(NA, times = lastStep.y)
+            if(!is.null(x$sequenceIID)){
+                y$sequenceIID <- vector(mode = "list", length = lastStep.y)
+            }
             y$sequenceSigma <- vector(mode = "list", length = lastStep.y)            
         }
-        
-        if(NROW(y$sequenceQuantile)>NROW(x$sequenceQuantile)){
-            Mall <- matrix(NA, nrow = NROW(y$sequenceQuantile), ncol = NCOL(x$sequenceQuantile),
-                           dimnames = list(rownames(y$sequenceQuantile), colnames(x$sequenceQuantile)))
-            Mall[rownames(x$sequenceQuantile),] <- x$sequenceQuantile
-            x$sequenceQuantile <- Mall
-        }else if(NROW(x$sequenceQuantile)>NROW(y$sequenceQuantile)){
-            Mall <- matrix(NA, nrow = NROW(x$sequenceQuantile), ncol = NCOL(y$sequenceQuantile),
-                           dimnames = list(rownames(x$sequenceQuantile), colnames(y$sequenceQuantile)))
-            Mall[rownames(y$sequenceQuantile),] <- y$sequenceQuantile
-            y$sequenceQuantile <- Mall            
-        }
-        
-        x$sequenceQuantile <- cbind(x$sequenceQuantile,y$sequenceQuantile)
+        x$sequenceQuantile <- c(x$sequenceQuantile,y$sequenceQuantile)
         x$sequenceIID <- c(x$sequenceIID,y$sequenceIID)
         x$sequenceSigma <- c(x$sequenceSigma,y$sequenceSigma)
 

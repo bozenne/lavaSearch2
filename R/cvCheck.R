@@ -21,7 +21,7 @@
 #' @examples 
 #' m <- lvm(list(y~v1+v2+v3+v4,c(v1,v2,v3,v4)~x))
 #' covariance(m) <- v1~v2+v3+v4
-#' dd <- sim(m,10000) ## Simulate 10000 observations from model
+#' dd <- lava::sim(m,10000) ## Simulate 10000 observations from model
 #' e <- estimate(m, dd) ## Estimate parameters
 #'
 #' \dontrun{

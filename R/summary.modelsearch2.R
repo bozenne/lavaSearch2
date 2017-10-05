@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: sep 25 2017 (11:36) 
+## last-updated: okt  5 2017 (09:22) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 36
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,7 +46,7 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
                         "LR" = "likelihood ratio",
                         "NA" = "NA")
            
-    out$output$message.pre <- paste0("Sequential search for local dependence using the ",statistic,"statistic \n")
+    out$output$message.pre <- paste0("Sequential search for local dependence using the ",statistic," statistic \n")
     if(n.selected==0){
         out$output$message.pre <- c(out$output$message.pre,
                                     "The variable selection procedure did not retain any variable \n")
