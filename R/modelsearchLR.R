@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: okt  4 2017 (19:57) 
+## last-updated: okt  9 2017 (16:53) 
 ##           By: Brice Ozenne
-##     Update #: 66
+##     Update #: 69
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,7 +48,8 @@ modelsearchLR <- function (x, data, restricted, link, directive,
     if(trace > 0){pb <- utils::txtProgressBar(max = n.link, style = 3) }
 
     for (iterI in 1:n.link) { # iterI <- 1
-        newfit <- update.FCT(x, args = update.args, restricted = restricted[iterI,], directive = directive[iterI])
+        newfit <- update.FCT(x, args = update.args,
+                             restricted = restricted[iterI,], directive = directive[iterI])
 
         if(class(newfit) != "try-error" && !is.na(logLik(newfit))){ 
 

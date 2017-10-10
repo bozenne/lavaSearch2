@@ -83,7 +83,8 @@
 #' addvar(m) <- ~x1+x2 
 #'
 #' e <- estimate(m, df)
-#'
+#' 
+#' e$model$index$P1
 #' ## score
 #' \dontrun{
 #' resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
@@ -155,11 +156,27 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         link <- paste0(restricted2[,1],lava.options()$symbols[2-directive],restricted2[,2])
 
         ## check links
-        allVars <- vars(x)
-        if(any(unique(as.vector(restricted2)) %in% allVars == FALSE)){
-            wrong.var <- unique(as.vector(restricted2))[unique(as.vector(restricted2)) %in% allVars == FALSE]
-            stop("Some links contains variables that are not in the latent variable model \n",
-                 "variables(s) : \"",paste(wrong.var,collapse ="\" \""),"\"\n")
+        allVars.link <- unique(as.vector(restricted2))
+        allVars.model <- vars(x$model)
+        allVars.data <- names(data)
+        if(any(allVars.link %in% allVars.model == FALSE)){
+            missing.var <- allVars.link[allVars.link %in% allVars.model == FALSE]
+            
+            if(any(allVars.link %in% allVars.data == FALSE)){
+                missing.var <- allVars.link[allVars.link %in% allVars.data == FALSE]
+                stop("Some links contains variables that are not in the latent variable model \n",
+                     "variables(s) : \"",paste(missing.var,collapse ="\" \""),"\"\n")
+            }
+
+            ## modelsearch require to have the variable corresponding to the links in the model
+            if(list(...)$statistic == "score" && any(allVars.data %in% missing.var)){
+                addVars <- allVars.data[allVars.data %in% missing.var]
+                ff <- as.formula(paste0("~",paste(addVars, collapse = " + ")))
+                addvar(x$model) <- ff
+                allVars.model <- vars(x$model)        
+            }
+
+            
         }
         
         ## check covariance links
@@ -383,7 +400,7 @@ modelsearch2.default <- function(x, link, data = NULL,
 
     ## criterion    
     cv <- FALSE
-
+       
     ## cpus
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     if(ncpus>1){
@@ -418,7 +435,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             res.search <- modelsearch(iObject,
                                       link = gsub("~~","~",iLink),
                                       silent = (trace <= 1))
-
+            
             iN.link <- NROW(iRestricted)        
             res.search$dt.test <- data.table("link" = iLink,
                                              "statistic" = as.numeric(rep(NA,iN.link)),
@@ -618,7 +635,7 @@ modelsearch2.default <- function(x, link, data = NULL,
 }
 
 ## * .updateModelLink.default
-.updateModelLink.default <- function(x, args, restricted, directive){
+.updateModelLink.default <- function(x, args, restricted, directive, ...){
     FCT.estimate <- as.character(x$call[[1]])
 
     ## update the formula

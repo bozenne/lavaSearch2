@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: okt  5 2017 (09:22) 
+## last-updated: okt 10 2017 (11:17) 
 ##           By: Brice Ozenne
-##     Update #: 36
+##     Update #: 43
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,13 +30,21 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
         indexMax <- which.max(abs(step$statistic))
         return(step[indexMax])
     }))
+    n.step <- NROW(dt.seqTest)
     n.selected <- sum(dt.seqTest$selected)
 
     keep.cols <- c("link","nTests","noConvergence","statistic","adjusted.p.value")    
     if(!is.na(object$method.p.adjust) && object$method.p.adjust == "max"){
         keep.cols <- c(keep.cols,"quantile")
-    }    
+    }
 
+    dfModel <- try(sapply(object$sequenceModel,df.residual, conservative = FALSE),
+                   silent = TRUE)
+    if("try-error" %in% class(dfModel)){
+        dfModel <- rep(NA, n.step)
+    }
+    dt.seqTest[, c("df.residual") := dfModel]
+    dt.seqTest[, c("nTests.adj") := 0.05/(2*(1-pt(quantile,df = df.residual)))]
     
     ## ** output
     out <- list(output = list(), data = dt.seqTest)
@@ -56,7 +64,7 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
                                            if(n.selected>1){"s"},":\n")
                                     )     
     }
-    
+     
     out$output$table <- dt.seqTest[,.SD,.SDcols = keep.cols]
     data.table::setcolorder(out$output$table, keep.cols)
     out$output$message.post <- paste0("confidence level: ",1-object$alpha," (two sided, adjustement: ",object$method.p.adjust,")\n")  

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: okt  5 2017 (09:06) 
+## last-updated: okt  9 2017 (16:53) 
 ##           By: Brice Ozenne
-##     Update #: 472
+##     Update #: 481
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                            iid.previous = NULL, quantile.previous = NULL, 
                            export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
 
-    ## ** initialisation
+### ** initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
@@ -48,7 +48,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     convergence <- rep(NA,n.link)
 
 
-    ## ** wraper
+### ** wraper
     warper <- function(iterI){ # iterI <- 2
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     p.value = as.numeric(NA),
@@ -57,7 +57,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                     coefBeta = as.numeric(NA)),
                     iid = NULL)
         ## *** fit new model
-        newfit <- update.FCT(x, args = update.args, restricted = restricted[iterI,], directive = directive[iterI])
+        newfit <- update.FCT(x, args = update.args,
+                             restricted = restricted[iterI,], directive = directive[iterI])
         out$dt[1, c("convergence") := newfit$opt$convergence]
 
         ## *** extract influence function        
@@ -83,7 +84,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         return(out)
     }
     
-    ## ** get influence function
+### ** get influence function
     if(trace>0){
         cat("gather influence functions \n")
     }
@@ -126,16 +127,22 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         
         if(trace>0){
             requireNamespace("pbapply")
-            coefJack <- pbapply::pblapply(1:n.link, warper)
+            resApply <- pbapply::pblapply(1:n.link, warper)
         }else{
-            coefJack <- lapply(1:n.link, warper)
+            resApply <- lapply(1:n.link, warper)
         }
-        res <- list(dt = data.table::rbindlist(lapply(coefJack,"[[","dt")),
-                    iid = do.call(cbind,lapply(coefJack,"[[","iid")))
+        res <- list(dt = data.table::rbindlist(lapply(resApply,"[[","dt")),
+                    iid = do.call(cbind,lapply(resApply,"[[","iid")))
         
     }
     dt.test <- cbind(link = link, res$dt)    
     iid.link <- res$iid
+
+
+    if(all(dt.test$convergence!=0)){
+        stop("none of the extended model has converged \n",
+             "the additional links may be misspecified \n")
+    }
     
 ### ** p.value
     df.model <- df.residual(x, conservative = TRUE)
@@ -147,13 +154,12 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         dt.test[indexCV, c("p.value") := 2*(1-pt(abs(.SD$statistic), df = df.model))]
     }
 
-    ### ** adjust p.value
+### ** adjust p.value
     if(method.p.adjust == "max"){
         nameN0 <- dt.test[indexCV, .SD$link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
 
         if(method.max=="integration"){
-            args(calcDistMaxIntegral)
             resQmax <- calcDistMaxIntegral(statistic = statisticN0, iid = iid.link, df = df.model,
                                            iid.previous = iid.previous, quantile.previous = quantile.previous, 
                                            alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
@@ -186,7 +192,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         Sigma <- NULL        
     }    
     
-## ** export
+### ** export
     out <- list(dt.test = dt.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)

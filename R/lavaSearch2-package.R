@@ -8,6 +8,7 @@
 #' @importFrom doSNOW registerDoSNOW
 #' @importFrom foreach foreach
 #' @importFrom graphics par plot text
+#' @importFrom inline cfunction
 #' @importFrom optimx optimx
 #' @importFrom MASS mvrnorm
 #' @importFrom methods is

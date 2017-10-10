@@ -7,7 +7,9 @@
 \title{Adjust the p.values using the quantiles of the max statistic}
 \usage{
 calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
-  quantile.previous = NULL, alpha, ncpus = 1, initCpus = TRUE, trace)
+  quantile.previous = NULL,
+  quantile.compute = lava.options()$search.calc.quantile.int, alpha,
+  ncpus = 1, initCpus = TRUE, trace)
 
 calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
   quantile.previous = NULL, method, alpha, ncpus = 1, initCpus = TRUE,
@@ -24,6 +26,8 @@ calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
 
 \item{quantile.previous}{critical threshold of the previous step to condition on.
 If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.}
+
+\item{quantile.compute}{should the critical quantile be computed.}
 
 \item{alpha}{the significance threshold for retaining a new link}
 

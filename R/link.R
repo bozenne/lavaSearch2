@@ -172,7 +172,7 @@ addLink.lvm <- function(x,
                         allVars = vars(x),
                         warnings = FALSE,
                         ...){
-    
+
     res <- initVarLink(var1, var2, format = "list")
     var1 <- res$var1
     var2 <- res$var2
@@ -199,40 +199,31 @@ addLink.lvm <- function(x,
         }
         
         
-        if(var2 %in% allVars == FALSE){
-            if(warnings){
-                warning("addLink.lvm: var2 does not match any variable in x, no link is added \n",
-                        "var2: ",var2,"\n")
-            }
-        }
+        ## if(var2 %in% allVars == FALSE){
+        ##     if(warnings){
+        ##         warning("addLink.lvm: var2 does not match any variable in x, no link is added \n",
+        ##                 "var2: ",var2,"\n")
+        ##     }
+        ## }
         if(var1 %in% endogenous(x) && var2 %in% endogenous(x)){
             if(missing(covariance)){
                 covariance <- TRUE
             }else if(covariance == FALSE){
-                if(warnings){ warning("addLink.lvm: set covariance argument to TRUE to add a covariance link to the lvm \n") }
-                return(x)
-            }
+                stop("addLink.lvm: cannot add a link between two endogenous variable when argument \'covariance\' is FALSE \n")
+            }                
         }
-        
-        test.1 <- var1 %in% exogenous(x)
-        test.2 <- var2 %in% exogenous(x)
-        
-        if(test.1 && test.2){
-            if(warnings){
-                warning("addLink.lvm: both variable are exogenous, no link is added \n",
-                        "var1: ",var1,"\n",
-                        "var2: ",var2,"\n")
-            }
-        }else if(test.1){
-            regression(x) <- as.formula(paste(var2, var1,  sep = "~"))
-        }else if(test.2){
-            regression(x) <- as.formula(paste(var1, var2, sep = "~"))
-        }else if(covariance){
+    
+       
+        if(covariance){
             covariance(x) <- as.formula(paste(var1, var2, sep = "~"))  
+        }else if(var1 %in% endogenous(x) || var2 %in% exogenous(x)){
+            regression(x) <- as.formula(paste(var1, var2,  sep = "~"))
+        }else if(var2 %in% endogenous(x) || var1 %in% exogenous(x)){
+            regression(x) <- as.formula(paste(var2, var1, sep = "~"))
         }else {
-            if(var1 %in% endogenous(x)){
+            if(var1 %in% latent(x)){
                 regression(x) <- as.formula(paste(var1, var2, sep = "~"))  
-            }else if(var2 %in% endogenous(x)){
+            }else if(var2 %in% latent(x)){
                 regression(x) <- as.formula(paste(var2, var1, sep = "~"))  
             }else{
                 stop("unknow configuration \n")

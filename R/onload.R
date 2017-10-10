@@ -1,14 +1,16 @@
+## * .onLoad
 .onLoad <- function(lib, pkg="lavaSearch2") {
 
     # available methods to compute the distribution of the max statistic
     lava::lava.options(search.calcMaxDist = c("integration","boot-naive","boot-residual","boot-wild"),
                        search.iid = c("iid","iidJack"),
                        search.statistic = c("Wald","score","LR"),
-                       search.p.adjust = c("max","holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")
+                       search.p.adjust = c("max","holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none"),
+                       search.calc.quantile.int = TRUE
                        )
 }
 
-
+## * .onAttach
 .onAttach <- function(lib, pkg="lavaSearch2") {
     desc <- utils::packageDescription(pkg)
     packageStartupMessage(desc$Package, " version ",desc$Version)

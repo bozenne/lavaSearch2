@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: okt  5 2017 (09:07) 
+## last-updated: okt 10 2017 (11:19) 
 ##           By: Brice Ozenne
-##     Update #: 352
+##     Update #: 355
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,6 +23,7 @@
 #' @param statistic the observed statistic relative to the coefficients to test.
 #' @param iid zero-mean iid decomposition of the observed coefficients used to compute the statistic.
 #' @param iid.previous zero-mean iid decomposition of the previous step to condition on.
+#' @param quantile.compute should the critical quantile be computed.
 #' @param quantile.previous critical threshold of the previous step to condition on.
 #' If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.
 #' @param df the degree of freedom for the t statistic.
@@ -104,7 +105,8 @@
 #' @rdname calcDistMax
 #' @export
 calcDistMaxIntegral <- function(statistic, iid, df, 
-                                iid.previous = NULL, quantile.previous = NULL, 
+                                iid.previous = NULL, quantile.previous = NULL,
+                                quantile.compute = lava.options()$search.calc.quantile.int,
                                 alpha, ncpus = 1, initCpus = TRUE, trace){
 
     ## ** normalize arguments
@@ -157,8 +159,12 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     }
 
     ## ** Computation
-    out$z <- warperQ(alpha)
-        
+    if(quantile.compute){
+        out$z <- warperQ(alpha)
+    }else{
+        out$z <- NA
+    }
+    
     if(ncpus > 1){
         ## *** parallel computations
         if(initCpus){

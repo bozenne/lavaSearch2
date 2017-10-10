@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: okt  5 2017 (15:39) 
+## last-updated: okt 10 2017 (11:07) 
 ##           By: Brice Ozenne
-##     Update #: 186
+##     Update #: 194
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,7 +63,7 @@ compareSearch <- function(object, alpha = 0.05,
     if("score" %in% statistic){
         if(trace){
             cat("modelsearch with the score statistic")
-        }
+        }        
         ls.search$score <- modelsearch2(object, statistic = "score", method.p.adjust = "none", method.iid = "iid",
                                         trace = trace-1, ...)
         if(trace){
@@ -87,7 +87,7 @@ compareSearch <- function(object, alpha = 0.05,
         if("max" %in% method.p.adjust){
             ls.search$Wald <- modelsearch2(object, statistic = "Wald", method.p.adjust = "max", method.iid = method.iid,
                                            trace = trace-1, ...)
-
+            
             currentStep <- nStep(ls.search$Wald)
             vec.tempo <- getStep(ls.search$Wald, step = currentStep, slot = "sequenceTest")
             maxStep <- list(...)$nStep
@@ -115,14 +115,18 @@ compareSearch <- function(object, alpha = 0.05,
                                                              restricted = restricted.tempo,
                                                              directive = directive.tempo)
                 }
-                
+
                 dots <- list(...)
                 dots$nStep <- maxStep-currentStep
                 if("link" %in% names(dots)){
-                    dots$link <- setdiff(dots$link)
+                    dots$link <- setdiff(dots$link, union(getNewLink(ls.search$Wald, step = 1:currentStep),newLink.tempo))
                 }
-                otherSearch <- modelsearch2(model.tempo2, statistic = "Wald", method.p.adjust = "none", method.iid = method.iid,
-                                            trace = trace-1, dots)
+                otherSearch <- do.call("modelsearch2", c(list(x = model.tempo2,
+                                                              statistic = "Wald",
+                                                              method.p.adjust = "none",
+                                                              method.iid = method.iid,
+                                                              trace = trace-1), dots)
+                                       )
                 
                 ls.search$Wald <- merge(ls.search$Wald, otherSearch)   
             }

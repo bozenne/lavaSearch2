@@ -132,6 +132,7 @@ addvar(m) <- ~x1+x2
 
 e <- estimate(m, df)
 
+e$model$index$P1
 ## score
 \dontrun{
 resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
