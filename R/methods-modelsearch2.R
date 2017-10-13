@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: okt  5 2017 (15:35) 
+## last-updated: okt 12 2017 (13:13) 
 ##           By: Brice Ozenne
-##     Update #: 105
+##     Update #: 112
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -81,7 +81,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
     
     ## ** normalize arguments
     lastStep <- nStep(object)
-    if(step %in% 1:lastStep == FALSE){
+    if(any(step %in% 1:lastStep == FALSE)){
         stop("step must be an integer between 1 and ",lastStep,"\n")
     }
     if(!is.null(slot) && slot %in% names(object) == FALSE){
@@ -144,12 +144,12 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
     
     ## ** normalize arguments
     lastStep <- nStep(object)
-    if(step %in% 1:lastStep == FALSE){
+    if(any(step %in% 1:lastStep == FALSE)){
         stop("step must be an integer between 1 and ",lastStep,"\n")
     }
 
     ## ** extract
-    ls.link <- lapply(1:step, function(x){
+    ls.link <- lapply(step, function(x){
         getStep(object,step=x,slot="sequenceTest")[selected == TRUE,link]
     })
 

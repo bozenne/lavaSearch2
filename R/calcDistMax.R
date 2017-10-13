@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: okt 10 2017 (11:19) 
+## last-updated: okt 13 2017 (09:42) 
 ##           By: Brice Ozenne
-##     Update #: 355
+##     Update #: 373
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -116,7 +116,6 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     if(length(quantile.previous)>1){
         stop("Can only condition on one previous step \n")
     }
-    
     if(is.null(df)){
         distribution.statistic <- "gaussian"
     }else{
@@ -165,6 +164,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         out$z <- NA
     }
     
+    if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values: ") }
     if(ncpus > 1){
         ## *** parallel computations
         if(initCpus){
@@ -172,13 +172,21 @@ calcDistMaxIntegral <- function(statistic, iid, df,
             doSNOW::registerDoSNOW(cl)
         }
 
+        if(trace > 0){
+            pb <- utils::txtProgressBar(max = length(index.new), style = 3)
+            progress <- function(n) setTxtProgressBar(pb, n)
+            opts <- list(progress = progress)
+        }else{
+            opts <- NULL
+        }
+
         value <- NULL # for CRAN check
-        if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values: ") }
         out$p.adjust <- foreach::`%dopar%`(
                                      foreach::foreach(value = index.new,
                                                       .packages = c("tmvtnorm","mvtnorm"),
-                                                      .export = "calcDistMax",
-                                                      .combine = "c"),
+                                                      .export = c(".calcPmaxIntegration"),
+                                                      .combine = "c",
+                                                      .options.snow = opts),
                                      {
                                          warperP(value)
                                      })
@@ -188,7 +196,6 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         }
             
     }else{
-            
         ## *** sequential computations
         if(trace>0){
             requireNamespace("pbapply")
@@ -331,8 +338,9 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
 
     iRep <- 0
     cv <- FALSE
+
     while(iRep < n.repMax && cv == FALSE){
-        
+
         ## ** resample to obtain a new influence function
         if(method == "naive"){
             iid.sim <- iid[sample.int(n, replace = TRUE),]

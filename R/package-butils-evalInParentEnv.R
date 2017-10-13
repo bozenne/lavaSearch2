@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (10:48) 
 ## Version: 
-## last-updated: okt  5 2017 (13:45) 
+## last-updated: okt 10 2017 (13:46) 
 ##           By: Brice Ozenne
-##     Update #: 6
+##     Update #: 7
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,7 +36,7 @@ evalInParentEnv <- function(name, envir){
   cv <- FALSE
   while((iParent <= n.parents) && (cv == FALSE)){ # iParent <- 1
     
-    res <- try(eval(name, envir = parent.frame(iParent)))
+    res <- try(eval(name, envir = parent.frame(iParent)), silent = TRUE)
       
       if("try-error" %in% class(res)){
         iParent <- iParent + 1     

@@ -115,7 +115,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
 
     ## ** normalise arguments
     method.iid <- match.arg(method.iid, lava.options()$search.iid)
-
+       
     ## ** normalize the links
     if(is.null(link)){
         res.find <- findNewLink(x$model,
@@ -190,13 +190,13 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
         }
 
     }    
-
+        
     ## ** arguments of the call
     add.args <- setdiff(names(x$call), c("","x","data","control"))
     ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
     names(ls.call) <- add.args
 
-    ls.call$data <- x$data$model.frame
+    ls.call$data <- model.frame(x)
     if(!is.null(data)){
         index.cols <- which(names(data)%in%names(ls.call$data)==FALSE)
         if(length(index.cols)>0){
@@ -431,7 +431,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         if(trace >= 1){cat("Step ",iStep,":\n",sep="")}        
 
         if(statistic == "score"){
-            ## *** run modelsearch
+### *** run modelsearch
             res.search <- modelsearch(iObject,
                                       link = gsub("~~","~",iLink),
                                       silent = (trace <= 1))
@@ -447,18 +447,18 @@ modelsearch2.default <- function(x, link, data = NULL,
                                              "corrected.level" = as.numeric(rep(NA,iN.link))
                                              )
             index.match <- match(gsub("~~","~",iLink), res.search$res[,"Index"])
-            # res.search$res[index.match,"Index"]
+                                        ## res.search$res[index.match,"Index"]
             res.search$dt.test[, c("statistic") := res.search$test[index.match,"Test Statistic"]]
             res.search$dt.test[, c("p.value") := res.search$test[index.match,"P-value"]]
             res.search$dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
         }else if(statistic == "LR"){
-            ## *** run modelsearchLR
+### *** run modelsearchLR
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
                                         update.FCT = update.FCT, update.args = update.args,
                                         method.p.adjust = method.p.adjust, display.warnings = display.warnings, trace = trace-1)
 
         }else if(statistic == "Wald"){
-            ## *** run modelsearchMax
+### *** run modelsearchMax
             if(conditional && iStep>1){
                 iid.previous <- ls.seqIID[[iStep-1]]
                 quantile.previous <- vec.seqQuantile[iStep-1]
