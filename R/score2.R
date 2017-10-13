@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: okt 13 2017 (16:10) 
+## last-updated: okt 13 2017 (16:59) 
 ##           By: Brice Ozenne
-##     Update #: 257
+##     Update #: 285
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -145,9 +145,18 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
         ## *** Psi
         M.Psi <- matrix(0,nrow = n.latent, ncol = n.latent,
                         dimnames = list(name.latent,name.latent))
-        index.Psi <- which(allType %in% c("Psi_var","Psi_cov"))
-        for(iPsi in index.Psi){ # iPsi <- index.Psi[1]
-            M.Psi[link.allType$var1[iPsi],link.allType$var2[iPsi]] <- allCoef[name.allType[iPsi]]
+        index.Psi <- which(allType == "Psi_var")
+        if(length(index.Psi)>0){
+            for(iPsi in index.Psi){ # iPsi <- index.Psi[1]
+                M.Psi[link.allType$var1[iPsi],link.allType$var2[iPsi]] <- allCoef[name.allType[iPsi]]
+            }
+        }
+        index.Psi <- which(allType == "Psi_cov")
+        if(length(index.Psi)>0){
+            for(iPsi in index.Psi){ # iPsi <- index.Psi[1]
+                M.Psi[link.allType$var1[iPsi],link.allType$var2[iPsi]] <- allCoef[name.allType[iPsi]]
+                M.Psi[link.allType$var2[iPsi],link.allType$var1[iPsi]] <- allCoef[name.allType[iPsi]]
+            }
         }
         Psi.iB <- M.Psi %*% iB
         iB.Lambda.iB.Psi <- Lambda.iB %*% Psi.iB
@@ -195,22 +204,21 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
                                  nrow = n, ncol = n.endogenous, byrow = TRUE)
             add.mean <- TRUE
         }else if(iType == "Gamma"){
-            dmu.dtheta <- data[,iVar$var2] %o% Lambda.iB[,iVar$var1]
+            dmu.dtheta <- data[,iVar$var2] %o% Lambda.iB[,name.latent == iVar$var1]
             add.mean <- TRUE
         }else if(iType == "K"){
             dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
             dmu.dtheta[,name.endogenous == iVar$var1] <- data[,iVar$var2]
             add.mean <- TRUE
         }else if(iType == "Lambda"){
-            browser()
-            dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
-            dmu.dtheta[,name.endogenous==iVar$var1] <- iB.alpha.GammaX %*% (name.latent == iVar$var2)
+            J.tempo <- matrix(0,nrow = n.latent, ncol = n.endogenous)
+            J.tempo[name.latent == iVar$var2,name.endogenous == iVar$var1] <- 1
+            dmu.dtheta <- iB.alpha.GammaX %*% J.tempo
             add.mean <- TRUE
         }else if(iType == "B"){
-            browser()            
-            ## dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
-            ## dmu.dtheta[,name.endogenous==iVar$var1] <- Lambda.iB[,name.latent == iVar$var2] iB.alpha.GammaX %*% (name.latent == iVar$var2)
-            ## dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
+            J.tempo <- matrix(0,nrow = n.latent, ncol = n.latent)
+            J.tempo[name.latent == iVar$var1, name.latent == iVar$var2] <- 1
+            dmu.dtheta <- iB.alpha.GammaX %*% J.tempo %*% t(Lambda.iB)
             add.mean <- TRUE
         }else{
             add.mean <- FALSE
@@ -237,20 +245,21 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
             dOmega.dtheta <-  Lambda.iB %*% J.tempo %*% t(Lambda.iB)
             add.cov <- TRUE
         }else if(iType == "Lambda"){
-            browser()
-            dOmega.dtheta <- iB.Lambda.iB.Psi[,name.latent == iVar$var2,drop=FALSE] %*% (name.endogenous == iVar$var1)
+            J.tempo <- matrix(0,nrow = n.latent, ncol = n.endogenous)
+            J.tempo[name.latent == iVar$var2,name.endogenous == iVar$var1] <- 1
+            dOmega.dtheta <- iB.Lambda.iB.Psi %*% J.tempo 
             dOmega.dtheta <- dOmega.dtheta + t(dOmega.dtheta)
-                                        #            dOmega.dtheta <- iB.Lambda.iB.Psi %*% (name.endogenous == iVar$var1) + t(iB.Lambda.iB.Psi %*% (name.endogenous == iVar$var1))
             add.cov <- TRUE
         }else if(iType == "B"){
-            browser()
+            J.tempo <- matrix(0,nrow = n.latent, ncol = n.latent)
+            J.tempo[name.latent == iVar$var2, name.latent == iVar$var1] <- 1
+            dOmega.dtheta <- iB.Lambda.iB.Psi %*% J.tempo %*% t(Lambda.iB)
+            dOmega.dtheta <- dOmega.dtheta + t(dOmega.dtheta)
             add.cov <- TRUE
         }else{
             add.cov <- FALSE
         }
         
-        
-      
         ## *** add contributions
         iScore <- rep(0,n)
 
