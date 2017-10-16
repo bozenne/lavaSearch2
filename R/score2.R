@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: okt 13 2017 (16:59) 
+## last-updated: okt 16 2017 (18:35) 
 ##           By: Brice Ozenne
-##     Update #: 285
+##     Update #: 341
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,9 +20,9 @@
 #'
 #' 
 #' @details A lvm can be written as a measurement model:
-#' \deqn{Y_i = \nu + \Lambda \eta_i + K X_i + \epsilon_i}
+#' \deqn{Y_i = \nu + \eta_i \Lambda + X_i K + \epsilon_i}
 #' and a structural model:
-#' \deqn{\eta_i = \alpha + B \eta_i + \Gamma X_i + \zeta_i}
+#' \deqn{\eta_i = \alpha + \eta_i B + X_i \Gamma + \zeta_i}
 #' where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
 #' and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
 #'
@@ -30,10 +30,10 @@
 #' 
 #' The corresponding conditional mean is:
 #' \deqn{
-#' \mu_i(\theta) = E[Y_i|X_i] = \nu + \Lambda (1-B)^{-1} \alpha + (\Lambda (1-B)^{-1} \Gamma + K) X_i 
+#' \mu_i(\theta) = E[Y_i|X_i] = \nu + (\alpha + X_i \Gamma) (1-B)^{-1} \Lambda + X_i K
 #' }
 #' \deqn{
-#' \Omega(\theta) = Var[Y_i|X_i] = \Lambda (1-B)^{-1} \Psi (1-B)^{-t} \Lambda^t + \Sigma
+#' \Omega(\theta) = Var[Y_i|X_i] = \Lambda^{t} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda + \Sigma
 #' }
 #'
 #' Therefore \eqn{\nu}, \eqn{K}, \eqn{\alpha}, \eqn{\Gamma} are pure mean parameters, \eqn{\Psi}, \eqn{\Sigma} pure variance parameters, \cr
@@ -55,15 +55,15 @@
 #' with:
 #' \deqn{\frac{\partial \mu_i(\theta)}{\partial \nu} = 1}
 #' \deqn{\frac{\partial \mu_i(\theta)}{\partial \K} = X_i}
-#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \alpha} = \Lambda(1-B)^{-1}}
-#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \Gamma} = \Lambda(1-B)^{-1}X_i}
-#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \Lambda} = (1-B)^{-1}(\alpha + \Gamma X_i)}
-#' \deqn{\frac{\partial \mu_i(\theta)}{\partial B} = -\Lambda(1-B)^{-1}(1-B)^{-1}(\alpha + \Gamma X_i)}
+#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \alpha} = (1-B)^{-1}\Lambda}
+#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \Gamma} = X_i(1-B)^{-1}\Lambda}
+#' \deqn{\frac{\partial \mu_i(\theta)}{\partial \lambda} = (\alpha + X_i \Gamma)(1-B)^{-1}\delta_{\lambda \in \Lambda}}
+#' \deqn{\frac{\partial \mu_i(\theta)}{\partial b} = -(\alpha + X_i \Gamma)(1-B)^{-1}\delta_{b \in B}(1-B)^{-1}\Lambda}
 #' and:
 #' \deqn{\frac{\partial \Omega(\theta)}{\partial \psi} = \Lambda (1-B)^{-1} \delta_{\psi \in \Psi} (1-B)^{-t} \Lambda^t}
 #' \deqn{\frac{\partial \Omega(\theta)}{\partial \sigma} = \delta_{\sigma \in \Sigma}}
 #' \deqn{\frac{\partial \Omega(\theta)}{\partial \lambda} = \delta_{\lambda \in \Lambda} (1-B)^{-1} \Psi (1-B)^{-t} \Lambda^t + \Lambda (1-B)^{-1} \Psi (1-B)^{-t} \delta_{\lambda \in \Lambda}}
-#' \deqn{\frac{\partial \Omega(\theta)}{\partial B} = - \Lambda (1-B)^{-1} \delta_{b \in B} (1-B)^{-1} \Psi (1-B)^{-t} \Lambda^t - \Lambda (1-B)^{-1} \Psi (1-B)^{-1,t} \delta_{b \in B} (1-B)^{-1,t}}
+#' \deqn{\frac{\partial \Omega(\theta)}{\partial b} = - \Lambda (1-B)^{-1} \delta_{b \in B} (1-B)^{-1} \Psi (1-B)^{-t} \Lambda^t - \Lambda (1-B)^{-1} \Psi (1-B)^{-1,t} \delta_{b \in B} (1-B)^{-1,t}}
 #' @examples
 #'
 #' @export
@@ -158,7 +158,7 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
                 M.Psi[link.allType$var2[iPsi],link.allType$var1[iPsi]] <- allCoef[name.allType[iPsi]]
             }
         }
-        Psi.iB <- M.Psi %*% iB
+        Psi.iB <- M.Psi %*% t(iB)
         iB.Lambda.iB.Psi <- Lambda.iB %*% Psi.iB
 
         ## *** alpha Gamma X
@@ -175,12 +175,11 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
             index.Gamma <- intersect(which(link.allType$var1==name.latent[iLatent]),
                                      which(allType=="Gamma"))
             if(length(index.Gamma)>0){
-                M.alpha.GammaX[,iLatent] <- M.alpha.GammaX[,iLatent] + data[,link.allType$var2[index.Gamma]] %*% allCoef[index.Gamma]
+                M.alpha.GammaX[,iLatent] <- M.alpha.GammaX[,iLatent] + data[,link.allType$var2[index.Gamma],drop=FALSE] %*% allCoef[index.Gamma]
             }
            
         }
-
-        iB.alpha.GammaX <- M.alpha.GammaX %*% iB
+        alpha.GammaX.iB <- M.alpha.GammaX %*% iB
     }
     
     
@@ -192,12 +191,15 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
         iType <- type[iP]
         iName <- name.type[iP]
         iVar <- lapply(link.type,"[",iP)
-        print(iName)
         
         ## *** partial derivative of the linear predictor
         if(iType == "nu"){
             dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
             dmu.dtheta[,name.endogenous == iVar$var1] <- rep(1,n)
+            add.mean <- TRUE
+        }else if(iType == "K"){
+            dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
+            dmu.dtheta[,name.endogenous == iVar$var1] <- data[,iVar$var2]
             add.mean <- TRUE
         }else if(iType == "alpha"){
             dmu.dtheta <- matrix(as.numeric(Lambda.iB[,name.latent == iVar$var1]),
@@ -206,19 +208,17 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
         }else if(iType == "Gamma"){
             dmu.dtheta <- data[,iVar$var2] %o% Lambda.iB[,name.latent == iVar$var1]
             add.mean <- TRUE
-        }else if(iType == "K"){
-            dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
-            dmu.dtheta[,name.endogenous == iVar$var1] <- data[,iVar$var2]
-            add.mean <- TRUE
         }else if(iType == "Lambda"){
-            J.tempo <- matrix(0,nrow = n.latent, ncol = n.endogenous)
-            J.tempo[name.latent == iVar$var2,name.endogenous == iVar$var1] <- 1
-            dmu.dtheta <- iB.alpha.GammaX %*% J.tempo
+            J.tempo <- matrix(0,nrow = n.endogenous, ncol = n.latent)
+            J.tempo[name.endogenous == iVar$var1,name.latent == iVar$var2] <- 1
+            dmu.dtheta <- M.alpha.GammaX %*% t(iB) %*% t(J.tempo)
+            ## alpha.GammaX.iB %*% t(J.tempo)
             add.mean <- TRUE
         }else if(iType == "B"){
             J.tempo <- matrix(0,nrow = n.latent, ncol = n.latent)
             J.tempo[name.latent == iVar$var1, name.latent == iVar$var2] <- 1
-            dmu.dtheta <- iB.alpha.GammaX %*% J.tempo %*% t(Lambda.iB)
+            dmu.dtheta <- M.alpha.GammaX %*% t(iB) %*% t(J.tempo) %*% t(iB) %*% t(M.Lambda)
+            ##  alpha.GammaX.iB %*% J.tempo %*% t(Lambda.iB)
             add.mean <- TRUE
         }else{
             add.mean <- FALSE
@@ -245,15 +245,17 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
             dOmega.dtheta <-  Lambda.iB %*% J.tempo %*% t(Lambda.iB)
             add.cov <- TRUE
         }else if(iType == "Lambda"){
-            J.tempo <- matrix(0,nrow = n.latent, ncol = n.endogenous)
-            J.tempo[name.latent == iVar$var2,name.endogenous == iVar$var1] <- 1
-            dOmega.dtheta <- iB.Lambda.iB.Psi %*% J.tempo 
+            J.tempo <- matrix(0,nrow = n.endogenous, ncol = n.latent)
+            J.tempo[name.endogenous == iVar$var1,name.latent == iVar$var2] <- 1
+            dOmega.dtheta <- iB.Lambda.iB.Psi %*% t(J.tempo)
             dOmega.dtheta <- dOmega.dtheta + t(dOmega.dtheta)
             add.cov <- TRUE
         }else if(iType == "B"){
             J.tempo <- matrix(0,nrow = n.latent, ncol = n.latent)
-            J.tempo[name.latent == iVar$var2, name.latent == iVar$var1] <- 1
-            dOmega.dtheta <- iB.Lambda.iB.Psi %*% J.tempo %*% t(Lambda.iB)
+            J.tempo[name.latent == iVar$var1, name.latent == iVar$var2] <- 1
+            ## Omega - M.Lambda %*% iB %*% M.Psi %*% t(iB) %*% t(M.Lambda)
+            ## dOmega.dtheta <-  M.Lambda %*% iB %*% M.Psi %*% t(iB) %*% t(J.tempo) %*% t(iB) %*% t(M.Lambda)
+            dOmega.dtheta <-  iB.Lambda.iB.Psi %*% t(J.tempo) %*% t(Lambda.iB)
             dOmega.dtheta <- dOmega.dtheta + t(dOmega.dtheta)
             add.cov <- TRUE
         }else{

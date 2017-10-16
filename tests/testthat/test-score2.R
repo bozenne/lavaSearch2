@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 13 2017 (16:59) 
+## last-updated: okt 16 2017 (18:33) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 30
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -115,8 +115,15 @@ test_that("",{
 ## ** 2 factor model (correlation LV)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
-regression(m) <- eta1 ~ eta2
-latent(m) <- ~eta1+eta2
+regression(m) <- eta2 ~ X1
+regression(m) <- eta1 ~ eta2+X2
+
+## m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
+##            Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
+## regression(m) <- eta2 ~ 0
+## regression(m) <- eta1 ~ 0+eta2
+## latent(m) <- ~ eta1 + eta2
+
 e <- estimate(m,d)
 
 test_that("",{
@@ -125,20 +132,9 @@ test_that("",{
     expect_equal(dim(test),dim(GS))
     expect_equal(test[,colnames(GS)],GS)
 })
-head(test[,colnames(GS)]-GS)
 
-
-
-
-head(test[,colnames(GS)]-GS)
-round(colMeans(abs(test[,colnames(GS)]-GS)),4)
-
-## m <- lvm(c(Y1~eta1,Y2~eta2,eta1~eta2))
-## latent(m) <- ~eta1+eta2
-## d <- sim(m,n,latent=FALSE)
-## e <- estimate(m,d)
-
-
+## > head(GS)[,"eta1~eta2"]
+## [1]  0.78165615 -0.25528969 -1.77126130 -0.36471102 -0.04859673  0.93779653
 
 #----------------------------------------------------------------------
 ### test-score2.R ends here

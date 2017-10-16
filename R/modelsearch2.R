@@ -115,7 +115,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
 
     ## ** normalise arguments
     method.iid <- match.arg(method.iid, lava.options()$search.iid)
-       
+
     ## ** normalize the links
     if(is.null(link)){
         res.find <- findNewLink(x$model,
@@ -196,12 +196,12 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
     ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
     names(ls.call) <- add.args
 
-    ls.call$data <- model.frame(x)
+    ls.call$data <- as.data.table(model.frame(x))
     if(!is.null(data)){
         index.cols <- which(names(data)%in%names(ls.call$data)==FALSE)
         if(length(index.cols)>0){
             ls.call$data <- cbind(ls.call$data,
-                                  as.list(data)[index.cols])
+                                  as.data.table(data)[,.SDcols=index.cols])
         }
     }
     ls.call$control <- x$control

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (09:25) 
 ## Version: 
-## last-updated: okt  5 2017 (12:05) 
+## last-updated: okt 16 2017 (11:45) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 9
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,6 +31,12 @@ dt.sim <- as.data.table(sim(m.sim, n=100, latent = FALSE))
 e.base <- estimate(m.base, data = dt.sim)
 
 resCompare <- compareSearch(e.base, 
+                            method.iid = "iid",
+                            method.p.adjust = c("none","bonferroni","fdr","max"),
+                            statistic = c("score","Wald"),trace = 5)
+
+## * example with error
+resCompare <- compareSearch(e.base, link = c("Y~G","Y~A"),
                             method.iid = "iid",
                             method.p.adjust = c("none","bonferroni","fdr","max"),
                             statistic = c("score","Wald"),trace = 5)

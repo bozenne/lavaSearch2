@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: okt 10 2017 (11:07) 
+## last-updated: okt 16 2017 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 194
+##     Update #: 216
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,10 +63,16 @@ compareSearch <- function(object, alpha = 0.05,
     if("score" %in% statistic){
         if(trace){
             cat("modelsearch with the score statistic")
-        }        
-        ls.search$score <- modelsearch2(object, statistic = "score", method.p.adjust = "none", method.iid = "iid",
-                                        trace = trace-1, ...)
-        if(trace){
+        }
+        ls.search$score <- try(modelsearch2(object, statistic = "score", method.p.adjust = "none", method.iid = "iid",
+                                            trace = trace-1, ...), silent = TRUE)
+        
+        if("try-error" %in% class(ls.search$score)){
+            statistic <- setdiff(statistic,"score")
+            if(trace){
+                cat(" - error \n")
+            }
+        }else if(trace){
             cat(" - done \n")
         }
     }
@@ -74,10 +80,15 @@ compareSearch <- function(object, alpha = 0.05,
         if(trace){
             cat("modelsearch with the log likelihood ratio statistic")
         }
-        ls.search$LR <- modelsearch2(object, statistic = "LR", method.p.adjust = "none", method.iid = "iid",
-                                     trace = trace-1, ...)
-        if(trace){
-            cat(" - done \n")
+        ls.search$LR <- try(modelsearch2(object, statistic = "LR", method.p.adjust = "none", method.iid = "iid",
+                                         trace = trace-1, ...), silent = TRUE)
+        if("try-error" %in% class(ls.search$LR)){
+            statistic <- setdiff(statistic,"LR")
+            if(trace){
+                cat(" - error \n")
+            }
+        }else if(trace){
+            cat(" - done \n")            
         }
     }
     if("Wald" %in% statistic){
@@ -85,68 +96,87 @@ compareSearch <- function(object, alpha = 0.05,
             cat("modelsearch with the robust Wald statistic")
         }
         if("max" %in% method.p.adjust){
-            ls.search$Wald <- modelsearch2(object, statistic = "Wald", method.p.adjust = "max", method.iid = method.iid,
-                                           trace = trace-1, ...)
-            
-            currentStep <- nStep(ls.search$Wald)
-            vec.tempo <- getStep(ls.search$Wald, step = currentStep, slot = "sequenceTest")
-            maxStep <- list(...)$nStep
-            vec.p.adjust <- sapply(setdiff(method.p.adjust,"max"), function(iAdj){
-                min(p.adjust(vec.tempo$p.value, method = iAdj))
-            })
-            if(is.null(maxStep)){maxStep <- Inf}
-            if(any(vec.p.adjust < alpha) && (vec.tempo$selected==FALSE) && (currentStep<maxStep) ){ # continue the modelsearch
+            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "max", method.iid = method.iid,
+                                               trace = trace-1, ...), silent = TRUE)
 
-                ## ** add the link of the last test to the model (avoid to repeat step)
-                model.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceModel")
-                link.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceTest")
-                newLink.tempo <- link.tempo[which.min(p.value),link]
+            ## *** check whether further steps are needed for other type 1 error adjustment
+            if("try-error" %in% class(ls.search$Wald) == FALSE){
+                currentStep <- nStep(ls.search$Wald)
+                vec.tempo <- getStep(ls.search$Wald, step = currentStep, slot = "sequenceTest")
+                maxStep <- list(...)$nStep
+                vec.p.adjust <- sapply(setdiff(method.p.adjust,"max"), function(iAdj){
+                    min(p.adjust(vec.tempo$p.value, method = iAdj))
+                })
+                if(is.null(maxStep)){maxStep <- Inf}
 
-                ls.args <- lapply(model.tempo$call[-(1:2)], evalInParentEnv)
-                restricted.tempo <- unlist(initVarLink(newLink.tempo))
-                directive.tempo <- length(grep(lava.options()$symbols[2],newLink.tempo,fixed=TRUE))==0
+                ## *** perform additional search
+                if(any(vec.p.adjust < alpha) && (vec.tempo$selected==FALSE) && (currentStep<maxStep) ){ # continue the modelsearch
+
+                    ## add the link of the last test to the model (avoid to repeat step)
+                    model.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceModel")
+                    link.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceTest")
+                    newLink.tempo <- link.tempo[which.min(p.value),link]
+
+                    ls.args <- lapply(model.tempo$call[-(1:2)], evalInParentEnv)
+                    restricted.tempo <- unlist(initVarLink(newLink.tempo))
+                    directive.tempo <- length(grep(lava.options()$symbols[2],newLink.tempo,fixed=TRUE))==0
                 
-                if("lvmfit" %in% class(object)){
-                    model.tempo2 <- .updateModelLink.lvm(model.tempo, args = ls.args,
-                                                         restricted = restricted.tempo,
-                                                         directive = directive.tempo)
-                }else{
-                    model.tempo2 <- .updateModelLink.default(model.tempo, args = ls.args,
+                    if("lvmfit" %in% class(object)){
+                        model.tempo2 <- .updateModelLink.lvm(model.tempo, args = ls.args,
                                                              restricted = restricted.tempo,
                                                              directive = directive.tempo)
-                }
+                    }else{
+                        model.tempo2 <- .updateModelLink.default(model.tempo, args = ls.args,
+                                                                 restricted = restricted.tempo,
+                                                                 directive = directive.tempo)
+                    }
 
-                dots <- list(...)
-                dots$nStep <- maxStep-currentStep
-                if("link" %in% names(dots)){
-                    dots$link <- setdiff(dots$link, union(getNewLink(ls.search$Wald, step = 1:currentStep),newLink.tempo))
+                    dots <- list(...)
+                    dots$nStep <- maxStep-currentStep
+                    if("link" %in% names(dots)){
+                        dots$link <- setdiff(dots$link, union(getNewLink(ls.search$Wald, step = 1:currentStep),newLink.tempo))
+                    }
+                    otherSearch <- try(do.call("modelsearch2", c(list(x = model.tempo2,
+                                                                      statistic = "Wald",
+                                                                      method.p.adjust = "none",
+                                                                      method.iid = method.iid,
+                                                                      trace = trace-1), dots)
+                                               ), silent = TRUE)
+
+                    if("try-error" %in% class(otherSearch) == FALSE){
+                        ls.search$Wald <- merge(ls.search$Wald, otherSearch)
+                    }
                 }
-                otherSearch <- do.call("modelsearch2", c(list(x = model.tempo2,
-                                                              statistic = "Wald",
-                                                              method.p.adjust = "none",
-                                                              method.iid = method.iid,
-                                                              trace = trace-1), dots)
-                                       )
-                
-                ls.search$Wald <- merge(ls.search$Wald, otherSearch)   
-            }
-               
+             }
             
         }else{            
-            ls.search$Wald <- modelsearch2(object, statistic = "Wald", method.p.adjust = "none", method.iid = method.iid,
-                                           trace = FALSE, ...)
+            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "none", method.iid = method.iid,
+                                               trace = FALSE, ...), silent = TRUE)            
         }
-        if(trace){
+        if("try-error" %in% class(ls.search$Wald)){
+            statistic <- setdiff(statistic,"Wald")
+            if(trace){
+                cat(" - error \n")
+            }
+        }else if(trace){
             cat(" - done \n")
         }
     }
-    
+
+### ** check only errors
+    if(length(statistic)==0){
+        return(list(newlinks = NULL,
+                    table.coef = NULL,
+                    ls.search = ls.search)
+               )
+    }
+
 ### ** Adjust p.values
     ls.searchAll <- list()    
     for(iStatistic in statistic){ # iStatistic <- statistic[1]
-      ##  print(iStatistic)
+        ##  print(iStatistic)
         for(iAdjust in method.p.adjust){ # iAdjust <- method.p.adjust[1]
-        ##    print(iAdjust)
+            ##    print(iAdjust)
             if(iAdjust == "max" && iStatistic != "Wald"){next}
             list.tempo <- list(.adjustModelSearch(ls.search[[iStatistic]],
                                                   model0 = object,

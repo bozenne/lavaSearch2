@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: okt 13 2017 (16:42) 
+## last-updated: okt 16 2017 (16:23) 
 ##           By: Brice Ozenne
-##     Update #: 77
+##     Update #: 137
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,7 +105,16 @@
 #' coefReg(e, value = TRUE)
 #' coefReg(e, level = -1, value = TRUE)
 #'
-#' #### multigroup #####' 
+#' #### LVM with constrains ####
+#' m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
+#'           Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
+#' latent(m) <- ~eta1 + eta2
+#' e <- estimate(m, sim(m,1e2))
+#' coefType(m)
+#' coef(e, level = 9)
+#' coefType(e)
+#' 
+#' #### multigroup ####
 #' eG <- estimate(list(m,m), list(sim(m, 1e2),sim(m, 1e2)))
 #' coefType(eG)
 #'
@@ -135,27 +144,10 @@ coefType.lvm <- function(x, detailed = FALSE, ...){
 
 ### ** rename as
     if(detailed){
-        ls.links <- initVarLinks(names.coef)
-        index.loading <- setdiff(which(ls.links$var2 %in% latent(x)),
-                                 which(type %in% c("covariance","variance")))
-        if(length(index.loading)>0){
-            type[index.loading] <- "loading"
-        }
-        
-        index.measurement <- which(ls.links$var1 %in% endogenous(x))
-        if(length(index.measurement)>0){
-            type[index.measurement] <- as.character(factor(type[index.measurement],
-                                                           levels = c("intercept","regression","loading","covariance","variance"),
-                                                           labels = c("nu","K","Lambda","Sigma_cov","Sigma_var")))
-        }
-        index.structural <- setdiff(1:length(type),index.measurement)
-        if(length(index.structural)>0){
-            type[index.structural] <- as.character(factor(type[index.structural],
-                                                          levels = c("intercept","regression","loading","covariance","variance"),
-                                                          labels = c("alpha","Gamma","B","Psi_cov","Psi_var")))
-        }
-        
+        type <- detailName(x, type)
     }
+        
+    
 ### ** export
     return(type)
 }
@@ -163,7 +155,7 @@ coefType.lvm <- function(x, detailed = FALSE, ...){
 ## ** method - coefType.lvmfit
 #' @rdname coefType
 #' @export
-coefType.lvmfit <- function(x, level = 9, index.model = FALSE, ...){ 
+coefType.lvmfit <- function(x, level = 9, index.model = FALSE, detailed = FALSE, ...){ 
   
 ### ** extract all coefficients
     extractCoef <- coef(x, level = level, ...)
@@ -172,31 +164,68 @@ coefType.lvmfit <- function(x, level = 9, index.model = FALSE, ...){
     }else{
         names.allCoef <- names(extractCoef)
     }
-    
     res <- setNames(rep(NA, length = length(names.allCoef)), names.allCoef)
     attribute <- setNames(rep(TRUE, length = length(names.allCoef)), names.allCoef)
 
 ### ** find type of the coefficients in the original model
-    type <- coefType(x$model0, ...)        
+    type <- coefType(x$model0, detailed = FALSE)        
     res[names(type)] <- type
     attribute[names(type)] <- FALSE
 
-### ** find the missing coefficients which are in fact fixed as reference
-    originalX <- evalInParentEnv(x$call$x)
-    if("lvm" %in% class(originalX)){
-        reftype <- coefType(originalX, ...)
-        res[attribute==TRUE] <- reftype[names(attribute)[attribute==TRUE]]
-    }   
+### ** try to find the type of the coefficients that were fixed in the orginal model
+    if(any(is.na(res))){
 
+        res.NA <- res[is.na(res)]
+        varLinks <- initVarLinks(names(res.NA))
+        name.regression <- rownames(extractCoef)[which(attr(extractCoef, "type")=="regression")]
+        name.variance <- rownames(extractCoef)[which(attr(extractCoef, "type")=="variance")]
+
+        index.intercept <- which(is.na(varLinks$var2))
+        if(length(index.intercept)>0){
+            res[names(res.NA)[index.intercept]] <- "intercept"
+        }
+
+        index.variance <- which(varLinks$var2==varLinks$var1)
+        if(length(index.variance)>0){
+            res[names(res.NA)[index.variance]] <- "variance"
+        }
+
+        index.regression <- setdiff(which(names(res.NA) %in% name.regression),
+                                    index.intercept)
+        if(length(index.regression)>0){
+            res[names(res.NA)[index.regression]] <- "regression"
+        }
+
+        index.covariance <- setdiff(which(names(res.NA) %in% name.variance),
+                                    index.variance)
+        if(length(index.covariance)>0){
+            res[names(res.NA)[index.covariance]] <- "covariance"
+        }        
+
+    }
+    
+### ** detail coefficient names
+    if(detailed){
+        res <- detailName(x, res)
+    }
+
+### ** find fixed coefficients
+    if(any(!is.na(x$model$fix))){
+        index.fixed  <- which(!is.na(x$model$fix), arr.ind = TRUE)
+        link.fixed <- paste0(colnames(x$model$fix)[index.fixed[,2]],
+                             lava.options()$symbols[1+(index.fixed[,1]==index.fixed[,2])],
+                             rownames(x$model$fix)[index.fixed[,1]])
+        attribute[link.fixed] <- TRUE
+    }
+    
     attr(res,"reference") <- attribute
     if(index.model){
         attr(type, "index.model") <- rep(1, length(type))
     }
     
-    #### export
+### ** export
     return(res)
 }
-# }}}
 
 ## ** method - coefType.multigroup
 #' @rdname coefType
@@ -424,7 +453,7 @@ coefVar.multigroup <- coefVar.lvm
 #----------------------------------------------------------------------
 ### coefType.R ends here
 
-## * retainType  (need for coefCov/Latent/Ref)
+## * retainType  (needed for coefCov/Latent/Ref)
 retainType <- function(type, validType, value){
   index.var <- which(type %in% validType)
   
@@ -439,7 +468,7 @@ retainType <- function(type, validType, value){
   }
 }
 
-## * APmatrix (need for coefType)
+## * APmatrix (needed for coefType)
 APmatrix <- function(x){ # borrowed from coef.lvmfit
  
   names2.coef <- names(coef(x))
@@ -485,4 +514,29 @@ APmatrix <- function(x){ # borrowed from coef.lvmfit
   myparnames <- paste0("p",seq_len(npar+npar.ex))[myorder.reg]
   return(lava_matrices.lvm(Model(x), myparnames))
   
+}
+
+## * detailName (needed for coefType)
+detailName <- function(x, type){
+    names.coef <- names(type)
+    ls.links <- initVarLinks(names.coef)
+    index.loading <- setdiff(which(ls.links$var2 %in% latent(x)),
+                             which(type %in% c("covariance","variance")))
+    if(length(index.loading)>0){
+        type[index.loading] <- "loading"
+    }
+
+    index.measurement <- which(ls.links$var1 %in% endogenous(x))
+    if(length(index.measurement)>0){
+        type[index.measurement] <- as.character(factor(type[index.measurement],
+                                                       levels = c("intercept","regression","loading","covariance","variance"),
+                                                       labels = c("nu","K","Lambda","Sigma_cov","Sigma_var")))
+    }
+    index.structural <- setdiff(1:length(type),index.measurement)
+    if(length(index.structural)>0){
+        type[index.structural] <- as.character(factor(type[index.structural],
+                                                      levels = c("intercept","regression","loading","covariance","variance"),
+                                                      labels = c("alpha","Gamma","B","Psi_cov","Psi_var")))
+    }
+    return(type)
 }

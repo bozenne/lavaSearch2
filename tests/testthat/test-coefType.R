@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:52) 
 ## Version: 
-## last-updated: okt 12 2017 (16:43) 
+## last-updated: okt 16 2017 (16:31) 
 ##           By: Brice Ozenne
-##     Update #: 24
+##     Update #: 30
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -186,3 +186,66 @@ test_that("coefType - lm", {
 
 #----------------------------------------------------------------------
 ### test-coefType.R ends here
+
+## ** constrains
+
+m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
+           Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
+latent(m) <- ~eta1 + eta2
+#covariance(m,var1="Y1",var2="Y2") <- 0.5
+covariance(m) <- Y1~Y2
+
+e <- estimate(m, sim(m,1e2))
+coefType(m)
+coef(e, level = 9)
+coefType(e)
+
+dt.truth <- rbind(c("Y1","intercept","nu"),
+                  c("Y2","intercept","nu"),
+                  c("Y3","intercept","nu"),
+                  c("Z1","intercept","nu"),
+                  c("Z2","intercept","nu"),
+                  c("Z3","intercept","nu"),
+                  c("eta1","intercept","alpha"),
+                  c("eta2","intercept","alpha"),
+                  ##
+                  c("Y1~eta1","regression","Lambda"),
+                  c("Y2~eta1","regression","Lambda"),
+                  c("Y3~eta1","regression","Lambda"),
+                  c("Z1~eta2","regression","Lambda"),
+                  c("Z2~eta2","regression","Lambda"),
+                  c("Z3~eta2","regression","Lambda"),
+                  ##
+                  c("Y1~~Y1","variance","Sigma_var"),
+                  c("Y2~~Y2","variance","Sigma_var"),
+                  c("Y3~~Y3","variance","Sigma_var"),
+                  c("Z1~~Z1","variance","Sigma_var"),
+                  c("Z2~~Z2","variance","Sigma_var"),
+                  c("Z3~~Z3","variance","Sigma_var"),
+                  ##
+                  c("Y1~~Y2","covariance","Sigma_cov"),
+                  ##
+                  c("eta2~~eta2","variance","Psi_var"),
+                  c("eta1~~eta1","variance","Psi_var")
+                  )
+dt.truth <- as.data.table(dt.truth)
+names(dt.truth) <- c("name","type","letter")
+
+
+test_that("coefType - constrains", {
+
+    test <- coefType(e, detailed = FALSE)
+    GS <- setNames(dt.truth$type,dt.truth$name)
+    expect_equal(length(test),length(GS))
+    GS <- GS[names(test)]
+    attr(test,"reference") <- NULL
+    expect_equal(test,GS)
+    
+    test <- coefType(e, detailed = TRUE)
+    GS <- setNames(dt.truth$letter,dt.truth$name)
+    expect_equal(length(test),length(GS))
+    GS <- GS[names(test)]
+    attr(test,"reference") <- NULL
+    expect_equal(test,GS)
+    
+})
