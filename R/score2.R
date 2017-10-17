@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: okt 16 2017 (18:35) 
+## last-updated: okt 16 2017 (19:20) 
 ##           By: Brice Ozenne
-##     Update #: 341
+##     Update #: 370
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,7 +70,9 @@
 `score2` <-
   function(x, ...) UseMethod("score2")
 
-score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residuals = TRUE, ...){
+score2.lvmfit <- function(x, param = NULL,
+                          mu = NULL, Omega = NULL, data = NULL,
+                          indiv = TRUE, adjust.residuals = TRUE, ...){
 
 ### ** normalize arguments
     if(!identical(class(x),"lvmfit")){
@@ -80,12 +82,19 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
     allType <- coefType(x, detailed = TRUE)
     type <- allType[attr(allType,"reference")==FALSE]
 
+    if(is.null(param)){
+        param <- pars(x)
+    }
+    names.param <- names(param)
+    if(any(names(type) %in% names.param == FALSE)){
+        stop("argument \'param\' does not contain all the necessary parameters \n")
+    }
     if(is.null(data)){
         data <- model.frame(x)
     }
     data <- as.matrix(data)
     if(is.null(mu) || is.null(Omega)){
-        mom.th <- moments(x, p = pars(x), conditional=TRUE, data = data)
+        mom.th <- moments(x, p = param, conditional=TRUE, data = data)
         if(is.null(mu)){
             mu <- mom.th$xi
         }
@@ -95,7 +104,7 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
     }
 
 ### ** tag elements
-    p <- length(type)
+    p <- length(param)
     n <- NROW(data)
     name.endogenous <- endogenous(x)
     n.endogenous <- length(name.endogenous)
@@ -112,10 +121,10 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
 
     ## *** coef
     allCoef <- coef(x,level=9)[,"Estimate"]
-    
-    ## *** residuals
-    epsilon <- residuals(x)
+    allCoef[names.param] <- param  ## useful when the parameter values are defined by the user
 
+    ## *** residuals
+    epsilon <- residuals(x, p = param)
     if(adjust.residuals){
         
     }
@@ -185,13 +194,12 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
     
 
 ### ** compute derivatives
-    out.score <- matrix(NA,nrow = n, ncol = p, dimnames = list(NULL,name.type))
-
+    out.score <- matrix(NA,nrow = n, ncol = p, dimnames = list(NULL,names(param)))
     for(iP in 1:p){ # iP <- 1
         iType <- type[iP]
         iName <- name.type[iP]
         iVar <- lapply(link.type,"[",iP)
-        
+
         ## *** partial derivative of the linear predictor
         if(iType == "nu"){
             dmu.dtheta <- matrix(0,nrow=n,ncol=n.endogenous)
@@ -281,8 +289,15 @@ score2.lvmfit <- function(x, mu = NULL, Omega = NULL, data = NULL, adjust.residu
         out.score[,iName] <- iScore       
     }
 
+    if(!is.null(param)){
+        out.score <-  out.score[,names(param),drop=FALSE]
+    }
+    if(indiv==FALSE){
+        out.score <- colSums(out.score)
+    }
     ## out.score - score(x, indiv = TRUE)[,colnames(out.score)]
     return(out.score)
+
 
 }
 

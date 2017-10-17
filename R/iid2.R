@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 13 2017 (10:26) 
+## last-updated: okt 16 2017 (19:48) 
 ##           By: Brice Ozenne
-##     Update #: 76
+##     Update #: 104
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,9 +40,11 @@
 #'
 #' e.lm <- lm(formula.lvm,data=d)
 #' iid2(e.lm)
+#' iid2(e.lm,corrected=FALSE)-iid(e.lm)
 #' 
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' iid2(e.lvm)
+#' score(e.lvm)
+#' range(iid2(e.lvm, adjust.residuals = FALSE)-iid(e.lvm))
 #'
 #' #### multiple regression
 #' m <- lvm(c(Y1~X1,Y2~X2,Y3~X3))
@@ -56,7 +58,7 @@
 ## * method iid2.lm
 #' @rdname iid2
 #' @export
-iid2.lm <- function(x, data = NULL, ...){
+iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, ...){
     if(!identical(class(x),"lm")){
         wrongClass <- paste(setdiff(class(x),"lm"), collapse = " ")
         stop("iid2 is not available for ",wrongClass," objects \n")
@@ -70,15 +72,19 @@ iid2.lm <- function(x, data = NULL, ...){
 ### ** get hat values
     XX_m1 <- solve(t(data)%*%data)
     H <- data %*% XX_m1 %*% t(data)    
-    epsilon <- residuals(x)/(1 - diag(H))
+    if(adjust.residuals){
+        epsilon <- residuals(x)/(1 - diag(H))
+    }else{
+        epsilon <- residuals(x)
+    }
 
-    iid.corrected <- sweep(data, MARGIN = 1, FUN = "*", STATS = epsilon) %*% XX_m1
+    iid0 <- sweep(data, MARGIN = 1, FUN = "*", STATS = epsilon) %*% XX_m1
 
 ### ** export
-    return(iid.corrected)
+    return(iid0)
 }
 
-iid2.lvmfit <- function(x, data = NULL, ...){
+iid2.lvmfit <- function(x, data = NULL, adjust.residuals = TRUE, check.score = TRUE, ...){
 
     if(!identical(class(x),"lvmfit")){
         wrongClass <- paste(setdiff(class(x),"lvmfit"), collapse = " ")
@@ -91,15 +97,32 @@ iid2.lvmfit <- function(x, data = NULL, ...){
         stop("not implemented yet!\n")
     }
     
-### ** get empirical moments
-    mom.data <- lava:::procdata.lvm(x, data = data)
+### ** compute the iid
+    coef.model <- coef(x)
 
-### ** get theorical moments
-    mom.th <- moments(x, p = pars(x), conditional=TRUE, data = data)
+    if(check.score){
+        S1 <- score2(x, param = coef.model, data = data,
+                     adjust.residuals = FALSE)
+        S2 <- score(x, p = coef.model,indiv = TRUE)
+        if(max(abs(S1-S2))>1e-10){
+            stop("score2 does not match score \n",
+                 "report that to the maintainer of the package")
+        }
+    }
 
-### ** compute the score
-    e.score <- score2(x, mu = mom.th$xi , Omega =  mom.th$C, data = data)
+    e.score <- score2(x, param = coef.model, data = data,
+                      adjust.residuals = adjust.residuals)
+    I <- -numDeriv::jacobian(func = function(p){
+        score2(x, param = p, data = data, adjust.residuals = adjust.residuals, indiv = FALSE, ...)
+    },
+    x = coef.model,
+    method = lava.options()$Dmethod)
 
+    iid0 <- e.score %*% lava::Inverse(I)
+
+### ** export
+    colnames(iid0) <- colnames(score)
+    return(iid0)
 }
 
 ##----------------------------------------------------------------------

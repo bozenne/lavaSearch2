@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 16 2017 (18:33) 
+## last-updated: okt 16 2017 (19:43) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 35
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,8 @@ library(testthat)
 context("score2")
 n <- 5e1
 
-## * linear regression
+## * score at the ML
+## ** linear regression
 
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
@@ -30,13 +31,11 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## * multiple linear regression
-
-## ** without covariance link
+## ** multiple linear regression
+## *** without covariance link
 m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
 set.seed(10)
 d <- sim(m,n)
@@ -45,11 +44,10 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## ** without covariance links
+## *** without covariance links
 m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
 covariance(m) <- Y1~Y2
 set.seed(10)
@@ -59,11 +57,10 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## * latent variable model
+## ** latent variable model
 m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m.sim) <- eta1~X1+X2
@@ -71,7 +68,7 @@ latent(m.sim) <- ~eta1+eta2
 set.seed(10)
 d <- sim(m.sim,n,latent=FALSE)
 
-## ** factor model
+## *** factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1
@@ -80,11 +77,10 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## ** 2 factor model
+## *** 2 factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta1~X1+X2
@@ -94,11 +90,10 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## ** 2 factor model (covariance)
+## *** 2 factor model (covariance)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 covariance(m) <- eta1 ~ eta2
@@ -108,11 +103,10 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
-## ** 2 factor model (correlation LV)
+## *** 2 factor model (correlation LV)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta2 ~ X1
@@ -129,8 +123,7 @@ e <- estimate(m,d)
 test_that("",{
     test <- score2(e)
     GS <- score(e,indiv=TRUE)
-    expect_equal(dim(test),dim(GS))
-    expect_equal(test[,colnames(GS)],GS)
+    expect_equal(test,GS)
 })
 
 ## > head(GS)[,"eta1~eta2"]
@@ -138,3 +131,37 @@ test_that("",{
 
 #----------------------------------------------------------------------
 ### test-score2.R ends here
+
+
+## * score not at the ML
+
+## ** linear regression
+# m <- lvm(Y~X1+X2+X3)
+m <- lvm(Y~X1)
+set.seed(10)
+d <- sim(m,n)
+
+e <- estimate(m,d)
+param <- coef(e)+1:length(coef(e))
+test_that("",{
+    test <- score2(e, param = param)
+    GS <- score(e,p = param,indiv=TRUE)
+    expect_equal(test,GS)
+})
+
+## ** multiple linear regression
+## *** without covariance link
+m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
+set.seed(10)
+d <- sim(m,n)
+
+e <- estimate(m,d)
+param <- coef(e)+0.1*(1:length(coef(e)))
+test_that("",{
+    test <- score2(e,param = param)
+    GS <- score(e,p=param,indiv=TRUE)
+    expect_equal(test,GS)
+    test <- score2(e,param = param,indiv=FALSE)
+    GS <- score(e,p=param,indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+})
