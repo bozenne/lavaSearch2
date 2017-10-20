@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 16 2017 (19:43) 
+## last-updated: okt 19 2017 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 72
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@ library(testthat)
 context("score2")
 n <- 5e1
 
-## * score at the ML
+## * not-adjusted score
 ## ** linear regression
 
 m <- lvm(Y~X1+X2+X3)
@@ -28,10 +28,30 @@ set.seed(10)
 d <- sim(m,n)
 
 e <- estimate(m,d)
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+param <- coef(e)
+
+test_that("linear regression",{
+    ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## ** multiple linear regression
@@ -41,10 +61,30 @@ set.seed(10)
 d <- sim(m,n)
 
 e <- estimate(m,d)
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+param <- coef(e)
+
+test_that("multiple linear regression",{
+    ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## *** without covariance links
@@ -54,10 +94,30 @@ set.seed(10)
 d <- sim(m,n)
 
 e <- estimate(m,d)
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+param <- coef(e)
+
+test_that("multiple linear regression (covariance link)",{
+        ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## ** latent variable model
@@ -74,10 +134,30 @@ regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1
 
 e <- estimate(m,d)
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+param <- coef(e)
+
+test_that("factor model",{
+        ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## *** 2 factor model
@@ -87,10 +167,30 @@ regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+param <- coef(e)
+
+test_that("2 factor model",{
+        ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## *** 2 factor model (covariance)
@@ -98,12 +198,32 @@ m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 covariance(m) <- eta1 ~ eta2
 latent(m) <- ~eta1+eta2
-e <- estimate(m,d)
 
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+e <- estimate(m,d)
+param <- coef(e)
+
+test_that("2 factor model (covariance)",{
+        ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
 })
 
 ## *** 2 factor model (correlation LV)
@@ -119,49 +239,108 @@ regression(m) <- eta1 ~ eta2+X2
 ## latent(m) <- ~ eta1 + eta2
 
 e <- estimate(m,d)
+param <- coef(e)
 
-test_that("",{
-    test <- score2(e)
-    GS <- score(e,indiv=TRUE)
-    expect_equal(test,GS)
+test_that("2 factor model (correlation LV)",{
+    ## at ML
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=TRUE)
+    expect_equal(test, GS)
+
+    head(round(test-GS,10))
+    
+    test <- score2(e, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
+    ## not at ML
+    test <- score2(e, p = param+1, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+    expect_equal(test, GS)
+
+    test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
+    GS <- score(e, p = param+1, indiv=FALSE)
+    expect_equal(as.double(test),as.double(GS))
+
 })
 
-## > head(GS)[,"eta1~eta2"]
-## [1]  0.78165615 -0.25528969 -1.77126130 -0.36471102 -0.04859673  0.93779653
+
+
+
+
+
+
+
+
+## * leverage adjusted score
+m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+regression(m.sim) <- eta1~X1+X2
+latent(m.sim) <- ~eta1+eta2
+set.seed(10)
+d <- sim(m.sim,n,latent=FALSE)
+
+## ** linear regression
+e0 <- estimate(lvm(Y1~X1),d)
+s0 <- score2(e0, adjust.residuals = TRUE)
+
+e1 <- estimate(lvm(Y1~X1,Y2~X2+X3,Y3~1),d)
+s1 <- score2(e1, adjust.residuals = TRUE)
+
+test_that("",{
+    expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
+                 s0[,c("Y1","Y1~X1","Y1~~Y1")])
+    expect_equal(df.residual(e0),attr(s0,"df"))
+    ## expect_equal(df.residual(e1),attr(s1,"df"))
+
+    ## df.residual(e1)
+    
+##    expect_equal(attr(s1, "df"), NROW(d))
+})
+
+
+
+## ** lvm model with leverage adjusted residuals
+
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
+regression(m) <- eta1~X1+X2
+latent(m) <- ~eta1
+
+e <- estimate(m,d)
+
+
+e <- estimate(m,d)
+param <- coef(e)
+
+test_that("",{
+    r2 <- score2(e)
+})
 
 #----------------------------------------------------------------------
 ### test-score2.R ends here
 
 
-## * score not at the ML
 
-## ** linear regression
-# m <- lvm(Y~X1+X2+X3)
-m <- lvm(Y~X1)
+## * error for tobit and multigroup lvm
+
+m.sim <- lvm(Y~X1+X2,G~1)
+categorical(m.sim,K=2,label=c("a","b")) <- ~G+X2
 set.seed(10)
-d <- sim(m,n)
+d <- sim(m.sim,n,latent=FALSE)
+e <- estimate(list(m.sim,m.sim),data = split(d,d$G))
 
-e <- estimate(m,d)
-param <- coef(e)+1:length(coef(e))
-test_that("",{
-    test <- score2(e, param = param)
-    GS <- score(e,p = param,indiv=TRUE)
-    expect_equal(test,GS)
-})
+expect_error(score2(e))
 
-## ** multiple linear regression
-## *** without covariance link
-m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
+
+library(lava.tobit)
+m.sim <- lvm(Y~X1)
+categorical(m.sim,K=2,labels = c("a","b")) <- ~Y
 set.seed(10)
-d <- sim(m,n)
+d <- sim(m.sim,n,latent=FALSE)
+e <- estimate(lvm(Y~X1),data = d)
 
-e <- estimate(m,d)
-param <- coef(e)+0.1*(1:length(coef(e)))
-test_that("",{
-    test <- score2(e,param = param)
-    GS <- score(e,p=param,indiv=TRUE)
-    expect_equal(test,GS)
-    test <- score2(e,param = param,indiv=FALSE)
-    GS <- score(e,p=param,indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
-})
+expect_error(score2(e))

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: okt 12 2017 (15:24) 
+## last-updated: okt 19 2017 (19:04) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 30
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,7 @@ X.name <- paste0("X",1:p)
 link.lvm <- paste0("Y~",X.name)
 formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 
+set.seed(10)
 m <- lvm(formula.lvm)
 distribution(m,~Id) <- sequence.lvm(0)
 set.seed(10)
@@ -36,15 +37,58 @@ d <- sim(m,n)
 e.lm <- lm(formula.lvm,data=d)
 e.lvm <- estimate(lvm(formula.lvm),data=d)
 
+## ** iid2 matches iid
+test_that("iid2 matches iid", {
+    e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = lava.options()$Dmethod)
+    GS1 <- iid(e.lm)
+    attr(GS1, "bread") <- NULL
+    expect_equal(e.iid2.lm, GS1)
 
-test_that("iid2 match sandwich", {
-    e.iid2.lm <- iid2(e.lm)
-    expect_equal(e.iid2.lm, iid2(e.lm, data = d))
+    e.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = lava.options()$Dmethod)
+    GS2 <- iid(e.lvm)
+    attr(GS2, "bread") <- NULL
+    expect_equal(e.iid2.lvm, GS2)
+})
 
-    e.iid2.lvm <- iid2(e.lvm)
+## ** iid2 lvm matches iid2 lm
+test_that("iid2 lvm matches iid2 lm", {
+    for(iAdj in c(FALSE,TRUE)){ # iAdj <- 1
+    e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = iAdj)
     
-    Vsandwich.manual <- t(e.iid2.lm) %*% e.iid2.lm
-    expect_equal(unname(vcovCL(e.lm, type = "HC3")),unname(Vsandwich.manual))
+    e0.iid2.lvm <- iid2(e.lvm, use.information = TRUE, adjust.residuals = iAdj)
+    expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
+
+    iData <- model.matrix(e.lm)
+    XX_m1 <- solve(t(data)%*%data)
+    H <- data %*% XX_m1 %*% t(data)    
+
+    iEpsilon <- residuals(e.lm)/(1-diag(iData)^(1/2))
+    sweep(iData, MARGIN = 1, FUN = "*", STATS = iEpsilon)/score(e.lvm, indiv = TRUE)[,1:4]
+    sweep(iData, MARGIN = 1, FUN = "*", STATS = iEpsilon)/score2(e.lvm, indiv = TRUE)[,1:4]
+    
+    
+    e1.iid2.lvm <- iid2(e.lvm, use.information = FALSE, adjust.residuals = iAdj, Dmethod = "simple")
+    expect_equal(e0.iid2.lvm, e1.iid2.lvm, tolerance = 1e-4)
+    expect_equal(unname(e.iid2.lm), unname(e1.iid2.lvm[,1:4]), tolerance = 1e-4)
+    e2.iid2.lvm <- iid2(e.lvm, use.information = FALSE, adjust.residuals = iAdj, Dmethod = "Richardson")
+    expect_equal(e0.iid2.lvm, e2.iid2.lvm, tolerance = 1e-10)
+    expect_equal(unname(e.iid2.lm), unname(e2.iid2.lvm[,1:4]), tolerance = 1e-10)
+    }
+}
+
+test_that("iid2 matches sandwich", {
+    eHC2.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, alpha = 0.5)
+    VsandwichHC2.lm <- t(eHC2.iid2) %*% eHC2.iid2
+    expect_equal(unname(vcovCL(e.lm, type = "HC2")),unname(VsandwichHC2.lm))
+
+    eHC3.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, alpha = 1)
+    VsandwichHC3.lm <- t(eHC3.iid2) %*% eHC3.iid2
+    expect_equal(unname(vcovCL(e.lm, type = "HC3")),unname(VsandwichHC3.lm))
+
+    eHC3.iid2.lvm <- iid2(e.lvm, alpha = 1, use.information = TRUE, adjust.residuals = TRUE)
+    VsandwichHC3.lvm <- crossprod(eHC3.iid2.lvm)
+    expect_equal(unname(VsandwichHC3.lvm[1:4,1:4]), unname(VsandwichHC3.lm))
+    expect_equal(unname(vcovCL(e.lm, type = "HC3")),unname(Vsandwich0.lvm[1:4,1:4]))
 })
 
 score2(e.lvm, indiv = TRUE)

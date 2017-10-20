@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 16 2017 (19:48) 
+## last-updated: okt 19 2017 (18:44) 
 ##           By: Brice Ozenne
-##     Update #: 104
+##     Update #: 134
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,7 +58,7 @@
 ## * method iid2.lm
 #' @rdname iid2
 #' @export
-iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, ...){
+iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, alpha = 1/2, ...){
     if(!identical(class(x),"lm")){
         wrongClass <- paste(setdiff(class(x),"lm"), collapse = " ")
         stop("iid2 is not available for ",wrongClass," objects \n")
@@ -73,7 +73,7 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, ...){
     XX_m1 <- solve(t(data)%*%data)
     H <- data %*% XX_m1 %*% t(data)    
     if(adjust.residuals){
-        epsilon <- residuals(x)/(1 - diag(H))
+        epsilon <- residuals(x)/(1 - diag(H)^{alpha})
     }else{
         epsilon <- residuals(x)
     }
@@ -84,7 +84,11 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, ...){
     return(iid0)
 }
 
-iid2.lvmfit <- function(x, data = NULL, adjust.residuals = TRUE, check.score = TRUE, ...){
+iid2.lvmfit <- function(x, data = NULL, 
+                        adjust.residuals = TRUE, power = 1/2,
+                        use.information = FALSE, Dmethod = "Richardson",
+                        return.df = TRUE,
+                        check.score = TRUE, ...){
 
     if(!identical(class(x),"lvmfit")){
         wrongClass <- paste(setdiff(class(x),"lvmfit"), collapse = " ")
@@ -102,7 +106,7 @@ iid2.lvmfit <- function(x, data = NULL, adjust.residuals = TRUE, check.score = T
 
     if(check.score){
         S1 <- score2(x, param = coef.model, data = data,
-                     adjust.residuals = FALSE)
+                     adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
         S2 <- score(x, p = coef.model,indiv = TRUE)
         if(max(abs(S1-S2))>1e-10){
             stop("score2 does not match score \n",
@@ -110,18 +114,27 @@ iid2.lvmfit <- function(x, data = NULL, adjust.residuals = TRUE, check.score = T
         }
     }
 
-    e.score <- score2(x, param = coef.model, data = data,
-                      adjust.residuals = adjust.residuals)
-    I <- -numDeriv::jacobian(func = function(p){
-        score2(x, param = p, data = data, adjust.residuals = adjust.residuals, indiv = FALSE, ...)
-    },
-    x = coef.model,
-    method = lava.options()$Dmethod)
+    e.score <- score2(x, p = coef.model, data = data,
+                      adjust.residuals = adjust.residuals, power = power, return.df = return.df)
 
-    iid0 <- e.score %*% lava::Inverse(I)
+    if(use.information){
+        iI <- vcov(x)
+    }else{
+        I <- -numDeriv::jacobian(func = function(p){
+            score(x, p = p, data = data, indiv = FALSE, ...)        
+        },
+        x = coef.model,
+        method = Dmethod)
+        iI <- lava::Inverse(I)
+    }
+
+    iid0 <- e.score %*% iI
 
 ### ** export
-    colnames(iid0) <- colnames(score)
+    colnames(iid0) <- colnames(e.score)
+    if(return.df){
+        attr(iid0,"df") <- attr(e.score,"df")
+    }
     return(iid0)
 }
 
