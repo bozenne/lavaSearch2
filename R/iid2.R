@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 19 2017 (18:44) 
+## last-updated: okt 23 2017 (11:06) 
 ##           By: Brice Ozenne
-##     Update #: 134
+##     Update #: 174
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,7 +58,7 @@
 ## * method iid2.lm
 #' @rdname iid2
 #' @export
-iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, alpha = 1/2, ...){
+iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
     if(!identical(class(x),"lm")){
         wrongClass <- paste(setdiff(class(x),"lm"), collapse = " ")
         stop("iid2 is not available for ",wrongClass," objects \n")
@@ -73,7 +73,7 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, alpha = 1/2, ...){
     XX_m1 <- solve(t(data)%*%data)
     H <- data %*% XX_m1 %*% t(data)    
     if(adjust.residuals){
-        epsilon <- residuals(x)/(1 - diag(H)^{alpha})
+        epsilon <- residuals(x)/(1 - diag(H))^{power}
     }else{
         epsilon <- residuals(x)
     }
@@ -84,16 +84,43 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, alpha = 1/2, ...){
     return(iid0)
 }
 
+## * method iid2.lvmfit
+#' @rdname iid2
+#' @export
+iid2.lme <- function(x, data = NULL, 
+                     adjust.residuals = TRUE, power = 1/2,
+                     return.df = TRUE, ...){
+
+    if(is.null(data)){
+        data <- getData(x)
+    }else{
+        stop("not implemented yet!\n")
+    }
+    
+### ** compute the iid
+    coef.model <- fixef(x)
+    e.score <- score2(x, p = coef.model, data = data,
+                      adjust.residuals = adjust.residuals, power = power, return.df = return.df)
+
+    iI <- vcov(x)
+    iid0 <- e.score %*% iI
+
+### ** export
+    colnames(iid0) <- colnames(e.score)
+    if(return.df){
+        attr(iid0,"df") <- attr(e.score,"df")
+    }
+    return(iid0)
+}
+
+## * method iid2.lvmfit
+#' @rdname iid2
+#' @export
 iid2.lvmfit <- function(x, data = NULL, 
                         adjust.residuals = TRUE, power = 1/2,
                         use.information = FALSE, Dmethod = "Richardson",
                         return.df = TRUE,
                         check.score = TRUE, ...){
-
-    if(!identical(class(x),"lvmfit")){
-        wrongClass <- paste(setdiff(class(x),"lvmfit"), collapse = " ")
-        stop("iid2 is not available for ",wrongClass," objects \n")
-    }
 
     if(is.null(data)){
         data <- model.frame(x)
@@ -103,7 +130,6 @@ iid2.lvmfit <- function(x, data = NULL,
     
 ### ** compute the iid
     coef.model <- coef(x)
-
     if(check.score){
         S1 <- score2(x, param = coef.model, data = data,
                      adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
@@ -121,6 +147,7 @@ iid2.lvmfit <- function(x, data = NULL,
         iI <- vcov(x)
     }else{
         I <- -numDeriv::jacobian(func = function(p){
+            #score2(x, p = p, data = data, adjust.residuals = FALSE, indiv = FALSE, return.df = FALSE, ...)
             score(x, p = p, data = data, indiv = FALSE, ...)        
         },
         x = coef.model,

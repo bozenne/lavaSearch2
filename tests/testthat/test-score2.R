@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 19 2017 (16:43) 
+## last-updated: okt 23 2017 (12:48) 
 ##           By: Brice Ozenne
-##     Update #: 72
+##     Update #: 94
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,9 +20,54 @@ library(testthat)
 context("score2")
 n <- 5e1
 
+## * score for lme models
+mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
+latent(mSim) <- ~eta
+transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
+set.seed(10)
+dW <- as.data.table(sim(mSim,n,latent = FALSE))
+setkey(dW, "Id")
+dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
+setkey(dL, "Id")
+
+m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
+e.lvm <- estimate(m, dW)
+
+e.lme <- lme(value ~ time + G,
+             random =~1| Id,
+             weight = varIdent(form = ~ 1|time),
+             data = dL, method = "ML")
+
+test_that("lme equivalent to lvm", {
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+
+    coef.lme <- c(fixef(e.lme), sigma(e.lme)^2, as.numeric(getVarCov(e.lme)),
+    (sigma(e.lme)*coef(e.lme$modelStruct$varStruct, uncons = FALSE, allCoef = FALSE))^2)
+    coef.lvm <- coef(e.lvm)
+
+    expect_equal(as.double(coef.lme),as.double(coef.lvm), tol = 1e-5)
+})
+
+test_that("score2 equivalent to score", {
+    score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
+    score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
+
+    expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+
+    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 1)
+
+    expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+# lapply(V_list, function(v) chol2inv(chol(v)))
+    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
+
+    expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+})
+
+
 ## * not-adjusted score
 ## ** linear regression
-
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
 d <- sim(m,n)
@@ -53,6 +98,15 @@ test_that("linear regression",{
     GS <- score(e, p = param+1, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
 })
+
+test_that("linear regression: constrains",{
+    m <- lvm(Y~X1+1*X2)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE, return.df = FALSE),
+                 score(e, indiv = TRUE))
+})
+
 
 ## ** multiple linear regression
 ## *** without covariance link
@@ -87,7 +141,7 @@ test_that("multiple linear regression",{
     expect_equal(as.double(test),as.double(GS))
 })
 
-## *** without covariance links
+## *** with covariance links
 m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
 covariance(m) <- Y1~Y2
 set.seed(10)
@@ -118,6 +172,14 @@ test_that("multiple linear regression (covariance link)",{
     test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE, return.df = FALSE)
     GS <- score(e, p = param+1, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
+})
+
+test_that("linear regressions: constrains",{
+    m <- lvm(Y1~X1+1*X2,Y2~2*X3+2*X1,Y3~X2)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE, return.df = FALSE),
+                 score(e, indiv = TRUE))
 })
 
 ## ** latent variable model
@@ -159,6 +221,15 @@ test_that("factor model",{
     GS <- score(e, p = param+1, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
 })
+
+test_that("factor model: constrains",{
+    m <- lvm(Y1~1*eta+1*X2,Y2~1*eta,Y3~1*eta)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE, return.df = FALSE),
+                 score(e, indiv = TRUE))
+})
+
 
 ## *** 2 factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
@@ -294,12 +365,6 @@ s1 <- score2(e1, adjust.residuals = TRUE)
 test_that("",{
     expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
                  s0[,c("Y1","Y1~X1","Y1~~Y1")])
-    expect_equal(df.residual(e0),attr(s0,"df"))
-    ## expect_equal(df.residual(e1),attr(s1,"df"))
-
-    ## df.residual(e1)
-    
-##    expect_equal(attr(s1, "df"), NROW(d))
 })
 
 
@@ -327,6 +392,7 @@ test_that("",{
 
 ## * error for tobit and multigroup lvm
 
+## ** multigroup model
 m.sim <- lvm(Y~X1+X2,G~1)
 categorical(m.sim,K=2,label=c("a","b")) <- ~G+X2
 set.seed(10)
@@ -335,7 +401,7 @@ e <- estimate(list(m.sim,m.sim),data = split(d,d$G))
 
 expect_error(score2(e))
 
-
+## ** model with binary endogenous variables
 library(lava.tobit)
 m.sim <- lvm(Y~X1)
 categorical(m.sim,K=2,labels = c("a","b")) <- ~Y

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: okt 19 2017 (18:36) 
+## last-updated: okt 20 2017 (16:24) 
 ##           By: Brice Ozenne
-##     Update #: 85
+##     Update #: 100
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -78,7 +78,6 @@ df.residual.lvmfit <- function(object, power = 1/2, adjust.residuals=TRUE,
     }
 
     vcov.param <- vcov(object)
-    
     if(adjust.residuals && (is.null(dmu.dtheta2) || is.null(leverage.adj))){
         
         ## derivative of the linear predictor
@@ -94,7 +93,7 @@ df.residual.lvmfit <- function(object, power = 1/2, adjust.residuals=TRUE,
             }
         })
         ## compute leverage values
-         if(n.endogenous==1){
+        if(n.endogenous==1){
             dmu.dtheta2 <- do.call(cbind, args = ls.M)
             leverage.adj <- 1 - diag(iOmega) * rowSums( (dmu.dtheta2 %*% vcov.param) * dmu.dtheta2)
         }else{
@@ -116,40 +115,22 @@ df.residual.lvmfit <- function(object, power = 1/2, adjust.residuals=TRUE,
     if(adjust.residuals){
         if(n.endogenous==1){
             df.adj <- sum(leverage.adj)
-
-            ## eigen.Omega <- eigen(Omega)
-            ## root.Omega <- eigen.Omega$vectors %*% diag(sqrt(eigen.Omega$values), nrow = n.endogenous, ncol = n.endogenous) %*% t(eigen.Omega$vectors)
-            
-            ## vec.lambda <- lapply(1:n, function(iI){ # iI <- 1
-            ##     iH <- dmu.dtheta2[iI,,drop=FALSE] %*%  vcov.param %*% t(dmu.dtheta2[iI,,drop=FALSE]) %*% iOmega
-            ##     iP <- diag(1,n.endogenous) - iH
-            ##     iD <- diag(diag(iH)^(power), nrow = n.endogenous, ncol = n.endogenous)
-            ##     iV <- root.Omega
-            ##     ia <- vcov.param %*% t(dmu.dtheta2[iI,,drop=FALSE]) %*% iOmega
-            ##     iM <- iV %*% iP %*% iD %*% t(ia) %*% ia  %*% iD %*% iP %*% iV
-            ##     return(eigen(iM)$values)
-            ## })
-            ## df.adj <- sum(unlist(vec.lambda))^2/sum(unlist(vec.lambda)^2)
             
         }else{
             eigen.Omega <- eigen(Omega)
             root.Omega <- eigen.Omega$vectors %*% diag(sqrt(eigen.Omega$values), nrow = n.endogenous, ncol = n.endogenous) %*% t(eigen.Omega$vectors)
             ## root.Omega %*% root.Omega - Omega
-            ## round(vcov.param,10)
-            
-            vec.lambda <- lapply(1:n, function(iI){ # iI <- 1
-                iH <- dmu.dtheta2[iI,,] %*%  vcov.param %*% t(dmu.dtheta2[iI,,]) %*% iOmega
-                iP <- diag(1,n.endogenous) - iH
-                iD <- diag(diag(iH)^(power), nrow = n.endogenous, ncol = n.endogenous)
-                iV <- root.Omega
-                ia <- vcov.param %*% t(dmu.dtheta2[iI,,]) %*% iOmega
-                iM <- iV %*% iP %*% iD %*% t(ia) %*% ia  %*% iD %*% iP %*% iV
-                return(eigen(iM)$values)
+
+            dmu.dtheta <- apply(dmu.dtheta2, 3, function(iP){
+              as.vector(t(iP))  
             })
-            df.adj <- sum(unlist(vec.lambda))^2/sum(unlist(vec.lambda)^2)
-            ## sapply(1:n.endogenous, function(iY){
-            ##     n - sum(sapply(ls.diagH,"[",iY))
-            ## })
+            diag.iOmega <- Matrix::bdiag(lapply(1:n, function(i){iOmega}))
+                
+            H <- dmu.dtheta %*% vcov.param %*% t(dmu.dtheta) %*% diag.iOmega
+            vec.eigen <- eigen(H)$values
+            df.adj <- sum(unlist(vec.eigen))^2/sum(unlist(vec.eigen)^2)
+            
+            print(colSums(leverage.adj))
         }
     }else{
         df.adj <- n-1

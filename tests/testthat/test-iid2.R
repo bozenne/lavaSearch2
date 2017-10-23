@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: okt 19 2017 (19:04) 
+## last-updated: okt 23 2017 (12:35) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 78
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,8 @@
 ### Code:
 
 library(testthat)
-library(sandwich)
+library(clubSandwich)
+library(nlme)
 
 context("iid2")
 
@@ -30,7 +31,7 @@ formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 
 set.seed(10)
 m <- lvm(formula.lvm)
-distribution(m,~Id) <- sequence.lvm(0)
+transform(m,Id~Y) <- function(x){1:NROW(x)}
 set.seed(10)
 d <- sim(m,n)
 
@@ -44,99 +45,150 @@ test_that("iid2 matches iid", {
     attr(GS1, "bread") <- NULL
     expect_equal(e.iid2.lm, GS1)
 
-    e.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = lava.options()$Dmethod)
+    e1.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = TRUE)
+    e2.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = "Richardson")
+    e3.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = "simple")
+    expect_equal(e1.iid2.lvm, e2.iid2.lvm)
+    expect_equal(e1.iid2.lvm, e3.iid2.lvm, tolerance = 1e-4)
+
     GS2 <- iid(e.lvm)
     attr(GS2, "bread") <- NULL
-    expect_equal(e.iid2.lvm, GS2)
+    expect_equal(e3.iid2.lvm, GS2)
 })
 
 ## ** iid2 lvm matches iid2 lm
 test_that("iid2 lvm matches iid2 lm", {
     for(iAdj in c(FALSE,TRUE)){ # iAdj <- 1
-    e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = iAdj)
-    
-    e0.iid2.lvm <- iid2(e.lvm, use.information = TRUE, adjust.residuals = iAdj)
-    expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
-
-    iData <- model.matrix(e.lm)
-    XX_m1 <- solve(t(data)%*%data)
-    H <- data %*% XX_m1 %*% t(data)    
-
-    iEpsilon <- residuals(e.lm)/(1-diag(iData)^(1/2))
-    sweep(iData, MARGIN = 1, FUN = "*", STATS = iEpsilon)/score(e.lvm, indiv = TRUE)[,1:4]
-    sweep(iData, MARGIN = 1, FUN = "*", STATS = iEpsilon)/score2(e.lvm, indiv = TRUE)[,1:4]
-    
-    
-    e1.iid2.lvm <- iid2(e.lvm, use.information = FALSE, adjust.residuals = iAdj, Dmethod = "simple")
-    expect_equal(e0.iid2.lvm, e1.iid2.lvm, tolerance = 1e-4)
-    expect_equal(unname(e.iid2.lm), unname(e1.iid2.lvm[,1:4]), tolerance = 1e-4)
-    e2.iid2.lvm <- iid2(e.lvm, use.information = FALSE, adjust.residuals = iAdj, Dmethod = "Richardson")
-    expect_equal(e0.iid2.lvm, e2.iid2.lvm, tolerance = 1e-10)
-    expect_equal(unname(e.iid2.lm), unname(e2.iid2.lvm[,1:4]), tolerance = 1e-10)
+        for(iPower in c(0.5,1)){ # iPower <- 1
+        e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = iAdj, power = iPower)
+        e0.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = iAdj, power = iPower, use.information = TRUE)
+        expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
+        }
     }
-}
-
-test_that("iid2 matches sandwich", {
-    eHC2.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, alpha = 0.5)
-    VsandwichHC2.lm <- t(eHC2.iid2) %*% eHC2.iid2
-    expect_equal(unname(vcovCL(e.lm, type = "HC2")),unname(VsandwichHC2.lm))
-
-    eHC3.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, alpha = 1)
-    VsandwichHC3.lm <- t(eHC3.iid2) %*% eHC3.iid2
-    expect_equal(unname(vcovCL(e.lm, type = "HC3")),unname(VsandwichHC3.lm))
-
-    eHC3.iid2.lvm <- iid2(e.lvm, alpha = 1, use.information = TRUE, adjust.residuals = TRUE)
-    VsandwichHC3.lvm <- crossprod(eHC3.iid2.lvm)
-    expect_equal(unname(VsandwichHC3.lvm[1:4,1:4]), unname(VsandwichHC3.lm))
-    expect_equal(unname(vcovCL(e.lm, type = "HC3")),unname(Vsandwich0.lvm[1:4,1:4]))
 })
 
-score2(e.lvm, indiv = TRUE)
-debug(score)
-score(e.lvm, indiv = TRUE)
+## ** iid2 matches clubSandwich
+test_that("iid2 matches clubSandwich", {
+    eHC2.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, power = 0.5)
+    VsandwichHC2.lm <- crossprod(eHC2.iid2)
+    expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
+                 as.double(VsandwichHC2.lm))
 
-## ** simulation
-if(FALSE){
-    warper <- function(n){
+    eHC3.iid2 <- iid2(e.lm, return.df = FALSE, adjust.residuals = TRUE, power = 1)
+    VsandwichHC3.lm <- crossprod(eHC3.iid2)
+    expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
+                 as.double(VsandwichHC3.lm))
 
-        d <- data.table(Y = rnorm(n),X = rnorm(n), Id = 1:n)
+    eHC3.iid2.lvm <- iid2(e.lvm, use.information = TRUE, adjust.residuals = TRUE, power = 1)
+    VsandwichHC3.lvm <- crossprod(eHC3.iid2.lvm)
+    expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
+                 as.double(VsandwichHC3.lvm[1:4,1:4]))
 
-        e.lm <- lm(Y~X,data=d)
-        e.iid <- sqrt(n) * iid(e.lm)
-        e.iid2 <- sqrt(n) * iid2(e.lm)
+    eHC2.iid2.lvm <- iid2(e.lvm, use.information = TRUE, adjust.residuals = TRUE, power = 0.5)
+    VsandwichHC2.lvm <- crossprod(eHC2.iid2.lvm)
+    expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
+                 as.double(VsandwichHC2.lvm[1:4,1:4]))
 
-        sd.lm <- sqrt(vcov(e.lm)[2,2])
-        sdR.iid <- sd(e.iid[,2])
-        sdR.iid2 <- sd(e.iid2[,2])
-
-        Wald.lm <- coef(e.lm)[2]/sd.lm
-        Wald.iid <- coef(e.lm)[2]/sdR.iid
-        Wald.iid2 <- coef(e.lm)[2]/sdR.iid2
-
-    
-        out <- NULL
-    
-        out <- rbind(out, data.table(p = summary(e.lm)$coef[2,4], method = "lm"))
-        out <- rbind(out, data.table(p = 2*(1-pt(abs(Wald.lm), df = n-2)), method = "information"))
-        out <- rbind(out, data.table(p = 2*(1-pt(abs(Wald.iid), df = n-2)), method = "iid"))
-        out <- rbind(out, data.table(p = 2*(1-pt(abs(Wald.iid2), df = n-2)), method = "iid2"))
-        out[, n:= n]
-        return(out)
-    
-    }
-
-    n.rep <- 1000
-    resApply <- pbapply::pblapply(1:n.rep, function(x){
-        dt <- warper(20)[, iRep := x]
-        return(dt)
-    })
-
-    dt.pval <- rbindlist(resApply)
-    dt.pval[,mean(p <= 0.05),by = "method"]
-}
+    eHC2.iid2.lvm <- iid2(e.lvm, use.information = FALSE, adjust.residuals = TRUE, power = 0.5, Dmethod = "Richardson")
+    VsandwichHC2.lvm <- crossprod(eHC2.iid2.lvm)
+    expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
+                 as.double(VsandwichHC2.lvm[1:4,1:4]))
+})
 
 
-## * lvm
+## * linear model with heterogeneous variance
+set.seed(10)
+m <- lvm(c(Y~X1+X2,G~1))
+categorical(m, labels = paste0("t",1:3)) <- ~G
+transform(m,Id~Y) <- function(x){1:NROW(x)}
+set.seed(10)
+d <- as.data.table(sim(m,n,latent = FALSE))
+dW <- dcast(d, Id + X1 + X2 ~ G, value.var = "Y")
+
+e.gls <- gls(Y ~ G + X1 + X2,
+             weight = varIdent(form = ~ 1|G),
+             data = d, method = "ML")
+
+## m <- lvm(c(t1,t2,t3,t4,t5)~X1+X2)
+## e.lvm <- estimate(m, dW)
+
+## * mixed model
+mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
+latent(mSim) <- ~eta
+transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
+set.seed(10)
+dW <- as.data.table(sim(mSim,n,latent = FALSE))
+setkey(dW, "Id")
+dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
+setkey(dL, "Id")
+
+keep.cols <- c("eta","Y2","Y3","eta~G")
+
+m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
+e.lvm <- estimate(m, dW)
+
+e.lme <- lme(value ~ time + G,
+             random =~1| Id,
+             weight = varIdent(form = ~ 1|time),
+             data = dL, method = "ML")
+
+test_that("lme equivalent to lvm", {
+expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+
+coef.lme <- c(fixef(e.lme), sigma(e.lme)^2, as.numeric(getVarCov(e.lme)),
+             (sigma(e.lme)*coef(e.lme$modelStruct$varStruct, uncons = FALSE, allCoef = FALSE))^2)
+coef.lvm <- coef(e.lvm)
+
+expect_equal(as.double(coef.lme),as.double(coef.lvm), tol = 1e-5)
+})
+
+test_that("lme: HC0/HC1", {
+    iid2HC0.lme <- iid2(e.lme, adjust.residuals = FALSE)
+    iid2HC0.lvm <- iid2(e.lvm, adjust.residuals = FALSE, use.information = TRUE)
+
+    expect_equal(unname(iid2HC0.lme),unname(iid2HC0.lvm[,keep.cols]), tol = 1e-6)
+
+    VsandwichHC0.lme <- crossprod(iid2HC0.lme)
+    VsandwichHC0.lvm <- crossprod(iid2HC0.lvm[,keep.cols])
+    GS <- vcovCR(e.lme, type = "CR0", cluster = dL$Id)
+    expect_equal(as.double(GS),as.double(VsandwichHC0.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VsandwichHC0.lvm), tolerance = 1e-7)
+
+    GS <- vcovCR(e.lme, type = "CR1", cluster = dL$Id)
+    VsandwichHC1.lme <- crossprod(iid2HC0.lme)*n/(n-1)
+    VsandwichHC1.lvm <- crossprod(iid2HC0.lvm[,keep.cols])*n/(n-1)
+    expect_equal(as.double(GS),as.double(VsandwichHC1.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VsandwichHC1.lvm), tolerance = 1e-7)
+})
+
+test_that("lme: HC3", {
+    iid2HC3.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 1)
+    iid2HC3.lvm <- iid2(e.lvm, adjust.residuals = TRUE, use.information = TRUE, power = 1)
+
+    expect_equal(unname(iid2HC3.lme),unname(iid2HC3.lvm[,keep.cols]), tol = 1e-6)
+
+    VsandwichHC3.lme <- crossprod(iid2HC3.lme)
+    VsandwichHC3.lvm <- crossprod(iid2HC3.lvm[,keep.cols])
+    GS <- vcovCR(e.lme, type = "CR3", cluster = dL$Id)
+    expect_equal(as.double(GS),as.double(VsandwichHC3.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VsandwichHC3.lvm), tolerance = 1e-7)
+})
+
+test_that("lme: HC2", {
+    iid2HC2.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 0.5)
+    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, use.information = TRUE, power = 0.5)
+
+    expect_equal(unname(iid2HC2.lme),unname(iid2HC2.lvm[,keep.cols]), tol = 1e-6)
+
+    VsandwichHC2.lme <- crossprod(iid2HC2.lme)
+    VsandwichHC2.lvm <- crossprod(iid2HC2.lvm[,keep.cols])
+    fGS <- vcovCR(e.lme, type = "CR2", cluster = dL$Id)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.lvm), tolerance = 1e-7)
+})
+
+
+
 
 #----------------------------------------------------------------------
 ### test-iid2.R ends here

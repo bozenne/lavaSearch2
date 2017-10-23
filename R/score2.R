@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: okt 19 2017 (18:35) 
+## last-updated: okt 23 2017 (12:32) 
 ##           By: Brice Ozenne
-##     Update #: 727
+##     Update #: 848
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -82,6 +82,100 @@
 `score2` <-
   function(x, ...) UseMethod("score2")
 
+## * score2.lme
+score2.lme <- function(x, data = NULL, indiv = TRUE, adjust.residuals = TRUE, power = 1/2, ...){
+
+    ## ** Normalize arguments
+    if(!identical(class(x),"lme")){
+        wrongClass <- paste(setdiff(class(x),"lme"), collapse = " ")
+        stop("iid2 is not available for ",wrongClass," objects \n")
+    }
+    if(!is.null(x$modelStruct$corStruct)){
+        stop("cannot handle lme objects when corStruct is not null \n")
+    }
+    if(NCOL(x$groups)>1){
+        stop("cannot handle lme objects with more than one random effect \n")
+    }
+    vec.group <- as.numeric(x$groups[,1])
+    if(all(diff(vec.group)>=0) == FALSE && all(diff(vec.group<=0)) == FALSE ){
+        stop("the grouping variable for the random effect must be sorted before fitting the model \n")
+    }
+    Ugroup <- unique(vec.group)
+    n.group <- length(Ugroup)
+    table.group <- table(vec.group)
+    
+    if(is.null(data)){
+        data <- getData(x)        
+    }
+    data <- model.matrix(formula(x), data)
+
+    ## ** Prepare
+    dmu.dtheta <- data
+    Im1 <- vcov(x)
+
+    ls.indexGroup <- lapply(1:n.group, function(iG){
+        which(vec.group==iG)
+    })
+    
+    ## ** Reconstruct covariance matrix
+    tau <- as.double(getVarCov(x))
+    sigma2.base <- (sigma(x)*coef(e.lme$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
+    vec.sigma <- sigma2.base[match(attr(x$modelStruct$varStruct,"groups"), names(sigma2.base))]
+
+    Omega <- Matrix::bdiag(lapply(1:n.group, function(iG){ # iG <- 1
+        n.tempo <- table.group[iG]        
+        sigma.tempo <- vec.sigma[ls.indexGroup[[iG]]]
+        return(matrix(tau,nrow=n.tempo,ncol=n.tempo) + diag(sigma.tempo, n.tempo, n.tempo))
+    }))
+    iOmega <- solve(Omega)
+    ## check that Sigma_beta = (t(X) Sigma_epsilon^{-1} X)^{-1}
+    ## vcov.param - solve(t(data) %*% solve(Omega) %*% data)
+
+    ## ** Compute residuals
+    epsilon <- residuals(x, type = "response", level = 0)
+
+    if(adjust.residuals){
+        vcov.param <- vcov(x)
+        n.tot <- NROW(data)
+        #ImH <- diag(1,nrow=n.tot,ncol=n.tot) - data %*% vcov.param %*% t(data) %*% iOmega
+        
+        
+        epsilon <- do.call(rbind, lapply(1:n.group, function(iG){ # iG <- 1
+            n.tempo <- table.group[[iG]]
+            index.tempo <- ls.indexGroup[[iG]]
+            Hm1 <- diag(1,nrow=n.tempo,ncol=n.tempo) - data[index.tempo,,drop=FALSE] %*% vcov.param %*% t(data[index.tempo,,drop=FALSE]) %*% iOmega[index.tempo,index.tempo,drop=FALSE]
+            iHm1 <- solve(Hm1)
+            if(power != 1){
+                eigen.iHm1 <- eigen(iHm1)
+                iHm1 <- eigen.iHm1$vectors %*% diag(eigen.iHm1$values^(power),nrow = n.tempo, ncol = n.tempo) %*% solve(eigen.iHm1$vectors)
+            }
+            ## tcrossprod(iHm12) %*% Hm1
+            ## tcrossprod(iHm12) - iHm1
+            ## (iHm12) - iHm1
+            ## epsilon[index.tempo] %*% iHm12
+            ##  iHm12 %*% epsilon[index.tempo]
+            ##return(as.double(epsilon[index.tempo] %*% iHm1))
+            return(iHm1 %*% epsilon[index.tempo])
+        }))
+        
+    }
+    
+    ## ** Compute score
+    score0 <- t(sapply(1:n.group, function(iG){ # iG <- 1
+        index.tempo <- ls.indexGroup[[iG]]
+        score.tempo <- t(dmu.dtheta[index.tempo,,drop=FALSE]) %*% iOmega[index.tempo,index.tempo,drop=FALSE] %*% epsilon[index.tempo]
+        return(as.double(score.tempo))
+    }))
+
+    ## ** export
+    if(indiv==FALSE){
+        score0 <- rbind(colSums(score0))
+    }
+    colnames(score0) <- names(fixef(x))
+   
+    return(score0)
+}
+
 ## * score2.lvmfit
 score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
                           indiv = TRUE, adjust.residuals = TRUE, return.df = TRUE, ...){
@@ -134,43 +228,44 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
     ls.calc <- .calcDtheta(x, data = data,
                            param = p, n.param = n.param,
                            dmu = TRUE, dOmega = TRUE)
-    # names(ls.calc$dmu.dtheta)
-
+                                        # names(ls.calc$dmu.dtheta)
+    
 ### ** residuals
-    epsilon <- residuals(x, p = p)
+    epsilon <- as.matrix(residuals(x, p = p))
     
     if(adjust.residuals){
 
         vcov.param <- vcov(x)
         ## *** gather derivatives
-        ls.M <- lapply(ls.calc$dmu.dtheta[colnames(vcov.param)], function(iD){
-            if(is.null(iD)){
-                return(matrix(0,nrow = n,ncol=n.endogenous))
+        dmu.dtheta <- sapply(colnames(vcov.param), function(iP){
+            if(is.null(ls.calc$dmu.dtheta[[iP]])){
+                return(rep(0, times = n * n.endogenous))
             }else{
-                return(iD)
+                return(as.vector(t(ls.calc$dmu.dtheta[[iP]])))
             }
         })
-
-        ## *** compute leverage values
-        if(n.endogenous==1){
-            dmu.dtheta2 <- do.call(cbind, args = ls.M)
-            leverage.adj <- 1 - diag(iOmega) * rowSums( (dmu.dtheta2 %*% vcov.param) * dmu.dtheta2)
-        }else{
-            dmu.dtheta2 <- do.call(abind::abind, args = list(ls.M, along = 3))
-
-            ls.diagH <- lapply(1:n, function(iI){ # iI <- 1
-                ## rowSums((dmu.dtheta2[iI,,] %*%  vcov.param) * dmu.dtheta2[iI,,]) * diag(iOmega)
-                dmu.dtheta2[iI,,] %*%  vcov.param %*% t(dmu.dtheta2[iI,,]) %*% diag(iOmega)
-            })
-            
-            leverage.adj <- 1 - t(do.call(cbind,ls.diagH))
-
-        }
-        ## *** normalize residuals
-        epsilon <- epsilon/leverage.adj^(power)
+        colnames(dmu.dtheta) <- colnames(vcov.param)
         
+        ## *** compute hat matrix
+        Id.endogenous <- diag(1,n.endogenous,n.endogenous)
+        D.blockdiag <- lapply(1:n, function(iI){ # iI <- 1
+            index.tempo <- (n.endogenous*(iI-1)+1):(n.endogenous*iI)
+            Hm1.tempo <- Id.endogenous - dmu.dtheta[index.tempo,,drop=FALSE] %*% vcov.param %*% t(dmu.dtheta[index.tempo,,drop=FALSE]) %*% iOmega
+            iHm1.tempo <- solve(Hm1.tempo)
+            if(power != 1){
+                eigen.iHm1 <- eigen(iHm1.tempo)
+                iHm1.tempo <- eigen.iHm1$vectors %*% diag(eigen.iHm1$values^(power),nrow = n.endogenous, ncol = n.endogenous) %*% solve(eigen.iHm1$vectors)
+            }
+            return(iHm1.tempo)
+        })
+
+        ## *** normalize residuals
+        epsilon <- do.call(rbind, lapply(1:n, function(iI){ # iI <- 1            
+            as.double(D.blockdiag[[iI]] %*% epsilon[iI,])
+        }))
     }
-    #tiOmega.epsilon <- t(iOmega %*% t(epsilon))
+
+    ## tiOmega.epsilon <- t(iOmega %*% t(epsilon))
     tiOmega.epsilon <- epsilon %*% iOmega
    
 ### ** compute score
@@ -196,10 +291,34 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
 
 ### ** degree of freedom
     if(return.df){
-        df.adj <- df.residual(x, adjust.residuals = adjust.residuals, 
-                              dmu.dtheta2 = dmu.dtheta2, leverage.adj = leverage.adj, Omega = Omega, iOmega = iOmega,
-                              p = p)
-        attr(out.score,"df") <- df.adj
+        if(adjust.residuals){
+            iOmega.all <- Matrix::bdiag(lapply(1:n, function(iI){
+                iOmega ## construct block diagonal matrix
+            }))
+            H <- dmu.dtheta %*% vcov.param %*% t(dmu.dtheta) %*% iOmega.all
+        
+            vec.a <- vcov.param %*% t(dmu.dtheta) %*% iOmega.all
+            D <- Matrix::bdiag(D.blockdiag)
+            P <- diag(1,n*n.endogenous,n*n.endogenous) - H
+            eigen.Omega <- eigen(Omega)
+            root.Omega <- eigen.Omega$vectors %*% diag(sqrt(eigen.Omega$values), nrow = n.endogenous, ncol = n.endogenous) %*% t(eigen.Omega$vectors)
+            root.Omega.all <- Matrix::bdiag(lapply(1:n, function(iI){
+                root.Omega ## construct block diagonal matrix
+            }))
+
+            if(return.df == 1){
+                M <- root.Omega.all %*% D %*% H %*% D %*% root.Omega.all
+            }else if(return.df == 2){
+                M <- root.Omega.all %*% D %*% t(vec.a) %*% vec.a %*% D %*% root.Omega.all
+            }else if(return.df == 3){
+                M <- root.Omega.all %*% P %*% D %*% t(vec.a) %*% vec.a %*% D %*% P %*% root.Omega.all
+            }
+            vec.eigen <- eigen(M, symmetric = TRUE)$values
+            df.adj <- sum(unlist(vec.eigen))^2/sum(unlist(vec.eigen)^2)
+            attr(out.score,"df") <- df.adj
+        }else{
+            attr(out.score,"df") <- NA
+        }
     }
 
 ### ** export
@@ -313,7 +432,7 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
 
         ## *** linear predictor
         if(dmu){
-            if(iType == "nu"){
+            if(iType == "nu"){                
                 dmu.dtheta[[iP]] <- matrix(0,nrow=n,ncol=n.endogenous)
                 dmu.dtheta[[iP]][,name.endogenous == iVar1] <- rep(1,n)
             }else if(iType == "K"){
