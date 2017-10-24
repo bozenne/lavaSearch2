@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (12:27) 
 ## Version: 
-## last-updated: okt 20 2017 (16:24) 
+## last-updated: okt 24 2017 (10:21) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 106
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,8 +20,25 @@
 #' @name df.residual
 #' 
 #' @param object model object
-#' @param conservative If true the total number of parameter is substracted from the number of observations. If false only the number of mean parameters is substracted.
+#' @param adjust.residuals should leverage-adjusted residuals be used? 
+#' @param power the type of leverage-adjusted residuals to be used. See the details section.
+#' @param dmu.dtheta2 
+#' @param leverage.adj 
+#' @param Omega 
+#' @param iOmega 
+#' @param data 
+#' @param p 
 #' @param ... additional arguments
+#'
+#' @details
+#' Leverage-adjusted residuals have been shown to improve the coverage of robust standard errors in small samples.
+#' 
+#' Since the calculation of the degrees of freedom involves the use of the residuals,
+#' the same small sample correction should be use to compute the degrees of freedom and the robust standard errors.
+#'
+#' 
+#' 
+#' 
 #' @examples
 #' n <- 20
 #' 

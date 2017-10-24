@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 23 2017 (11:06) 
+## last-updated: okt 24 2017 (10:36) 
 ##           By: Brice Ozenne
-##     Update #: 174
+##     Update #: 182
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,12 +21,35 @@
 #' @name iid2
 #'
 #' @param x a linear model or a latent variable model
-#' @param ... not used
+#' @param data [optional] data set.
+#' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.#' 
+#' @param adjust.residuals Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.#' 
+#' @param power the exponent used for computing the leverage-adjusted residuals. See the details section.
+#' @param return.df Should the degree of freedom be computed?
+#' @param ... arguments to be passed to \code{score2}.
+#'
+#' @details
+#' Leverage-adjusted residuals have been shown to improve the coverage of robust standard errors in small samples.
+#' They are computed according to the formula:
+#' \eqn{e_adj = \frac{e}{(1-h_{ii})^\alpha}}
+#'
+#' \code{power = 0} (i.e. code{adjust.residuals = FALSE}) corresponds to the use of the raw residuals.
+#' It can be shown that the variance-covariance estimator is biased downward for the mean parameters in LVM.
 #' 
-#' @references Kauermann G. and Carroll R. J. A note on the efficiency of sandwich covariance matrix estimation. Journal of the American Statistical Association. Vol. 96, No. 456 (2001).
+#' \code{power=0.5} corrects for the bias of the variance-covariance estimator,
+#' at least for the mean parameters (Kauermann and Carroll, 2001)..
+#' This corresponds to the correction "CR2" in the clubSandwich package.
+#' 
+#' \code{power=1} approximates the variance-covariance jackknife estimator (Bell and McCaffrey, 2002).
+#' This corresponds to the correction "CR3" in the clubSandwich package.
+#' 
+#' @references
+#' Bell, R. M., & McCaffrey, D. F. Bias reduction in standard errors for linear regression with multi-stage samples. Survey Methodology, 28(2), 169-181 (2002). \cr
+#' Kauermann G. and Carroll R. J. A note on the efficiency of sandwich covariance matrix estimation. Journal of the American Statistical Association. Vol. 96, No. 456 (2001).
 #'
+#' @return A matrix with an attribute df if \code{return.df=TRUE}.
+#' 
 #' @examples
-#'
 #' n <- 5e1
 #' p <- 3
 #' X.name <- paste0("X",1:p)
@@ -100,7 +123,8 @@ iid2.lme <- function(x, data = NULL,
 ### ** compute the iid
     coef.model <- fixef(x)
     e.score <- score2(x, p = coef.model, data = data,
-                      adjust.residuals = adjust.residuals, power = power, return.df = return.df)
+                      adjust.residuals = adjust.residuals, power = power, return.df = return.df,
+                      ...)
 
     iI <- vcov(x)
     iid0 <- e.score %*% iI

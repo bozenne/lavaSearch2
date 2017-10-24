@@ -8,3 +8,29 @@
 \description{
 Tools for model specification in the latent variable framework (add-on for the lava package).
 }
+\details{
+The latent variable models (lvm) considered in this package can be written \cr
+as a measurement model:
+\deqn{Y_i = \nu + \eta_i \Lambda + X_i K + \epsilon_i}
+and a structural model:
+\deqn{\eta_i = \alpha + \eta_i B + X_i \Gamma + \zeta_i}
+where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
+and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
+
+\cr
+
+The corresponding conditional mean is:
+\deqn{
+\mu_i(\theta) = E[Y_i|X_i] = \nu + (\alpha + X_i \Gamma) (1-B)^{-1} \Lambda + X_i K
+}
+\deqn{
+\Omega(\theta) = Var[Y_i|X_i] = \Lambda^{t} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda + \Sigma
+}
+
+Therefore:
+\itemize{
+\item \eqn{\nu}, \eqn{K}, \eqn{\alpha}, \eqn{\Gamma} are pure mean parameters.
+\item \eqn{\Psi}, \eqn{\Sigma} pure variance parameters.
+\item \eqn{\Lambda}, \eqn{B} are both mean and variance parameters.
+}
+}

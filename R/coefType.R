@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: okt 16 2017 (16:23) 
+## last-updated: okt 24 2017 (10:10) 
 ##           By: Brice Ozenne
-##     Update #: 137
+##     Update #: 138
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,6 +26,7 @@
 #' @param detailed should the type of parameter be returned as a mathematical symbol? Otherwise plain english.
 #' @param keep.var should the variance parameters be output?
 #' @param level level argument of \code{lava::coef}
+#' @param index.model returns as an attribute to which of the model is from each parameter. Relevant for multigroup lvm models.
 #' @param ... arguments to be passed to \code{lava::coef}
 #'
 #' @details A lvm can be written as a measurement model:

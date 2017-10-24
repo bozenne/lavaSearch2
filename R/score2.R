@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: okt 23 2017 (12:32) 
+## last-updated: okt 24 2017 (16:46) 
 ##           By: Brice Ozenne
-##     Update #: 848
+##     Update #: 1084
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,38 +20,18 @@
 #' @description Compute the score directly from the gaussian density
 #'
 #' @param x a linear model or a latent variable model.
-#' @param p [optional] vector of parameters.
+#' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
 #' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.
 #' @param adjust.residuals Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
-#' @param alpha the exponent used for adjusting the residuals: \eqn{e_adj = \frac{e}{(1-h_{ii})^\alpha}}.
-#' \eqn{alpha=0.5} corresponds to leverage-adjustment (Kauermann and Carroll, 2001).
-#' \eqn{alpha=1} approximates the leave-one-out jackknife variance estimator (Bell and McCaffrey, 2002) 
-#' @param return.df Should the degree of freedom be exported?
-#' 
-#' @details A lvm can be written as a measurement model:
-#' \deqn{Y_i = \nu + \eta_i \Lambda + X_i K + \epsilon_i}
-#' and a structural model:
-#' \deqn{\eta_i = \alpha + \eta_i B + X_i \Gamma + \zeta_i}
-#' where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
-#' and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
+#' @param power the exponent used for computing the leverage-adjusted residuals. See the documentation of the \code{\link{iid2}} function for more details.
+#' @param return.df Should the degree of freedom be computed?
+#' @param as.clubSandwich The method use to apply the \code{power} argument.
+#' @param ... not used.
 #'
-#' \cr
+#' @return A matrix with an attribute df if \code{return.df=TRUE}.
 #' 
-#' The corresponding conditional mean is:
-#' \deqn{
-#' \mu_i(\theta) = E[Y_i|X_i] = \nu + (\alpha + X_i \Gamma) (1-B)^{-1} \Lambda + X_i K
-#' }
-#' \deqn{
-#' \Omega(\theta) = Var[Y_i|X_i] = \Lambda^{t} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda + \Sigma
-#' }
-#'
-#' Therefore \eqn{\nu}, \eqn{K}, \eqn{\alpha}, \eqn{\Gamma} are pure mean parameters, \eqn{\Psi}, \eqn{\Sigma} pure variance parameters, \cr
-#' and \eqn{\Lambda}, \eqn{B} are both mean and variance parameters. \cr
-#'
-#' \cr
-#' 
-#' The log-likelihood can written:
+#' @details The log-likelihood of a lvm can written:
 #' \deqn{
 #'   l(\theta|Y,X) = \sum_{i=1}^{n} - \frac{p}{2} log(2\pi) - \frac{1}{2} log|\Omega(\theta))| - \frac{1}{2} (Y_i-\mu_i(\theta)) \Omega^{-1} (Y_i-\mu_i(\theta))^t
 #' }
@@ -75,15 +55,97 @@
 #' \deqn{ \frac{\partial \Omega(\beta)}{\partial \lambda} = \delta_{\lambda \in \Lambda} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda + \Lambda^t (1-B)^{-t} \Psi (1-B)^{-1} \delta_{\lambda \in \Lambda} }
 #' \deqn{ \frac{\partial \Omega(\beta)}{\partial b} = \Lambda^t (1-B)^{-t} \delta_{b \in B} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda - \Lambda^t (1-B)^{-t} \Psi (1-B)^{-1} \delta_{b \in B} (1-B)^{-1} \Lambda}
 #' 
-#' @references
-#' Bell, R. M., & McCaffrey, D. F. Bias reduction in standard errors for linear regression with multi-stage samples. Survey Methodology, 28(2), 169-181 (2002). \cr
-#' Kauermann G. and Carroll R. J. A note on the efficiency of sandwich covariance matrix estimation. Journal of the American Statistical Association. Vol. 96, No. 456 (2001).
 #' @export
 `score2` <-
   function(x, ...) UseMethod("score2")
 
+## * score2.gls
+score2.gls <- function(x, cluster, p = NULL, data = NULL, indiv = TRUE, adjust.residuals = TRUE, power = 1/2,
+                       as.clubSandwich = TRUE, return.df = TRUE, ...){
+
+    ## ** Normalize arguments
+    if(!identical(class(x),"gls")){
+        wrongClass <- paste(setdiff(class(x),"gls"), collapse = " ")
+        stop("iid2 is not available for ",wrongClass," objects \n")
+    }
+    test.var <- !is.null(x$modelStruct$varStruct)
+    test.cor <- !is.null(x$modelStruct$corStruct)
+    if(test.var == FALSE && test.cor == FALSE){
+        stop("Either the correlation or weight argument must be specified when fitting the gls model \n")
+    }
+
+    if(is.null(data)){
+        data <- getData(x)        
+    }
+    X <- model.matrix(formula(x), data)
+
+    if(test.cor){
+        vec.group <- as.numeric(x$groups)
+        if(all(diff(vec.group)>=0) == FALSE && all(diff(vec.group<=0)) == FALSE){
+            stop("the grouping variable for the random effect must be sorted before fitting the model \n")
+        }
+    }else{
+        if(length(cluster) == 1 && is.character(cluster)){
+            vec.group <- as.numeric(as.factor(data[[cluster]]))
+        }else{
+            if(length(cluster)!=NROW(data)){
+                stop("length of cluster and data do not match \n")
+            }
+            vec.group <- as.numeric(as.factor(cluster))
+        }
+    }
+    
+    x.coef <- coef(x)
+    if(!is.null(p) && any(abs(p-x.coef)>1e-10)){
+        stop("can only compute the score at the estimated model parameters \n",
+             "consider setting argument \'p\' to NULL \n")
+    }
+
+    ## ** identify groups
+    table.group <- table(vec.group)
+    Ugroup <- unique(vec.group)
+    n.group <- length(Ugroup)
+
+    ls.indexGroup <- lapply(1:n.group, function(iG){
+        which(vec.group==iG)
+    })
+
+    
+    ## ** Reconstruct covariance matrix
+    if(test.cor){
+        tau <- unclass(getVarCov(x))
+        ls.Omega <- lapply(1:n.group, function(iI){tau})
+        
+    }else{
+        sigma2.base <- (sigma(x)*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
+        vec.sigma2 <- sigma2.base[match(attr(x$modelStruct$varStruct,"groups"), names(sigma2.base))]
+
+        
+        ls.Omega <- lapply(1:n.group, function(iG){ # iG <- 1
+            n.tempo <- table.group[iG]        
+            sigma.tempo <- vec.sigma2[ls.indexGroup[[iG]]]
+            return(diag(sigma.tempo, n.tempo, n.tempo))
+        })
+    }
+    ## check that Sigma_beta = (t(X) Sigma_epsilon^{-1} X)^{-1}
+    ## vcov(x) / solve(t(X) %*% solve(Matrix::bdiag(ls.Omega)) %*% X)
+
+    ## ** Compute score
+    score0 <- .score2_nlme(name.param = names(x.coef),
+                           dmu.dtheta = X, epsilon = residuals(x, type = "response", level = 0),
+                           vcov.param = vcov(x), ls.Omega = ls.Omega,
+                           ls.indexGroup = ls.indexGroup, n.group = n.group, table.group = table.group,
+                           indiv = indiv, adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                           return.df = return.df)
+    
+    ## ** Export
+    return(score0)
+}
+
+
 ## * score2.lme
-score2.lme <- function(x, data = NULL, indiv = TRUE, adjust.residuals = TRUE, power = 1/2, ...){
+score2.lme <- function(x, p = NULL, data = NULL, indiv = TRUE, adjust.residuals = TRUE, power = 1/2,
+                       as.clubSandwich = TRUE, return.df = TRUE, ...){
 
     ## ** Normalize arguments
     if(!identical(class(x),"lme")){
@@ -100,85 +162,56 @@ score2.lme <- function(x, data = NULL, indiv = TRUE, adjust.residuals = TRUE, po
     if(all(diff(vec.group)>=0) == FALSE && all(diff(vec.group<=0)) == FALSE ){
         stop("the grouping variable for the random effect must be sorted before fitting the model \n")
     }
-    Ugroup <- unique(vec.group)
-    n.group <- length(Ugroup)
-    table.group <- table(vec.group)
+    x.coef <- fixef(x)
+    if(!is.null(p) && any(abs(p-x.coef)>1e-10)){
+        stop("can only compute the score at the estimated model parameters \n",
+             "consider setting argument \'p\' to NULL \n")
+    }
     
     if(is.null(data)){
         data <- getData(x)        
     }
-    data <- model.matrix(formula(x), data)
-
+    X <- model.matrix(formula(x), data)
+    
     ## ** Prepare
-    dmu.dtheta <- data
-    Im1 <- vcov(x)
+    table.group <- table(vec.group)
+    Ugroup <- unique(vec.group)
+    n.group <- length(Ugroup)
 
     ls.indexGroup <- lapply(1:n.group, function(iG){
         which(vec.group==iG)
     })
-    
+
     ## ** Reconstruct covariance matrix
     tau <- as.double(getVarCov(x))
-    sigma2.base <- (sigma(x)*coef(e.lme$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
-    vec.sigma <- sigma2.base[match(attr(x$modelStruct$varStruct,"groups"), names(sigma2.base))]
+    sigma2.base <- (sigma(x)*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
+    vec.sigma2 <- sigma2.base[match(attr(x$modelStruct$varStruct,"groups"), names(sigma2.base))]
 
-    Omega <- Matrix::bdiag(lapply(1:n.group, function(iG){ # iG <- 1
+    ls.Omega <- lapply(1:n.group, function(iG){ # iG <- 1
         n.tempo <- table.group[iG]        
-        sigma.tempo <- vec.sigma[ls.indexGroup[[iG]]]
+        sigma.tempo <- vec.sigma2[ls.indexGroup[[iG]]]
         return(matrix(tau,nrow=n.tempo,ncol=n.tempo) + diag(sigma.tempo, n.tempo, n.tempo))
-    }))
-    iOmega <- solve(Omega)
+    })
+
     ## check that Sigma_beta = (t(X) Sigma_epsilon^{-1} X)^{-1}
     ## vcov.param - solve(t(data) %*% solve(Omega) %*% data)
 
-    ## ** Compute residuals
-    epsilon <- residuals(x, type = "response", level = 0)
-
-    if(adjust.residuals){
-        vcov.param <- vcov(x)
-        n.tot <- NROW(data)
-        #ImH <- diag(1,nrow=n.tot,ncol=n.tot) - data %*% vcov.param %*% t(data) %*% iOmega
-        
-        
-        epsilon <- do.call(rbind, lapply(1:n.group, function(iG){ # iG <- 1
-            n.tempo <- table.group[[iG]]
-            index.tempo <- ls.indexGroup[[iG]]
-            Hm1 <- diag(1,nrow=n.tempo,ncol=n.tempo) - data[index.tempo,,drop=FALSE] %*% vcov.param %*% t(data[index.tempo,,drop=FALSE]) %*% iOmega[index.tempo,index.tempo,drop=FALSE]
-            iHm1 <- solve(Hm1)
-            if(power != 1){
-                eigen.iHm1 <- eigen(iHm1)
-                iHm1 <- eigen.iHm1$vectors %*% diag(eigen.iHm1$values^(power),nrow = n.tempo, ncol = n.tempo) %*% solve(eigen.iHm1$vectors)
-            }
-            ## tcrossprod(iHm12) %*% Hm1
-            ## tcrossprod(iHm12) - iHm1
-            ## (iHm12) - iHm1
-            ## epsilon[index.tempo] %*% iHm12
-            ##  iHm12 %*% epsilon[index.tempo]
-            ##return(as.double(epsilon[index.tempo] %*% iHm1))
-            return(iHm1 %*% epsilon[index.tempo])
-        }))
-        
-    }
-    
     ## ** Compute score
-    score0 <- t(sapply(1:n.group, function(iG){ # iG <- 1
-        index.tempo <- ls.indexGroup[[iG]]
-        score.tempo <- t(dmu.dtheta[index.tempo,,drop=FALSE]) %*% iOmega[index.tempo,index.tempo,drop=FALSE] %*% epsilon[index.tempo]
-        return(as.double(score.tempo))
-    }))
-
-    ## ** export
-    if(indiv==FALSE){
-        score0 <- rbind(colSums(score0))
-    }
-    colnames(score0) <- names(fixef(x))
-   
+    score0 <- .score2_nlme(name.param = names(x.coef),
+                           dmu.dtheta = X, epsilon = residuals(x, type = "response", level = 0),
+                           vcov.param = vcov(x), ls.Omega = ls.Omega,
+                           ls.indexGroup = ls.indexGroup, n.group = n.group, table.group = table.group,
+                           indiv = indiv, adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                           return.df = return.df)
+    
+    ## ** Export
     return(score0)
 }
 
 ## * score2.lvmfit
-score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
-                          indiv = TRUE, adjust.residuals = TRUE, return.df = TRUE, ...){
+score2.lvmfit <- function(x, p = NULL, data = NULL, indiv = TRUE,
+                          adjust.residuals = TRUE, power = 1/2, return.df = TRUE,
+                          as.clubSandwich = TRUE, ...){
 
 ### ** normalize arguments
     if(!identical(class(x),"lvmfit")){
@@ -222,14 +255,14 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
 
     ## Omega
     Omega <- moments(x, p = p, conditional=TRUE, data = data)$C
-    iOmega <- solve(Omega)
+    Omega_chol <- chol(Omega)
+    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
     
 ### ** compute derivatives
     ls.calc <- .calcDtheta(x, data = data,
                            param = p, n.param = n.param,
                            dmu = TRUE, dOmega = TRUE)
                                         # names(ls.calc$dmu.dtheta)
-    
 ### ** residuals
     epsilon <- as.matrix(residuals(x, p = p))
     
@@ -245,28 +278,17 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
             }
         })
         colnames(dmu.dtheta) <- colnames(vcov.param)
-        
-        ## *** compute hat matrix
-        Id.endogenous <- diag(1,n.endogenous,n.endogenous)
-        D.blockdiag <- lapply(1:n, function(iI){ # iI <- 1
-            index.tempo <- (n.endogenous*(iI-1)+1):(n.endogenous*iI)
-            Hm1.tempo <- Id.endogenous - dmu.dtheta[index.tempo,,drop=FALSE] %*% vcov.param %*% t(dmu.dtheta[index.tempo,,drop=FALSE]) %*% iOmega
-            iHm1.tempo <- solve(Hm1.tempo)
-            if(power != 1){
-                eigen.iHm1 <- eigen(iHm1.tempo)
-                iHm1.tempo <- eigen.iHm1$vectors %*% diag(eigen.iHm1$values^(power),nrow = n.endogenous, ncol = n.endogenous) %*% solve(eigen.iHm1$vectors)
-            }
-            return(iHm1.tempo)
-        })
 
-        ## *** normalize residuals
-        epsilon <- do.call(rbind, lapply(1:n, function(iI){ # iI <- 1            
-            as.double(D.blockdiag[[iI]] %*% epsilon[iI,])
+        ## *** adjust residuals
+        ls.leverage <- .calcLeverage(n.group = n, table.group = rep(n.endogenous, n), ls.indexGroup = NULL,
+                                     dmu.dtheta = dmu.dtheta, vcov.param = vcov.param,
+                                     Omega = Omega, iOmega = iOmega, Omega_chol = Omega_chol,
+                                     power = power, as.clubSandwich = as.clubSandwich)
+
+        epsilon <- do.call(rbind,lapply(1:n, function(iG){ # iG <- 1
+            as.double(ls.leverage[[iG]] %*% epsilon[iG,])
         }))
     }
-
-    ## tiOmega.epsilon <- t(iOmega %*% t(epsilon))
-    tiOmega.epsilon <- epsilon %*% iOmega
    
 ### ** compute score
     n.score <- indiv*n+(1-indiv)*1 ## n if indiv==TRUE and 1 if indiv==FALSE
@@ -274,7 +296,10 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
     fct.sum <- switch(as.character(as.double(indiv)),
                       "1" = "rowSums",
                       "0" = "sum")
-    
+
+    ## tiOmega.epsilon <- t(iOmega %*% t(epsilon))
+    tiOmega.epsilon <- epsilon %*% iOmega
+
     for(iP in 1:n.param){ # iP <- 1
         iScore <- rep(0,n.score)
         if(!is.null(ls.calc$dmu.dtheta[[iP]])){
@@ -291,30 +316,23 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
 
 ### ** degree of freedom
     if(return.df){
+        browser()
         if(adjust.residuals){
-            iOmega.all <- Matrix::bdiag(lapply(1:n, function(iI){
-                iOmega ## construct block diagonal matrix
+            Omega_chol.all <- Matrix::bdiag(lapply(1:n, function(iI){
+                Omega_chol## construct block diagonal matrix
             }))
+            
             H <- dmu.dtheta %*% vcov.param %*% t(dmu.dtheta) %*% iOmega.all
-        
+            P <- diag(1,n*n.endogenous,n*n.endogenous) - H
+            
             vec.a <- vcov.param %*% t(dmu.dtheta) %*% iOmega.all
             D <- Matrix::bdiag(D.blockdiag)
-            P <- diag(1,n*n.endogenous,n*n.endogenous) - H
-            eigen.Omega <- eigen(Omega)
-            root.Omega <- eigen.Omega$vectors %*% diag(sqrt(eigen.Omega$values), nrow = n.endogenous, ncol = n.endogenous) %*% t(eigen.Omega$vectors)
-            root.Omega.all <- Matrix::bdiag(lapply(1:n, function(iI){
-                root.Omega ## construct block diagonal matrix
-            }))
-
-            if(return.df == 1){
-                M <- root.Omega.all %*% D %*% H %*% D %*% root.Omega.all
-            }else if(return.df == 2){
-                M <- root.Omega.all %*% D %*% t(vec.a) %*% vec.a %*% D %*% root.Omega.all
-            }else if(return.df == 3){
-                M <- root.Omega.all %*% P %*% D %*% t(vec.a) %*% vec.a %*% D %*% P %*% root.Omega.all
-            }
+            # D.blockdiag[[1]]
+            M <- Omega_chol.all %*% P %*% D %*% t(vec.a) %*% vec.a %*% D %*% P %*% Omega_chol.all
+            
             vec.eigen <- eigen(M, symmetric = TRUE)$values
             df.adj <- sum(unlist(vec.eigen))^2/sum(unlist(vec.eigen)^2)
+            # sum(diag(H))
             attr(out.score,"df") <- df.adj
         }else{
             attr(out.score,"df") <- NA
@@ -327,6 +345,57 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
     return(out.score)
 
 }
+
+## * .score2_nlme
+.score2_nlme <- function(name.param,
+                         dmu.dtheta, epsilon, vcov.param, ls.Omega,  
+                         indiv, adjust.residuals, power, as.clubSandwich,
+                         ls.indexGroup, n.group, table.group,
+                         return.df){
+
+    Omega <- Matrix::bdiag(ls.Omega)
+    iOmega <- Matrix::bdiag(lapply(ls.Omega,solve))
+    Omega_chol <- Matrix::bdiag(lapply(ls.Omega,chol))
+    
+    ## ** compute leverage-adjusted residuals
+    if(adjust.residuals){
+
+        ls.leverage <- .calcLeverage(n.group = n.group, table.group = table.group, ls.indexGroup = ls.indexGroup,
+                                     dmu.dtheta = dmu.dtheta, vcov.param = vcov.param,
+                                     Omega = Omega, iOmega = iOmega, Omega_chol = Omega_chol,
+                                     power = power, as.clubSandwich = as.clubSandwich)
+
+        epsilon <- do.call(rbind,lapply(1:n.group, function(iG){ # iG <- 1
+            ls.leverage[[iG]] %*% epsilon[ls.indexGroup[[iG]]]
+        }))
+        
+    }
+    
+    ## ** Compute score
+    score0 <- t(sapply(1:n.group, function(iG){ # iG <- 1
+        index.tempo <- ls.indexGroup[[iG]]
+        score.tempo <- t(dmu.dtheta[index.tempo,,drop=FALSE]) %*% iOmega[index.tempo,index.tempo,drop=FALSE] %*% epsilon[index.tempo]
+        return(as.double(score.tempo))
+    }))
+
+    ## ** Compute the degree of freedom
+    if(return.df){
+        
+        browser()
+    }
+    
+    ## ** export
+    if(indiv==FALSE){
+        score0 <- rbind(colSums(score0))
+    }
+    colnames(score0) <- name.param
+
+    return(score0)
+   
+}
+
+#----------------------------------------------------------------------
+### score2.R ends here
 
 ## * .calcDetheta
 .calcDtheta <- function(x, data, param, n.param, 
@@ -513,6 +582,59 @@ score2.lvmfit <- function(x, p = NULL, data = NULL, power = 1/2,
                 dOmega.dtheta = dOmega.dtheta))
 }
 
+## * .calcAdjustedResiduals
+.calcLeverage <- function(n.group, table.group, ls.indexGroup,
+                          dmu.dtheta, vcov.param,
+                          Omega, iOmega, Omega_chol,
+                          power, as.clubSandwich){
 
-#----------------------------------------------------------------------
-### score2.R ends here
+    ls.leverage <- lapply(1:n.group, function(iG){ # iG <- 1
+
+### ** Prepare
+        n.tempo <- table.group[[iG]]
+        Id.tempo <- diag(1,nrow=n.tempo,ncol=n.tempo)
+
+        if(!is.null(ls.indexGroup)){
+            index.tempo <- ls.indexGroup[[iG]]            
+            iOmega.tempo <- iOmega[index.tempo,index.tempo,drop=FALSE]
+            dmu.dtheta.tempo <- dmu.dtheta[index.tempo,,drop=FALSE]
+            if(power != 1 && as.clubSandwich){
+                Omega_chol.tempo <- Omega_chol[index.tempo,index.tempo,drop=FALSE]
+                Omega.tempo <- Omega[index.tempo,index.tempo,drop=FALSE] 
+            }
+        }else{
+            iOmega.tempo <- iOmega            
+            dmu.dtheta.tempo <- dmu.dtheta[(n.tempo*(iG-1)+1):(n.tempo*iG),,drop=FALSE]
+            if(power != 1 && as.clubSandwich){
+                Omega_chol.tempo <- Omega_chol
+                Omega.tempo <- Omega
+            }
+        }
+### ** Compute IH
+        IH <- Id.tempo - dmu.dtheta.tempo %*% vcov.param %*% t(dmu.dtheta.tempo) %*% iOmega.tempo
+
+        ## correction
+        if(power == 1){
+            iIH <- solve(IH)
+        }else{
+            if(as.clubSandwich){
+                M.tempo <- Omega_chol.tempo %*% IH %*% Omega.tempo %*% t(Omega_chol.tempo)
+                iIH <- as.matrix(t(Omega_chol.tempo) %*% matrixPower(M.tempo, power = -1/2, symmetric = TRUE) %*% Omega_chol.tempo)
+                ## crossprod(iIH) %*% IH
+            }else{
+                IH_sym <- iOmega.tempo %*% IH
+                iIH_sym <- matrixPower(IH_sym, power = -power, symmetric = TRUE)
+                
+                iIH <- chol(iOmega.tempo) %*% iIH_sym
+                ## crossprod(iIH_sym) %*% IH_sym
+            }
+                
+        }
+ 
+        return(iIH)
+    })
+
+### ** export
+    return(ls.leverage)
+}
+

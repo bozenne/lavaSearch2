@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 23 2017 (12:48) 
+## last-updated: okt 24 2017 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 94
+##     Update #: 102
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,9 @@ library(testthat)
 context("score2")
 n <- 5e1
 
-## * score for lme models
+
+
+## * score for nlme models
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
@@ -30,6 +32,40 @@ setkey(dW, "Id")
 dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
 setkey(dL, "Id")
 
+## ** gls models
+m <- lvm(c(Y1~G,Y2~G,Y3~G))
+e.lvm <- estimate(m, dW)
+
+e.gls <- gls(value ~ 0+time + time:G,
+             weight = varIdent(form = ~ 1|time),
+             data = dL, method = "ML")
+
+keep.cols <- c("Y1","Y2","Y3","Y1~G","Y2~G","Y3~G")
+
+test_that("lme equivalent to lvm", {
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.gls)))
+})
+
+test_that("score2 equivalent to score", {
+    score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
+
+    expect_equal(unname(score.gls),unname(score.lvm[,keep.cols]), tol = 1e-5)
+    
+    score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = 1, indiv = TRUE, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = 1, indiv = TRUE, return.df = FALSE)
+
+    score.lvm[,keep.cols]/score.gls
+    vcov(e.gls)/vcov(e.lvm)[keep.cols,keep.cols]
+
+    score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = 0.5, indiv = TRUE, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = 0.5, indiv = TRUE, return.df = FALSE)
+
+    score.lvm[,keep.cols]/score.gls
+})
+    
+
+## ** lme models
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 e.lvm <- estimate(m, dW)
 
@@ -40,7 +76,8 @@ e.lme <- lme(value ~ time + G,
 
 test_that("lme equivalent to lvm", {
     expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
-
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.gls)), tol = 1)
+  
     coef.lme <- c(fixef(e.lme), sigma(e.lme)^2, as.numeric(getVarCov(e.lme)),
     (sigma(e.lme)*coef(e.lme$modelStruct$varStruct, uncons = FALSE, allCoef = FALSE))^2)
     coef.lvm <- coef(e.lvm)
@@ -49,21 +86,22 @@ test_that("lme equivalent to lvm", {
 })
 
 test_that("score2 equivalent to score", {
-    score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
-    score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
+    score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
 
-    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
-    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 1)
+    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 1, return.df = FALSE)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
-# lapply(V_list, function(v) chol2inv(chol(v)))
-    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
-    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
+    
+    score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5, return.df = FALSE)
+    score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 0.5, return.df = FALSE)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
 })
+
 
 
 ## * not-adjusted score
@@ -339,14 +377,6 @@ test_that("2 factor model (correlation LV)",{
 
 })
 
-
-
-
-
-
-
-
-
 ## * leverage adjusted score
 m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
@@ -357,10 +387,10 @@ d <- sim(m.sim,n,latent=FALSE)
 
 ## ** linear regression
 e0 <- estimate(lvm(Y1~X1),d)
-s0 <- score2(e0, adjust.residuals = TRUE)
+s0 <- score2(e0, adjust.residuals = TRUE, return.df = FALSE)
 
 e1 <- estimate(lvm(Y1~X1,Y2~X2+X3,Y3~1),d)
-s1 <- score2(e1, adjust.residuals = TRUE)
+s1 <- score2(e1, adjust.residuals = TRUE, return.df = FALSE)
 
 test_that("",{
     expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
@@ -382,7 +412,7 @@ e <- estimate(m,d)
 param <- coef(e)
 
 test_that("",{
-    r2 <- score2(e)
+    r2 <- score2(e, return.df = FALSE)
 })
 
 #----------------------------------------------------------------------
