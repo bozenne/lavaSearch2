@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: okt 24 2017 (16:50) 
+## last-updated: okt 25 2017 (12:08) 
 ##           By: Brice Ozenne
-##     Update #: 83
+##     Update #: 91
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,6 +39,8 @@ e.lm <- lm(formula.lvm,data=d)
 e.lvm <- estimate(lvm(formula.lvm),data=d)
 
 ## ** iid2 matches iid
+# e.iid2.lm <- iid2(e.lvm, use.information = TRUE)
+
 test_that("iid2 matches iid", {
     e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = lava.options()$Dmethod)
     GS1 <- iid(e.lm)
@@ -108,6 +110,41 @@ setkey(dL, "Id")
 
 keep.cols <- c("eta","Y2","Y3","eta~G")
 
+## ** gls
+e.gls <- gls(value ~ time + G,
+             correlation = corCompSymm(form =~ 1| Id),
+             weight = varIdent(form = ~ 1|time),
+             data = dL, method = "ML")
+
+test_that("gls: HC0/HC1", {
+    iid2HC0.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = FALSE)
+
+    VsandwichHC0.gls <- crossprod(iid2HC0.gls)
+    GS <- vcovCR(e.gls, type = "CR0", cluster = dL$Id)
+    expect_equal(as.double(GS),as.double(VsandwichHC0.gls), tolerance = 1e-10)
+    
+    GS <- vcovCR(e.gls, type = "CR1", cluster = dL$Id)
+    VsandwichHC1.gls <- crossprod(iid2HC0.gls)*n/(n-1)
+    expect_equal(as.double(GS),as.double(VsandwichHC1.gls), tolerance = 1e-10)
+})
+
+test_that("gls: HC3", {
+    iid2HC3.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 1)
+
+    VsandwichHC3.gls <- crossprod(iid2HC3.gls)
+    GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id)    
+    expect_equal(as.double(GS),as.double(VsandwichHC3.gls), tolerance = 1e-7)
+})
+
+test_that("gls: HC2", {
+    iid2HC2.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 0.5)
+
+    VsandwichHC2.gls <- crossprod(iid2HC2.gls)
+    GS <- vcovCR(e.gls, type = "CR2", cluster = dL$Id)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.gls), tolerance = 1e-7)
+})
+
+## ** lme
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 e.lvm <- estimate(m, dW)
 
@@ -167,8 +204,8 @@ test_that("lme: HC2", {
     VsandwichHC2.lme <- crossprod(iid2HC2.lme)
     VsandwichHC2.lvm <- crossprod(iid2HC2.lvm[,keep.cols])
     GS <- vcovCR(e.lme, type = "CR2", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC2.lme), tolerance = 1e-3)
-    expect_equal(as.double(GS),as.double(VsandwichHC2.lvm), tolerance = 1e-3)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.lvm), tolerance = 1e-7)
 })
 
 

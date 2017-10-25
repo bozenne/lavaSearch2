@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: okt 24 2017 (16:50) 
+## last-updated: okt 24 2017 (19:48) 
 ##           By: Brice Ozenne
-##     Update #: 20
+##     Update #: 21
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -47,16 +47,27 @@ e.gls <- gls(value ~ 0+variable, weight = varIdent(form =~ 1|variable), data = d
 cS.df <- coef_test(e.gls, vcov = "CR2", test = "Satterthwaite", cluster = dtL$Id) # ok
 cS.df <- coef_test(e.gls, vcov = "CR2", test = "Satterthwaite", cluster = 1:NROW(dtL)) # not ok
 
-  epsilon = as.double(iIH %*% epsilon.tempo) 
+epsilon = as.double(iIH %*% epsilon.tempo) 
+
+
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2),d)
 e.lm <- lm(Y1~X1+X2,d)
 
+lava.options(Dmethod = "Richardson")
+iid.lava <- iid(e.lvm)
+iid.manual <- score(e.lvm,indiv = TRUE) %*% vcov(e.lvm)
+iid.lava-iid.manual
+head(score(e.lvm,indiv = TRUE))
+head(iid.lava)
+crossprod(iid.lava)
+
 cS.vcov <- vcovCR(e.lm, type = "CR2", cluster = d$Id)
 cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(d))
 ## cS.df$df is very suspect: should be the same for all coefficient and close to n-p
 
+score2(e.lvm)
 
 test_that("linear regression: df",{
 

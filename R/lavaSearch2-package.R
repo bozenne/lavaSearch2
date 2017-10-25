@@ -1,4 +1,6 @@
 #' @docType package
+#' @name lavaSearch
+#'
 #' @title Tools for model specification in the latent variable framework
 #' @description Tools for model specification in the latent variable framework (add-on for the lava package).
 #'
@@ -27,7 +29,6 @@
 #' \item \eqn{\Lambda}, \eqn{B} are both mean and variance parameters.
 #' }
 #' 
-#' @name lavaSearch
 
 #' @import lava
 #' @import data.table
