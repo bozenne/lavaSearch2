@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: okt 24 2017 (10:10) 
+## last-updated: okt 27 2017 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 138
+##     Update #: 326
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,9 +23,8 @@
 #' 
 #' @param x a lvm model or a fitted lvm model 
 #' @param value should the name of the coefficient be returned? Else return the coefficients
-#' @param detailed should the type of parameter be returned as a mathematical symbol? Otherwise plain english.
-#' @param keep.var should the variance parameters be output?
-#' @param level level argument of \code{lava::coef}
+#' @param as.lava export the type of parameters mimicking lava:::coef.
+#' @param keep.var should the variance parameters be returned?
 #' @param index.model returns as an attribute to which of the model is from each parameter. Relevant for multigroup lvm models.
 #' @param ... arguments to be passed to \code{lava::coef}
 #'
@@ -44,6 +43,20 @@
 #' \item covariance: extra-diagonal terms of \eqn{\Sigma} and \eqn{\Psi}.
 #' \item variance: diagonal of \eqn{\Sigma} and \eqn{\Psi}.
 #' }
+#'
+#' @return \code{coefType} either returns a data.table:
+#' \itemize{
+#' \item name: name of the link
+#' \item Y: outcome variable
+#' \item X: regression variable in the design matrix (could be a transformation of the original variables, e.g. dichotimization).
+#' \item data: original variable
+#' \item type: type of link
+#' \item value: if TRUE, the value of the link is set and not estimated.
+#' \item marginal: if TRUE, the value of the link does not impact the estimation.
+#' \item detail: a more detailled decription of the type of link (see the details section)
+#' \item lava: name of the parameter in lava
+#' }
+#' or a named vector containing the type of the links.
 #' 
 #' @examples 
 #' #### regression ####
@@ -52,7 +65,6 @@
 #' 
 #' coefType(m)
 #' coefType(e)
-#' coefType(e, level = -1)
 #'
 #' coefCov(m)
 #' coefCov(m, value = TRUE)
@@ -82,10 +94,9 @@
 #' 
 #' coefType(m)
 #' coefType(e)
-#' coefType(e, level = -1)
 #'
 #' coefCov(m)
-#' coefCov(m, value = TRUE)#' 
+#' coefCov(m, value = TRUE) 
 #'
 #' coefCov(m, keep.var = TRUE)
 #' coefCov(m, value = TRUE, keep.var = TRUE)
@@ -95,7 +106,7 @@
 #' coefIndexModel(m)
 #' coefIndexModel(e)
 #' 
-#' categorical(m, K = 3) <- "X1"
+#' categorical(m, labels = as.character(1:3)) <- "X1"
 #' coefExtra(m)
 #' coefExtra(m, value = TRUE)
 #'
@@ -116,9 +127,11 @@
 #' coefType(e)
 #' 
 #' #### multigroup ####
+#' m <- lvm(Y~X1+X2)
 #' eG <- estimate(list(m,m), list(sim(m, 1e2),sim(m, 1e2)))
 #' coefType(eG)
-#'
+#' coef(eG)
+#' 
 #' @export
 `coefType` <-
   function(x,...) UseMethod("coefType")
@@ -128,134 +141,211 @@
 ## ** method - coefType.lvm
 #' @rdname coefType
 #' @export
-coefType.lvm <- function(x, detailed = FALSE, ...){ 
+coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){ 
 
-### ** extract all coef
-    names.coef <- coef(x, ...)
-    index.coef <- lava::index(x)
+    ## *** extract all coef
 
-### ** find coef class
-    type <- setNames(character(length = length(names.coef)), names.coef)
-    type[index.coef$parBelongsTo$mean] <- "intercept"
-    type[index.coef$parBelongsTo$reg] <- "regression"
-    type[index.coef$parBelongsTo$cov] <- "covariance"
-    type[index.coef$parBelongsTo$epar] <- "extra"
-  
-    type[names(names.coef) %in% diag(APmatrix(x)$P)] <- "variance"
-
-### ** rename as
-    if(detailed){
-        type <- detailName(x, type)
-    }
-        
+    index.all <- which(!is.na(x$M), arr.ind = FALSE)
+    ls.name <- list()
+    ls.X <- list()
+    ls.Y <- list()
+    ls.type <- list()
+    ls.value <- list()
+    ls.param <- list()
+    ls.marginal <- list()
     
-### ** export
-    return(type)
+    ## *** intercept
+    ls.name$intercept <- names(x$mean)
+    n.intercept <- length(ls.name$intercept)
+    ls.Y$intercept <- ls.name$intercept
+    ls.X$intercept <- rep(NA, n.intercept)    
+    ls.type$intercept <- rep("intercept", n.intercept)
+    ls.value$intercept <- unlist(x$mean)
+    ls.param$intercept <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                iPar = unlist(x$mean),
+                                iFix = !is.na(ls.value$intercept),
+                                iName = ls.name$intercept)
+                            )
+    ls.marginal$intercept <-  ls.name$intercept %in% exogenous(x)
+
+    ## *** regression
+    arrIndex.regression <- which(x$M==1, arr.ind = TRUE)
+    index.regression <- which(x$M==1, arr.ind = FALSE)
+
+    ls.Y$regression <- colnames(x$M)[arrIndex.regression[,"col"]]
+    ls.X$regression <- rownames(x$M)[arrIndex.regression[,"row"]]
+    ls.name$regression <- paste0(ls.Y$regression,
+                                 lava.options()$symbols[1],
+                                 ls.X$regression)
+    n.regression <- length(ls.name$regression)
+    ls.type$regression <- rep("regression", n.regression)    
+    ls.value$regression <- x$fix[index.regression]
+    ls.param$regression <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                      iPar = x$par[index.regression],
+                                      iFix = !is.na(ls.value$regression),
+                                      iName = ls.name$regression)
+                                  )
+    ls.marginal$regression <- rep(FALSE,n.regression)
+    
+    ## *** covariance
+    M.cov <- x$cov
+    M.cov[upper.tri(M.cov)] <- 0
+    
+    arrIndex.vcov <- which(M.cov==1, arr.ind = TRUE)
+    index.vcov <- which(M.cov==1, arr.ind = FALSE)
+
+    Y.vcov <- colnames(x$cov)[arrIndex.vcov[,"col"]]
+    X.vcov <- rownames(x$cov)[arrIndex.vcov[,"row"]]
+    
+    name.vcov <- paste0(Y.vcov,
+                        lava.options()$symbols[2],
+                        X.vcov)
+    value.vcov <- x$covfix[index.vcov]
+    param.vcov <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                iPar = x$covpar[index.vcov],
+                                iFix = !is.na(value.vcov),
+                                iName = name.vcov)
+                            )
+
+    index.variance <- which(arrIndex.vcov[,1]==arrIndex.vcov[,2])
+    ls.name$variance <- name.vcov[index.variance]
+    n.variance <- length(ls.name$variance)
+    ls.Y$variance <- Y.vcov[index.variance]
+    ls.X$variance <- X.vcov[index.variance]
+    ls.type$variance <- rep("variance", n.variance)
+    ls.value$variance <- value.vcov[index.variance]
+    ls.param$variance <- param.vcov[index.variance]
+    ls.marginal$variance <- ls.name$variance %in% paste0(exogenous(x),lava.options()$symbols[2],exogenous(x))
+    
+    index.covariance <- which(arrIndex.vcov[,1]!=arrIndex.vcov[,2])
+    ls.name$covariance <- name.vcov[index.covariance]
+    n.covariance <- length(ls.name$covariance)
+    ls.Y$covariance <- Y.vcov[index.covariance]
+    ls.X$covariance <- X.vcov[index.covariance]
+    ls.type$covariance <- rep("covariance", n.covariance)
+    ls.value$covariance <- value.vcov[index.covariance]
+    ls.param$covariance <- param.vcov[index.covariance]
+    ls.marginal$covariance <- rep(FALSE, n.covariance)
+    
+    ## *** external parameters    
+    n.external <- length(x$expar)
+    if(n.external>0){
+        ls.name$external <- names(x$expar)
+        ls.type$external <- rep("external", n.external)
+
+        ls.X$external <- rep(NA,n.external)
+        for(iX in names(x$attributes$ordinalparname)){
+            ls.X$external[ls.name$external %in% x$attributes$ordinalparname[[iX]]] <- iX
+        }
+        ls.Y$external <- rep(NA,n.external)
+        ls.value$external <- unlist(x$exfix)
+        ls.param$external <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                        iPar = rep(NA,n.external),
+                                        iFix = !is.na(ls.value$external),
+                                        iName = ls.name$external)
+                                    )
+        ls.marginal$external <-  rep(FALSE, n.external)
+    }
+
+    ## *** merge
+    dt.param <- data.table(name = unlist(ls.name),
+                           Y = unlist(ls.Y),
+                           X = unlist(ls.X),
+                           data = as.character(NA),
+                           type = unlist(ls.type),
+                           value = unlist(ls.value),
+                           param = unlist(ls.param),
+                           marginal = unlist(ls.marginal))
+
+    ## *** categorical variables
+
+    if(!is.null(x$attributes$ordinalparname)){
+        resCar <- defineCategoricalLink(x, link = dt.param$name, data = data)
+
+        ## normal parameters
+        resCar.Nexternal <- resCar[is.na(externalLink),.(name = link, distribution = type,factice,level,originalLink,externalLink)]
+        dt.Nexternal <- merge(dt.param[type != "external"],resCar.Nexternal,by = "name")
+
+        ## external parameters
+        resCar.external <- resCar[!is.na(externalLink),.(name = link, Y = endogenous, X = paste0(exogenous,level), data = exogenous, distribution = type,factice,level, originalLink, externalLink)]
+        resCar.external[,param := name]
+        for(iCol in c("type","value","marginal")){ # iCol <- "Y"
+            name2col <- setNames(dt.param[[iCol]],dt.param$name)
+            resCar.external[,c(iCol) := name2col[originalLink]]
+        }
+
+        setcolorder(resCar.external, neworder = names(dt.Nexternal))
+        dt.param <- rbind(resCar.external,dt.Nexternal)
+    }else{
+        dt.param[,c("factice") := FALSE]
+        dt.param[,c("level") := as.character(NA)]        
+        dt.param[,c("externalLink") := as.character(NA)]        
+        dt.param[,c("originalLink") := name]
+    }
+
+    ## *** merge with lava
+    coef.lava <- coef(x)
+    dt.param[type!="external" & factice == FALSE & marginal == FALSE,
+             detail := detailName(x, name.coef = name, type.coef = type)]
+    dt.param[,lava:=names(coef(x))[match(originalLink,coef.lava)]]
+    setkeyv(dt.param, c("type","detail","name"))
+       
+    ## *** export
+    if(as.lava){
+        dt.param[!is.na(lava),lava.name := na.omit(c(externalLink,name))[1],by=name]
+        out <- dt.param[!is.na(lava), setNames(type,lava.name)]
+        out <- out[!duplicated(names(out))]
+        return(out[coef.lava])    
+    }else{
+        return(dt.param[])
+    }
 }
 
 ## ** method - coefType.lvmfit
 #' @rdname coefType
 #' @export
-coefType.lvmfit <- function(x, level = 9, index.model = FALSE, detailed = FALSE, ...){ 
-  
-### ** extract all coefficients
-    extractCoef <- coef(x, level = level, ...)
-    if(is.matrix(extractCoef)){
-        names.allCoef <- rownames(extractCoef)
+coefType.lvmfit <- function(x, as.lava = TRUE, ...){ 
+
+    
+    ## *** find type of the coefficients in the original model
+    dt.param <- coefType(x$model0, as.lava = FALSE)
+    
+    ## *** export
+    if(as.lava){
+        out <- dt.param[!is.na(lava), setNames(type,name)]
+        coef.lava <- names(coef(x))
+        return(out[coef.lava])    
     }else{
-        names.allCoef <- names(extractCoef)
+        return(dt.param[])
     }
-    res <- setNames(rep(NA, length = length(names.allCoef)), names.allCoef)
-    attribute <- setNames(rep(TRUE, length = length(names.allCoef)), names.allCoef)
-
-### ** find type of the coefficients in the original model
-    type <- coefType(x$model0, detailed = FALSE)        
-    res[names(type)] <- type
-    attribute[names(type)] <- FALSE
-
-### ** try to find the type of the coefficients that were fixed in the orginal model
-    if(any(is.na(res))){
-
-        res.NA <- res[is.na(res)]
-        varLinks <- initVarLinks(names(res.NA))
-        name.regression <- rownames(extractCoef)[which(attr(extractCoef, "type")=="regression")]
-        name.variance <- rownames(extractCoef)[which(attr(extractCoef, "type")=="variance")]
-
-        index.intercept <- which(is.na(varLinks$var2))
-        if(length(index.intercept)>0){
-            res[names(res.NA)[index.intercept]] <- "intercept"
-        }
-
-        index.variance <- which(varLinks$var2==varLinks$var1)
-        if(length(index.variance)>0){
-            res[names(res.NA)[index.variance]] <- "variance"
-        }
-
-        index.regression <- setdiff(which(names(res.NA) %in% name.regression),
-                                    index.intercept)
-        if(length(index.regression)>0){
-            res[names(res.NA)[index.regression]] <- "regression"
-        }
-
-        index.covariance <- setdiff(which(names(res.NA) %in% name.variance),
-                                    index.variance)
-        if(length(index.covariance)>0){
-            res[names(res.NA)[index.covariance]] <- "covariance"
-        }        
-
-    }
-    
-### ** detail coefficient names
-    if(detailed){
-        res <- detailName(x, res)
-    }
-
-### ** find fixed coefficients
-    if(any(!is.na(x$model$fix))){
-        index.fixed  <- which(!is.na(x$model$fix), arr.ind = TRUE)
-        link.fixed <- paste0(colnames(x$model$fix)[index.fixed[,2]],
-                             lava.options()$symbols[1+(index.fixed[,1]==index.fixed[,2])],
-                             rownames(x$model$fix)[index.fixed[,1]])
-        attribute[link.fixed] <- TRUE
-    }
-    
-    attr(res,"reference") <- attribute
-    if(index.model){
-        attr(type, "index.model") <- rep(1, length(type))
-    }
-    
-### ** export
-    return(res)
 }
 
 ## ** method - coefType.multigroup
 #' @rdname coefType
 #' @export
-coefType.multigroup <- function(x, ...){ 
-  n.model <- length(x$lvm)
-  
-  ## new coef names
-  allCoef <- x$name
-  n.allCoef <- length(allCoef)
-  index.AllCoef <- x$coef
-  
-  type_tempo <- NULL
-  type <- setNames(rep("", n.allCoef), allCoef)
-  
-  ## old coef names
-  indexCoef.old <- x$coef.idx
-  for(iModel in 1:n.model){ # iModel <- 1
+coefType.multigroup <- function(x, as.lava = TRUE, ...){ 
+    n.model <- length(x$lvm)
+    dt.param <- NULL
     
-      if(!is.null(x$meanposN[[iModel]])){
-          indexCoef.old[[iModel]] <- c(1,indexCoef.old[[iModel]]+1)
-      }
+    for(iModel in 1:n.model){ # iModel <- 1
 
-      type_tempo <- coefType(x$lvm[[iModel]],...)      
-      type[index.AllCoef[[iModel]]] <- type_tempo[indexCoef.old[[iModel]]]
-  }
-  
-  #### export
-  return(type)
+        dt.param <- rbind(dt.param,
+                          cbind(coefType(x$lvm[[iModel]], as.lava = FALSE), model = iModel)
+                          )
+      
+    }
+
+    dt.param[,name := paste0(model,"@",name)]
+    
+    ## *** export
+    if(as.lava){        
+        out <- dt.param[!is.na(lava), setNames(type,name)]
+        ## coef.lava <- names(coef(x))
+        ## return(out[coef.lava])
+        return(out)
+    }else{
+        return(dt.param[])
+    }
 }
 
 ## * method - coefCov
@@ -469,75 +559,26 @@ retainType <- function(type, validType, value){
   }
 }
 
-## * APmatrix (needed for coefType)
-APmatrix <- function(x){ # borrowed from coef.lvmfit
- 
-  names2.coef <- names(coef(x))
-  if (is.null(x$control$meanstructure)){
-    meanstructure <- TRUE
-  } else {
-    meanstructure <- x$control$meanstructure
-  }
-  npar <- lava::index(x)$npar
-  npar.mean <- lava::index(x)$npar.mean*meanstructure
-  npar.ex <- lava::index(x)$npar.ex
-  
-  if (inherits(x,"lvm.missing")) {
-    if (length(x$cc)==0) {## No complete cases
-      coefs <- coef(x$estimate)
-      c1 <- coef(Model(x),mean=TRUE,fix=FALSE)
-      c1. <- coef(Model(x),mean=FALSE,fix=FALSE)
-      myorder <- match(c1,names(coefs))
-      myorder.reg <- order(na.omit(match(names(coefs),c1.)))
-      myorder.extra <- c()
-      ##mp <-effect modelPar(x,seq_len(npar+npar.mean+npar.ex))
-      ## mp <- modelPar(x,seq_len(npar+npar.mean+npar.ex))
-      ## myorder <- c(mp$meanpar,mp$p)
-      ## myorder.reg <- seq_len(length(mp$p))
-      ## myorder.extra <- mp$p2
-    } else {
-      myorder <- na.omit(modelPar(x$multigroup,seq_len(npar+npar.mean))$p[[x$cc]])
-      myorder.reg <- na.omit(modelPar(x$multigroup,seq_len(npar))$p[[x$cc]])
-      myorder.extra <- seq_len(lava::index(x)$npar.ex)+length(myorder)
-      myorder <- c(myorder,myorder.extra)
-    }
-  } else {
-    myorder <- seq_len(npar+npar.mean)
-    myorder.reg <- seq_len(npar)
-    myorder.extra <- seq_len(lava::index(x)$npar.ex)+length(myorder)
-    myorder <- c(myorder,myorder.extra)
-  }
-  ## myorder <- seq_len(npar+npar.mean)
-  ## myorder.reg <- seq_len(npar)
-  ## myorder.extra <- seq_len(lava::index(x)$npar.ex)+length(myorder)
-  ## myorder <- c(myorder,myorder.extra)
-  
-  myparnames <- paste0("p",seq_len(npar+npar.ex))[myorder.reg]
-  return(lava_matrices.lvm(Model(x), myparnames))
-  
-}
-
 ## * detailName (needed for coefType)
-detailName <- function(x, type){
-    names.coef <- names(type)
-    ls.links <- initVarLinks(names.coef)
+detailName <- function(x, name.coef, type.coef){
+    ls.links <- initVarLinks(name.coef)
     index.loading <- setdiff(which(ls.links$var2 %in% latent(x)),
-                             which(type %in% c("covariance","variance")))
+                             which(type.coef %in% c("covariance","variance")))
     if(length(index.loading)>0){
-        type[index.loading] <- "loading"
+        type.coef[index.loading] <- "loading"
     }
 
     index.measurement <- which(ls.links$var1 %in% endogenous(x))
     if(length(index.measurement)>0){
-        type[index.measurement] <- as.character(factor(type[index.measurement],
+        type.coef[index.measurement] <- as.character(factor(type.coef[index.measurement],
                                                        levels = c("intercept","regression","loading","covariance","variance"),
                                                        labels = c("nu","K","Lambda","Sigma_cov","Sigma_var")))
     }
-    index.structural <- setdiff(1:length(type),index.measurement)
+    index.structural <- setdiff(1:length(type.coef),index.measurement)
     if(length(index.structural)>0){
-        type[index.structural] <- as.character(factor(type[index.structural],
+        type.coef[index.structural] <- as.character(factor(type.coef[index.structural],
                                                       levels = c("intercept","regression","loading","covariance","variance"),
                                                       labels = c("alpha","Gamma","B","Psi_cov","Psi_var")))
     }
-    return(type)
+    return(type.coef)
 }

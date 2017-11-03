@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: okt 24 2017 (19:48) 
+## last-updated: okt 27 2017 (14:37) 
 ##           By: Brice Ozenne
-##     Update #: 21
+##     Update #: 29
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -90,16 +90,112 @@ setkey(dW, "Id")
 dL <- melt(dW,id.vars = c("G","Id","Gender"), variable.name = "time")
 setkey(dL, "Id")
 
-m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G+Gender))
+m <- lvm(c(Y1[mu1:sigma]~1*eta,
+           Y2[mu2:sigma]~1*eta,
+           Y3[mu3:sigma]~1*eta,
+           eta~G+Gender))
 e.lvm <- estimate(m, dW)
 
-e.lmer <- lmer(value ~ time + G + Gender + (1|Id), data = dL, REML = FALSE)
-summary(e.lmer, ddf = "Satterthwaite")
-
+## ** clubSandwich - bug
 e.lme <- lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
 expect_equal(logLik(e.lmer),logLik(e.lme))
-coef_test(e.lme, vcov = "CR2", test = "Satterthwaite", cluster = dL$Id)
+coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 ## strange that same type of coef have very different degrees of freedom
+
+## ** lmerTest - ok
+e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
+               data = dL, REML = FALSE)
+summary(e.lmer, ddf = "Satterthwaite")$coef
+
+
+e.lme <- lme(value ~ time + G + Gender,
+             random =~ 1|Id,
+             weight = varIdent(form = ~1|Gender),
+             data = dL, method = "ML")
+class(e.lme$modelStruct$varStruct)
+iid2(e.lme)
+sqrt(diag(crossprod(iid2(e.lme, adjust.residuals = FALSE, return.df = FALSE))))
+vcov(e.lme)
+##             Estimate Std. Error       df t value Pr(>|t|)    
+## (Intercept)  -0.5164     0.2496  80.3100  -2.068   0.0418 *  
+## timeY2        0.3653     0.2063 100.0000   1.771   0.0796 .  
+## timeY3        0.1273     0.2063 100.0000   0.617   0.5384    
+## G             0.8964     0.1562  50.0000   5.738 5.58e-07 ***
+## GenderF       1.4214     0.2891  50.0000   4.917 9.91e-06 ***
+
+diag(rep(1,length(rho$fixEffs)))
+
+ls.rho <- lmerTest:::rhoInit(list(), e.lmer, FALSE)
+ls.rho$A <- lmerTest:::calcApvar(ls.rho)
+n.param <- length(ls.rho$fixEffs)
+L <- diag(rep(1,n.param))
+
+iid2(e.lvm, adjust.residuals = FALSE)
+
+score(e.lvm,indiv = TRUE) - score2(e.lvm, adjust.residuals = FALSE, Dmethod = "simple")
+
+names(e.lvm)
+names(e.lvm$model)
+e.lvm$model$covpar
+e.lvm$model$index
+e.lvm$model$parpos
+
+coefType(e.lvm)
+coefType(m)
+
+coef(e.lvm,level=9)
+
+coef(e.lvm)
+vss <- lmerTest:::vcovLThetaL(e.lmer)
+vss(t(L[1,]), c(ls.rho$thopt,ls.rho$sigma))
+
+undebug(vss)
+
+logLik(e.lvm)
+logLik(e.lmer)
+logLik(e.lme)
+
+lapply(1:n.param, function(iP){ # iP <- 1
+
+    iL <- L[iP,]
+    calcSatterth1DF2(ls.rho, L = iL, isF = FALSE)
+
+    debug(vss)
+    vss <- lmerTest:::vcovLThetaL(ls.rho$model)
+
+    fct.obj <- function(x){
+        print(x)
+        vss(t(iL), x)
+    }
+    fct.obj <- function(x){ # x <- p.obj
+        iid.tempo <- iid2(e.lme, p = x, adjust.residuals = FALSE, return.df = FALSE)
+        vec.sd <- sqrt(diag(crossprod()))
+        vec.sd %*% iL
+    }
+    p.obj <- c(ls.rho$thopt, ls.rho$sigma)    
+    g <- as.double(numDeriv::jacobian(func = fct.obj, x = p.obj, method = "Richardson"))
+        
+    denom <- t(g) %*% ls.rho$A %*% g
+    varcor <- fct.obj(p.obj)
+    
+    2 * (varcor)^2/denom
+
+    
+    result[, 2] <- (L %*% ls.rho$fixEffs)/sqrt(varcor)
+    
+    result[, 3] <- 2 * (1 - pt(abs(result[, 2]), df = result[, 
+        1]))
+    result[, 4] <- sqrt(varcor)
+    
+})
+
+ls.rho$sigma
+
+sigma(e.lmer)
+e.lmer@theta
+
+
+str(e.lmer)
 
 ## * linear regressions
 m.sim <- lvm(Y1~X1+X2+X3,Y2~X2,Y3~1)

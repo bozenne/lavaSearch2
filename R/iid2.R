@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 25 2017 (09:14) 
+## last-updated: okt 27 2017 (10:00) 
 ##           By: Brice Ozenne
-##     Update #: 195
+##     Update #: 306
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -78,7 +78,7 @@
 `iid2` <-
   function(x, ...) UseMethod("iid2")
 
-## * method iid2.lm
+## * iid2.lm
 #' @rdname iid2
 #' @export
 iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
@@ -107,75 +107,85 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
     return(iid0)
 }
 
-## * method iid2.lme
+## * iid2.gls
 #' @rdname iid2
 #' @export
-iid2.lme <- function(x, data = NULL, 
+iid2.gls <- function(x, p = NULL, data = NULL, 
+                     adjust.residuals = TRUE, power = 1/2,
+                     return.df = TRUE, ...){
+
+### ** normalize argument
+    if(is.null(data)){
+        data <- getData(x)
+    }
+    if(is.null(p)){
+        p <- coef(x)
+    }
+
+### ** compute the score
+    e.score <- score2(x, p = p, data = data,
+                      adjust.residuals = adjust.residuals, power = power,
+                      indiv = TRUE, return.vcov.param = TRUE, ...)
+    vcov.param <- attr(e.score,"vcov.param")
+    
+### ** compute the iid
+    iid0 <- e.score %*% vcov.param
+
+### ** compute the degrees of freedom
+    if(return.df){
+        df.adj <- calcDDF(x, p = p, iid0 = iid0,
+                          adjust.residuals = adjust.residuals, power = power, ...)
+        attr(iid0,"df") <- df.adj
+    }
+    
+### ** export
+    colnames(iid0) <- colnames(e.score)
+    
+    return(iid0)
+}
+
+## * iid2.lme
+#' @rdname iid2
+#' @export
+iid2.lme <- function(x, p = NULL, data = NULL,
                      adjust.residuals = TRUE, power = 1/2,
                      return.df = TRUE, ...){
 
     if(is.null(data)){
         data <- getData(x)
-    }else{
-        stop("not implemented yet!\n")
     }
-
+    if(is.null(p)){
+        p <- fixef(x)
+    }
+    
+### ** compute the score
+    e.score <- score2(x, p = p, data = data,
+                      adjust.residuals = adjust.residuals, power = power,
+                      indiv = TRUE, return.vcov.param = TRUE, ...)
+    vcov.param <- attr(e.score,"vcov.param")
+    
 ### ** compute the iid
-    coef.model <- fixef(x)
-    e.score <- score2(x, p = coef.model, data = data,
-                      adjust.residuals = adjust.residuals, power = power, return.df = return.df,
-                      ...)
+    iid0 <- e.score %*% vcov.param
 
-    iI <- vcov(x)
-    iid0 <- e.score %*% iI
-
+### ** compute the degrees of freedom
+    if(return.df){
+        df.adj <- calcDDF(x, p = p, iid0 = iid0,
+                          adjust.residuals = adjust.residuals, power = power, ...)
+        attr(iid0,"df") <- df.adj
+    }
+    
 ### ** export
     colnames(iid0) <- colnames(e.score)
-    if(return.df){
-        attr(iid0,"df") <- attr(e.score,"df")
-    }
-    return(iid0)
-}
-
-## * method iid2.gls
-#' @rdname iid2
-#' @export
-iid2.gls <- function(x, data = NULL, 
-                     adjust.residuals = TRUE, power = 1/2,
-                     return.df = TRUE, ...){
-
-    if(is.null(data)){
-        data <- getData(x)
-    }else{
-        stop("not implemented yet!\n")
-    }
-
-### ** compute the iid
-    coef.model <- coef(x)
-    e.score <- score2(x, p = coef.model, data = data,
-                      adjust.residuals = adjust.residuals, power = power, return.df = return.df,
-                      ...)
-
-    iI <- vcov(x)
-    iid0 <- e.score %*% iI
-
-### ** export
-    colnames(iid0) <- colnames(e.score)
-    if(return.df){
-        attr(iid0,"df") <- attr(e.score,"df")
-    }
     return(iid0)
 }
 
 
-## * method iid2.lvmfit
+## * iid2.lvmfit
 #' @rdname iid2
 #' @export
 iid2.lvmfit <- function(x, p = NULL, data = NULL, 
-                        adjust.residuals = TRUE, power = 1/2,
-                        use.information = FALSE, Dmethod = "Richardson",
-                        return.df = TRUE,
-                        check.score = TRUE, ...){
+                        adjust.residuals = TRUE, Dmethod = FALSE, power = 1/2, 
+                        return.df = TRUE, check.score = TRUE, ...){
 
     if(is.null(data)){
         data <- model.frame(x)
@@ -184,64 +194,34 @@ iid2.lvmfit <- function(x, p = NULL, data = NULL,
     }
     if(is.null(p)){
         p <- coef(x)
-    }
-        
-### ** compute the iid
-
+    }   
+    name.param <- names(p)
+    
+### ** compute the score
     if(check.score){
-        S1 <- score2(x, param = p, data = data,
-                     adjust.residuals = FALSE, indiv = TRUE, return.df = FALSE)
-        S2 <- score(x, p = p,indiv = TRUE)
+        browser()
+        S1 <- score2(x, p = p, data = data,
+                     adjust.residuals = FALSE, Dmethod = "simple",
+                     indiv = TRUE)
+        S2 <- score(x, p = p, indiv = TRUE)
         if(max(abs(S1-S2))>1e-10){
             stop("score2 does not match score \n",
                  "report that to the maintainer of the package")
         }
     }
-
     e.score <- score2(x, p = p, data = data,
-                      adjust.residuals = adjust.residuals, power = power, return.df = return.df)
+                      adjust.residuals = adjust.residuals, power = power,
+                      indiv = TRUE, return.vcov.param = TRUE, ...)
+    vcov.param <- attr(e.score,"vcov.param")
 
-    if(use.information){
-        iI <- vcov(x)
-    }else{
-        I <- -numDeriv::jacobian(func = function(iP){
-            #score2(x, p = p, data = data, adjust.residuals = FALSE, indiv = FALSE, return.df = FALSE, ...)
-            score(x, p = iP, data = data, indiv = FALSE, ...)        
-        },
-        x = p,
-        method = Dmethod)
-        iI <- lava::Inverse(I)
-    }
-
-    iid0 <- e.score %*% iI
+### ** compute the iiid
+    iid0 <- e.score %*% vcov.param
 
 ### ** degrees of freedom
     if(return.df){
         browser()
-        n.coef <- length(p)
-        calcSigma <- function(iP){ # iP <- p
-            Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
-                                                 use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
-                                                 check.score = FALSE, ...))
-            return(Sigma.tempo)             
-        }
-
-        Sigma.beta <- crossprod(iid0)
-        numerator <- 2*Sigma.beta^2
-        jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = p, method = Dmethod)
-        denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
-
-        numerator / denominator
-        ## jacob.iid0 %*% Sigma.beta %*% t(jacob.iid0)
-
-        ## calcSigma <- function(iP){ # iP <- p
-        ##     Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
-        ##                                          use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
-        ##                                          check.score = FALSE, ...))
-        ##     return(Sigma.tempo[2,2])             
-        ## }
-        
-        attr(iid0,"df") <- attr(e.score,"df")
+        df.adj <- .calcDF(x = x, p = p, iid0 = iid0)
+        attr(iid0,"df") <- df.adj
     }
     
 ### ** export

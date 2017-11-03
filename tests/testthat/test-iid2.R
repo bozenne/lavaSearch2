@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: okt 25 2017 (12:08) 
+## last-updated: okt 26 2017 (10:21) 
 ##           By: Brice Ozenne
-##     Update #: 91
+##     Update #: 102
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,20 +42,18 @@ e.lvm <- estimate(lvm(formula.lvm),data=d)
 # e.iid2.lm <- iid2(e.lvm, use.information = TRUE)
 
 test_that("iid2 matches iid", {
-    e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = lava.options()$Dmethod)
+    e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = FALSE)
     GS1 <- iid(e.lm)
     attr(GS1, "bread") <- NULL
     expect_equal(e.iid2.lm, GS1)
 
-    e1.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = TRUE)
-    e2.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = "Richardson")
-    e3.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, use.information = FALSE, Dmethod = "simple")
-    expect_equal(e1.iid2.lvm, e2.iid2.lvm)
-    expect_equal(e1.iid2.lvm, e3.iid2.lvm, tolerance = 1e-4)
-
-    GS2 <- iid(e.lvm)
+    e1.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE)
+    expect_equal(unname(e1.iid2.lvm[,1:4]), unname(GS1))
+    
+    e2.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, Dmethod = "simple")
+    GS2 <- iid(e.lvm, Dmethod = "simple")
     attr(GS2, "bread") <- NULL
-    expect_equal(e3.iid2.lvm, GS2)
+    expect_equal(e2.iid2.lvm, GS2)    
 })
 
 ## ** iid2 lvm matches iid2 lm
@@ -115,15 +113,16 @@ e.gls <- gls(value ~ time + G,
              correlation = corCompSymm(form =~ 1| Id),
              weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
+factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
 
 test_that("gls: HC0/HC1", {
     iid2HC0.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = FALSE)
 
     VsandwichHC0.gls <- crossprod(iid2HC0.gls)
-    GS <- vcovCR(e.gls, type = "CR0", cluster = dL$Id)
+    GS <- vcovCR(e.gls, type = "CR0", cluster = dL$Id) * factor^2
     expect_equal(as.double(GS),as.double(VsandwichHC0.gls), tolerance = 1e-10)
     
-    GS <- vcovCR(e.gls, type = "CR1", cluster = dL$Id)
+    GS <- vcovCR(e.gls, type = "CR1", cluster = dL$Id) * factor^2
     VsandwichHC1.gls <- crossprod(iid2HC0.gls)*n/(n-1)
     expect_equal(as.double(GS),as.double(VsandwichHC1.gls), tolerance = 1e-10)
 })
@@ -131,18 +130,19 @@ test_that("gls: HC0/HC1", {
 test_that("gls: HC3", {
     iid2HC3.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 1)
 
+    GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id) * factor^2    
     VsandwichHC3.gls <- crossprod(iid2HC3.gls)
-    GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id)    
-    expect_equal(as.double(GS),as.double(VsandwichHC3.gls), tolerance = 1e-7)
+    expect_equal(as.double(GS),as.double(VsandwichHC3.gls), tolerance = 1e-10) 
 })
 
 test_that("gls: HC2", {
     iid2HC2.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 0.5)
 
+    GS <- vcovCR(e.gls, type = "CR2", cluster = dL$Id) * factor^2
     VsandwichHC2.gls <- crossprod(iid2HC2.gls)
-    GS <- vcovCR(e.gls, type = "CR2", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC2.gls), tolerance = 1e-7)
+    expect_equal(as.double(GS),as.double(VsandwichHC2.gls), tolerance = 1e-10)
 })
+
 
 ## ** lme
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
@@ -154,13 +154,13 @@ e.lme <- lme(value ~ time + G,
              data = dL, method = "ML")
 
 test_that("lme equivalent to lvm", {
-expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
 
-coef.lme <- c(fixef(e.lme), sigma(e.lme)^2, as.numeric(getVarCov(e.lme)),
-             (sigma(e.lme)*coef(e.lme$modelStruct$varStruct, uncons = FALSE, allCoef = FALSE))^2)
-coef.lvm <- coef(e.lvm)
+    coef.lme <- c(fixef(e.lme), sigma(e.lme)^2, as.numeric(getVarCov(e.lme)),
+    (sigma(e.lme)*coef(e.lme$modelStruct$varStruct, uncons = FALSE, allCoef = FALSE))^2)
+    coef.lvm <- coef(e.lvm)
 
-expect_equal(as.double(coef.lme),as.double(coef.lvm), tol = 1e-5)
+    expect_equal(as.double(coef.lme),as.double(coef.lvm), tol = 1e-5)
 })
 
 test_that("lme: HC0/HC1", {
@@ -207,7 +207,6 @@ test_that("lme: HC2", {
     expect_equal(as.double(GS),as.double(VsandwichHC2.lme), tolerance = 1e-10)
     expect_equal(as.double(GS),as.double(VsandwichHC2.lvm), tolerance = 1e-7)
 })
-
 
 
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: okt 25 2017 (12:06) 
+## last-updated: nov  3 2017 (13:39) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 141
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 library(testthat)
 
 context("score2")
-n <- 3e1
+n <- 5e1
 
 ## * score for nlme models
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
@@ -47,20 +47,25 @@ test_that("lme equivalent to lvm", {
 
 test_that("score2 equivalent to score", {
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
+    score.gls.p <- score2(e.gls, p = coef(e.gls), cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
 
     expect_equal(unname(score.gls),unname(score.lvm[,keep.cols]), tol = 1e-5)
+    expect_equal(score.gls,score.gls.p)
     
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = 1, indiv = TRUE)
+    score.gls.p <- score2(e.gls, p = coef(e.gls), cluster = "Id", adjust.residuals = TRUE, power = 1, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = 1, indiv = TRUE)
 
-    score.lvm[,keep.cols]/score.gls
-    vcov(e.gls)/vcov(e.lvm)[keep.cols,keep.cols]
-
+    expect_equal(unname(score.gls),unname(score.lvm[,keep.cols]), tol = 1e-5)
+    expect_equal(score.gls,score.gls.p)
+    
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = 0.5, indiv = TRUE)
+    score.gls.p <- score2(e.gls, p = coef(e.gls), cluster = "Id", adjust.residuals = TRUE, power = 0.5, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = 0.5, indiv = TRUE)
 
-    score.lvm[,keep.cols]/score.gls
+    expect_equal(unname(score.gls),unname(score.lvm[,keep.cols]), tol = 1e-5)
+    expect_equal(score.gls,score.gls.p)
 })
 
 ## ** lme
@@ -82,21 +87,27 @@ test_that("lme equivalent to lvm", {
     expect_equal(as.double(coef.lme),as.double(coef.lvm), tol = 1e-5)
 })
 
-test_that("score2 equivalent to score", {
+test_that("score2.lme equivalent to score2.lvm", {
     score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
+    score.lme.p <- score2(e.lme, p = fixef(e.lme), adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    expect_equal(score.lme,score.lme.p)
 
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
+    score.lme.p <- score2(e.lme, p = fixef(e.lme), adjust.residuals = TRUE, indiv = TRUE, power = 1)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 1)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    expect_equal(score.lme,score.lme.p)
     
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
+    score.lme.p <- score2(e.lme, p = fixef(e.lme), adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
 
     expect_equal(unname(score.lme),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    expect_equal(score.lme,score.lme.p)
 })
 
 ## ** gls vs. lme models 
@@ -138,7 +149,7 @@ test_that("lme equivalent to gls", {
 })
 
 
-## * not-adjusted score
+## * score for lvm model 
 ## ** linear regression
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
@@ -146,7 +157,8 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-
+e$prepareScore2 <- prepareScore2(e)
+    
 test_that("linear regression",{
     ## at ML
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -172,7 +184,13 @@ test_that("linear regression",{
 })
 
 test_that("linear regression: constrains",{
-    m <- lvm(Y~X1+1*X2)
+    m <- lvm(Y[0:2]~X1+1*X2)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE),
+                 score(e, indiv = TRUE))
+    
+    m <- lvm(Y~beta*X1+beta*X2)
     e <- estimate(m, d)
 
     expect_equal(score2(e, adjust.residuals = FALSE),
@@ -188,6 +206,9 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
+
+coefType(m, as.lava = FALSE)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("multiple linear regression",{
     ## at ML
@@ -221,11 +242,12 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("multiple linear regression (covariance link)",{
-        ## at ML
+    ## at ML
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
-    GS <- score(e, indiv=TRUE)
+    GS <- score(e, indiv=TRUE)    
     expect_equal(test, GS)
     
     test <- score2(e, indiv = FALSE, adjust.residuals = FALSE)
@@ -265,17 +287,17 @@ d <- sim(m.sim,n,latent=FALSE)
 ## *** factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 regression(m) <- eta1~X1+X2
-latent(m) <- ~eta1
 
 e <- estimate(m,d)
 param <- coef(e)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("factor model",{
-        ## at ML
+    ## at ML
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
     GS <- score(e, indiv=TRUE)
     expect_equal(test, GS)
-    
+     
     test <- score2(e, indiv = FALSE, adjust.residuals = FALSE)
     GS <- score(e, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
@@ -294,8 +316,16 @@ test_that("factor model",{
     expect_equal(as.double(test),as.double(GS))
 })
 
-test_that("factor model: constrains",{
+test_that("factor model: fixed coefficients",{
     m <- lvm(Y1~1*eta+1*X2,Y2~1*eta,Y3~1*eta)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE),
+                 score(e, indiv = TRUE))
+})
+
+test_that("factor model: constrains",{
+    m <- lvm(Y1~1*eta+X2,Y2~lambda*eta+X2,Y3~lambda*eta,eta ~ beta*X2+beta*X1)
     e <- estimate(m, d)
 
     expect_equal(score2(e, adjust.residuals = FALSE),
@@ -311,13 +341,14 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("2 factor model",{
-        ## at ML
+    ## at ML
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
     GS <- score(e, indiv=TRUE)
     expect_equal(test, GS)
-    
+
     test <- score2(e, indiv = FALSE, adjust.residuals = FALSE)
     GS <- score(e, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
@@ -336,6 +367,15 @@ test_that("2 factor model",{
     expect_equal(as.double(test),as.double(GS))
 })
 
+test_that("2 factor model: constrains",{
+    m <- lvm(Y1~1*eta1+X2,Y2~lambda*eta1+X2,Y3~lambda*eta1,eta1 ~ beta*X2+beta*X1,
+             Z1~0+eta2,Z2~lambda*eta2,Z3~eta2)
+    e <- estimate(m, d)
+
+    expect_equal(score2(e, adjust.residuals = FALSE),
+                 score(e, indiv = TRUE))
+})
+
 ## *** 2 factor model (covariance)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
@@ -344,9 +384,10 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("2 factor model (covariance)",{
-        ## at ML
+    ## at ML
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
     GS <- score(e, indiv=TRUE)
     expect_equal(test, GS)
@@ -370,27 +411,26 @@ test_that("2 factor model (covariance)",{
 })
 
 ## *** 2 factor model (correlation LV)
-m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
-           Z1~eta2,Z2~eta2,Z3~eta2+X3))
-regression(m) <- eta2 ~ X1
-regression(m) <- eta1 ~ eta2+X2
+## m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+##            Z1~eta2,Z2~eta2,Z3~eta2+X3))
+## regression(m) <- eta2 ~ X1
+## regression(m) <- eta1 ~ eta2+X2
 
-## m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
-##            Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
-## regression(m) <- eta2 ~ 0
-## regression(m) <- eta1 ~ 0+eta2
-## latent(m) <- ~ eta1 + eta2
+m <- lvm(c(Y1~1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
+           Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
+regression(m) <- eta2 ~ 0
+regression(m) <- eta1 ~ 0+eta2
+latent(m) <- ~ eta1 + eta2
 
 e <- estimate(m,d)
 param <- coef(e)
+e$prepareScore2 <- prepareScore2(e)
 
 test_that("2 factor model (correlation LV)",{
     ## at ML
-    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE, return.df = FALSE)
+    test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
     GS <- score(e, indiv=TRUE)
     expect_equal(test, GS)
-
-    head(round(test-GS,10))
     
     test <- score2(e, indiv = FALSE, adjust.residuals = FALSE)
     GS <- score(e, indiv=FALSE)
@@ -408,10 +448,9 @@ test_that("2 factor model (correlation LV)",{
     test <- score2(e, p = param+1, indiv = FALSE, adjust.residuals = FALSE)
     GS <- score(e, p = param+1, indiv=FALSE)
     expect_equal(as.double(test),as.double(GS))
-
 })
 
-## * leverage adjusted score
+## * leverage adjusted score for lvm models
 m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m.sim) <- eta1~X1+X2
@@ -453,7 +492,7 @@ test_that("",{
 ### test-score2.R ends here
 
 
-
+ 
 ## * error for tobit and multigroup lvm
 
 ## ** multigroup model
