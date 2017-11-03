@@ -1,0 +1,141 @@
+### defineCategoricalLink.R --- 
+#----------------------------------------------------------------------
+## author: Brice Ozenne
+## created: okt 26 2017 (16:35) 
+## Version: 
+## last-updated: okt 26 2017 (18:37) 
+##           By: Brice Ozenne
+##     Update #: 98
+#----------------------------------------------------------------------
+## 
+### Commentary: 
+## 
+### Change Log:
+#----------------------------------------------------------------------
+## 
+### Code:
+
+## * documentation - defineCategoricalLink
+#' @title Identify categorical links in lvm
+#' @description Identify categorical links in lvm
+#' @name defineCategoricalLink
+#' 
+#' @param x a lvm model.
+#' @param link the links to be analyzed. If NULL, all the coefficients from the lvm model are used instead.
+#' @param Y.name the outcome variable of each link.
+#' @param X.name the regression variable of each link.
+#' @param data the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.
+#' 
+#' @examples  
+#' m <- lvm(Y1~X1+X2,Y2~X1+X3)
+#' categorical(m, K = 3) <- "X1"
+#' try(defineCategoricalLink(m)) # error
+#'
+#' categorical(m, K = 3, labels = 1:3) <- "X1"
+#' defineCategoricalLink(m)
+#' defineCategoricalLink(m, "Y~X1")
+#' defineCategoricalLink(m, "X1:0|1")
+#' defineCategoricalLink(m, "X1:1|2")
+#' defineCategoricalLink(m, c("X1:0|1", "X1:1|2"))
+#' defineCategoricalLink(m, c("Y~X1","Y~X2"))
+#' defineCategoricalLink(m, c("Y~X2","Y~X1"))
+#'
+#' @export
+`defineCategoricalLink` <-
+  function(x, ...) UseMethod("defineCategoricalLink")
+
+
+## * defineCategoricalLink.lvm
+#' @rdname defineCategoricalLink
+#' @export
+defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
+
+### ** normalize arguments
+    if(is.null(link)){
+        link <- coef(x)
+    }
+    if(is.null(data)){
+        data <- sim(x, 1)
+    }
+    
+### ** identify the type of regression variable (continuous or categorical)
+    index.cat <- which(link %in% unlist(x$attributes$ordinalparname))
+    index.Ncat <- setdiff(1:length(link), index.cat)
+    link.Ncat <- link[index.Ncat]
+
+### ** caracterize links involving categorical variables    
+    if(length(index.cat)>0){
+        link.cat <- link[index.cat]
+        xCAT <- lava_categorical2dummy(x, data)$x
+
+        ## *** find exogenous variable
+        X.name.allcat <- sapply(link.cat, function(iL){
+            test <- unlist(lapply(x$attributes$ordinalparname, function(vec.coef){iL %in% vec.coef}))
+            return(names(x$attributes$ordinalparname)[test])
+        })
+        UX.name.cat <- unique(X.name.allcat)
+    
+        ## *** find the level of the exogenous variable
+        X.level.cat <- unlist(lapply(UX.name.cat, function(iL){ 
+            if(iL %in% names(xCAT$attributes$labels)){
+                labels <- xCAT$attributes$labels[[iL]]
+                index.label <- which(x$attributes$ordinalparname[[iL]] %in% link.cat)                
+                return(labels[1+index.label])
+            }else {
+                stop("Categorical variables must have labels. Specify argument \'labels\' when calling categorical. \n")
+            }            
+        }))
+
+        ## *** find endogenous variable
+        M.link <- xCAT$M[paste0(X.name.allcat,X.level.cat),,drop = FALSE]
+        indexLink <- which(M.link==1, arr.ind = TRUE)
+        Y.name.allcat <- colnames(M.link)[indexLink[,"col"]]
+            
+        ## *** characterize all links
+        Xcat.name.allcat <- rownames(M.link)[indexLink[,"row"]]
+        X.level.allcat <- as.character(X.level.cat[indexLink[,"row"]])
+        external.link.allcat <- link[index.cat[indexLink[,"row"]]]
+        original.link.allcat <- paste0(Y.name.allcat, lava.options()$symbol[1], X.name.allcat)
+        cat.link.allcat <- paste0(Y.name.allcat, lava.options()$symbol[1], Xcat.name.allcat)
+
+        dt.cat <- data.table::data.table(link = cat.link.allcat,
+                                         endogenous = Y.name.allcat,
+                                         exogenous = X.name.allcat,
+                                         type = "categorical",
+                                         factice = FALSE,
+                                         level = X.level.allcat,
+                                         originalLink = original.link.allcat,
+                                         externalLink = external.link.allcat)       
+
+    }else{
+            dt.cat <- NULL
+    }
+
+### ** caracterize links involving continuous variables    
+    if(length(index.Ncat)>0){
+
+        var.tempo <- initVarLinks(link.Ncat)
+        Y.name.Ncat <- var.tempo$var1
+        X.name.Ncat <- var.tempo$var2
+        test.factice <- X.name.Ncat %in% names(x$attributes$ordinalparname)
+
+        dt.Ncat <- data.table::data.table(link = link.Ncat,
+                                          endogenous = Y.name.Ncat,
+                                          exogenous = X.name.Ncat,
+                                          type = "continuous",
+                                          factice = test.factice,
+                                          level = NA,
+                                          originalLink = link.Ncat,
+                                          externalLink = NA)       
+    }else{
+        dt.Ncat <- NULL
+    }
+
+    
+### ** export
+    out <- rbind(dt.Ncat,dt.cat)
+    return(out)
+}
+
+#----------------------------------------------------------------------
+### defineCategoricalLink.R ends here
