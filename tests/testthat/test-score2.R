@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: nov  3 2017 (13:39) 
+## last-updated: nov  3 2017 (16:30) 
 ##           By: Brice Ozenne
-##     Update #: 141
+##     Update #: 145
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,8 +38,7 @@ e.lvm <- estimate(m, dW)
 e.gls <- gls(value ~ 0+time + time:G,
              weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
-
-keep.cols <- c("Y1","Y2","Y3","Y1~G","Y2~G","Y3~G")
+allCoef.gls <- c(coef(e.gls),sigma2 = sigma(e.gls)^2,coef(e.gls$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))
 
 test_that("lme equivalent to lvm", {
     expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.gls)))
@@ -47,12 +46,14 @@ test_that("lme equivalent to lvm", {
 
 test_that("score2 equivalent to score", {
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
-    score.gls.p <- score2(e.gls, p = coef(e.gls), cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
+    score.gls.p <- score2(e.gls, p = allCoef.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
 
-    expect_equal(unname(score.gls),unname(score.lvm[,keep.cols]), tol = 1e-5)
+    expect_equal(unname(score.gls[,1:6]),unname(score.lvm[,1:6]), tol = 1e-5)
     expect_equal(score.gls,score.gls.p)
-    
+})
+
+test_that("score2.gls equivalent to score.lvm", {
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = 1, indiv = TRUE)
     score.gls.p <- score2(e.gls, p = coef(e.gls), cluster = "Id", adjust.residuals = TRUE, power = 1, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = 1, indiv = TRUE)
@@ -112,7 +113,7 @@ test_that("score2.lme equivalent to score2.lvm", {
 
 ## ** gls vs. lme models 
 e.gls <- gls(value ~ time*G,
-             correlation = corCompSymm(form =~ 1 | Id),
+             correlation = corSymm(form =~ 1 | Id),
              data = dL, method = "ML")
 
 e.lme <- lme(value ~ time*G,
@@ -480,19 +481,11 @@ latent(m) <- ~eta1
 
 e <- estimate(m,d)
 
-
-e <- estimate(m,d)
-param <- coef(e)
-
 test_that("",{
     r2 <- score2(e)
 })
 
-#----------------------------------------------------------------------
-### test-score2.R ends here
 
-
- 
 ## * error for tobit and multigroup lvm
 
 ## ** multigroup model
@@ -513,3 +506,7 @@ d <- sim(m.sim,n,latent=FALSE)
 e <- estimate(lvm(Y~X1),data = d)
 
 expect_error(score2(e))
+
+##----------------------------------------------------------------------
+### test-score2.R ends here
+

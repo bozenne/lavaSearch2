@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  3 2017 (13:29) 
+## last-updated: nov  3 2017 (15:20) 
 ##           By: Brice Ozenne
-##     Update #: 158
+##     Update #: 159
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -243,8 +243,7 @@ prepareScore2.lvmfit <- function(x, data = NULL){
         B = B,
         Lambda = Lambda,
         type = type,
-        toUpdate = toUpdate,
-        param2originalLink = param2originalLink
+        toUpdate = toUpdate
     ))
 }
 
