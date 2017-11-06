@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov  3 2017 (17:47) 
+## last-updated: nov  6 2017 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 1552
+##     Update #: 1617
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -341,7 +341,7 @@ score2.lme <- function(x, p = NULL, data = NULL,
 
 ## * score2.lvmfit
 score2.lvmfit <- function(x, p = NULL, data = NULL, 
-                          adjust.residuals = TRUE, Dmethod = FALSE, power = 1/2,
+                          adjust.residuals = TRUE, power = 1/2,
                           indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
 
 ### ** normalize arguments
@@ -375,7 +375,7 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
 
     name.endogenous <- endogenous(x)
     n.endogenous <- length(name.endogenous)
-    
+
     if(is.null(x$prepareScore2)){   
         x.score2 <- prepareScore2(x, data)
     }else{
@@ -384,8 +384,6 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
     name.param <- names(x.score2$type)
     n.param <- length(name.param)
     
-    
-
 ### ** Reconstruct Sigma, Lambda, B, Psi
     x.score2$Sigma[!is.na(x.score2$skeleton$Sigma)] <- p[x.score2$skeleton$Sigma[!is.na(x.score2$skeleton$Sigma)]]
     if(n.latent>0){
@@ -417,59 +415,60 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
         x.score2$alpha.GammaX.iIB <- x.score2$alpha.GammaX %*% x.score2$iIB
 
     }
-   
+
+### ** Compute partial derivatives regarding the mean and the variance
+    if(any(x.score2$toUpdate)){
+        x.score2 <- .calcDtheta(x.score2)        
+    }
+
 ### ** Reconstruct variance covariance matrix (residuals)
     if(n.latent>0){
         Omega <- x.score2$tLambda.tiIB.Psi.iIB %*% x.score2$Lambda + x.score2$Sigma
     }else{
         Omega <- x.score2$Sigma
     }
+    Omega_chol <- chol(Omega)
+    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
     ## range(Omega - moments(x, p = p, conditional=TRUE, data = data)$C)
-   
+
 ### ** Compute variance covariance matrix (parameters)
-    vcov.param <- .information2(x.score2, Omega = Omega,
-                                n.param = n.param, name.param = name.param)
     if(adjust.residuals || return.vcov.param){
-        if( (null.p || all(abs(pars(x)-p)<1e-10)) && Dmethod == FALSE  ){
+        if(null.p){
             vcov.param <- vcov(x)
         }else{
-            ## could be replaced by explicit computation by computing the second derivative of the likelihood
-            vcov.param <- -lava::Inverse(numDeriv::jacobian(function(iP){score(x, p = iP, indiv = FALSE, ...)},
-                                                            p, method = Dmethod))
-            colnames(vcov.param) <- name.param
-            rownames(vcov.param) <- name.param
+            Info <- .information2(x.score2, iOmega = iOmega,
+                                  n.param = n.param, name.param = name.param)
+            vcov.param <- chol2inv(chol(Info))
+            rownames(vcov.param) <- rownames(Info)
+            colnames(vcov.param) <- colnames(Info)
         }        
     }
-    ## vcov.param - vcov(x)
+    ## round(vcov.param[rownames(vcov(x)),colnames(vcov(x))] - vcov(x),10)
 
 ### ** Compute score
     out.score <- .score2(x.score2, epsilon = as.matrix(residuals(x, p = p)),
-                         vcov.param = vcov.param, Omega = Omega,
+                         vcov.param = vcov.param, Omega = Omega, Omega_chol = Omega_chol, iOmega = iOmega,
                          adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
                          return.vcov.param = return.vcov.param, indiv = indiv,
                          name.param = name.param,
                          n = n, n.endogenous = n.endogenous, n.param = n.param)        
 
 ### ** export
-    return(out.score[,name.param.lava,drop=FALSE])
+    out.score <- out.score[,name.param.lava,drop=FALSE]
+    if(return.vcov.param){
+        attr(out.score,"vcov.param") <- vcov.param[name.param.lava,name.param.lava,drop=FALSE]
+    }
+    return(out.score)
 
 }
 
 ## * .score2
-.score2 <- function(prepare.score2, epsilon, vcov.param, Omega,
+.score2 <- function(prepare.score2, epsilon, vcov.param, Omega, Omega_chol, iOmega,
                     adjust.residuals, power, as.clubSandwich, return.vcov.param, indiv,
                     name.param,
                     n, n.endogenous, n.latent, n.param){
 
-### ** prepare
-    Omega_chol <- chol(Omega)
-    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
 
-    
-### ** Compute partial derivatives
-    if(any(prepare.score2$toUpdate)){
-        prepare.score2 <- .calcDtheta(prepare.score2)        
-    }
                                      
 ### ** Residuals
     if(adjust.residuals){
@@ -529,64 +528,52 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
     return(out.score)
 }
 ## * .information2
-.information2 <- function(prepare.score2, Omega,
+.information2 <- function(prepare.score2, iOmega,
                           n.param, name.param){
 
-### ** prepare
-    Omega_chol <- chol(Omega)
-    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
-
-### ** Compute partial derivatives
-    if(any(prepare.score2$toUpdate)){
-        prepare.score2 <- .calcDtheta(prepare.score2)        
-    }
                                         
 ### ** Compute information
-    vcov.param <- matrix(NA, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
+    Info <- matrix(NA, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
 
     for(iP1 in 1:n.param){ # iP <- 1
         for(iP2 in iP1:n.param){ # iP <- 1
-            browser()
             iName1 <- name.param[iP1]
             iName2 <- name.param[iP2]
-            
-            if(!is.null(prepare.score2$dmu.dtheta[[iName]])){
-                term1 <- colSums(prepare.score2$dmu.dtheta[[iName1]] %*% iOmega * prepare.score2$dmu.dtheta[[iName2]])
+
+            if(!is.null(prepare.score2$dmu.dtheta[[iName1]]) && !is.null(prepare.score2$dmu.dtheta[[iName2]])){
+                term1 <- sum(prepare.score2$dmu.dtheta[[iName1]] %*% iOmega * prepare.score2$dmu.dtheta[[iName2]])
             }else{
                 term1 <- 0
             }
 
-            if(!is.null(prepare.score2$dOmega.dtheta[[iName]])){
-                term2 <- prepare.score2$dOmega.dtheta[[iName1]] %*% iOmega %*% iOmega %*% prepare.score2$dOmega.dtheta[[iName2]]
+            if(!is.null(prepare.score2$dOmega.dtheta[[iName1]]) && !is.null(prepare.score2$dOmega.dtheta[[iName2]])){
+                ##    term2 <- n/2*tr(prepare.score2$dOmega.dtheta[[iName1]] %*% iOmega %*% iOmega %*% prepare.score2$dOmega.dtheta[[iName2]])
+                term2 <- n/2*tr(iOmega %*% prepare.score2$dOmega.dtheta[[iName1]] %*% iOmega %*% prepare.score2$dOmega.dtheta[[iName2]])
             }else{
                 term2 <- 0
             }
-            vcov.param[iP1,iP2] <- (term1/n+term2)
+            Info[iP1,iP2] <- (term1+term2)
         }
     }
-
-    vcov.param[lower.tri(vcov.param)] <- vcov.param[upper.tri(vcov.param)]
+          
+    Info[lower.tri(Info)] <- t(Info)[lower.tri(Info)]
 
 ### ** export
-    return(vcov.param)
+    return(Info)
 }
 
 ## * .calcDetheta
 .calcDtheta <- function(x){
 
     type <- x$type[x$toUpdate]
-    param <- x$param[x$toUpdate]
+    param <- names(x$toUpdate)[x$toUpdate]
     n.param <- length(param)
-    
-### ** partial derivative
-
+ 
     for(iP in 1:n.param){ # iP <- 1
         iType <- type[iP]
         iName <- param[iP]
 
-        cat(iName,": ", iType,"\n")
-
-        ## *** linear predictor
+### ** linear predictor
         if(iType == "alpha"){
             x$dmu.dtheta[[iName]] <- x$dmu.dtheta[[iName]] %*% x$iIB.Lambda            
         }else if(iType == "Gamma"){
@@ -597,7 +584,7 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
             x$dmu.dtheta[[iName]] <- x$alpha.GammaX.iIB %*% x$dB.dtheta[[iName]] %*% x$iIB.Lambda
         }
         
-        ## *** variance-covariance matrix
+### ** variance-covariance matrix
         if(iType %in% "Psi_var"){
             x$dOmega.dtheta[[iName]] <-  t(x$iIB.Lambda) %*% x$dPsi.dtheta[[iName]] %*% x$iIB.Lambda
         }else if(iType %in% "Psi_cov"){
@@ -610,19 +597,6 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
             x$dOmega.dtheta[[iName]] <- x$dOmega.dtheta[[iName]] + t(x$dOmega.dtheta[[iName]])
         }
 
-### ** debug
-        ## Omega <- moments(x, p = pars(x), conditional=TRUE, data = data)$C
-        ## iOmega <- solve(Omega)
-        ## tiOmega.epsilon <- t(iOmega %*% t(residuals(x)))
-        
-        ## if(!is.null(dmu.dtheta[[iP]])){
-        ##     iScore <- (dmu.dtheta[[iP]] * tiOmega.epsilon)
-        ## }
-        ## if(!is.null(dOmega.dtheta[[iP]])){
-        ##     firstTerm <- - tr(iOmega %*% dOmega.dtheta[[iP]])            
-        ##     secondTerm <- (tiOmega.epsilon %*% dOmega.dtheta[[iP]]) * tiOmega.epsilon
-        ##     iScore <- as.double(firstTerm) + secondTerm            
-        ## }
     }
 
     

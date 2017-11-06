@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  3 2017 (15:20) 
+## last-updated: nov  6 2017 (11:23) 
 ##           By: Brice Ozenne
-##     Update #: 159
+##     Update #: 160
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -148,7 +148,6 @@ prepareScore2.lvmfit <- function(x, data = NULL){
         type[iName2] <- unique(dt.param[param == iName,detail])
         iY <- dt.param[param %in% iName,Y]
         iX <- dt.param[param %in% iName,X]
-        print(type[iName2])
 
         ## *** derivative regarding the mean        
         if(type[iName2] %in% mean.param){
