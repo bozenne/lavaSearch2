@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov  6 2017 (12:02) 
+## last-updated: nov  6 2017 (16:59) 
 ##           By: Brice Ozenne
-##     Update #: 1621
+##     Update #: 1688
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,8 @@
 ## * documentation - score2
 #' @title Compute the score directly from the gaussian density
 #' @description Compute the score directly from the gaussian density
-#'
+#' @name score2
+#' 
 #' @param x a linear model or a latent variable model.
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
@@ -59,7 +60,9 @@
   function(x, ...) UseMethod("score2")
 
 ## * score2.gls
-score2.gls <- function(x, cluster, p = NULL,  data = NULL,
+#' @rdname score2
+#' @export
+score2.gls <- function(x, cluster, p = NULL, data = NULL,
                        adjust.residuals = TRUE, power = 1/2,
                        indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
 
@@ -70,14 +73,10 @@ score2.gls <- function(x, cluster, p = NULL,  data = NULL,
     }
     test.var <- !is.null(x$modelStruct$varStruct)
     test.cor <- !is.null(x$modelStruct$corStruct)
-    if(test.var == FALSE && test.cor == FALSE){
-        stop("Either the correlation or weight argument must be specified when fitting the gls model \n")
-    }
 
     if(is.null(data)){
         data <- getData(x)        
     }
-    X <- model.matrix(formula(x), data)
 
     if(test.cor){
         vec.group <- as.numeric(x$groups)
@@ -102,157 +101,76 @@ score2.gls <- function(x, cluster, p = NULL,  data = NULL,
             stop("can only handle varStruct of class \"varIdent\"\n")
         }
     }
-    table.group <- table(vec.group)
-    Ugroup <- unique(vec.group)
-    n.group <- length(Ugroup)
 
-### ** parameters
+### ** extract information
+    formula.x <- formula(x)
+    X <- model.matrix(formula.x, data)
+    name.Y <- all.vars(update(formula.x, ".~1"))
+    Y <- data[[name.Y]]
+
+    ## *** mean parameters
     mean.coef <- coef(x)
-    name.meancoef <- names(mean.coef)
 
+    ## *** variance parameters
     if(test.var){
         var.coef <- c(sigma2 = sigma(x),coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
-        name.varcoef <- names(var.coef)
     }else{
         var.coef <- c(sigma2 = sigma(x)^2)
-        name.varcoef <- "sigma2"
-    }
-   
-    if(test.cor){
-        cor.coef <- coef(x$modelStruct$corStruct, unconstrained = FALSE)
-        name.corcoef <- paste0("corCoef",1:length(cor.coef))
-        names(cor.coef) <- name.corcoef
-    }else{
-        cor.coef <- NULL
-        name.corcoef <- NULL
     }
 
-    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
-    if(is.null(p)){
-        p <- c(mean.coef,cor.coef,var.coef)        
+    ## *** covariance parameters
+    if(test.cor){
+        cor.coef <- coef(x$modelStruct$corStruct, unconstrained = FALSE)
+        names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
     }else{
+        cor.coef <- NULL
+    }
+
+    ## *** update with user-specified values
+    if(!is.null(p)){
+        name.meancoef <- names(mean.coef) 
+        name.corcoef <- names(cor.coef)
+        name.varcoef <- names(var.coef)
+        
+        if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
+            name.all <- c(name.meancoef,name.corcoef,name.varcoef)
+            stop("argument \'p\' is not correctly specified \n",
+                 "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
+        }
+
         mean.coef <- p[name.meancoef]
         cor.coef <- p[name.corcoef]
         var.coef <- p[name.varcoef]
     }
-    n.param <- length(name.param)
-
-### ** outcomes
-    if(test.var){
-        name.endogenous <- attr(x$modelStruct$varStruct,"groupName")
-        n.endogenous <- length(name.endogenous)
-        vec.rep <- attr(x$modelStruct$varStruct,"groups")
-        sigma2.base <- (sigma(x)*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2        
-    }else{
-        name.endogenous <- 1:max(table.group)
-        n.endogenous <- length(name.endogenous)
-        vec.rep <- unlist(lapply(table.group,function(iG){1:iG}))
-        sigma2.base <- rep(sigma(x)^2,n.endogenous)
-    }
-    index.obs <- vec.group+(match(vec.rep,name.endogenous)-1)*n.group
     
-    
-    
-### ** compute residuals
-    if(is.null(p)){
-        epsilon <- residuals(x, type = "response", level = 0)
-    }else{
-        epsilon <- x$fitted+x$residuals - model.matrix(formula(x), getData(x)) %*% mean.coef
-    }
-
-    M.epsilon <- matrix(NA, nrow = n.group, ncol = n.endogenous)    
-    M.epsilon[index.obs] <- epsilon
-
-### ** Reconstruct varaince covariance matrix (residuals)
-    if(test.cor){
-        Omega <- unclass(getVarCov(x))
-    }else{        
-        Omega <- diag(sigma2.base, n.endogenous, n.endogenous)        
-    }
-    
-### ** compute variance covariance matrix (parameters)
-    ## factor <- (x$dims$N - (x$method == "REML") * x$dims$p)/(x$dims$N-x$dims$p)
-    ## vcov.param <- vcov(x) / factor
-    ## check:
-    ## ls.iOmega <- lapply(ls.Omega, solve)
-    ## vcov.param <- solve(t(X) %*% Matrix::bdiag(ls.iOmega) %*% X)
-    vcov.param <- NULL
+    ## *** type of covariance matrix
+    class.var <- class(x$modelStruct$varStruct)[1]
+    class.cor <- class(x$modelStruct$corStruct)[1]
 
 ### ** Prepare score
-    x.score2 <- list()
-    x.score2$dmu.dtheta <- lapply(name.meancoef, function(iCoef){
-        M.tempo <- matrix(NA, nrow = n.group, ncol = n.endogenous)    
-        M.tempo[index.obs] <- X[,iCoef]
-        return(M.tempo)
-    })
-    names(x.score2$dmu.dtheta) <- name.meancoef
-    
-    x.score2$type <- c(rep("K", length(name.meancoef)),
-                       rep("Sigma_cov", length(name.corcoef)),
-                       rep("Sigma_var", length(name.varcoef))
-                       )
-    if(any("(Intercept)" %in% name.param)){
-        x.score2$type["(Intercept)" %in% name.param] <- "nu"
-    }
+    res.prepare <- prepareScore2(x, Y = Y, X = X, cluster = vec.group,                                
+                                 mean.coef = mean.coef, var.coef = var.coef, cor.coef = cor.coef,
+                                 class.var = class.var, class.cor = class.cor,
+                                 return.vcov.param = return.vcov.param, adjust.residuals = adjust.residuals)
 
-    x.score2$dOmega.dtheta <- list()
-
-    ## sigma2
-    x.score2$dOmega.dtheta[["sigma2"]] <- diag(sigma2.base/p["sigma2"],n.endogenous,n.endogenous)
-    if(test.cor){
-        x.score2$dOmega.dtheta[["sigma2"]][lower.tri(Omega)] <- Omega[lower.tri(Omega)]/p["sigma2"]
-        x.score2$dOmega.dtheta[["sigma2"]][upper.tri(Omega)] <- Omega[upper.tri(Omega)]/p["sigma2"]
-    }
-  
-    ## other sigma
-    if(test.var){
-        for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
-            index.iVar <- name.endogenous %in% iVar 
-            x.score2$dOmega.dtheta[[iVar]] <- p["sigma2"]*diag(index.iVar,n.endogenous,n.endogenous)
-            
-            if(test.cor){
-                index2.iVar <- setdiff(1:n.endogenous,which(index.iVar))                
-                x.score2$dOmega.dtheta[[iVar]][index2.iVar,index.iVar] <- Omega[index2.iVar,index.iVar]/p[iVar]
-                x.score2$dOmega.dtheta[[iVar]][index.iVar,index2.iVar] <- Omega[index1.iVar,index2.iVar]/p[iVar]
-            }        
-        }
-    }
-
-    ## correlation coefficients
-    if(test.cor){
-        if("corCompSymm" %in% class(x$modelStruct$corStruct)){
-            x.score2$dOmega.dtheta[[name.corcoef]] <- sqrt(sigma2.base) %*% t(sqrt(sigma2.base)) - diag(diag(Omega))
-            diag(x.score2$dOmega.dtheta[[name.corcoef]]) <- 0        
-        }else{
-            for(iVar in name.corcoef){ # iVar <- name.corcoef[1]
-                x.score2$dOmega.dtheta[[iVar]] <- matrix(0, nrow = n.endogenous, ncol = n.endogenous)
-                index.iVar <- c(which(lower.tri(Omega))[iVar == name.corcoef],
-                                which(upper.tri(Omega))[iVar == name.corcoef])
-                x.score2$dOmega.dtheta[[iVar]][index.iVar] <- Omega[index.iVar]/p[iVar]
-                
-            }
-        }
-    }
-
-    x.score2$toUpdate <- setNames(rep(FALSE,n.param),name.param)
-    
 ### ** Compute score
-    out.score <- .score2(x.score2, epsilon = M.epsilon,
-                         vcov.param = NULL, Omega = Omega,
+    out.score <- .score2(res.prepare$x.score2, epsilon = res.prepare$epsilon, vcov.param = res.prepare$vcov.param,
+                         Omega = res.prepare$Omega, iOmega = res.prepare$iOmega, Omega_chol = res.prepare$Omega_chol,
                          adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
                          return.vcov.param = return.vcov.param, indiv = indiv,
-                         name.param = name.param,
-                         n = n, n.endogenous = n.endogenous, n.param = n.param)     
+                         name.param = res.prepare$name.param, n.param = res.prepare$n.param,
+                         n = res.prepare$n.cluster, n.endogenous = res.prepare$n.endogenous)     
     
 ### ** Export
     if(return.vcov.param){
-        attr(out.score,"vcov.param") <- vcov.param
+        attr(out.score,"vcov.param") <- res.prepare$vcov.param
     }
     return(out.score)
 }
 
-
 ## * score2.lme
+#' @rdname score2
+#' @export
 score2.lme <- function(x, p = NULL, data = NULL,
                        adjust.residuals = TRUE, power = 1/2,
                        indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
@@ -262,12 +180,14 @@ score2.lme <- function(x, p = NULL, data = NULL,
         wrongClass <- paste(setdiff(class(x),"lme"), collapse = " ")
         stop("iid2 is not available for ",wrongClass," objects \n")
     }
-    if(!is.null(x$modelStruct$corStruct)){
+    test.var <- !is.null(x$modelStruct$varStruct)
+    test.cor <- !is.null(x$modelStruct$corStruct)
+    if(test.cor){
         stop("cannot handle lme objects when corStruct is not null \n")
     }
     if(length(getVarCov(x))>1){
         stop("cannot handle lme objects with more than one random effect \n")
-    }
+    }    
     vec.group <- as.numeric(x$groups[,1])
     if(all(diff(vec.group)>=0) == FALSE && all(diff(vec.group<=0)) == FALSE ){
         stop("the grouping variable for the random effect must be sorted before fitting the model \n")
@@ -276,70 +196,78 @@ score2.lme <- function(x, p = NULL, data = NULL,
     if(is.null(data)){
         data <- getData(x)        
     }
-    X <- model.matrix(formula(x), data)
 
-    name.coef <- names(fixef(x))
-    n.coef <- length(name.coef)
+    if(test.var){
+        if(any(class(x$modelStruct$varStruct) %in% c("varIdent","varFunc") == FALSE)){
+            stop("can only handle varStruct of class \"varIdent\"\n")
+        }
+    }
+
+### ** extract information
+    formula.x <- formula(x)
+    X <- model.matrix(formula.x, data)
+    name.Y <- all.vars(update(formula.x, ".~1"))
+    Y <- data[[name.Y]]
+    
+    ## *** mean parameters
+    mean.coef <- fixef(x)
+
+    ## *** variance parameters
+    if(test.var){
+        var.coef <- c(sigma2 = sigma(x),coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
+    }else{
+        var.coef <- c(sigma2 = sigma(x)^2)
+    }
+
+    ## *** covariance parameters
+    cor.coef <- as.double(getVarCov(x))
+    names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
+    
+    ## *** update with user-specified values
     if(!is.null(p)){
-        p <- p[name.coef]
+        name.meancoef <- names(mean.coef) 
+        name.corcoef <- names(cor.coef)
+        name.varcoef <- names(var.coef)
+
+        if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
+            name.all <- c(name.meancoef,name.corcoef,name.varcoef)
+            stop("argument \'p\' is not correctly specified \n",
+                 "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
+        }
+        
+        mean.coef <- p[name.meancoef]
+        cor.coef <- p[name.corcoef]
+        var.coef <- p[name.varcoef]
     }
 
+    ## *** type of covariance matrix
+    class.var <- class(x$modelStruct$varStruct)[1]
+    class.cor <- class(x$modelStruct$corStruct)[1]
     
-### ** compute residuals
-    if(is.null(p)){
-        epsilon <- residuals(x, type = "response", level = 0)
-    }else{
-        epsilon <- x$fitted[,"fixed"]+x$residuals[,"fixed"] - model.matrix(formula(x), getData(x)) %*% p
-        # epsilon - residuals(x, type = "response", level = 0)
-    }
+### ** Prepare score
+    res.prepare <- prepareScore2(x, Y = Y, X = X, cluster = vec.group,                                
+                                 mean.coef = mean.coef, var.coef = var.coef, cor.coef = cor.coef,
+                                 class.var = class.var, class.cor = class.cor,
+                                 return.vcov.param = return.vcov.param, adjust.residuals = adjust.residuals)
 
-### ** identify groups
-    table.group <- table(vec.group)
-    Ugroup <- unique(vec.group)
-    n.group <- length(Ugroup)
-
-    ls.indexGroup <- lapply(1:n.group, function(iG){
-        which(vec.group==iG)
-    })
-    
-### ** Reconstruct covariance matrix
-    tau <- as.double(getVarCov(x))
-    sigma2.base <- sigma(x)^2
-    if(!is.null(x$modelStruct$varStruct)){
-        Usigma2 <- sigma2.base*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)^2
-        vec.sigma2 <- Usigma2[match(attr(x$modelStruct$varStruct,"groups"), names(Usigma2))]
-    }else{
-        vec.sigma2 <- rep(sigma2.base, NROW(data))
-    }
-    
-    ls.Omega <- lapply(1:n.group, function(iG){ # iG <- 1
-        n.tempo <- table.group[iG]        
-        sigma.tempo <- vec.sigma2[ls.indexGroup[[iG]]]
-        return(matrix(tau,nrow=n.tempo,ncol=n.tempo) + diag(sigma.tempo, n.tempo, n.tempo))
-    })
-    ls.iOmega <- lapply(ls.Omega, solve)
-    
-### ** compute variance covariance matrix (parameters)
-    vcov.param <- solve(t(X) %*% Matrix::bdiag(ls.iOmega) %*% X)
-    ## check
-    ## round(vcov.param - vcov(x),10)
-    
-    
 ### ** Compute score
-    score0 <- .score2_nlme(name.param = name.coef,
-                           dmu.dtheta = X, epsilon = epsilon,
-                           vcov.param = vcov.param, ls.Omega = ls.Omega, ls.iOmega = ls.iOmega,
-                           ls.indexGroup = ls.indexGroup, n.group = n.group, table.group = table.group,
-                           indiv = indiv, adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich)
-
+    out.score <- .score2(res.prepare$x.score2, epsilon = res.prepare$epsilon, vcov.param = res.prepare$vcov.param,
+                         Omega = res.prepare$Omega, iOmega = res.prepare$iOmega, Omega_chol = res.prepare$Omega_chol,
+                         adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                         return.vcov.param = return.vcov.param, indiv = indiv,
+                         name.param = res.prepare$name.param, n.param = res.prepare$n.param,
+                         n = res.prepare$n.cluster, n.endogenous = res.prepare$n.endogenous)     
+    
 ### ** Export
     if(return.vcov.param){
-        attr(score0,"vcov.param") <- vcov.param
+        attr(out.score,"vcov.param") <- res.prepare$vcov.param
     }
-    return(score0)
+    return(out.score)
 }
 
 ## * score2.lvmfit
+#' @rdname score2
+#' @export
 score2.lvmfit <- function(x, p = NULL, data = NULL, 
                           adjust.residuals = TRUE, power = 1/2,
                           indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
@@ -468,8 +396,6 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
                     name.param,
                     n, n.endogenous, n.latent, n.param){
 
-
-                                     
 ### ** Residuals
     if(adjust.residuals){
         ## *** gather derivatives
@@ -547,7 +473,6 @@ score2.lvmfit <- function(x, p = NULL, data = NULL,
             }
 
             if(!is.null(prepare.score2$dOmega.dtheta[[iName1]]) && !is.null(prepare.score2$dOmega.dtheta[[iName2]])){
-                ##    term2 <- n/2*tr(prepare.score2$dOmega.dtheta[[iName1]] %*% iOmega %*% iOmega %*% prepare.score2$dOmega.dtheta[[iName2]])
                 term2 <- n/2*tr(iOmega %*% prepare.score2$dOmega.dtheta[[iName1]] %*% iOmega %*% prepare.score2$dOmega.dtheta[[iName2]])
             }else{
                 term2 <- 0

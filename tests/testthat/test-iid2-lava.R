@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: okt 26 2017 (10:21) 
+## last-updated: nov  6 2017 (12:58) 
 ##           By: Brice Ozenne
-##     Update #: 102
+##     Update #: 103
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,9 +17,8 @@
 
 library(testthat)
 library(clubSandwich)
-library(nlme)
 
-context("iid2")
+context("iid2-lava")
 
 n <- 5e1
 

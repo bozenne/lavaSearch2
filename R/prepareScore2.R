@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  6 2017 (11:23) 
+## last-updated: nov  6 2017 (16:57) 
 ##           By: Brice Ozenne
-##     Update #: 160
+##     Update #: 209
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,6 +20,7 @@
 `prepareScore2` <-
   function(x, ...) UseMethod("prepareScore2")
 
+## * prepareScore2.lvmfit
 #' @rdname prepareScore2
 #' @export
 prepareScore2.lvmfit <- function(x, data = NULL){
@@ -245,6 +246,157 @@ prepareScore2.lvmfit <- function(x, data = NULL){
         toUpdate = toUpdate
     ))
 }
+
+## * prepareScore2.gls
+#' @rdname prepareScore2
+#' @export
+prepareScore2.gls <- function(x, Y, X, cluster,
+                              mean.coef, var.coef, cor.coef,
+                              class.var, class.cor,
+                              return.vcov.param, adjust.residuals){
+
+### ** group
+    table.cluster <- table(cluster)
+    Ucluster <- unique(cluster)
+    n.cluster <- length(Ucluster)
+
+### ** param
+    name.meancoef <- names(mean.coef)
+    name.corcoef <- names(cor.coef)
+    name.varcoef <- names(var.coef)
+    param <- c(mean.coef,cor.coef,var.coef)
+    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
+    n.param <- length(name.param)
+
+### ** outcome
+    if(class.var != "NULL"){
+        name.endogenous <- attr(x$modelStruct$varStruct,"groupName")
+        n.endogenous <- length(name.endogenous)
+        vec.rep <- attr(x$modelStruct$varStruct,"groups")
+        sigma2.base <- (sigma(x)*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2        
+    }else{
+        name.endogenous <- 1:max(table.cluster)
+        n.endogenous <- length(name.endogenous)
+        vec.rep <- unlist(lapply(table.cluster,function(iG){1:iG}))
+        sigma2.base <- rep(sigma(x)^2,n.endogenous)
+    }
+    ## convert observations from the vector format to the matrix format
+    index.obs <- cluster+(match(vec.rep,name.endogenous)-1)*n.cluster
+    
+### ** residuals
+    epsilon <- Y - X %*% mean.coef
+    M.epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)    
+    M.epsilon[index.obs] <- epsilon
+
+### ** Reconstruct variance covariance matrix (residuals)
+    if(class.cor != "NULL"){
+        if(class(x)=="gls"){
+            Omega <- unclass(getVarCov(x, individual = 1))
+        }else{
+            Omega <- getVarCov(x, individual = 1, type = "marginal")[[1]]
+        }
+    }else{        
+        Omega <- diag(sigma2.base, n.endogenous, n.endogenous)        
+    }
+    Omega_chol <- chol(Omega)
+    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
+    
+### ** Prepare score
+    x.score2 <- list()
+    x.score2$dmu.dtheta <- lapply(name.meancoef, function(iCoef){
+        M.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)    
+        M.tempo[index.obs] <- X[,iCoef]
+        return(M.tempo)
+    })
+    names(x.score2$dmu.dtheta) <- name.meancoef
+
+    x.score2$type <- c(rep("K", length(name.meancoef)),
+                       rep("Sigma_cov", length(name.corcoef)),
+                       rep("Sigma_var", length(name.varcoef))
+                       )
+    if(any("(Intercept)" %in% name.param)){
+        x.score2$type[name.param %in% "(Intercept)"] <- "nu"
+    }
+
+    x.score2$dOmega.dtheta <- list()
+
+    ## sigma2
+    param["corCoef1"]*param["sigma2"]+param["sigma2"]
+
+    x.score2$dOmega.dtheta[["sigma2"]] <- diag(sigma2.base/param["sigma2"],n.endogenous,n.endogenous)
+    if(class.cor != "NULL"){
+        x.score2$dOmega.dtheta[["sigma2"]][lower.tri(Omega)] <- Omega[lower.tri(Omega)]/param["sigma2"]
+        x.score2$dOmega.dtheta[["sigma2"]][upper.tri(Omega)] <- Omega[upper.tri(Omega)]/param["sigma2"]
+    }
+  
+    ## other sigma
+    if(class.var != "NULL"){
+        for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
+            index.iVar <- name.endogenous %in% iVar 
+            x.score2$dOmega.dtheta[[iVar]] <- param["sigma2"]*diag(index.iVar,n.endogenous,n.endogenous)
+
+            if(class.cor != "NULL"){
+                index2.iVar <- setdiff(1:n.endogenous,which(index.iVar))                
+                x.score2$dOmega.dtheta[[iVar]][index2.iVar,index.iVar] <- Omega[index2.iVar,index.iVar]/param[iVar]
+                x.score2$dOmega.dtheta[[iVar]][index.iVar,index2.iVar] <- Omega[index.iVar,index2.iVar]/param[iVar]
+            }        
+        }
+    }
+
+    ## correlation coefficients
+    if(class.cor != "NULL"){
+        if(class.cor == "corCompSymm"){            
+            x.score2$dOmega.dtheta[[name.corcoef]] <- sqrt(sigma2.base) %*% t(sqrt(sigma2.base)) - diag(diag(Omega))
+            diag(x.score2$dOmega.dtheta[[name.corcoef]]) <- 0        
+        }else if(class.cor == "corSymm"){
+            for(iVar in name.corcoef){ # iVar <- name.corcoef[1]
+                x.score2$dOmega.dtheta[[iVar]] <- matrix(0, nrow = n.endogenous, ncol = n.endogenous)
+                index.iVar <- c(which(lower.tri(Omega))[iVar == name.corcoef],
+                                which(upper.tri(Omega))[iVar == name.corcoef])
+                x.score2$dOmega.dtheta[[iVar]][index.iVar] <- Omega[index.iVar]/param[iVar]
+                
+            }
+        }
+    }else if("lme" %in% class(x)){
+        x.score2$dOmega.dtheta[[name.corcoef]] <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
+    }
+
+    x.score2$toUpdate <- setNames(rep(FALSE,n.param),name.param)
+
+### ** compute variance covariance matrix (parameters)
+    if(return.vcov.param || adjust.residuals){
+        Info <- .information2(x.score2, iOmega = iOmega,
+                              n.param = n.param, name.param = name.param)
+        vcov.param <- chol2inv(chol(Info))
+        rownames(vcov.param) <- rownames(Info)
+        colnames(vcov.param) <- colnames(Info)
+        ## factor <- (x$dims$N - (x$method == "REML") * x$dims$p)/(x$dims$N-x$dims$p)
+        ## vcov.param[rownames(vcov(x)),colnames(vcov(x))] - vcov(x) / factor
+    }else{
+        vcov.param <- NULL
+    }
+
+### ** export
+    return(list(x.score2 = x.score2,
+                vcov.param = vcov.param,
+                Omega = Omega,
+                Omega_chol = Omega_chol,
+                iOmega = iOmega,
+                epsilon = M.epsilon,
+                param = param,
+                name.param = name.param,
+                n.param = n.param,
+                n.cluster = n.cluster,
+                name.endogenous =  name.endogenous,
+                n.endogenous =  n.endogenous))
+    
+}
+
+## * prepareScore2.lme
+#' @rdname prepareScore2
+#' @export
+prepareScore2.lme <- prepareScore2.gls
+
 
 #----------------------------------------------------------------------
 ### prepareScore2.R ends here

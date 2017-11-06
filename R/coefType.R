@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: okt 27 2017 (17:52) 
+## last-updated: nov  6 2017 (17:05) 
 ##           By: Brice Ozenne
-##     Update #: 326
+##     Update #: 330
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -160,7 +160,7 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
     ls.Y$intercept <- ls.name$intercept
     ls.X$intercept <- rep(NA, n.intercept)    
     ls.type$intercept <- rep("intercept", n.intercept)
-    ls.value$intercept <- unlist(x$mean)
+    ls.value$intercept <- lapply(x$mean, function(iP){if(is.numeric(iP)){iP}else{NA}})
     ls.param$intercept <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
                                 iPar = unlist(x$mean),
                                 iFix = !is.na(ls.value$intercept),

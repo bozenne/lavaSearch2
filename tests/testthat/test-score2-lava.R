@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: nov  6 2017 (11:53) 
+## last-updated: nov  6 2017 (12:58) 
 ##           By: Brice Ozenne
-##     Update #: 165
+##     Update #: 166
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 library(testthat)
 library(lava.tobit)
 
-context("score2")
+context("score2-lava")
 n <- 5e1
 
 ## * linear regression
