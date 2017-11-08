@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: nov  6 2017 (12:58) 
+## last-updated: nov  8 2017 (14:32) 
 ##           By: Brice Ozenne
-##     Update #: 166
+##     Update #: 167
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -297,7 +297,7 @@ test_that("2 factor model, covariance (not at ML: +1:p)",{
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta2 ~ X1
-regression(m) <- eta1 ~ eta2+X2
+regression(m) <- eta1 ~ eta2+X2+X3
 
 e <- estimate(m,d)
 param <- coef(e)

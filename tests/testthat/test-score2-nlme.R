@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: nov  6 2017 (17:06) 
+## last-updated: nov  8 2017 (21:57) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 29
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,6 +14,7 @@
 #----------------------------------------------------------------------
 ## 
 ### Code:
+
 
 library(testthat)
 library(nlme)
@@ -114,37 +115,47 @@ test_that("score2.lme equivalent to score2.lvm", {
     score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
     # colSums(abs(score.lvm - score(e.lvm, indiv = TRUE)))
-
-    head(score.lme)
-    head(score.lvm)
-    expect_equal(unname(score.lme[,1:4]),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    
+    expect_equal(unname(score.lme[,c(1:4,6,5)]),unname(score.lvm))
     expect_equal(score.lme,score.lme.p)
     
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
     score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 1)
 
-    expect_equal(unname(score.lme[,1:4]),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    expect_equal(unname(score.lme[,c(1:4,6,5)]),unname(score.lvm))
     expect_equal(score.lme,score.lme.p)
     
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
     score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
     score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
 
-    expect_equal(unname(score.lme[,1:4]),unname(score.lvm[,c("eta","Y2","Y3","eta~G")]), tol = 1e-5)
+    expect_equal(unname(score.lme[,c(1:4,6,5)]),unname(score.lvm))
     expect_equal(score.lme,score.lme.p)
 })
 
 ## ** gls vs. lme models 
 e.gls <- gls(value ~ time*G,
              correlation = corCompSymm(form =~ 1 | Id),
-             weight = varIdent(form = ~ 1|time),
+#             weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
+
+score2(e.gls, adjust.residuals = FALSE, indiv = TRUE)
 
 e.lme <- lme(value ~ time*G,
              random =~1| Id,
-             weight = varIdent(form = ~ 1|time),
+#             weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
+
+score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
+
+logLik(e.gls)
+logLik(e.lme)
+
+name.coef <- names(coef(e.gls))
+
+getVarCov(e.lme, type = "marginal")
+sigma(e.lme)^2+as.double(getVarCov(e.lme))
 
 test_that("lme equivalent to gls", {
     expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
@@ -160,19 +171,23 @@ test_that("lme equivalent to gls", {
     expect_equal(as.double(coef.lme),as.double(coef.gls), tol = 1e-7)
 })
 
+score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE)
+
 test_that("score.lme equivalent to score.gls", {
     score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
     score.gls <- score2(e.gls, adjust.residuals = FALSE, indiv = TRUE)
 
+    expect_equal(unname(score.lme[,name.coef]),unname(score.gls[,name.coef]), tol = 1e-7)
+    
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 1)
     score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE, power = 1)
-        
-    expect_equal(unname(score.lme),unname(score.gls), tol = 1e-5)
-    
+
+    expect_equal(unname(score.lme[,name.coef]),unname(score.gls[,name.coef]), tol = 1e-7)
+
     score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
     score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE, power = 0.5)
 
-    expect_equal(unname(score.lme),unname(score.gls), tol = 1e-5)
+    expect_equal(unname(score.lme[,name.coef]),unname(score.gls[,name.coef]), tol = 1e-7)
 })
 
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  6 2017 (16:57) 
+## last-updated: nov  8 2017 (21:56) 
 ##           By: Brice Ozenne
-##     Update #: 209
+##     Update #: 356
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,48 +15,71 @@
 ## 
 ### Code:
 
+#' @title Prepare the computation of score2.
+#' @description Prepare the computation of score2.
 #' @name prepareScore2
+#' 
+#' @param object a latent variable model
+#' @param data [optional] data set.
+#' @param name.endogenous [optional] name of the endogenous variables
+#' @param n.endogenous [optional] number of endogenous variables
+#' @param name.latent [optional] name of the latent variables
+#' @param n.latent [optional] number of latent variables
+#' 
+#' @examples
+#' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
+#' latent(m) <- ~eta
+#'
+#' e <- estimate(m,sim(m,1e2))
+#' prepareScore2(e)
 #' @export
 `prepareScore2` <-
-  function(x, ...) UseMethod("prepareScore2")
+  function(object, ...) UseMethod("prepareScore2")
 
 ## * prepareScore2.lvmfit
 #' @rdname prepareScore2
 #' @export
-prepareScore2.lvmfit <- function(x, data = NULL){
+prepareScore2.lvmfit <- function(object, data = NULL,
+                                 name.endogenous = NULL, n.endogenous = NULL,
+                                 name.latent = NULL, n.latent = NULL){
 
-### ** extract parameters
-    dt.param.all <- coefType(x, as.lava = FALSE)
-    dt.param <- dt.param.all[is.na(value) & factice == FALSE]
-    Utype.by.detail <- dt.param[,.(n.type = length(unique(detail))), by = param][["n.type"]]
-    if(any(Utype.by.detail>1)){
-        stop("cannot constrain two parameters of different types to be equal \n")
-    }
+### ** normalize arguments
+    if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
+    if(is.null(n.endogenous)){n.endogenous <- length(name.endogenous)}
+    if(is.null(name.latent)){name.latent <- latent(object)}
+    if(is.null(n.latent)){n.latent <- length(name.latent)}
 
-### ** extract data
     if(is.null(data)){
-        data <- model.frame(x)
+        data <- model.frame(object)
     }
     if(!is.matrix(data)){
         data <- as.matrix(data)
     }
     
-### ** prepare
-    name.param <- dt.param[!duplicated(param),param]
-    param2originalLink <- dt.param.all[!is.na(param)&!is.na(lava)][,setNames(originalLink,param)]
-    name.originalLink <- as.character(param2originalLink)
-    n.param <- length(name.param)
-    
-    n <- NROW(data)
+### ** Compute skeleton
+    resSkeleton <- skeleton(object,
+                            name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                            name.latent = name.latent, n.latent = n.latent,
+                            as.lava = TRUE, update.value = FALSE)
 
-    name.endogenous <- endogenous(x)
-    n.endogenous <- length(name.endogenous)
-    name.latent <- latent(x)
-    n.latent <- length(name.latent)
+    dt.param.all <- resSkeleton$dt.param
+    dt.param <- dt.param.all[is.na(value) & factice == FALSE]
+    Utype.by.detail <- dt.param[,.(n.type = length(unique(detail))), by = param][["n.type"]]
+    if(any(Utype.by.detail>1)){
+        stop("cannot constrain two parameters of different types to be equal \n")
+    }
+    name.param <- dt.param[!duplicated(param),param]
+    n.param <- length(name.param)
+
+    param2originalLink <- resSkeleton$param2originalLink
+    name.originalLink <- as.character(param2originalLink)
+    
+### ** prepare
+    n <- NROW(data)
     name.data <- colnames(data)
     
     mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
-    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")
+    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
     dmu.dtheta <- list()
     dOmega.dtheta <- list()
     dLambda.dtheta <- list()
@@ -65,85 +88,8 @@ prepareScore2.lvmfit <- function(x, data = NULL){
 
     type <- setNames(vector(mode = "character", n.param),name.originalLink)
     toUpdate <- setNames(vector(mode = "logical", n.param),name.originalLink)
-  
-### ** prepare the computation of the residual variance covariance matrix
-    skeleton <- list()
     
-    ## Sigma
-    Sigma <- matrix(0,nrow = n.endogenous, ncol = n.endogenous,
-                    dimnames = list(name.endogenous,name.endogenous))
-    skeleton$Sigma <- matrix(as.character(NA),nrow = n.endogenous, ncol = n.endogenous,
-                             dimnames = list(name.endogenous,name.endogenous))
-    dt.tempo <- dt.param.all[detail %in% c("Sigma_var","Sigma_cov"), .(index = which(name.endogenous %in% X) + n.endogenous*(which(name.endogenous %in% Y)-1), param, value), by = name]
-    skeleton$Sigma[dt.tempo[is.na(value)]$index] <- param2originalLink[dt.tempo[is.na(value),param]]
-    Sigma[dt.tempo[!is.na(value)]$index] <- dt.tempo[!is.na(value),value]
-
-    Sigma[upper.tri(Sigma, diag = FALSE)] <- Sigma[lower.tri(Sigma, diag = FALSE)]
-    skeleton$Sigma[upper.tri(Sigma, diag = FALSE)] <- skeleton$Sigma[lower.tri(Sigma, diag = FALSE)]
-    Sigma[!is.na(skeleton$Sigma)] <- NA
-    
-    ## Psi
-    Psi <- matrix(0,nrow = n.latent, ncol = n.latent,
-                  dimnames = list(name.latent,name.latent))
-    skeleton$Psi <- matrix(as.character(NA),nrow = n.latent, ncol = n.latent,
-                           dimnames = list(name.latent,name.latent))
-    if(n.latent>0){
-        dt.tempo <- dt.param.all[detail %in% c("Psi_var","Psi_cov"), .(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value), by = name]
-        skeleton$Psi[dt.tempo[is.na(value)]$index] <- param2originalLink[dt.tempo[is.na(value),param]]
-        Psi[dt.tempo[!is.na(value)]$index] <- dt.tempo[!is.na(value),value]
-
-        Psi[upper.tri(Psi, diag = FALSE)] <- Psi[lower.tri(Psi, diag = FALSE)]
-        skeleton$Psi[upper.tri(Psi, diag = FALSE)] <- skeleton$Psi[lower.tri(Psi, diag = FALSE)]
-        Psi[!is.na(skeleton$Psi)] <- NA
-    }
-
-    ## B
-    B <- matrix(0,nrow = n.latent, ncol = n.latent,
-                dimnames = list(name.latent,name.latent))
-    skeleton$B <- matrix(as.character(NA),nrow = n.latent, ncol = n.latent,
-                         dimnames = list(name.latent,name.latent))
-    if(n.latent>0){
-        if(any("B" %in% dt.param.all$detail)){
-            dt.tempo <- dt.param.all[detail == "B", .(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value), by = name]
-            skeleton$B[dt.tempo[is.na(value)]$index] <- param2originalLink[dt.tempo[is.na(value),param]]
-            B[dt.tempo[!is.na(value)]$index] <- dt.tempo[!is.na(value),value]
-            B[!is.na(skeleton$B)] <- NA            
-        }
-    }
-
-    ## Lambda
-    Lambda <- matrix(0,nrow = n.latent, ncol = n.endogenous,
-                     dimnames = list(name.latent,name.endogenous))
-    skeleton$Lambda <- matrix(as.character(NA),nrow = n.latent, ncol = n.endogenous,
-                              dimnames = list(name.latent,name.endogenous))
-    if(n.latent>0){
-        dt.tempo <- dt.param.all[detail %in% "Lambda", .(index = which(name.latent %in% X) + n.latent*(which(name.endogenous %in% Y)-1), param, value), by = name]
-        skeleton$Lambda[dt.tempo[is.na(value)]$index] <- param2originalLink[dt.tempo[is.na(value),param]]
-        Lambda[dt.tempo[!is.na(value)]$index] <- dt.tempo[!is.na(value),value]
-        Lambda[!is.na(skeleton$Lambda)] <- NA
-    }
-
-    ## alpha + X Gamma
-    alpha <- dt.param.all[detail=="alpha",value,by="name"][["value"]]
-    skeleton$alpha <- param2originalLink[dt.param.all[detail=="alpha",value,by="param"][["param"]]]
-
-    dt.tempo <- dt.param.all[detail=="Gamma",value,by="Y"]
-    Gamma <- setNames(lapply(1:n.latent, function(iLatent){
-        dt.tempo$value[dt.tempo$Y==name.latent[iLatent]]
-    }), name.latent)
-
-
-    dt.tempo <- dt.param.all[detail=="Gamma",param,by="Y"]
-    skeleton$Gamma <- setNames(lapply(1:n.latent, function(iLatent){
-        param2originalLink[dt.tempo$param[dt.tempo$Y==name.latent[iLatent]]]
-    }), name.latent)
-    
-    dt.tempo <- dt.param.all[detail=="Gamma",X,by="Y"]
-    skeleton$XGamma <- setNames(lapply(1:n.latent, function(iLatent){
-        dt.tempo$X[dt.tempo$Y==name.latent[iLatent]]
-    }), name.latent) 
-
-### ** compute derivative or prepare for the derivative
+### ** Compute derivative or prepare for the derivative
     for(iName in name.param){ # iName <- name.param[1]
         iName2 <- as.character(param2originalLink[iName])
         type[iName2] <- unique(dt.param[param == iName,detail])
@@ -226,7 +172,7 @@ prepareScore2.lvmfit <- function(x, data = NULL){
             toUpdate[iName2] <- TRUE
         } 
     }
-
+    
 ### ** export
 
     return(list(
@@ -235,167 +181,197 @@ prepareScore2.lvmfit <- function(x, data = NULL){
         dLambda.dtheta = dLambda.dtheta,
         dB.dtheta = dB.dtheta,
         dPsi.dtheta = dPsi.dtheta,
-        skeleton = skeleton,
-        alpha = alpha,
-        Gamma = Gamma,
-        Sigma = Sigma,
-        Psi = Psi,
-        B = B,
-        Lambda = Lambda,
+        skeleton = resSkeleton$skeleton,
+        value = resSkeleton$value,
         type = type,
         toUpdate = toUpdate
     ))
+    
 }
 
 ## * prepareScore2.gls
 #' @rdname prepareScore2
 #' @export
-prepareScore2.gls <- function(x, Y, X, cluster,
-                              mean.coef, var.coef, cor.coef,
-                              class.var, class.cor,
-                              return.vcov.param, adjust.residuals){
+prepareScore2.gls <- function(object, X, Omega,
+                              var.coef, cor.coef,
+                              n.cluster, n.endogenous, name.endogenous, index.obs){
 
-### ** group
-    table.cluster <- table(cluster)
-    Ucluster <- unique(cluster)
-    n.cluster <- length(Ucluster)
-
-### ** param
-    name.meancoef <- names(mean.coef)
-    name.corcoef <- names(cor.coef)
+### ** prepare
+    class.var <- class(object$modelStruct$varStruct)
+    class.cor <- class(object$modelStruct$corStruct)
     name.varcoef <- names(var.coef)
-    param <- c(mean.coef,cor.coef,var.coef)
-    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
-    n.param <- length(name.param)
-
-### ** outcome
-    if(class.var != "NULL"){
-        name.endogenous <- attr(x$modelStruct$varStruct,"groupName")
-        n.endogenous <- length(name.endogenous)
-        vec.rep <- attr(x$modelStruct$varStruct,"groups")
-        sigma2.base <- (sigma(x)*coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2        
-    }else{
-        name.endogenous <- 1:max(table.cluster)
-        n.endogenous <- length(name.endogenous)
-        vec.rep <- unlist(lapply(table.cluster,function(iG){1:iG}))
-        sigma2.base <- rep(sigma(x)^2,n.endogenous)
-    }
-    ## convert observations from the vector format to the matrix format
-    index.obs <- cluster+(match(vec.rep,name.endogenous)-1)*n.cluster
+    name.corcoef <- names(cor.coef)
+    n.varcoef <- length(var.coef)
+    n.corcoef <- length(cor.coef)
     
-### ** residuals
-    epsilon <- Y - X %*% mean.coef
-    M.epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)    
-    M.epsilon[index.obs] <- epsilon
-
-### ** Reconstruct variance covariance matrix (residuals)
-    if(class.cor != "NULL"){
-        if(class(x)=="gls"){
-            Omega <- unclass(getVarCov(x, individual = 1))
-        }else{
-            Omega <- getVarCov(x, individual = 1, type = "marginal")[[1]]
-        }
-    }else{        
-        Omega <- diag(sigma2.base, n.endogenous, n.endogenous)        
+    if("corSymm" %in% class.cor){
+        M.corcoef <- matrix("", n.endogenous, n.endogenous,
+                            dimnames = list(name.endogenous,name.endogenous))
+        M.corcoef[lower.tri(M.corcoef)] <- name.corcoef
+        M.corcoef[upper.tri(M.corcoef)] <- name.corcoef
     }
-    Omega_chol <- chol(Omega)
-    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
-    
-### ** Prepare score
-    x.score2 <- list()
-    x.score2$dmu.dtheta <- lapply(name.meancoef, function(iCoef){
+        
+### ** score - mean
+    name.X <- colnames(X)
+    dmu.dtheta <- lapply(name.X, function(iCoef){
         M.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)    
         M.tempo[index.obs] <- X[,iCoef]
+        colnames(M.tempo) <- name.endogenous
         return(M.tempo)
     })
-    names(x.score2$dmu.dtheta) <- name.meancoef
+    names(dmu.dtheta) <- name.X
 
-    x.score2$type <- c(rep("K", length(name.meancoef)),
-                       rep("Sigma_cov", length(name.corcoef)),
-                       rep("Sigma_var", length(name.varcoef))
-                       )
-    if(any("(Intercept)" %in% name.param)){
-        x.score2$type[name.param %in% "(Intercept)"] <- "nu"
-    }
+### ** score - variance/covariance
+    dOmega.dtheta <- vector(mode = "list", length = n.corcoef + n.varcoef)
+    names(dOmega.dtheta) <- c(name.corcoef, name.varcoef)
 
-    x.score2$dOmega.dtheta <- list()
+    for(iC in 1:n.cluster){ # iC <- 1
+        iOmega <- Omega[[iC]]
+        iSigma2.base <- diag(iOmega)
+        iN.endogenous <- length(iSigma2.base)
+        iName.endogenous <- colnames(iOmega)
 
-    ## sigma2
-    param["corCoef1"]*param["sigma2"]+param["sigma2"]
-
-    x.score2$dOmega.dtheta[["sigma2"]] <- diag(sigma2.base/param["sigma2"],n.endogenous,n.endogenous)
-    if(class.cor != "NULL"){
-        x.score2$dOmega.dtheta[["sigma2"]][lower.tri(Omega)] <- Omega[lower.tri(Omega)]/param["sigma2"]
-        x.score2$dOmega.dtheta[["sigma2"]][upper.tri(Omega)] <- Omega[upper.tri(Omega)]/param["sigma2"]
-    }
-  
-    ## other sigma
-    if(class.var != "NULL"){
-        for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
-            index.iVar <- name.endogenous %in% iVar 
-            x.score2$dOmega.dtheta[[iVar]] <- param["sigma2"]*diag(index.iVar,n.endogenous,n.endogenous)
-
-            if(class.cor != "NULL"){
-                index2.iVar <- setdiff(1:n.endogenous,which(index.iVar))                
-                x.score2$dOmega.dtheta[[iVar]][index2.iVar,index.iVar] <- Omega[index2.iVar,index.iVar]/param[iVar]
-                x.score2$dOmega.dtheta[[iVar]][index.iVar,index2.iVar] <- Omega[index.iVar,index2.iVar]/param[iVar]
-            }        
+        ## *** sigma2
+        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],iN.endogenous,iN.endogenous)
+        if("NULL" %in% class.cor){
+            dOmega.dtheta[["sigma2"]][[iC]][lower.tri(iOmega)] <- iOmega[lower.tri(iOmega)]/var.coef["sigma2"]
+            dOmega.dtheta[["sigma2"]][[iC]][upper.tri(iOmega)] <- iOmega[upper.tri(iOmega)]/var.coef["sigma2"]
+            colnames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
+            rownames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
         }
-    }
+  
+        ## *** other sigma
+        if("NULL" %in% class.var){
+            for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
+                index.iVar <- iName.endogenous %in% iVar 
+                dOmega.dtheta[[iVar]][[iC]] <- var.coef["sigma2"]*diag(index.iVar,iN.endogenous,iN.endogenous)
 
-    ## correlation coefficients
-    if(class.cor != "NULL"){
-        if(class.cor == "corCompSymm"){            
-            x.score2$dOmega.dtheta[[name.corcoef]] <- sqrt(sigma2.base) %*% t(sqrt(sigma2.base)) - diag(diag(Omega))
-            diag(x.score2$dOmega.dtheta[[name.corcoef]]) <- 0        
-        }else if(class.cor == "corSymm"){
-            for(iVar in name.corcoef){ # iVar <- name.corcoef[1]
-                x.score2$dOmega.dtheta[[iVar]] <- matrix(0, nrow = n.endogenous, ncol = n.endogenous)
-                index.iVar <- c(which(lower.tri(Omega))[iVar == name.corcoef],
-                                which(upper.tri(Omega))[iVar == name.corcoef])
-                x.score2$dOmega.dtheta[[iVar]][index.iVar] <- Omega[index.iVar]/param[iVar]
-                
+                if("NULL" %in% class.cor){
+                    index2.iVar <- setdiff(1:iN.endogenous,which(index.iVar))                
+                    dOmega.dtheta[[iVar]][[iC]][index2.iVar,index.iVar] <- iOmega[index2.iVar,index.iVar]/var.coef[iVar]
+                    dOmega.dtheta[[iVar]][[iC]][index.iVar,index2.iVar] <- iOmega[index.iVar,index2.iVar]/var.coef[iVar]
+                }
+                colnames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
+                rownames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
             }
         }
-    }else if("lme" %in% class(x)){
-        x.score2$dOmega.dtheta[[name.corcoef]] <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
+
+        ## *** correlation coefficients
+        if("corCompSymm" %in% class.cor){            
+            dOmega.dtheta[[name.corcoef]][[iC]] <- sqrt(iSigma2.base) %*% t(sqrt(iSigma2.base)) - diag(diag(iOmega))
+            colnames(dOmega.dtheta[[name.corcoef]][[iC]]) <- iName.endogenous
+            rownames(dOmega.dtheta[[name.corcoef]][[iC]]) <- iName.endogenous
+        }else if("corSymm" %in% class.cor){
+            iM.corcoef <- M.corcoef[iName.endogenous,iName.endogenous,drop=FALSE]
+            for(iVar in name.corcoef){ # iVar <- name.corcoef[1]
+                dOmega.dtheta[[iVar]][[iC]] <- matrix(0, nrow = iN.endogenous, ncol = iN.endogenous)
+                index.iVar <- which(iM.corcoef == iVar)
+                dOmega.dtheta[[iVar]][[iC]][index.iVar] <- iOmega[index.iVar]/cor.coef[iVar]
+                colnames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
+                rownames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
+            }
+        }
     }
-
-    x.score2$toUpdate <- setNames(rep(FALSE,n.param),name.param)
-
-### ** compute variance covariance matrix (parameters)
-    if(return.vcov.param || adjust.residuals){
-        Info <- .information2(x.score2, iOmega = iOmega,
-                              n.param = n.param, name.param = name.param)
-        vcov.param <- chol2inv(chol(Info))
-        rownames(vcov.param) <- rownames(Info)
-        colnames(vcov.param) <- colnames(Info)
-        ## factor <- (x$dims$N - (x$method == "REML") * x$dims$p)/(x$dims$N-x$dims$p)
-        ## vcov.param[rownames(vcov(x)),colnames(vcov(x))] - vcov(x) / factor
-    }else{
-        vcov.param <- NULL
-    }
-
+    
 ### ** export
-    return(list(x.score2 = x.score2,
-                vcov.param = vcov.param,
-                Omega = Omega,
+    Omega_chol <- lapply(Omega,function(i){
+        M <- chol(i)
+        colnames(M) <- colnames(i)
+        rownames(M) <- rownames(i)
+        return(M)
+    })
+    iOmega <- lapply(Omega_chol,function(i){
+        M <- chol2inv(i)
+        colnames(M) <- colnames(i)
+        rownames(M) <- rownames(i)
+        return(M)
+    }) ## faster compared to solve
+    
+    return(list(dmu.dtheta = dmu.dtheta,
+                dOmega.dtheta = dOmega.dtheta,
                 Omega_chol = Omega_chol,
-                iOmega = iOmega,
-                epsilon = M.epsilon,
-                param = param,
-                name.param = name.param,
-                n.param = n.param,
-                n.cluster = n.cluster,
-                name.endogenous =  name.endogenous,
-                n.endogenous =  n.endogenous))
+                iOmega = iOmega))
     
 }
 
 ## * prepareScore2.lme
 #' @rdname prepareScore2
 #' @export
-prepareScore2.lme <- prepareScore2.gls
+prepareScore2.lme <- function(object, X, Omega,
+                              var.coef, cor.coef,
+                              n.cluster, n.endogenous, name.endogenous, index.obs){
+
+### ** prepare
+    class.var <- class(object$modelStruct$varStruct)
+    name.varcoef <- names(var.coef)
+    name.corcoef <- names(cor.coef)
+    n.varcoef <- length(var.coef)
+    n.corcoef <- length(cor.coef)
+    
+### ** score - mean
+    name.X <- colnames(X)
+    dmu.dtheta <- lapply(name.X, function(iCoef){
+        M.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)    
+        M.tempo[index.obs] <- X[,iCoef]
+        colnames(M.tempo) <- name.endogenous
+        return(M.tempo)
+    })
+    names(dmu.dtheta) <- name.X
+
+### ** score - variance/covariance
+    dOmega.dtheta <- vector(mode = "list", length = n.corcoef + n.varcoef)
+    names(dOmega.dtheta) <- c(name.corcoef, name.varcoef)
+
+    for(iC in 1:n.cluster){ # iC <- 1
+        iOmega <- Omega[[iC]]
+        iSigma2.base <- diag(iOmega)
+        iN.endogenous <- length(iSigma2.base)
+        iName.endogenous <- colnames(iOmega)
+
+        ## *** sigma2
+        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],iN.endogenous,iN.endogenous)
+        dOmega.dtheta[["sigma2"]][[iC]][lower.tri(iOmega)] <- iOmega[lower.tri(iOmega)]/var.coef["sigma2"]
+        dOmega.dtheta[["sigma2"]][[iC]][upper.tri(iOmega)] <- iOmega[upper.tri(iOmega)]/var.coef["sigma2"]
+        colnames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
+        rownames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
+        
+        ## *** other sigma
+        if("NULL" %in% class.var){
+            for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
+                index.iVar <- iName.endogenous %in% iVar 
+                dOmega.dtheta[[iVar]][[iC]] <- var.coef["sigma2"]*diag(index.iVar,iN.endogenous,iN.endogenous)
+                colnames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
+                rownames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
+            }
+        }
+
+        ## *** correlation coefficients
+        dOmega.dtheta[[name.corcoef]][[iC]] <- matrix(1, nrow = iN.endogenous, ncol = iN.endogenous,
+                                                      dimnames = list(iName.endogenous,iName.endogenous))
+    }
+    
+### ** export
+    Omega_chol <- lapply(Omega,function(i){
+        M <- chol(i)
+        colnames(M) <- colnames(i)
+        rownames(M) <- rownames(i)
+        return(M)
+    })
+    iOmega <- lapply(Omega_chol,function(i){
+        M <- chol2inv(i)
+        colnames(M) <- colnames(i)
+        rownames(M) <- rownames(i)
+        return(M)
+    }) ## faster compared to solve
+    
+    return(list(dmu.dtheta = dmu.dtheta,
+                dOmega.dtheta = dOmega.dtheta,
+                Omega_chol = Omega_chol,
+                iOmega = iOmega))
+    
+}
+    
+
 
 
 #----------------------------------------------------------------------

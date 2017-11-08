@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: okt 27 2017 (10:00) 
+## last-updated: nov  7 2017 (19:14) 
 ##           By: Brice Ozenne
-##     Update #: 306
+##     Update #: 310
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -184,7 +184,7 @@ iid2.lme <- function(x, p = NULL, data = NULL,
 #' @rdname iid2
 #' @export
 iid2.lvmfit <- function(x, p = NULL, data = NULL, 
-                        adjust.residuals = TRUE, Dmethod = FALSE, power = 1/2, 
+                        adjust.residuals = TRUE, power = 1/2, 
                         return.df = TRUE, check.score = TRUE, ...){
 
     if(is.null(data)){
@@ -199,10 +199,9 @@ iid2.lvmfit <- function(x, p = NULL, data = NULL,
     
 ### ** compute the score
     if(check.score){
-        browser()
         S1 <- score2(x, p = p, data = data,
-                     adjust.residuals = FALSE, Dmethod = "simple",
-                     indiv = TRUE)
+                     adjust.residuals = FALSE,
+                     indiv = TRUE, return.vcov.param = FALSE)
         S2 <- score(x, p = p, indiv = TRUE)
         if(max(abs(S1-S2))>1e-10){
             stop("score2 does not match score \n",
