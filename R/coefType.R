@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: nov  6 2017 (17:05) 
+## last-updated: nov  9 2017 (12:03) 
 ##           By: Brice Ozenne
-##     Update #: 330
+##     Update #: 339
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -153,39 +153,45 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
     ls.value <- list()
     ls.param <- list()
     ls.marginal <- list()
-    
-    ## *** intercept
-    ls.name$intercept <- names(x$mean)
-    n.intercept <- length(ls.name$intercept)
-    ls.Y$intercept <- ls.name$intercept
-    ls.X$intercept <- rep(NA, n.intercept)    
-    ls.type$intercept <- rep("intercept", n.intercept)
-    ls.value$intercept <- lapply(x$mean, function(iP){if(is.numeric(iP)){iP}else{NA}})
-    ls.param$intercept <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
-                                iPar = unlist(x$mean),
-                                iFix = !is.na(ls.value$intercept),
-                                iName = ls.name$intercept)
-                            )
-    ls.marginal$intercept <-  ls.name$intercept %in% exogenous(x)
 
+    ## *** intercept
+    n.intercept <- length(x$mean)
+    if(n.intercept>0){
+        ls.name$intercept <- names(x$mean)    
+    
+        ls.Y$intercept <- ls.name$intercept
+        ls.X$intercept <- rep(NA, n.intercept)    
+        ls.type$intercept <- rep("intercept", n.intercept)
+        ls.value$intercept <- lapply(x$mean, function(iP){if(is.numeric(iP)){iP}else{NA}})
+        ls.param$intercept <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                         iPar = unlist(x$mean),
+                                         iFix = !is.na(ls.value$intercept),
+                                         iName = ls.name$intercept)
+                                     )
+        ls.marginal$intercept <-  ls.name$intercept %in% exogenous(x)
+    }
+    
     ## *** regression
     arrIndex.regression <- which(x$M==1, arr.ind = TRUE)
     index.regression <- which(x$M==1, arr.ind = FALSE)
-
-    ls.Y$regression <- colnames(x$M)[arrIndex.regression[,"col"]]
-    ls.X$regression <- rownames(x$M)[arrIndex.regression[,"row"]]
-    ls.name$regression <- paste0(ls.Y$regression,
-                                 lava.options()$symbols[1],
-                                 ls.X$regression)
-    n.regression <- length(ls.name$regression)
-    ls.type$regression <- rep("regression", n.regression)    
-    ls.value$regression <- x$fix[index.regression]
-    ls.param$regression <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
-                                      iPar = x$par[index.regression],
-                                      iFix = !is.na(ls.value$regression),
-                                      iName = ls.name$regression)
-                                  )
-    ls.marginal$regression <- rep(FALSE,n.regression)
+    n.regression <- length(index.regression)
+    if(n.regression>0){
+    
+        ls.Y$regression <- colnames(x$M)[arrIndex.regression[,"col"]]
+        ls.X$regression <- rownames(x$M)[arrIndex.regression[,"row"]]
+        ls.name$regression <- paste0(ls.Y$regression,
+                                     lava.options()$symbols[1],
+                                     ls.X$regression)
+    
+        ls.type$regression <- rep("regression", n.regression)    
+        ls.value$regression <- x$fix[index.regression]
+        ls.param$regression <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                          iPar = x$par[index.regression],
+                                          iFix = !is.na(ls.value$regression),
+                                          iName = ls.name$regression)
+                                      )
+        ls.marginal$regression <- rep(FALSE,n.regression)
+    }
     
     ## *** covariance
     M.cov <- x$cov
@@ -193,39 +199,43 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
     
     arrIndex.vcov <- which(M.cov==1, arr.ind = TRUE)
     index.vcov <- which(M.cov==1, arr.ind = FALSE)
-
-    Y.vcov <- colnames(x$cov)[arrIndex.vcov[,"col"]]
-    X.vcov <- rownames(x$cov)[arrIndex.vcov[,"row"]]
+    n.vcov <- length(index.vcov)
+    if(n.vcov>0){
+        
+        Y.vcov <- colnames(x$cov)[arrIndex.vcov[,"col"]]
+        X.vcov <- rownames(x$cov)[arrIndex.vcov[,"row"]]
     
-    name.vcov <- paste0(Y.vcov,
-                        lava.options()$symbols[2],
-                        X.vcov)
-    value.vcov <- x$covfix[index.vcov]
-    param.vcov <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
-                                iPar = x$covpar[index.vcov],
-                                iFix = !is.na(value.vcov),
-                                iName = name.vcov)
-                            )
-
-    index.variance <- which(arrIndex.vcov[,1]==arrIndex.vcov[,2])
-    ls.name$variance <- name.vcov[index.variance]
-    n.variance <- length(ls.name$variance)
-    ls.Y$variance <- Y.vcov[index.variance]
-    ls.X$variance <- X.vcov[index.variance]
-    ls.type$variance <- rep("variance", n.variance)
-    ls.value$variance <- value.vcov[index.variance]
-    ls.param$variance <- param.vcov[index.variance]
-    ls.marginal$variance <- ls.name$variance %in% paste0(exogenous(x),lava.options()$symbols[2],exogenous(x))
+        name.vcov <- paste0(Y.vcov,
+                            lava.options()$symbols[2],
+                            X.vcov)
     
-    index.covariance <- which(arrIndex.vcov[,1]!=arrIndex.vcov[,2])
-    ls.name$covariance <- name.vcov[index.covariance]
-    n.covariance <- length(ls.name$covariance)
-    ls.Y$covariance <- Y.vcov[index.covariance]
-    ls.X$covariance <- X.vcov[index.covariance]
-    ls.type$covariance <- rep("covariance", n.covariance)
-    ls.value$covariance <- value.vcov[index.covariance]
-    ls.param$covariance <- param.vcov[index.covariance]
-    ls.marginal$covariance <- rep(FALSE, n.covariance)
+        value.vcov <- x$covfix[index.vcov]
+        param.vcov <- unlist(Map(function(iPar,iFix,iName){if(iFix){NA}else if(!is.na(iPar)){iPar} else {iName}},
+                                 iPar = x$covpar[index.vcov],
+                                 iFix = !is.na(value.vcov),
+                                 iName = name.vcov)
+                             )
+
+        index.variance <- which(arrIndex.vcov[,1]==arrIndex.vcov[,2])
+        ls.name$variance <- name.vcov[index.variance]
+        n.variance <- length(ls.name$variance)
+        ls.Y$variance <- Y.vcov[index.variance]
+        ls.X$variance <- X.vcov[index.variance]
+        ls.type$variance <- rep("variance", n.variance)
+        ls.value$variance <- value.vcov[index.variance]
+        ls.param$variance <- param.vcov[index.variance]
+        ls.marginal$variance <- ls.name$variance %in% paste0(exogenous(x),lava.options()$symbols[2],exogenous(x))
+    
+        index.covariance <- which(arrIndex.vcov[,1]!=arrIndex.vcov[,2])
+        ls.name$covariance <- name.vcov[index.covariance]
+        n.covariance <- length(ls.name$covariance)
+        ls.Y$covariance <- Y.vcov[index.covariance]
+        ls.X$covariance <- X.vcov[index.covariance]
+        ls.type$covariance <- rep("covariance", n.covariance)
+        ls.value$covariance <- value.vcov[index.covariance]
+        ls.param$covariance <- param.vcov[index.covariance]
+        ls.marginal$covariance <- rep(FALSE, n.covariance)
+    }
     
     ## *** external parameters    
     n.external <- length(x$expar)

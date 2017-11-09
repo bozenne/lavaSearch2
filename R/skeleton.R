@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: nov  8 2017 (14:57) 
+## Last-Updated: nov  9 2017 (14:46) 
 ##           By: Brice Ozenne
-##     Update #: 112
+##     Update #: 216
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -69,20 +69,19 @@
     function(object, ...) UseMethod("skeleton")
 
 
-## * skeleton.lvmfit
+## * skeleton.lvm
 #' @rdname skeleton
 #' @export
-skeleton.lvmfit <- function(object, as.lava, update.value,
-                            p, data,
-                            name.endogenous, n.endogenous,
-                            name.latent, n.latent){
+skeleton.lvm <- function(object, as.lava,
+                         name.endogenous, name.latent){
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
 
 ### ** prepare
     dt.param.all <- coefType(object, as.lava = FALSE)
-
     if(as.lava){
-        dt.convert <- dt.param.all[is.na(value)][!duplicated(param),.(param,lava,originalLink)]
-        param2originalLink <- dt.convert[!is.na(lava)][,setNames(originalLink,param)]
+        param2originalLink <- dt.param.all[!is.na(lava)][,setNames(originalLink,param)]
     }else{
         param2originalLink <- dt.param.all[!is.na(param),setNames(param,param)]
     }
@@ -206,16 +205,6 @@ skeleton.lvmfit <- function(object, as.lava, update.value,
         value$Psi <- symmetrize(value$Psi, update.upper = TRUE)
         value$Psi[!is.na(skeleton$Psi)] <- NA
     }
-
-### ** update value with the current values
-    if(update.value){
-
-        value <- .updateValueWithSkeleton(param = p, data = data,
-                                          n.latent = n.latent, name.latent = name.latent,
-                                          n = NROW(data), n.endogenous = n.endogenous, name.endogenous = name.endogenous,
-                                          skeleton = skeleton, value = value)
-        
-    }
     
 ### ** export
     return(list(skeleton = skeleton,
@@ -225,86 +214,333 @@ skeleton.lvmfit <- function(object, as.lava, update.value,
            )
 }
 
-## * .updateValueWithSkeleton
-.updateValueWithSkeleton <- function(param, data,
-                                     n.latent, name.latent,
-                                     n, n.endogenous, name.endogenous,
-                                     skeleton, value){
 
-### ** Measurement model
+## * skeleton.lvmfit
+#' @rdname skeleton
+#' @export
+skeleton.lvmfit <- function(object, as.lava, 
+                            p, data,
+                            name.endogenous, name.latent){
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
+    n <- NROW(data)
+
+### ** Compute skeleton
+    if(is.null(object$prepareScore2$skeleton)){
+        OS <- skeleton(lava::Model(object), as.lava = as.lava,
+                       name.endogenous = name.endogenous, name.latent = name.latent)
+    }else{
+        OS <- object$prepareScore2$skeleton
+    }
+
+### ** Update skeleton with the current values
+    
     ## *** nu
-    index.update <- which(!is.na(skeleton$nu))
-    value$nu[index.update] <- param[skeleton$nu[index.update]]
+    index.update <- which(!is.na(OS$skeleton$nu))
+    OS$value$nu[index.update] <- p[OS$skeleton$nu[index.update]]
 
     ## *** K 
     for(iY in 1:n.endogenous){ # iY <- 3
-        if(length(skeleton$K[[iY]])>0){
-            index.update <- which(!is.na(skeleton$K[[iY]]))
-            value$K[[iY]][index.update] <- param[skeleton$K[[iY]][index.update]]
+        if(length(OS$skeleton$K[[iY]])>0){
+            index.update <- which(!is.na(OS$skeleton$K[[iY]]))
+            OS$value$K[[iY]][index.update] <- p[OS$skeleton$K[[iY]][index.update]]
         }
     }
 
     ## *** Lambda
     if(n.latent>0){
-        index.update <- which(!is.na(skeleton$Lambda))
-        value$Lambda[index.update] <- param[skeleton$Lambda[index.update]]
+        index.update <- which(!is.na(OS$skeleton$Lambda))
+        OS$value$Lambda[index.update] <- p[OS$skeleton$Lambda[index.update]]
     }
     
     ## *** Sigma
-    index.update <- which(!is.na(skeleton$Sigma))
-    value$Sigma[index.update] <- param[skeleton$Sigma[index.update]]
+    index.update <- which(!is.na(OS$skeleton$Sigma))
+    OS$value$Sigma[index.update] <- p[OS$skeleton$Sigma[index.update]]
 
     ## *** linear predictor
-    value$nu.XK <- matrix(NA,nrow = n, ncol = n.endogenous, byrow = TRUE,
-                          dimnames = list(NULL,name.endogenous))
+    OS$value$nu.XK <- matrix(NA,nrow = n, ncol = n.endogenous, byrow = TRUE,
+                             dimnames = list(NULL,name.endogenous))
     for(iY in 1:n.endogenous){ # iY <- 1
-        if(length(value$K[[iY]])>0){
-            value$nu.XK[,iY] <- value$nu[iY] + data[,skeleton$XK[[iY]],drop=FALSE] %*% value$K[[iY]]
+        iY2 <- name.endogenous[iY]
+        if(length(OS$value$K[[iY2]])>0){
+            OS$value$nu.XK[,iY2] <- OS$value$nu[iY2] + data[,OS$skeleton$XK[[iY2]],drop=FALSE] %*% OS$value$K[[iY2]]
         }else{
-            value$nu.XK[,iY] <- value$nu[iY]
+            OS$value$nu.XK[,iY2] <- OS$value$nu[iY2]
         }
     }
         
 ### ** Structural model
     if(n.latent>0){
         ## *** alpha
-        index.update <- which(!is.na(skeleton$alpha))
-        value$alpha[index.update] <- param[skeleton$alpha[index.update]]
+        index.update <- which(!is.na(OS$skeleton$alpha))
+        OS$value$alpha[index.update] <- p[OS$skeleton$alpha[index.update]]
 
         ## *** Gamma
         for(iLatent in 1:n.latent){
-            if(length(skeleton$Gamma[[iLatent]])>0){
-                index.update <- which(!is.na(skeleton$Gamma[[iLatent]]))
-                value$Gamma[[iLatent]][index.update] <- param[skeleton$Gamma[[iLatent]][index.update]]
+            if(length(OS$skeleton$Gamma[[iLatent]])>0){
+                index.update <- which(!is.na(OS$skeleton$Gamma[[iLatent]]))
+                OS$value$Gamma[[iLatent]][index.update] <- p[OS$skeleton$Gamma[[iLatent]][index.update]]
             }
         }
         
         ## *** B
-        index.update <- which(!is.na(skeleton$B))
-        value$B[index.update] <- param[skeleton$B[index.update]]
+        index.update <- which(!is.na(OS$skeleton$B))
+        OS$value$B[index.update] <- p[OS$skeleton$B[index.update]]
 
         ## *** Psi
-        index.update <- which(!is.na(skeleton$Psi))
-        value$Psi[index.update] <- param[skeleton$Psi[index.update]]
+        index.update <- which(!is.na(OS$skeleton$Psi))
+        OS$value$Psi[index.update] <- p[OS$skeleton$Psi[index.update]]
 
         ## *** linear predictor
-        value$alpha.XGamma <- matrix(NA,nrow = n, ncol = n.latent, byrow = TRUE,
-                                     dimnames = list(NULL,name.latent))
+        OS$value$alpha.XGamma <- matrix(NA,nrow = n, ncol = n.latent, byrow = TRUE,
+                                        dimnames = list(NULL,name.latent))
         for(iLatent in 1:n.latent){
+            iLatent2 <- name.latent[iLatent]
+                if(length(OS$value$Gamma[[iLatent2]])>0){
+                    OS$value$alpha.XGamma[,iLatent2] <- OS$value$alpha[iLatent2] + data[,OS$skeleton$XGamma[[iLatent2]],drop=FALSE] %*% OS$value$Gamma[[iLatent2]]
+                }else{
+                    OS$value$alpha.XGamma[,iLatent2] <- OS$value$alpha[iLatent2]
+                }
+        }
+    }
+           
+### ** Export
+    return(OS)
+}
 
-            if(length(value$Gamma[[iLatent]])>0){
-                value$alpha.XGamma[,iLatent] <- value$alpha[iLatent] + data[,skeleton$XGamma[[iLatent]],drop=FALSE] %*% value$Gamma[[iLatent]]
-            }else{
-                value$alpha.XGamma[,iLatent] <- value$alpha[iLatent]
+
+## * skeletonDtheta
+#' @rdname skeleton
+#' @export
+`skeletonDtheta` <-
+    function(object, ...) UseMethod("skeletonDtheta")
+
+## * skeletonDtheta.lvm
+#' @rdname skeleton
+#' @export
+skeletonDtheta.lvm <- function(object, data,
+                               dt.param.all, param2originalLink,
+                               name.endogenous, name.latent, ...){
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
+    
+    dt.param <- dt.param.all[is.na(value) & marginal == FALSE & factice == FALSE]
+    Utype.by.detail <- dt.param[,.(n.type = length(unique(detail))), by = param][["n.type"]]
+    if(any(Utype.by.detail>1)){
+        stop("cannot constrain two parameters of different types to be equal \n")
+    }
+    name.param <- dt.param[!duplicated(param),param]
+    n.param <- length(name.param)
+
+    name.originalLink <- as.character(param2originalLink)
+    
+### ** prepare
+    n <- NROW(data)
+    name.data <- colnames(data)
+    
+    mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
+    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
+    dmu.dtheta <- list()
+    dOmega.dtheta <- list()
+    dLambda.dtheta <- list()
+    dB.dtheta <- list()
+    dPsi.dtheta <- list()
+
+    type <- setNames(vector(mode = "character", n.param),name.originalLink)
+    toUpdate <- setNames(vector(mode = "logical", n.param),name.originalLink)
+   
+### ** Compute derivative or prepare for the derivative
+    for(iName in name.param){ # iName <- name.param[1]
+
+        iName2 <- as.character(param2originalLink[iName])
+        type[iName2] <- unique(dt.param[param == iName,detail])
+        iY <- dt.param[param %in% iName,Y]
+        iX <- dt.param[param %in% iName,X]
+
+        ## *** derivative regarding the mean        
+        if(type[iName2] %in% mean.param){
+            if(type[iName2]=="nu"){
+                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
+                                              nrow = n, ncol = n.endogenous, byrow = TRUE,
+                                              dimnames = list(NULL, name.endogenous))
+                toUpdate[iName2] <- FALSE
+            }else if(type[iName2]=="K"){
+                dmu.dtheta[[iName2]] <- matrix(0, nrow = n, ncol = n.endogenous, byrow = TRUE,
+                                              dimnames = list(NULL, name.endogenous))
+                for(Y.tempo in unique(iY)){
+                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                }
+                toUpdate[iName2] <- FALSE
+            }else if(type[iName2]=="alpha"){
+                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n, ncol = n.latent, byrow = TRUE,
+                                              dimnames = list(NULL, name.latent))                
+                toUpdate[iName2] <- TRUE
+            }else if(type[iName2]=="Gamma"){
+                dmu.dtheta[[iName2]] <- matrix(0, nrow = n, ncol = n.latent, byrow = TRUE,
+                                              dimnames = list(NULL, name.latent))
+                for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
+                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                }
+                toUpdate[iName2] <- TRUE
             }
         }
+        
+        ## *** derivative regarding the residual variance covariance
+        if(type[iName2] %in% vcov.param){
+            
+            if(type[iName2]=="Sigma_var"){
+                dOmega.dtheta[[iName2]] <- matrix(0,
+                                                  nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
+                                                  dimnames = list(name.endogenous, name.endogenous))
+                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                toUpdate[iName2] <- FALSE
+            }else if(type[iName2]=="Sigma_cov"){
+                dOmega.dtheta[[iName2]] <- matrix(0,
+                                                  nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
+                                                  dimnames = list(name.endogenous, name.endogenous))
+                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                dOmega.dtheta[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
+                toUpdate[iName2] <- FALSE
+            }
+            
+        }        
+
+        ## *** matrices
+        if(type[iName2]=="Lambda"){            
+            dLambda.dtheta[[iName2]] <- matrix(0,
+                                               nrow = n.latent, ncol = n.endogenous, byrow = TRUE,
+                                               dimnames = list(name.latent, name.endogenous))
+            dLambda.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
+            toUpdate[iName2] <- TRUE
+        }else if(type[iName2]=="B"){
+            dB.dtheta[[iName2]] <- matrix(0,
+                                          nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                          dimnames = list(name.latent, name.latent))
+            dB.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            toUpdate[iName2] <- TRUE
+        }else if(type[iName2]=="Psi_var"){
+            dPsi.dtheta[[iName2]] <- matrix(0,
+                                            nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                            dimnames = list(name.latent, name.latent))
+            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            toUpdate[iName2] <- TRUE
+        }else if(type[iName2]=="Psi_cov"){
+            dPsi.dtheta[[iName2]] <- matrix(0,
+                                            nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                            dimnames = list(name.latent, name.latent))
+            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            dPsi.dtheta[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
+            toUpdate[iName2] <- TRUE
+        } 
+    }
+
+### ** export
+    return(list(
+        dmu.dtheta = dmu.dtheta,
+        dOmega.dtheta = dOmega.dtheta,
+        dLambda.dtheta = dLambda.dtheta,
+        dB.dtheta = dB.dtheta,
+        dPsi.dtheta = dPsi.dtheta,
+        type = type,
+        toUpdate = toUpdate
+    ))
+}
+
+
+## * skeletonDtheta.lvmfit
+#' @rdname skeleton
+#' @export
+skeletonDtheta.lvmfit <- function(object, data,
+                                  dt.param.all, param2originalLink,
+                                  name.endogenous, name.latent,
+                                  B, alpha.XGamma, Lambda, Psi,
+                                  ...){
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
+  
+### ** Initialize partial derivatives
+    if(is.null(object$prepareScore2$dtheta)){
+        OD <- skeletonDtheta(lava::Model(object), data = data,
+                             dt.param.all = dt.param.all,
+                             param2originalLink = param2originalLink,
+                             name.endogenous = name.endogenous, 
+                             name.latent = name.latent)
+    }else{
+        OD <- object$prepareScore2$dtheta
+    }
+
+### ** Update partial derivatives
+    
+    
+    if(any(OD$toUpdate)){
+        type2update <- OD$type[OD$toUpdate]
+            
+        OD$iIB <- solve(diag(1,n.latent,n.latent)-B)
+        OD$alpha.XGamma.iIB <- alpha.XGamma %*% OD$iIB
+        OD$iIB.Lambda <-  OD$iIB %*% Lambda    
+        OD$Psi.iIB <- Psi %*% OD$iIB
+        OD$tLambda.tiIB.Psi.iIB <- t(OD$iIB.Lambda) %*% OD$Psi.iIB
+        
+        ## *** mean parameters
+        type.meanparam <- type2update[type2update %in% c("alpha","Lambda","Gamma","B")]
+        n.meanparam <- length(type.meanparam)
+        name.meanparam <- names(type.meanparam)
+
+        if(n.meanparam>0){
+            for(iP in 1:n.meanparam){ # iP <- 1
+                iType <- type.meanparam[iP]
+                iName <- name.meanparam[iP]
+            
+                if(iType == "alpha"){
+                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType == "Gamma"){
+                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda 
+                }else if(iType == "Lambda"){
+                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dLambda.dtheta[[iName]]
+                }else if(iType == "B"){
+                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
+                }
+
+                colnames(OD$dmu.dtheta[[iName]]) <- name.endogenous
+            }
+        }
+
+        ## *** variance-covariance parameters
+        type.vcovparam <- type2update[type2update %in% c("Psi_var","Psi_cov","Lambda","B")]
+        n.vcovparam <- length(type.vcovparam)
+        name.vcovparam <- names(type.vcovparam)
+
+        if(n.vcovparam>0){
+            for(iP in 1:n.vcovparam){ # iP <- 1
+                iType <- type.vcovparam[iP]
+                iName <- name.vcovparam[iP]
+        
+                if(iType %in% "Psi_var"){
+                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType %in% "Psi_cov"){
+                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType == "Lambda"){
+                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dLambda.dtheta[[iName]]
+                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                }else if(iType == "B"){
+                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
+                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                }
+
+                colnames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
+                rownames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
+            }
+        }
+        
     }
 
 ### ** Export
-    return(value)
+    return(OD)
 
 }
-
 
 
 ##----------------------------------------------------------------------

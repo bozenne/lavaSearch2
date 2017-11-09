@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov  8 2017 (21:47) 
+## Last-Updated: nov  9 2017 (16:31) 
 ##           By: Brice Ozenne
-##     Update #: 235
+##     Update #: 362
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,105 +34,12 @@
 `residuals2` <-
     function(object, ...) UseMethod("residuals2")
 
-## * residuals2.lvmfit
-#' @rdname residuals2
-#' @export
-residuals2.lvmfit <- function(object, p = NULL, data = NULL,
-                              adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                              ls.value = NULL,
-                              ...){
-
-### ** normalize arguments
-    ## test
-    if(!identical(class(object),"lvmfit")){
-        wrongClass <- paste(setdiff(class(object),"lvmfit"), collapse = " ")
-        stop("score2 is not available for ",wrongClass," objects \n")
-    }
-    if(!is.null(object$model0$attributes$type)){
-        stop("score2 is only available for latent variable models involving gaussian variables \n")
-    }
-
-    ## param
-    name.param.lava <- names(pars(object))
-    if(is.null(p)){
-        p <- pars(object)        
-    }else{
-        p <- p[name.param.lava]
-    }
-
-    ## data
-    if(is.null(data)){
-        data <- model.frame(object)
-    }
-    if(!is.matrix(data)){
-        data <- as.matrix(data)
-    }
-    n <- object$data$n
-    name.endogenous <- endogenous(object)
-    n.endogenous <- length(name.endogenous)
-    name.latent <- latent(object)
-    n.latent <- length(name.latent)
-   
-### ** Reconstruct nu.KX and alpha.XGamma.iIB.Lambda
-    if(is.null(ls.value)){   
-        if(is.null(object$prepareScore2)){
-            ls.value <- skeleton(object, as.lava = TRUE,
-                                 n.latent = n.latent, name.latent = name.latent,
-                                 n.endogenous = n.endogenous, name.endogenous = name.endogenous,
-                                 update.value = TRUE, p = p, data = data)$value
-        }else{
-            ls.value <- .updateValueWithSkeleton(param = p, data = data,
-                                                 n.latent = n.latent, name.latent = name.latent,
-                                                 n = n, n.endogenous = n.endogenous, name.endogenous = name.endogenous,
-                                                 skeleton = object$prepareScore2$skeleton,
-                                                 value = object$prepareScore2$value)
-        }
-        
-        ls.value$alpha.XGamma.iIB.Lambda <- ls.value$alpha.XGamma %*% solve(diag(1,n.latent,n.latent)-ls.value$B) %*% ls.value$Lambda
-    }
-    
-### ** Compute predicted value
-    object.fitted <- ls.value$nu.XK
-    if(n.latent>0){
-        object.fitted <- object.fitted + ls.value$alpha.XGamma.iIB.Lambda
-    }
-
-### ** Compute residuals
-    epsilon <- data[, colnames(object.fitted)] - object.fitted
-
-### ** Normalize residuals
-    if(adjust.residuals){
-        ## *** gather derivatives
-        dmu.dtheta <- sapply(colnames(vcov.param), function(iP){
-            if(is.null(dmu.dtheta[[iP]])){
-                return(rep(0, times = n * n.endogenous))
-            }else{
-                return(as.vector(t(dmu.dtheta[[iP]])))
-            }
-        })
-        colnames(dmu.dtheta) <- colnames(vcov.param)
-
-        ## *** adjust residuals
-        ls.leverage <- .calcLeverage(n.group = n, table.group = rep(n.endogenous, n), ls.indexGroup = NULL,
-                                     dmu.dtheta = dmu.dtheta, vcov.param = vcov.param,
-                                     Omega = Omega, iOmega = iOmega, Omega_chol = Omega_chol,
-                                     power = power, as.clubSandwich = as.clubSandwich)
-
-        epsilon <- do.call(rbind,lapply(1:n, function(iG){ # iG <- 1
-            as.double(ls.leverage[[iG]] %*% epsilon[iG,])
-        }))
-    }   
-    
-### ** Export
-    return(epsilon)
-}
-
 ## * residuals2.gls
 #' @rdname residuals2
 #' @export
 residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                           return.vcov.param = FALSE, return.score = FALSE, ...){
+                           return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
     test.var <- !is.null(object$modelStruct$varStruct)
     test.cor <- !is.null(object$modelStruct$corStruct)
@@ -219,76 +126,75 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     if(test.var){
         name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
         vec.rep <- attr(object$modelStruct$varStruct,"groups")        
+    }else if(test.cor){        
+        vec.rep0 <- unlist(attr(object$modelStruct$corStruct,"covariate"))
+        if(is.factor(vec.rep0)){
+            name.endogenous <- levels(vec.rep0)
+        }else{
+            name.endogenous <- unique(vec.rep0)
+        }
+        vec.rep <- vec.rep0[order(order(cluster))]
     }else{
-        table.cluster <- table(cluster)
-        name.endogenous <- 1:max(table.cluster)
-        vec.rep <- unlist(lapply(table.cluster,function(iG){1:iG})) ## not good in presence of missing values
+        vec.rep <- rep("1",n.cluster)
+        name.endogenous <- "1"
     }
     n.endogenous <- length(name.endogenous)
-    
     ## convert observations from the vector format to the matrix format
     index.obs <- cluster+(match(vec.rep,name.endogenous)-1)*n.cluster
 
 ### ** Compute observed residuals
     epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                      dimnames = list(NULL, name.endogenous))    
+                      dimnames = list(NULL, name.endogenous))
     epsilon[index.obs] <- Y - X %*% mean.coef
     ## residuals(object)-as.vector(t(epsilon))
 
-### ** Compute score
-    if(adjust.residuals || return.score){
-
-        ## *** Reconstruct variance covariance matrix (residuals)
-        if(test.cor){
-            Omega <- lapply(1:n.cluster,function(iC){ # iC <- 1
-                M <- unclass(getVarCov(object, individual = iC))
-                colnames(M) <- name.endogenous[vec.rep[cluster==iC]]
-                rownames(M) <- name.endogenous[vec.rep[cluster==iC]]
-                return(M)
-            })
+### ** Partial derivatives
+    ## *** Reconstruct variance covariance matrix (residuals)
+    if(test.cor){
+        Omega <- lapply(1:n.cluster,function(iC){ # iC <- 1
+            M <- unclass(getVarCov(object, individual = iC))
+            colnames(M) <- name.endogenous[vec.rep[cluster==iC]]
+            rownames(M) <- name.endogenous[vec.rep[cluster==iC]]
+            return(M)
+        })
+    }else{
+        if(test.var){
+            sigma2.base <- (sigma(object)*coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
         }else{
-            if(test.var){
-                sigma2.base <- (sigma(object)*coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
-            }else{
-                sigma2.base <- rep(sigma(object)^2,n.endogenous)
-            }
-            Omega <- tapply(vec.rep, cluster, function(iRep){
-                M <- diag(sigma2.base[iRep], nrow = length(iRep), ncol = length(iRep))
-                colnames(M) <- name.endogenous[vec.rep[cluster==iC]]
-                rownames(M) <- name.endogenous[vec.rep[cluster==iC]]
-                return(list(M))
-
-            })
+            sigma2.base <- setNames(rep(sigma(object)^2,n.endogenous), name.endogenous)
         }
-
-        ## *** Compute score
-        res.prepare <- prepareScore2(object, X = X, Omega = Omega,
-                                     var.coef = var.coef, cor.coef = cor.coef,
-                                     n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                                     index.obs = index.obs)
+        Omega <- tapply(vec.rep, cluster, function(iRep){
+            M <- diag(sigma2.base[iRep], nrow = length(iRep), ncol = length(iRep))
+            colnames(M) <- iRep
+            rownames(M) <- iRep
+            return(list(M))
+        })
     }
+
+    ## *** Compute partial derivative
+    OPS2 <- prepareScore2(object, X = X, Omega = Omega,
+                          var.coef = var.coef, cor.coef = cor.coef,
+                          n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                          index.obs = index.obs)
+    
 
 ### ** compute variance covariance matrix (parameters)
-    if(return.vcov.param || adjust.residuals){
-        Info <- .information2(dmu.dtheta = res.prepare$dmu.dtheta,
-                              dOmega.dtheta = res.prepare$dOmega.dtheta,
-                              iOmega = res.prepare$iOmega,
-                              n.param = n.param,
-                              name.param = name.param,
-                              n.cluster = n.cluster)
-        vcov.param <- solve(Info)        
-        rownames(vcov.param) <- rownames(Info)
-        colnames(vcov.param) <- colnames(Info)        
-        ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
-    }else{
-        vcov.param <- NULL
-    }
+    Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
+                          dOmega.dtheta = OPS2$dOmega.dtheta,
+                          iOmega = OPS2$iOmega,
+                          n.param = n.param,
+                          name.param = name.param,
+                          n.cluster = n.cluster)
+    vcov.param <- chol2inv(chol(Info))
+    rownames(vcov.param) <- rownames(Info)
+    colnames(vcov.param) <- colnames(Info)        
+    ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
 
 ### ** Normalize residuals    
     if(adjust.residuals){
-        ls.leverage <- .calcLeverage(dmu.dtheta = res.prepare$dmu.dtheta, vcov.param = vcov.param,
-                                     Omega = Omega, iOmega = res.prepare$iOmega, Omega_chol = res.prepare$Omega_chol,
-                                     n.cluster = n.cluster, 
+        ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta, vcov.param = vcov.param,
+                                     Omega = Omega, iOmega = OPS2$iOmega, Omega_chol = OPS2$Omega_chol,
+                                     n.cluster = n.cluster, name.endogenous = name.endogenous,
                                      power = power, as.clubSandwich = as.clubSandwich)
 
         epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
@@ -301,11 +207,11 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     if(return.vcov.param){
         attr(epsilon, "vcov.param") <- vcov.param 
     }
-    if(return.score){
-        res.prepare$name.param <- name.param
-        res.prepare$n.param <- n.param
-        res.prepare$n.cluster <- n.cluster
-        attr(epsilon, "score") <- res.prepare
+    if(return.prepareScore2){
+        OPS2$name.param <- name.param
+        OPS2$n.param <- n.param
+        OPS2$n.cluster <- n.cluster
+        attr(epsilon, "prepareScore2") <- OPS2
     }
     
     return(epsilon)
@@ -317,7 +223,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 #' @export
 residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
                            adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                           return.vcov.param = FALSE, return.score = FALSE, ...){
+                           return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
     test.var <- !is.null(object$modelStruct$varStruct)
     test.cor <- !is.null(object$modelStruct$corStruct)
@@ -396,7 +302,8 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     }else{
         table.cluster <- table(cluster)
         name.endogenous <- 1:max(table.cluster)
-        vec.rep <- unlist(lapply(table.cluster,function(iG){1:iG})) ## not good in presence of missing values
+        vec.rep0 <- unlist(lapply(table.cluster,function(iG){1:iG})) ## not good in presence of missing values
+        vec.rep <- vec.rep0[order(order(cluster))]
     }
     n.endogenous <- length(name.endogenous)
     
@@ -408,42 +315,36 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
                       dimnames = list(NULL, name.endogenous))    
     epsilon[index.obs] <- Y - X %*% mean.coef
     ## residuals(object)-as.vector(t(epsilon))
-
-### ** Compute score
-    if(adjust.residuals || return.score){
+    
+### ** Partial derivatives
 
         ## *** Reconstruct variance covariance matrix (residuals)
         Omega <- unclass(getVarCov(object, individual = 1:n.cluster, type = "marginal"))
         attr(Omega,"group.levels") <- NULL
 
-        ## *** Compute score
-        res.prepare <- prepareScore2(object, X = X, Omega = Omega,
-                                     var.coef = var.coef, cor.coef = cor.coef,
-                                     n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                                     index.obs = index.obs)
-    }
+    ## *** Compute partial derivatives
+    OPS2 <- prepareScore2(object, X = X, Omega = Omega,
+                          var.coef = var.coef, cor.coef = cor.coef,
+                          n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                          index.obs = index.obs)
 
 ### ** compute variance covariance matrix (parameters)
-    if(return.vcov.param || adjust.residuals){
-        Info <- .information2(dmu.dtheta = res.prepare$dmu.dtheta,
-                              dOmega.dtheta = res.prepare$dOmega.dtheta,
-                              iOmega = res.prepare$iOmega,
-                              n.param = n.param,
-                              name.param = name.param,
-                              n.cluster = n.cluster)
-        vcov.param <- solve(Info)        
-        rownames(vcov.param) <- rownames(Info)
-        colnames(vcov.param) <- colnames(Info)        
-        ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
-    }else{
-        vcov.param <- NULL
-    }
+    Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
+                          dOmega.dtheta = OPS2$dOmega.dtheta,
+                          iOmega = OPS2$iOmega,
+                          n.param = n.param,
+                          name.param = name.param,
+                          n.cluster = n.cluster)
+    vcov.param <- chol2inv(chol(Info))
+    rownames(vcov.param) <- rownames(Info)
+    colnames(vcov.param) <- colnames(Info)        
+    ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
 
 ### ** Normalize residuals    
     if(adjust.residuals){
-        ls.leverage <- .calcLeverage(dmu.dtheta = res.prepare$dmu.dtheta, vcov.param = vcov.param,
-                                     Omega = Omega, iOmega = res.prepare$iOmega, Omega_chol = res.prepare$Omega_chol,
-                                     n.cluster = n.cluster, 
+        ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta, vcov.param = vcov.param,
+                                     Omega = Omega, iOmega = OPS2$iOmega, Omega_chol = OPS2$Omega_chol,
+                                     n.cluster = n.cluster, name.endogenous = name.endogenous,
                                      power = power, as.clubSandwich = as.clubSandwich)
 
         epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
@@ -456,23 +357,141 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     if(return.vcov.param){
         attr(epsilon, "vcov.param") <- vcov.param 
     }
-    if(return.score){
-        res.prepare$name.param <- name.param
-        res.prepare$n.param <- n.param
-        res.prepare$n.cluster <- n.cluster
-        attr(epsilon, "score") <- res.prepare
+    if(return.prepareScore2){
+        OPS2$name.param <- name.param
+        OPS2$n.param <- n.param
+        OPS2$n.cluster <- n.cluster
+        attr(epsilon, "prepareScore2") <- OPS2
     }
     
     return(epsilon)
 
 }
 
+## * residuals2.lvmfit
+#' @rdname residuals2
+#' @export
+residuals2.lvmfit <- function(object, p = NULL, data = NULL,
+                              adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
+                              return.vcov.param = FALSE, return.prepareScore2 = FALSE,
+                              ...){
+
+### ** normalize arguments
+    ## test
+    if(!identical(class(object),"lvmfit")){
+        wrongClass <- paste(setdiff(class(object),"lvmfit"), collapse = " ")
+        stop("score2 is not available for ",wrongClass," objects \n")
+    }
+    if(!is.null(object$model0$attributes$type)){
+        stop("score2 is only available for latent variable models involving gaussian variables \n")
+    }
+
+    ## param
+    if(is.null(p)){
+        null.p <- TRUE
+        p <- pars(object)
+        name.param <- names(p)
+    }else{
+        null.p <- FALSE
+        name.param <- names(pars(object))
+        p <- p[name.param]
+    }
+    n.param <- length(p)
+
+    ## data
+    if(is.null(data)){
+        data <- model.frame(object)
+    }
+    if(!is.matrix(data)){
+        data <- as.matrix(data)
+    }
+    n.cluster <- object$data$n
+    name.endogenous <- endogenous(object)
+    name.latent <- latent(object)
+    n.latent <- length(name.latent)
+    
+### ** Reconstruct nu.KX and alpha.XGamma.iIB.Lambda
+    OPS2 <- prepareScore2(object, data = data, p = p,
+                          name.endogenous = name.endogenous,
+                          name.latent = name.latent)
+
+### ** Compute predicted value
+    object.fitted <- OPS2$skeleton$value$nu.XK
+    if(n.latent>0){
+        object.fitted <- object.fitted + OPS2$dtheta$alpha.XGamma.iIB %*% OPS2$skeleton$value$Lambda
+    }
+
+### ** Compute residuals
+    epsilon <- data[, colnames(object.fitted)] - object.fitted
+
+### ** Compute variance covariance matrix (residuals)
+    if(n.latent>0){
+        Omega <- OPS2$dtheta$tLambda.tiIB.Psi.iIB %*% OPS2$skeleton$value$Lambda + OPS2$skeleton$value$Sigma
+    }else{
+        Omega <- OPS2$skeleton$value$Sigma
+    }
+
+    Omega_chol <- chol(Omega)
+
+    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
+    colnames(iOmega) <- colnames(Omega)
+    rownames(iOmega) <- rownames(Omega)
+    ## range(Omega - moments(object, p = p, conditional=TRUE, data = data)$C)
+    
+### ** Compute variance covariance matrix (parameters)
+
+    if(null.p){
+        vcov.param <- vcov(object)
+        attr(vcov.param, "det") <- NULL
+        attr(vcov.param, "pseudo") <- NULL
+        attr(vcov.param, "minSV") <- NULL
+    }else{
+        Info <- .information2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
+                              dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
+                              iOmega = iOmega,
+                              n.param = n.param, name.param = name.param, n.cluster = n.cluster)
+        vcov.param <- chol2inv(chol(Info))
+        rownames(vcov.param) <- rownames(Info)
+        colnames(vcov.param) <- colnames(Info)
+    }        
+    ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
+
+### ** Normalize residuals
+    if(adjust.residuals){
+        ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dtheta$dmu.dtheta, vcov.param = vcov.param,
+                                     Omega = Omega, iOmega = iOmega, Omega_chol = Omega_chol,
+                                     n.cluster = n.cluster, name.endogenous = name.endogenous,
+                                     power = power, as.clubSandwich = as.clubSandwich)
+        
+        epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
+            as.double(ls.leverage[[iG]] %*% epsilon[iG,])
+        }))
+    }   
+
+### ** Export
+    if(return.vcov.param){
+        attr(epsilon, "vcov.param") <- vcov.param 
+    }
+    if(return.prepareScore2){
+        OPS2$name.param <- name.param
+        OPS2$n.param <- n.param
+        OPS2$n.cluster <- n.cluster
+        OPS2$iOmega <- iOmega
+        attr(epsilon, "prepareScore2") <- OPS2
+    }
+    return(epsilon)
+}
+
 ## * .calcLeverage
 .calcLeverage <- function(dmu.dtheta, vcov.param, 
-                          Omega, iOmega, Omega_chol, n.cluster, 
+                          Omega, iOmega, Omega_chol, 
+                          n.cluster, name.endogenous,
                           power, as.clubSandwich){
 
     missing <- is.list(iOmega)
+    if(!missing){
+        n.endogenous <- length(name.endogenous)
+    }
     name.param <- colnames(vcov.param)
     n.param <- length(name.param)
     name.meanparam <- names(dmu.dtheta)
@@ -487,15 +506,17 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
                 Omega_chol.tempo <- Omega_chol[[iG]]
                 Omega.tempo <- Omega[[iG]]
             }
+            name.endogenous.tempo <- colnames(iOmega.tempo)
+            n.endogenous.tempo <- length(name.endogenous.tempo)
         }else{
             iOmega.tempo <- iOmega
             if(power != 1 && as.clubSandwich){            
                 Omega_chol.tempo <- Omega_chol
                 Omega.tempo <- Omega
             }
+            name.endogenous.tempo <- name.endogenous
+            n.endogenous.tempo <- n.endogenous
         }
-        name.endogenous.tempo <- colnames(iOmega.tempo)
-        n.endogenous.tempo <- length(name.endogenous.tempo)
         Id.tempo <- diag(1,nrow=n.endogenous.tempo,ncol=n.endogenous.tempo)
         
         ## *** Combine derivatives into a matrix

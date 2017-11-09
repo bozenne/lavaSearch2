@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: nov  6 2017 (12:04) 
+## last-updated: nov  9 2017 (14:46) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 11
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -88,7 +88,7 @@ d <- sim(m,n)
 e <- estimate(m,d)
 param <- coef(e)
 
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("multiple linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -166,7 +166,7 @@ regression(m) <- eta1~X1+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -202,7 +202,7 @@ test_that("factor model: fixed coefficients",{
 test_that("factor model: constrains",{
     m <- lvm(Y1~1*eta+X2,Y2~lambda*eta+X2,Y3~lambda*eta,eta ~ beta*X2+beta*X1)
     e <- estimate(m, d)
-
+    
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
                  "vcov.param")
     GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))
@@ -218,7 +218,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("2 factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -260,7 +260,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("2 factor model, covariance (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -291,7 +291,7 @@ regression(m) <- eta1 ~ eta2+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- d
 
 test_that("2 factor model, correlation (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),

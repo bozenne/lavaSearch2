@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: nov  8 2017 (21:57) 
+## last-updated: nov  9 2017 (16:27) 
 ##           By: Brice Ozenne
-##     Update #: 29
+##     Update #: 33
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -60,15 +60,16 @@ e.gls <- gls(value ~ 0+time + time:G,
              data = dL, method = "ML")
 allCoef.gls <- c(coef(e.gls),sigma2 = sigma(e.gls)^2,coef(e.gls$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))
 
-test_that("lme equivalent to lvm", {
+test_that("gls equivalent to lvm", {
     expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.gls)))
 })
 
 test_that("score2.gls equivalent to score.lvm", {
+
     score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
     score.gls.p <- score2(e.gls, p = allCoef.gls, cluster = "Id", adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
-
+    
     expect_equal(unname(score.gls[,1:6]),unname(score.lvm[,1:6]))
     expect_true(all(abs(colSums(score.gls))<1e-7))
     expect_equal(score.gls,score.gls.p)
@@ -115,7 +116,7 @@ test_that("score2.lme equivalent to score2.lvm", {
     score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = FALSE, indiv = TRUE)
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
     # colSums(abs(score.lvm - score(e.lvm, indiv = TRUE)))
-    
+
     expect_equal(unname(score.lme[,c(1:4,6,5)]),unname(score.lvm))
     expect_equal(score.lme,score.lme.p)
     
@@ -140,26 +141,16 @@ e.gls <- gls(value ~ time*G,
 #             weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
 
-score2(e.gls, adjust.residuals = FALSE, indiv = TRUE)
-
 e.lme <- lme(value ~ time*G,
              random =~1| Id,
 #             weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
 
-score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)
-
-logLik(e.gls)
-logLik(e.lme)
-
-name.coef <- names(coef(e.gls))
-
-getVarCov(e.lme, type = "marginal")
-sigma(e.lme)^2+as.double(getVarCov(e.lme))
+name.coef <- names(fixef(e.lme))
 
 test_that("lme equivalent to gls", {
     expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
-  
+
     tau.lme <- as.numeric(getVarCov(e.lme))
     sigma2.lme <- as.numeric(getVarCov(e.lme)) + sigma(e.lme)^2
     coef.lme <- c(fixef(e.lme), sigma2 = sigma2.lme, tau = tau.lme)
@@ -170,8 +161,6 @@ test_that("lme equivalent to gls", {
     
     expect_equal(as.double(coef.lme),as.double(coef.gls), tol = 1e-7)
 })
-
-score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE)
 
 test_that("score.lme equivalent to score.gls", {
     score.lme <- score2(e.lme, adjust.residuals = FALSE, indiv = TRUE)

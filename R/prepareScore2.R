@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  8 2017 (21:56) 
+## last-updated: nov  9 2017 (16:23) 
 ##           By: Brice Ozenne
-##     Update #: 356
+##     Update #: 445
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,178 +16,24 @@
 ### Code:
 
 #' @title Prepare the computation of score2.
-#' @description Prepare the computation of score2.
+#' @description Compute partial derivatives regarding to the mean and the variance, and compute the design matrices.
 #' @name prepareScore2
 #' 
 #' @param object a latent variable model
 #' @param data [optional] data set.
 #' @param name.endogenous [optional] name of the endogenous variables
-#' @param n.endogenous [optional] number of endogenous variables
 #' @param name.latent [optional] name of the latent variables
-#' @param n.latent [optional] number of latent variables
 #' 
 #' @examples
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
 #'
 #' e <- estimate(m,sim(m,1e2))
-#' prepareScore2(e)
+#' res <- prepareScore2(e)
+#' res$skeleton$dt.param
 #' @export
 `prepareScore2` <-
   function(object, ...) UseMethod("prepareScore2")
-
-## * prepareScore2.lvmfit
-#' @rdname prepareScore2
-#' @export
-prepareScore2.lvmfit <- function(object, data = NULL,
-                                 name.endogenous = NULL, n.endogenous = NULL,
-                                 name.latent = NULL, n.latent = NULL){
-
-### ** normalize arguments
-    if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
-    if(is.null(n.endogenous)){n.endogenous <- length(name.endogenous)}
-    if(is.null(name.latent)){name.latent <- latent(object)}
-    if(is.null(n.latent)){n.latent <- length(name.latent)}
-
-    if(is.null(data)){
-        data <- model.frame(object)
-    }
-    if(!is.matrix(data)){
-        data <- as.matrix(data)
-    }
-    
-### ** Compute skeleton
-    resSkeleton <- skeleton(object,
-                            name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                            name.latent = name.latent, n.latent = n.latent,
-                            as.lava = TRUE, update.value = FALSE)
-
-    dt.param.all <- resSkeleton$dt.param
-    dt.param <- dt.param.all[is.na(value) & factice == FALSE]
-    Utype.by.detail <- dt.param[,.(n.type = length(unique(detail))), by = param][["n.type"]]
-    if(any(Utype.by.detail>1)){
-        stop("cannot constrain two parameters of different types to be equal \n")
-    }
-    name.param <- dt.param[!duplicated(param),param]
-    n.param <- length(name.param)
-
-    param2originalLink <- resSkeleton$param2originalLink
-    name.originalLink <- as.character(param2originalLink)
-    
-### ** prepare
-    n <- NROW(data)
-    name.data <- colnames(data)
-    
-    mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
-    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
-    dmu.dtheta <- list()
-    dOmega.dtheta <- list()
-    dLambda.dtheta <- list()
-    dB.dtheta <- list()
-    dPsi.dtheta <- list()
-
-    type <- setNames(vector(mode = "character", n.param),name.originalLink)
-    toUpdate <- setNames(vector(mode = "logical", n.param),name.originalLink)
-    
-### ** Compute derivative or prepare for the derivative
-    for(iName in name.param){ # iName <- name.param[1]
-        iName2 <- as.character(param2originalLink[iName])
-        type[iName2] <- unique(dt.param[param == iName,detail])
-        iY <- dt.param[param %in% iName,Y]
-        iX <- dt.param[param %in% iName,X]
-
-        ## *** derivative regarding the mean        
-        if(type[iName2] %in% mean.param){
-            if(type[iName2]=="nu"){
-                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
-                                              nrow = n, ncol = n.endogenous, byrow = TRUE,
-                                              dimnames = list(NULL, name.endogenous))
-                toUpdate[iName2] <- FALSE
-            }else if(type[iName2]=="K"){
-                dmu.dtheta[[iName2]] <- matrix(0, nrow = n, ncol = n.endogenous, byrow = TRUE,
-                                              dimnames = list(NULL, name.endogenous))
-                for(Y.tempo in unique(iY)){
-                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-                }
-                toUpdate[iName2] <- FALSE
-            }else if(type[iName2]=="alpha"){
-                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n, ncol = n.latent, byrow = TRUE,
-                                              dimnames = list(NULL, name.latent))                
-                toUpdate[iName2] <- TRUE
-            }else if(type[iName2]=="Gamma"){
-                dmu.dtheta[[iName2]] <- matrix(0, nrow = n, ncol = n.latent, byrow = TRUE,
-                                              dimnames = list(NULL, name.latent))
-                for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
-                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-                }
-                toUpdate[iName2] <- TRUE
-            }
-        }
-        
-        ## *** derivative regarding the residual variance covariance
-        if(type[iName2] %in% vcov.param){
-            
-            if(type[iName2]=="Sigma_var"){
-                dOmega.dtheta[[iName2]] <- matrix(0,
-                                                  nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
-                                                  dimnames = list(name.endogenous, name.endogenous))
-                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
-                toUpdate[iName2] <- FALSE
-            }else if(type[iName2]=="Sigma_cov"){
-                dOmega.dtheta[[iName2]] <- matrix(0,
-                                                  nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
-                                                  dimnames = list(name.endogenous, name.endogenous))
-                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
-                dOmega.dtheta[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
-                toUpdate[iName2] <- FALSE
-            }
-            
-        }        
-
-        ## *** matrices
-        if(type[iName2]=="Lambda"){            
-            dLambda.dtheta[[iName2]] <- matrix(0,
-                                               nrow = n.latent, ncol = n.endogenous, byrow = TRUE,
-                                               dimnames = list(name.latent, name.endogenous))
-            dLambda.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
-            toUpdate[iName2] <- TRUE
-        }else if(type[iName2]=="B"){
-            dB.dtheta[[iName2]] <- matrix(0,
-                                          nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                          dimnames = list(name.latent, name.latent))
-            dB.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            toUpdate[iName2] <- TRUE
-        }else if(type[iName2]=="Psi_var"){
-            dPsi.dtheta[[iName2]] <- matrix(0,
-                                            nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                            dimnames = list(name.latent, name.latent))
-            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            toUpdate[iName2] <- TRUE
-        }else if(type[iName2]=="Psi_cov"){
-            dPsi.dtheta[[iName2]] <- matrix(0,
-                                            nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                            dimnames = list(name.latent, name.latent))
-            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            dPsi.dtheta[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
-            toUpdate[iName2] <- TRUE
-        } 
-    }
-    
-### ** export
-
-    return(list(
-        dmu.dtheta = dmu.dtheta,
-        dOmega.dtheta = dOmega.dtheta,
-        dLambda.dtheta = dLambda.dtheta,
-        dB.dtheta = dB.dtheta,
-        dPsi.dtheta = dPsi.dtheta,
-        skeleton = resSkeleton$skeleton,
-        value = resSkeleton$value,
-        type = type,
-        toUpdate = toUpdate
-    ))
-    
-}
 
 ## * prepareScore2.gls
 #' @rdname prepareScore2
@@ -231,22 +77,26 @@ prepareScore2.gls <- function(object, X, Omega,
         iN.endogenous <- length(iSigma2.base)
         iName.endogenous <- colnames(iOmega)
 
-        ## *** sigma2
-        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],iN.endogenous,iN.endogenous)
-        if("NULL" %in% class.cor){
+        ## *** sigma2        
+        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],
+                                                nrow = iN.endogenous, ncol = iN.endogenous)
+        if("NULL" %in% class.cor == FALSE){
             dOmega.dtheta[["sigma2"]][[iC]][lower.tri(iOmega)] <- iOmega[lower.tri(iOmega)]/var.coef["sigma2"]
             dOmega.dtheta[["sigma2"]][[iC]][upper.tri(iOmega)] <- iOmega[upper.tri(iOmega)]/var.coef["sigma2"]
-            colnames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
-            rownames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
         }
-  
+
+        if(n.endogenous > 1){
+            colnames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
+            rownames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous 
+        }
+        
         ## *** other sigma
-        if("NULL" %in% class.var){
+        if("varIdent" %in% class.var){
             for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
                 index.iVar <- iName.endogenous %in% iVar 
                 dOmega.dtheta[[iVar]][[iC]] <- var.coef["sigma2"]*diag(index.iVar,iN.endogenous,iN.endogenous)
 
-                if("NULL" %in% class.cor){
+                if("NULL" %in% class.cor == FALSE){
                     index2.iVar <- setdiff(1:iN.endogenous,which(index.iVar))                
                     dOmega.dtheta[[iVar]][[iC]][index2.iVar,index.iVar] <- iOmega[index2.iVar,index.iVar]/var.coef[iVar]
                     dOmega.dtheta[[iVar]][[iC]][index.iVar,index2.iVar] <- iOmega[index.iVar,index2.iVar]/var.coef[iVar]
@@ -286,7 +136,7 @@ prepareScore2.gls <- function(object, X, Omega,
         rownames(M) <- rownames(i)
         return(M)
     }) ## faster compared to solve
-    
+
     return(list(dmu.dtheta = dmu.dtheta,
                 dOmega.dtheta = dOmega.dtheta,
                 Omega_chol = Omega_chol,
@@ -324,19 +174,17 @@ prepareScore2.lme <- function(object, X, Omega,
 
     for(iC in 1:n.cluster){ # iC <- 1
         iOmega <- Omega[[iC]]
-        iSigma2.base <- diag(iOmega)
+        iSigma2.base <- diag(iOmega)-cor.coef
         iN.endogenous <- length(iSigma2.base)
         iName.endogenous <- colnames(iOmega)
 
         ## *** sigma2
-        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],iN.endogenous,iN.endogenous)
-        dOmega.dtheta[["sigma2"]][[iC]][lower.tri(iOmega)] <- iOmega[lower.tri(iOmega)]/var.coef["sigma2"]
-        dOmega.dtheta[["sigma2"]][[iC]][upper.tri(iOmega)] <- iOmega[upper.tri(iOmega)]/var.coef["sigma2"]
+        dOmega.dtheta[["sigma2"]][[iC]] <- diag(iSigma2.base/var.coef["sigma2"],iN.endogenous,iN.endogenous)        
         colnames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
         rownames(dOmega.dtheta[["sigma2"]][[iC]]) <- iName.endogenous
         
         ## *** other sigma
-        if("NULL" %in% class.var){
+        if("varIdent" %in% class.var){
             for(iVar in setdiff(name.varcoef,"sigma2")){ # iVar <- name.varcoef[2]
                 index.iVar <- iName.endogenous %in% iVar 
                 dOmega.dtheta[[iVar]][[iC]] <- var.coef["sigma2"]*diag(index.iVar,iN.endogenous,iN.endogenous)
@@ -363,7 +211,7 @@ prepareScore2.lme <- function(object, X, Omega,
         rownames(M) <- rownames(i)
         return(M)
     }) ## faster compared to solve
-    
+
     return(list(dmu.dtheta = dmu.dtheta,
                 dOmega.dtheta = dOmega.dtheta,
                 Omega_chol = Omega_chol,
@@ -376,3 +224,99 @@ prepareScore2.lme <- function(object, X, Omega,
 
 #----------------------------------------------------------------------
 ### prepareScore2.R ends here
+
+
+#' @rdname prepareScore2
+#' @export
+`prepareScore2<-` <-
+  function(object, ..., value) UseMethod("prepareScore2<-")
+
+#' @rdname prepareScore2
+#' @export
+"prepareScore2<-.lvmfit" <- function(object, ..., value) {
+    object$prepareScore2  <- prepareScore2(lava::Model(object), data = value, ...)
+    return(object)
+}
+## * prepareScore2.lvm
+#' @rdname prepareScore2
+#' @export
+prepareScore2.lvm <- function(object, data,
+                              name.endogenous = NULL, name.latent = NULL){
+
+### ** normalize arguments
+    if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
+    n.endogenous <- length(name.endogenous)
+    if(is.null(name.latent)){name.latent <- latent(object)}
+    n.latent <- length(name.latent)
+
+    if(!is.matrix(data)){
+        data <- as.matrix(data)
+    }
+
+    prepareScore2 <- list()
+    
+### ** Compute skeleton   
+    prepareScore2$skeleton <- skeleton(object,
+                                       name.endogenous = name.endogenous, 
+                                       name.latent = name.latent, 
+                                       as.lava = TRUE)
+    
+### ** Initialize partial derivatives
+    prepareScore2$dtheta <- skeletonDtheta(object, data = data,
+                                           dt.param.all = prepareScore2$skeleton$dt.param,
+                                           param2originalLink = prepareScore2$skeleton$param2originalLink,
+                                           name.endogenous = name.endogenous, 
+                                           name.latent = name.latent)
+    
+### ** Export
+    return(prepareScore2)
+}
+    
+    
+## * prepareScore2.lvmfit
+#' @rdname prepareScore2
+#' @export
+prepareScore2.lvmfit <- function(object, data = NULL, p = NULL,
+                                 name.endogenous = NULL, name.latent = NULL){
+
+### ** normalize arguments
+    if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
+    n.endogenous <- length(name.endogenous)
+    if(is.null(name.latent)){name.latent <- latent(object)}
+    n.latent <- length(name.latent)
+
+    if(is.null(data)){
+        data <- model.frame(object)
+    }
+    if(!is.matrix(data)){
+        data <- as.matrix(data)
+    }
+
+    if(is.null(p)){
+        p <- pars(object)        
+    }
+    
+    prepareScore2 <- list()
+
+### ** Update skeleton with current estimates
+    prepareScore2$skeleton <- skeleton(object, data = data, p = p,
+                                       name.endogenous = name.endogenous, 
+                                       name.latent = name.latent, 
+                                       as.lava = TRUE)
+    
+### ** Update partial derivatives with current estimates
+    prepareScore2$dtheta <- skeletonDtheta(object, data = data,
+                                           dt.param.all = prepareScore2$skeleton$dt.param,
+                                           param2originalLink = prepareScore2$skeleton$param2originalLink,
+                                           name.endogenous = name.endogenous, 
+                                           name.latent = name.latent,
+                                           B = prepareScore2$skeleton$value$B,
+                                           alpha.XGamma = prepareScore2$skeleton$value$alpha.XGamma,
+                                           Lambda = prepareScore2$skeleton$value$Lambda,
+                                           Psi = prepareScore2$skeleton$value$Psi)
+    
+### ** Export
+    return(prepareScore2)    
+    
+}
+

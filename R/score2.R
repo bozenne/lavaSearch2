@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov  8 2017 (21:36) 
+## last-updated: nov  9 2017 (16:21) 
 ##           By: Brice Ozenne
-##     Update #: 1925
+##     Update #: 1966
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -80,22 +80,22 @@ score2.gls <- function(object, cluster, p = NULL, data = NULL,
                           power = power,
                           as.clubSandwich = as.clubSandwich,
                           return.vcov.param = return.vcov.param,
-                          return.score = TRUE)
+                          return.prepareScore2 = TRUE)
     
-    res.prepare <- attr(epsilon, "score")
+    OPS2 <- attr(epsilon, "prepareScore2")
     vcov.param <- attr(epsilon, "vcov.param")
-    attr(epsilon, "score") <- NULL
+    attr(epsilon, "prepareScore2") <- NULL
     attr(epsilon, "vcov.param") <- NULL
         
 ### ** Compute score
-    out.score <- .score2(dmu.dtheta = res.prepare$dmu.dtheta,
-                         dOmega.dtheta = res.prepare$dOmega.dtheta,
+    out.score <- .score2(dmu.dtheta = OPS2$dmu.dtheta,
+                         dOmega.dtheta = OPS2$dOmega.dtheta,
                          epsilon = epsilon,
-                         iOmega = res.prepare$iOmega,                         
+                         iOmega = OPS2$iOmega,                         
                          indiv = indiv,
-                         name.param = res.prepare$name.param,
-                         n.param = res.prepare$n.param,
-                         n.cluster = res.prepare$n.cluster)     
+                         name.param = OPS2$name.param,
+                         n.param = OPS2$n.param,
+                         n.cluster = OPS2$n.cluster)     
     
 ### ** Export
     if(return.vcov.param){
@@ -113,178 +113,44 @@ score2.lme <- score2.gls
 #' @rdname score2
 #' @export
 score2.lvmfit <- function(object, p = NULL, data = NULL, 
-                          adjust.residuals = TRUE, power = 1/2,
-                          indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
-
-### ** normalize arguments
-    ## test
-    if(!identical(class(object),"lvmfit")){
-        wrongClass <- paste(setdiff(class(object),"lvmfit"), collapse = " ")
-        stop("score2 is not available for ",wrongClass," objects \n")
-    }
-    if(!is.null(object$model0$attributes$type)){
-        stop("score2 is only available for latent variable models involving gaussian variables \n")
-    }
-
-    ## param
-    name.param.lava <- names(pars(object))
-    if(is.null(p)){
-        null.p <- TRUE
-        p <- pars(object)        
-    }else{
-        null.p <- FALSE
-        p <- p[name.param.lava]
-    }
-
-    ## data
-    if(is.null(data)){
-        data <- model.frame(object)
-    }
-    if(!is.matrix(data)){
-        data <- as.matrix(data)
-    }
-    n <- NROW(data)
-    
-### ** Prepare elements
-    name.latent <- latent(object)
-    n.latent <- length(name.latent)
-
-    name.endogenous <- endogenous(object)
-    n.endogenous <- length(name.endogenous)
-
-    if(is.null(object$prepareScore2)){   
-        object$prepareScore2 <- prepareScore2(object, data)
-    }
-    name.param <- names(object$prepareScore2$type)
-    n.param <- length(name.param)
-    
-### ** Reconstruct Sigma, Lambda, B, Psi
-    ls.value <- .updateValueWithSkeleton(param = p, data = data,
-                                         n.latent = n.latent, name.latent = name.latent,
-                                         n = n, n.endogenous = n.endogenous, name.endogenous = name.endogenous,
-                                         skeleton = object$prepareScore2$skeleton,
-                                         value = object$prepareScore2$value)
-
-### ** Compute partial derivatives regarding the mean and the variance
-    if(any(object$prepareScore2$toUpdate)){
-        type2update <- object$prepareScore2$type[object$prepareScore2$toUpdate]
-            
-        iIB <- solve(diag(1,n.latent,n.latent)-ls.value$B)
-        alpha.XGamma.iIB <- ls.value$alpha.XGamma %*% iIB
-        iIB.Lambda <-  iIB %*% ls.value$Lambda    
-        Psi.iIB <- ls.value$Psi %*% iIB
-        tLambda.tiIB.Psi.iIB <- t(iIB.Lambda) %*% Psi.iIB
-        
-        ## *** mean parameters
-        type.meanparam <- type2update[type2update %in% c("alpha","Lambda","Gamma","B")]
-        n.meanparam <- length(type.meanparam)
-        name.meanparam <- names(type.meanparam)
-
-        if(n.meanparam>0){
-            for(iP in 1:n.meanparam){ # iP <- 1
-                iType <- type.meanparam[iP]
-                iName <- name.meanparam[iP]
-            
-                if(iType == "alpha"){
-                    object$prepareScore2$dmu.dtheta[[iName]] <- object$prepareScore2$dmu.dtheta[[iName]] %*% iIB.Lambda
-                }else if(iType == "Gamma"){
-                    object$prepareScore2$dmu.dtheta[[iName]] <- object$prepareScore2$dmu.dtheta[[iName]] %*% iIB.Lambda 
-                }else if(iType == "Lambda"){
-                    object$prepareScore2$dmu.dtheta[[iName]] <- alpha.XGamma.iIB %*% object$prepareScore2$dLambda.dtheta[[iName]]
-                }else if(iType == "B"){
-                    object$prepareScore2$dmu.dtheta[[iName]] <- alpha.XGamma.iIB %*% object$prepareScore2$dB.dtheta[[iName]] %*% iIB.Lambda
-                }
-
-                colnames(object$prepareScore2$dmu.dtheta[[iName]]) <- name.endogenous
-            }
-        }
-
-        ## *** variance-covariance parameters
-        type.vcovparam <- type2update[type2update %in% c("Psi_var","Psi_cov","Lambda","B")]
-        n.vcovparam <- length(type.vcovparam)
-        name.vcovparam <- names(type.vcovparam)
-
-        if(n.vcovparam>0){
-            for(iP in 1:n.vcovparam){ # iP <- 1
-                iType <- type.vcovparam[iP]
-                iName <- name.vcovparam[iP]
-        
-                if(iType %in% "Psi_var"){
-                    object$prepareScore2$dOmega.dtheta[[iName]] <-  t(iIB.Lambda) %*% object$prepareScore2$dPsi.dtheta[[iName]] %*% iIB.Lambda
-                }else if(iType %in% "Psi_cov"){
-                    object$prepareScore2$dOmega.dtheta[[iName]] <-  t(iIB.Lambda) %*% object$prepareScore2$dPsi.dtheta[[iName]] %*% iIB.Lambda
-                }else if(iType == "Lambda"){
-                    object$prepareScore2$dOmega.dtheta[[iName]] <- tLambda.tiIB.Psi.iIB %*% object$prepareScore2$dLambda.dtheta[[iName]]
-                    object$prepareScore2$dOmega.dtheta[[iName]] <- object$prepareScore2$dOmega.dtheta[[iName]] + t(object$prepareScore2$dOmega.dtheta[[iName]])
-                }else if(iType == "B"){
-                    object$prepareScore2$dOmega.dtheta[[iName]] <- tLambda.tiIB.Psi.iIB %*% object$prepareScore2$dB.dtheta[[iName]] %*% iIB.Lambda
-                    object$prepareScore2$dOmega.dtheta[[iName]] <- object$prepareScore2$dOmega.dtheta[[iName]] + t(object$prepareScore2$dOmega.dtheta[[iName]])
-                }
-
-                colnames(object$prepareScore2$dOmega.dtheta[[iName]]) <- name.endogenous
-                rownames(object$prepareScore2$dOmega.dtheta[[iName]]) <- name.endogenous
-            }
-        }
-        
-    }
-
-### ** Reconstruct variance covariance matrix (residuals)
-    if(n.latent>0){
-        Omega <- tLambda.tiIB.Psi.iIB %*% ls.value$Lambda + ls.value$Sigma
-    }else{
-        Omega <- ls.value$Sigma
-    }
-    Omega_chol <- chol(Omega)
-    iOmega <- chol2inv(Omega_chol) ## faster compared to solve
-    ## range(Omega - moments(object, p = p, conditional=TRUE, data = data)$C)
-
-### ** Compute variance covariance matrix (parameters)
-    if(adjust.residuals || return.vcov.param){
-        if(null.p){
-            vcov.param <- vcov(object)
-            attr(vcov.param, "det") <- NULL
-            attr(vcov.param, "pseudo") <- NULL
-            attr(vcov.param, "minSV") <- NULL
-        }else{
-            Info <- .information2(object$prepareScore2$dmu.theta, object$prepareScore2$dOmega.dtheta,
-                                  iOmega = iOmega,
-                                  n.param = n.param, name.param = name.param)
-            vcov.param <- chol2inv(chol(Info))
-            rownames(vcov.param) <- rownames(Info)
-            colnames(vcov.param) <- colnames(Info)
-        }        
-    }else{
-        vcov.param <- NULL
-    }
-    ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
+                          adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
+                          indiv = TRUE, 
+                          return.vcov.param = FALSE, ...){
 
 ### ** Compute residuals
-    epsilon <- residuals2(object, p = p, data = data,
+    epsilon <- residuals2(object,
+                          p = p,
+                          data = data,
                           adjust.residuals = adjust.residuals,
                           power = power,
                           as.clubSandwich = as.clubSandwich,
-                          ls.value = list(vcov.param = vcov.param,
-                                          Omega = Omega,
-                                          Omega_chol = Omega_chol,
-                                          nu.XK = ls.value$nu.XK,
-                                          alpha.XGamma.iIB.Lambda = alpha.XGamma.iIB %*% ls.value$Lambda))
-    
-### ** Compute score
-    out.score <- .score2(dmu.dtheta = object$prepareScore2$dmu.dtheta,
-                         dOmega.dtheta = object$prepareScore2$dOmega.dtheta,
-                         epsilon = as.matrix(epsilon),
-                         iOmega = iOmega,
-                         indiv = indiv,
-                         name.param = name.param, n.param = n.param, n = n)        
+                          return.vcov.param = return.vcov.param,
+                          return.prepareScore2 = TRUE)
 
-### ** export
-    out.score <- out.score[,name.param.lava,drop=FALSE]
+    OPS2 <- attr(epsilon, "prepareScore2")
+    vcov.param <- attr(epsilon, "vcov.param")
+    attr(epsilon, "prepareScore2") <- NULL
+    attr(epsilon, "vcov.param") <- NULL
+
+### ** Compute score
+    out.score <- .score2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
+                         dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
+                         epsilon = epsilon,
+                         iOmega = OPS2$iOmega,                         
+                         indiv = indiv,
+                         name.param = OPS2$name.param,
+                         n.param = OPS2$n.param,
+                         n.cluster = OPS2$n.cluster)     
+    
+### ** Export
     if(return.vcov.param){
-        attr(out.score,"vcov.param") <- vcov.param[name.param.lava,name.param.lava,drop=FALSE]
+        attr(out.score,"vcov.param") <- vcov.param[OPS2$name.param,OPS2$name.param,drop=FALSE]
     }
     return(out.score)
-
 }
+
+
+
 
 ## * .information2
 .information2 <- function(dmu.dtheta, dOmega.dtheta, iOmega,
@@ -338,8 +204,8 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
 .score2 <- function(dmu.dtheta, dOmega.dtheta, epsilon, iOmega,
                     indiv,
                     name.param, n.param, n.cluster){
-  
-    missing <- is.list(iOmega)
+
+     missing <- is.list(iOmega)
     if(missing == FALSE){
         epsilon.iOmega <- epsilon %*% iOmega
     }else{
