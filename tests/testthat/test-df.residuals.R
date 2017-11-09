@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: okt 27 2017 (14:37) 
+## last-updated: nov  9 2017 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 29
+##     Update #: 35
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -106,88 +106,54 @@ coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
                data = dL, REML = FALSE)
 summary(e.lmer, ddf = "Satterthwaite")$coef
+logLik(e.lmer)
 
-
+## *** try to replicate lmerTest results
 e.lme <- lme(value ~ time + G + Gender,
              random =~ 1|Id,
-             weight = varIdent(form = ~1|Gender),
              data = dL, method = "ML")
-class(e.lme$modelStruct$varStruct)
-iid2(e.lme)
-sqrt(diag(crossprod(iid2(e.lme, adjust.residuals = FALSE, return.df = FALSE))))
-vcov(e.lme)
-##             Estimate Std. Error       df t value Pr(>|t|)    
-## (Intercept)  -0.5164     0.2496  80.3100  -2.068   0.0418 *  
-## timeY2        0.3653     0.2063 100.0000   1.771   0.0796 .  
-## timeY3        0.1273     0.2063 100.0000   0.617   0.5384    
-## G             0.8964     0.1562  50.0000   5.738 5.58e-07 ***
-## GenderF       1.4214     0.2891  50.0000   4.917 9.91e-06 ***
-
-diag(rep(1,length(rho$fixEffs)))
-
-ls.rho <- lmerTest:::rhoInit(list(), e.lmer, FALSE)
-ls.rho$A <- lmerTest:::calcApvar(ls.rho)
-n.param <- length(ls.rho$fixEffs)
-L <- diag(rep(1,n.param))
-
-iid2(e.lvm, adjust.residuals = FALSE)
-
-score(e.lvm,indiv = TRUE) - score2(e.lvm, adjust.residuals = FALSE, Dmethod = "simple")
-
-names(e.lvm)
-names(e.lvm$model)
-e.lvm$model$covpar
-e.lvm$model$index
-e.lvm$model$parpos
-
-coefType(e.lvm)
-coefType(m)
-
-coef(e.lvm,level=9)
-
-coef(e.lvm)
-vss <- lmerTest:::vcovLThetaL(e.lmer)
-vss(t(L[1,]), c(ls.rho$thopt,ls.rho$sigma))
-
-undebug(vss)
-
-logLik(e.lvm)
-logLik(e.lmer)
 logLik(e.lme)
 
-lapply(1:n.param, function(iP){ # iP <- 1
+m.lvm <- lvm(Y1[mu1:sigma]~1*eta,Y2[mu2:sigma]~1*eta,Y3[mu3:sigma]~1*eta,eta~G+Gender)
+latent(m.lvm) <- ~eta
+e.lvm <- estimate(m.lvm, data = dW)
+logLik(e.lvm)
 
-    iL <- L[iP,]
-    calcSatterth1DF2(ls.rho, L = iL, isF = FALSE)
+solve(information(e.lvm))-attr(residuals2(e.lme, return.vcov.param = TRUE),"vcov.param")
+solve(information(e.lvm))-attr(residuals2(e.lvm, return.vcov.param = TRUE),"vcov.param")
 
-    debug(vss)
-    vss <- lmerTest:::vcovLThetaL(ls.rho$model)
 
-    fct.obj <- function(x){
-        print(x)
-        vss(t(iL), x)
-    }
-    fct.obj <- function(x){ # x <- p.obj
-        iid.tempo <- iid2(e.lme, p = x, adjust.residuals = FALSE, return.df = FALSE)
-        vec.sd <- sqrt(diag(crossprod()))
-        vec.sd %*% iL
-    }
-    p.obj <- c(ls.rho$thopt, ls.rho$sigma)    
-    g <- as.double(numDeriv::jacobian(func = fct.obj, x = p.obj, method = "Richardson"))
-        
-    denom <- t(g) %*% ls.rho$A %*% g
-    varcor <- fct.obj(p.obj)
-    
-    2 * (varcor)^2/denom
+
+##              (Intercept)        timeY2        timeY3             G       GenderF     corCoef1       sigma2
+## (Intercept)  0.062322690 -2.127369e-02 -2.127369e-02  2.764622e-03 -4.842052e-02  0.000000000  0.000000000
+## timeY2      -0.021273689  4.254738e-02  2.127369e-02  6.554524e-19 -6.372999e-18  0.000000000  0.000000000
+## timeY3      -0.021273689  2.127369e-02  4.254738e-02  4.574516e-19 -3.214343e-18  0.000000000  0.000000000
+## G            0.002764622  6.554524e-19  4.574516e-19  2.441123e-02 -5.239548e-03  0.000000000  0.000000000
+## GenderF     -0.048420521 -6.372999e-18 -3.214343e-18 -5.239548e-03  8.358517e-02  0.000000000  0.000000000
+## corCoef1     0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.042864621 -0.007542831
+## sigma2       0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00 -0.007542831  0.022628493
+
+param <- coef(e.lvm)
+n.param <- length(param)
+L <- vector("numeric", length = n.param)
+L[4] <- 1
+fct.obj <- function(x){ # x <- p.obj
+    newSigma <- solve(information(e.lvm, p = x))
+    return(rbind(L) %*% newSigma %*% cbind(L))
+    ## iid.tempo <- iid2(e.lme, p = x, adjust.residuals = FALSE, return.df = FALSE)
+    ## vec.sd <- sqrt(diag(crossprod()))
+    ## vec.sd %*% iL
+}
+fct.obj(x = param)
+
+g <- as.double(numDeriv::jacobian(func = fct.obj, x = param, method = "Richardson"))     
+denom <- t(g) %*% vcov(e.lvm)  %*% g
+2*fct.obj(x = param)^2 / (t(g) %*% vcov(e.lvm)  %*% g)
+calcDF_lmerTest(e.lmer)
+
+
 
     
-    result[, 2] <- (L %*% ls.rho$fixEffs)/sqrt(varcor)
-    
-    result[, 3] <- 2 * (1 - pt(abs(result[, 2]), df = result[, 
-        1]))
-    result[, 4] <- sqrt(varcor)
-    
-})
 
 ls.rho$sigma
 
@@ -224,6 +190,54 @@ expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
     
 ##    expect_equal(attr(s1, "df"), NROW(d))
 
+
+## * Robust vcov
+
+## ** linear regression
+mSim <- lvm(Y~X1+X2+X3)
+transform(mSim,Id~Y) <- function(x){1:NROW(x)}
+set.seed(10)
+d <- sim(mSim,n)
+
+m <- lvm(Y~X1+X2+X3)
+e <- estimate(m,d)
+eR <- estimate(m,d,robust = TRUE, cluster = "Id")
+
+test_that("linear regression (at ML)",{
+
+    test <- solve(vcov(e))
+    X <- model.matrix(lm(formula(m)[[1]], data=d))    
+    GS <- Matrix::bdiag(crossprod(X)/coef(e)["Y~~Y"],n/2*(coef(e)["Y~~Y"])^(-2))
+    expect_equal(as.double(test), as.double(GS))
+
+    test <- crossprod(iid(e, return.df = FALSE))
+    
+    GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))
+    expect_equal(unname(test), unname(GS))    
+})
+
+
+p <- length(coef(e))
+fSigma <- function(p){
+    vcovB <- p["Y~~Y"]*solve(crossprod(X))
+    vcovS <- 2/n*(p["Y~~Y"])^2   
+    
+    return(as.double(Matrix::bdiag(vcovB,vcovS)))
+}
+matrix(fSigma(coef(e)),p,p) - vcov(e)
+
+iGrad <- numDeriv::jacobian(func = fSigma, x = coef(e))
+iGrad[,5]
+solve(crossprod(X))
+(4/n*(coef(e)["Y~~Y"]))
+
+(2/n*(coef(e)["Y~~Y"])^2) * solve(crossprod(X))[1] * solve(crossprod(X))[1]
+
+2 / (solve(crossprod(X))[1] * solve(crossprod(X))[1])
+
+iGrad %*% vcov(e) %*% iGrad
+
+2/n*(p["Y~~Y"])^2   
 
 #----------------------------------------------------------------------
 ### test-df.residuals.R ends here

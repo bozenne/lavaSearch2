@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov  9 2017 (16:31) 
+## Last-Updated: nov  9 2017 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 362
+##     Update #: 365
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -153,8 +153,8 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     if(test.cor){
         Omega <- lapply(1:n.cluster,function(iC){ # iC <- 1
             M <- unclass(getVarCov(object, individual = iC))
-            colnames(M) <- name.endogenous[vec.rep[cluster==iC]]
-            rownames(M) <- name.endogenous[vec.rep[cluster==iC]]
+            colnames(M) <- vec.rep[cluster==iC]
+            rownames(M) <- vec.rep[cluster==iC]
             return(M)
         })
     }else{

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: nov  7 2017 (19:14) 
+## last-updated: nov  9 2017 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 310
+##     Update #: 319
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -113,15 +113,7 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
 iid2.gls <- function(x, p = NULL, data = NULL, 
                      adjust.residuals = TRUE, power = 1/2,
                      return.df = TRUE, ...){
-
-### ** normalize argument
-    if(is.null(data)){
-        data <- getData(x)
-    }
-    if(is.null(p)){
-        p <- coef(x)
-    }
-
+    
 ### ** compute the score
     e.score <- score2(x, p = p, data = data,
                       adjust.residuals = adjust.residuals, power = power,
@@ -150,13 +142,6 @@ iid2.gls <- function(x, p = NULL, data = NULL,
 iid2.lme <- function(x, p = NULL, data = NULL,
                      adjust.residuals = TRUE, power = 1/2,
                      return.df = TRUE, ...){
-
-    if(is.null(data)){
-        data <- getData(x)
-    }
-    if(is.null(p)){
-        p <- fixef(x)
-    }
     
 ### ** compute the score
     e.score <- score2(x, p = p, data = data,
@@ -184,7 +169,7 @@ iid2.lme <- function(x, p = NULL, data = NULL,
 #' @rdname iid2
 #' @export
 iid2.lvmfit <- function(x, p = NULL, data = NULL, 
-                        adjust.residuals = TRUE, power = 1/2, 
+                        adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
                         return.df = TRUE, check.score = TRUE, ...){
 
     if(is.null(data)){
@@ -209,17 +194,17 @@ iid2.lvmfit <- function(x, p = NULL, data = NULL,
         }
     }
     e.score <- score2(x, p = p, data = data,
-                      adjust.residuals = adjust.residuals, power = power,
+                      adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
                       indiv = TRUE, return.vcov.param = TRUE, ...)
     vcov.param <- attr(e.score,"vcov.param")
 
-### ** compute the iiid
+### ** compute the iid
     iid0 <- e.score %*% vcov.param
 
 ### ** degrees of freedom
     if(return.df){
-        browser()
-        df.adj <- .calcDF(x = x, p = p, iid0 = iid0)
+        df.adj <- calcDDF(x, p = p, data = data, iid0 = iid0,
+                          adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich, ...)
         attr(iid0,"df") <- df.adj
     }
     

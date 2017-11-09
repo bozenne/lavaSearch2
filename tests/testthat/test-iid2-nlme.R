@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (12:57) 
 ## Version: 
-## last-updated: nov  7 2017 (19:31) 
+## last-updated: nov  9 2017 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 3
+##     Update #: 4
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,11 +42,12 @@ e.gls <- gls(value ~ time + G,
              weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
 factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
+name.param <- names(coef(e.gls))
 
 test_that("gls: HC0/HC1", {
     iid2HC0.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = FALSE)
 
-    VsandwichHC0.gls <- crossprod(iid2HC0.gls)
+    VsandwichHC0.gls <- crossprod(iid2HC0.gls)[name.param,name.param]
     GS <- vcovCR(e.gls, type = "CR0", cluster = dL$Id) * factor^2
     expect_equal(as.double(GS),as.double(VsandwichHC0.gls), tolerance = 1e-10)
     

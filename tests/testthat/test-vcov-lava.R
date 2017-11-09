@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: nov  9 2017 (14:46) 
+## last-updated: nov  9 2017 (17:49) 
 ##           By: Brice Ozenne
-##     Update #: 11
+##     Update #: 13
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,9 @@ library(testthat)
 
 context("score2")
 n <- 5e1
-## * function
+
+## * Model vcov
+## ** function
 rmAttr <- function(x, name.rm = NULL, name.keep){
     if(is.null(name.rm)){
         name.rm <- names(attributes(x))
@@ -30,7 +32,7 @@ rmAttr <- function(x, name.rm = NULL, name.keep){
     return(x)
 }
 
-## * linear regression
+## ** linear regression
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
 d <- sim(m,n)
@@ -79,8 +81,8 @@ test_that("linear regression: constrains",{
 })
 
 
-## * multiple linear regression
-## ** without covariance link
+## ** multiple linear regression
+## *** without covariance link
 m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
 set.seed(10)
 d <- sim(m,n)
@@ -121,7 +123,7 @@ test_that("multiple linear regressions: constrains",{
     expect_equal(unname(test), unname(GS))    
 })
 
-## ** with covariance links
+## *** with covariance links
 m <- lvm(c(Y1~X1,Y2~X2,Y3~X3+X1))
 covariance(m) <- Y1~Y2
 set.seed(10)
@@ -152,7 +154,7 @@ test_that("multiple linear regression, covariance link (not at ML: +1:p)",{
     expect_equal(unname(test), GS)    
 })
 
-## * latent variable model
+## ** latent variable model
 m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m.sim) <- eta1~X1+X2
@@ -160,7 +162,7 @@ latent(m.sim) <- ~eta1+eta2
 set.seed(10)
 d <- sim(m.sim,n,latent=FALSE)
 
-## ** factor model
+## *** factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 regression(m) <- eta1~X1+X2
 
@@ -210,7 +212,7 @@ test_that("factor model: constrains",{
 })
 
 
-## ** 2 factor model
+## *** 2 factor model
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta1~X1+X2
@@ -252,7 +254,7 @@ test_that("2 factor model: constrains",{
     expect_equal(unname(test), unname(GS))    
 })
 
-## ** 2 factor model (covariance)
+## *** 2 factor model (covariance)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 covariance(m) <- eta1 ~ eta2
@@ -283,7 +285,7 @@ test_that("2 factor model, covariance (not at ML: +1:p)",{
     expect_equal(unname(test), GS)    
 })
 
-## ** 2 factor model (correlation LV)
+## *** 2 factor model (correlation LV)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta2 ~ X1
@@ -317,3 +319,4 @@ test_that("2 factor model, correlation (not at ML: +1:p)",{
 
 #----------------------------------------------------------------------
 ### test-vcov.R ends here
+

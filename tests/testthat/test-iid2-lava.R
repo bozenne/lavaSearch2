@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: nov  7 2017 (19:31) 
+## last-updated: nov  9 2017 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 108
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,7 +38,6 @@ e.lm <- lm(formula.lvm,data=d)
 e.lvm <- estimate(lvm(formula.lvm),data=d)
 
 ## ** iid2 matches iid
-# e.iid2.lm <- iid2(e.lvm, use.information = TRUE)
 test_that("iid2 matches iid", {
     e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = FALSE)
     GS1 <- iid(e.lm)
@@ -49,13 +48,23 @@ test_that("iid2 matches iid", {
     expect_equal(unname(e1.iid2.lvm[,1:4]), unname(GS1))
 })
 
+
+tempo <- iid2(e.lvm, return.df = TRUE, adjust.residuals = FALSE)
+iid2(e.lvm, p = pars(e.lvm))[1,]
+score2(e.lvm, p = pars(e.lvm) + c(0,0,0,0,1))[1,]
+
+solve(vcov(e.lvm))
+n*(1/coef(e.lvm)["Y~~Y"])^2/2
+
+crossprod(model.matrix(e.lm))/coef(e.lvm)["Y~~Y"]
+
 ## ** iid2 lvm matches iid2 lm
 test_that("iid2 lvm matches iid2 lm", {
     for(iAdj in c(FALSE,TRUE)){ # iAdj <- 1
         for(iPower in c(0.5,1)){ # iPower <- 1
-        e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = iAdj, power = iPower)
-        e0.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = iAdj, power = iPower, use.information = TRUE)
-        expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
+            e.iid2.lm <- iid2(e.lm, return.df = FALSE, adjust.residuals = iAdj, power = iPower)
+            e0.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = iAdj, power = iPower, use.information = TRUE)
+            expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
         }
     }
 })
@@ -97,95 +106,6 @@ dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
 setkey(dL, "Id")
 
 keep.cols <- c("eta","Y2","Y3","eta~G")
-
-## ** gls
-e.gls <- gls(value ~ time + G,
-             correlation = corCompSymm(form =~ 1| Id),
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
-factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
-
-test_that("gls: HC0/HC1", {
-    iid2HC0.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = FALSE)
-
-    VsandwichHC0.gls <- crossprod(iid2HC0.gls)
-    GS <- vcovCR(e.gls, type = "CR0", cluster = dL$Id) * factor^2
-    expect_equal(as.double(GS),as.double(VsandwichHC0.gls), tolerance = 1e-10)
-    
-    GS <- vcovCR(e.gls, type = "CR1", cluster = dL$Id) * factor^2
-    VsandwichHC1.gls <- crossprod(iid2HC0.gls)*n/(n-1)
-    expect_equal(as.double(GS),as.double(VsandwichHC1.gls), tolerance = 1e-10)
-})
-
-test_that("gls: HC3", {
-    iid2HC3.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 1)
-
-    GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id) * factor^2    
-    VsandwichHC3.gls <- crossprod(iid2HC3.gls)
-    expect_equal(as.double(GS),as.double(VsandwichHC3.gls), tolerance = 1e-10) 
-})
-
-test_that("gls: HC2", {
-    iid2HC2.gls <- iid2(e.gls, return.df = FALSE, adjust.residuals = TRUE, power = 0.5)
-
-    GS <- vcovCR(e.gls, type = "CR2", cluster = dL$Id) * factor^2
-    VsandwichHC2.gls <- crossprod(iid2HC2.gls)
-    expect_equal(as.double(GS),as.double(VsandwichHC2.gls), tolerance = 1e-10)
-})
-
-
-## ** lme
-
-m <- lvm(c(Y~X+G,G~X))
-dW <- sim(m, 1e1)
-e.lvm <- estimate(m, dW)
-
-score2(e.lvm, return.df = FALSE, adjust.residuals = FALSE, return.vcov.param = TRUE)
-head(score(e.lvm, indiv = TRUE))
-
-vcov(e.lvm)
-prepareScore2(e.lvm)$dmu.dtheta[6]
-
-m00 <- lm(Y~X+G, data = dW)
-m0 <- estimate(lvm(Y~X+G), data = dW)
-score(m0, indiv = TRUE)
-score2(m0, indiv = TRUE, adjust.residuals = FALSE)
-
-dW$Y-coef(m0)[1]-coef(m0)[2]*dW$X-coef(m0)[3]*dW$G
-dW$Y-predict(m0)
-
-
-
-
-residuals(m0)
-residuals(e.lvm)
-predict(e.lvm)
-predictlvm(e.lvm)
-
-residuals(e.lvm, data = )
-lava:::predict.lvmfit
-dW$G
-dW$X
-coefType(m)
-
-m <- lvm(c(Y1~eta,Y2~eta,Y3~eta+X1))
-covariance(m) <- Y1~Y2
-dW <- sim(m, 1e2)
-e.lvm <- estimate(m, dW)
-
-## ** iid2 matches iid
-test_that("iid2 matches iid", {
-    e1.iid2.lvm <- iid2(e.lvm, return.df = FALSE, adjust.residuals = FALSE)
-    e1.iid2.lvm <- score2(e.lvm, return.df = FALSE, adjust.residuals = FALSE)
-
-    
-    GS1 <- iid(e.lvm)
-    attr(GS1, "bread") <- NULL
-
-    expect_equal(unname(e1.iid2.lvm[,1:4]), unname(GS1))
-    
-})
-
 
 
 #----------------------------------------------------------------------

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  9 2017 (16:23) 
+## last-updated: nov  9 2017 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 445
+##     Update #: 447
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -122,7 +122,7 @@ prepareScore2.gls <- function(object, X, Omega,
             }
         }
     }
-    
+
 ### ** export
     Omega_chol <- lapply(Omega,function(i){
         M <- chol(i)

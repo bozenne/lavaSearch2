@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: okt 27 2017 (10:21) 
+## last-updated: nov  9 2017 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 53
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@
 #' @export
 calcDDF.gls <- function(x, p, iid0,
                         adjust.residuals, power, ...){
-browser()
+    browser()
     x$modelStruct$reStruct
     
     n.coef <- NCOL(iid0)
@@ -117,6 +117,47 @@ calcDDF.lme <- function(x, p, iid0,
     numerator <- 2*Sigma.beta^2
     browser()
     jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = vec.allCoef)
+    denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
+
+    numerator / denominator
+    ## jacob.iid0 %*% Sigma.beta %*% t(jacob.iid0)
+
+        ## calcSigma <- function(iP){ # iP <- p
+        ##     Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
+        ##                                          use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
+        ##                                          check.score = FALSE, ...))
+        ##     return(Sigma.tempo[2,2])             
+        ## }
+ 
+}
+
+#----------------------------------------------------------------------
+### calcDDF.R ends here
+
+## * calcDDF.lvmfit
+#' @rdname calcDDF
+#' @export
+calcDDF.lvmfit <- function(x, p, data, iid0,
+                           adjust.residuals, power, as.clubSandwich, ...){
+
+### ** prepare
+    
+    calcSigma <- function(iP){ # iP <- vec.allCoef
+        
+        Sigma.tempo <- crossprod(iid2(x = x, p = iP, data = data,
+                                      adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                                      return.df = FALSE, check.score = FALSE, ...))
+
+        ## print(Sigma.tempo)
+        ## return(as.double(Sigma.tempo))
+        return(diag(Sigma.tempo))             
+    }
+
+    calcSigma(p+c(0,0,0,0,1))
+    Sigma.beta <- crossprod(iid0)
+    numerator <- 2*Sigma.beta^2
+    browser()
+    jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = p)
     denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
 
     numerator / denominator
