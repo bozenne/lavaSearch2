@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: nov 10 2017 (11:06) 
+## last-updated: nov 15 2017 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 92
+##     Update #: 137
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,116 +26,63 @@
 ## * dfVariance.gls
 #' @rdname dfVariance
 #' @export
-dfVariance.gls <- function(object, p, iid0,
-                           adjust.residuals, power, ...){
-    browser()
-    x$modelStruct$reStruct
+dfVariance.gls <- function(object, cluster, ...){
+
+    p <- .coef2(object)
+    data <- getData(object)
+    vcov.param <- attr(residuals2(object, cluster = cluster, p = p, data = data,
+                                  adjust.residuals = FALSE, return.vcov.param = TRUE),
+                       "vcov.param")
+
+    N.param <- length(p)
+    name.param <- names(p)
     
-    n.coef <- NCOL(iid0)
-    calcSigma <- function(iP){ # iP <- p
-        Sigma.tempo <- crossprod(iid2(x = x, p = iP,
-                                      adjust.residuals = adjust.residuals, power = power,
-                                      return.df = FALSE, check.score = FALSE, ...))
-        return(Sigma.tempo)             
+### ** Define function to compute the standard errors
+    calcSigma <- function(iParam){ # x <- p.obj
+        M <- attr(residuals2(object, cluster = cluster, p = iParam, data = data,
+                             adjust.residuals = FALSE, return.vcov.param = TRUE),
+                  "vcov.param")
+        return(setNames(diag(M), name.param))         
     }
-    args(iid2.lme)
+
+### ** Compute the gradient of the function computing the standard errors
     browser()
+    dSigma.dtheta <- numDeriv::jacobian(func = calcSigma, x = p, method = "Richardson")
     
-    calcSigma(p)
-    Sigma.beta <- crossprod(iid0)
+### ** Compute degrees of freedom
 
-    numerator <- 2*Sigma.beta^2
-    jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = p)
-    browser()
-    denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
-
-    numerator / denominator
-    ## jacob.iid0 %*% Sigma.beta %*% t(jacob.iid0)
-
-        ## calcSigma <- function(iP){ # iP <- p
-        ##     Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
-        ##                                          use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
-        ##                                          check.score = FALSE, ...))
-        ##     return(Sigma.tempo[2,2])             
-        ## }
+    ## diag(vcov.param) - calcSigma(p)
+    numerator <- 2*diag(vcov.param)^2
+    denom <- rowSums(dSigma.dtheta %*% vcov.param * dSigma.dtheta)
+    df <- numerator/denom
+    alpha <- df/diag(vcov.param)
+    return(df)
  
 }
 
 ## * dfVariance.lme
 #' @rdname dfVariance
 #' @export
-dfVariance.lme <- function(object, p, iid0,
-                        adjust.residuals, power, ...){
-
-### ** normalize arguments
-    if(!is.null(x$modelStruct$corStruct)){
-        stop("cannot handle lme objects when corStruct is not null \n")
-    }
-    if(length(getVarCov(x))>1){
-        stop("cannot handle lme objects with more than one random effect \n")
-    }
-    if(!is.null(x$modelStruct$varStruct) && "varIdent" %in% class(x$modelStruct$varStruct) == FALSE){
-        stop("can only handle varIdent class for the variance structure \n")
-    }
-### ** prepare
-    name.fixef <- names(fixef(x))
-    test.weigth <- !is.null(x$modelStruct$varStruct)
-    if(test.weigth){
-        name.weight <- paste0("weight",1:length(x$modelStruct$varStruct))
-        vec.weight <- setNames(as.double(x$modelStruct$varStruct),name.weight)
-    }else{
-        vec.weight <- NULL
-    }
-    vec.allCoef <- c(fixef(x),
-                     sigma2=x$sigma,
-                     tau=as.double(getVarCov(x)),
-                     vec.weight)
-
-    calcSigma <- function(iP){ # iP <- vec.allCoef
-        ## print(iP-vec.allCoef)
-        
-        ## update variance parameters in the model
-        x$sigma <- as.double(iP["sigma2"])
-        x$modelStruct$reStruct[[1]][] <- iP["tau"]/x$sigma^2
-        x$modelStruct$varStruct[] <- iP[name.weight]        
-        old2new <- 1/coef(x$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)
-        attr(x$modelStruct$varStruct,"weights") <- old2new[attr(x$modelStruct$varStruct, "groups")]
-           
-        Sigma.tempo <- crossprod(iid2(x = x, p = iP[name.fixef],
-                                      adjust.residuals = adjust.residuals, power = power,
-                                      return.df = FALSE, check.score = FALSE, ...))
-
-        ## print(Sigma.tempo)
-        return(as.double(Sigma.tempo))             
-    }
-                                       
-    Sigma.beta <- crossprod(iid0)
-    ## Sigma.beta-calcSigma(vec.allCoef)
-    ## vec.allCoef2 <- vec.allCoef
-    ## vec.allCoef2[1] <- vec.allCoef2[1] + 1
-    ## calcSigma(vec.allCoef2)-calcSigma(vec.allCoef)
-    numerator <- 2*Sigma.beta^2
-    browser()
-    jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = vec.allCoef)
-    denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
-
-    numerator / denominator
-    ## jacob.iid0 %*% Sigma.beta %*% t(jacob.iid0)
-
-        ## calcSigma <- function(iP){ # iP <- p
-        ##     Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
-        ##                                          use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
-        ##                                          check.score = FALSE, ...))
-        ##     return(Sigma.tempo[2,2])             
-        ## }
- 
-}
+dfVariance.lme <- dfVariance.gls
 
 ## * dfVariance.lvmfit
 #' @rdname dfVariance
 #' @export
-dfVariance.lvmfit <- function(object, p, data, vcov.param,
-                              robust, adjust.residuals, power, as.clubSandwich, ...){
+dfVariance.lvmfit <- function(object, p = NULL, data = NULL, vcov.param = NULL,
+                              robust = FALSE, adjust.residuals = FALSE, power = 0.5, as.clubSandwich = TRUE, ...){
+
+    if(is.null(p)){p <- pars(object)}
+    if(is.null(data)){data <- model.frame(object)}
+    if(is.null(vcov.param)){
+        if(robust==FALSE){
+            vcov.param <- vcov(object)
+        }else{
+            vcov.param <- crossprod(iid2(object, p = p, data = data,
+                                         adjust.residuals = adjust.residuals,
+                                         power = power,
+                                         as.clubSandwich = as.clubSandwich))
+        }
+    }
 
     n.param <- length(p)
     name.param <- names(p)
@@ -155,22 +102,25 @@ dfVariance.lvmfit <- function(object, p, data, vcov.param,
             M <- crossprod(iid2(object, p = iParam, data = data,
                                 adjust.residuals = adjust.residuals,
                                 power = power,
-                                as.clubSandwich = as.clubSandwich,
-                                return.df = FALSE))
+                                as.clubSandwich = as.clubSandwich))
             return(setNames(diag(M), name.param))         
         }
     }    
 
 ### ** Compute the gradient of the function computing the standard errors
-dSigma.dtheta <- numDeriv::jacobian(func = calcSigma, x = p, method = "Richardson")
+    dSigma.dtheta <- numDeriv::jacobian(func = calcSigma, x = p, method = "Richardson")
     
 ### ** Compute degrees of freedom
 
     ## diag(vcov.param) - calcSigma(p)
     numerator <- 2*diag(vcov.param)^2
-    denom <- rowSums(dSigma.dtheta %*% vcov.param  * dSigma.dtheta)
-
-    return(numerator/denom)
+    denom <- rowSums(dSigma.dtheta %*% vcov.param * dSigma.dtheta)
+    df <- numerator/denom
+    alpha <- df/diag(vcov.param)
+    return(df)
 }
+
+
+
 ##----------------------------------------------------------------------
 ### dfVariance.R ends here

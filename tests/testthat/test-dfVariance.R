@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: nov 10 2017 (12:15) 
+## last-updated: nov 15 2017 (17:58) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 55
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,55 +27,47 @@ n <- 5e1
 ## * linear regression
 mSim <- lvm(Y1~X1+X2+X3,Y2~X2,Y3~1)
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
+set.seed(10)
 d <- as.data.table(sim(mSim,n))
 
 ## ** t test
 ## formula:
 ## df = \frac{ 2 * s_pool^2 }{ var(s_pool^2) }
 ##    = \frac{ ( s_X^2/m + s_Y^2/n )^2}{( s_X^4/(m(m-1)) + s_Y^4/(n(n-1)))}
+
+## using the t test function
 e.ttest <- t.test(d$X1,d$X2)
 e.ttest$parameter
 
-
+## by hand
 sX1 <- var(d$X1)/n
 sX2 <- var(d$X2)/n
 df <- (sX1+sX2)^2/(sX1^2/(n-1) + sX2^2/(n-1))
 
-
-dtL <- melt(d[,.(X1,X2,Id)], id.vars = "Id")
-e.gls <- gls(value ~ 0+variable, weight = varIdent(form =~ 1|variable), data = dtL, method = "ML")
-cS.df <- coef_test(e.gls, vcov = "CR2", test = "Satterthwaite", cluster = dtL$Id) # ok
-cS.df <- coef_test(e.gls, vcov = "CR2", test = "Satterthwaite", cluster = 1:NROW(dtL)) # not ok
-
-epsilon = as.double(iIH %*% epsilon.tempo) 
-
-
+df-e.ttest$parameter
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2),d)
 e.lm <- lm(Y1~X1+X2,d)
 
-lava.options(Dmethod = "Richardson")
-iid.lava <- iid(e.lvm)
-iid.manual <- score(e.lvm,indiv = TRUE) %*% vcov(e.lvm)
-iid.lava-iid.manual
-head(score(e.lvm,indiv = TRUE))
-head(iid.lava)
-crossprod(iid.lava)
-
+### *** clubSandwich
 cS.vcov <- vcovCR(e.lm, type = "CR2", cluster = d$Id)
 cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(d))
 ## cS.df$df is very suspect: should be the same for all coefficient and close to n-p
 
-score2(e.lvm)
-
+### *** dfVariance
 test_that("linear regression: df",{
 
-    s.lvm <- score2(e.lvm, adjust.residuals = TRUE)
-    expect_equal(df.residual(e.lvm, adjust.residuals = TRUE),df.residual(e.lm))
+    df.adj <- dfVariance(e.lvm,
+                         robust = FALSE, adjust.residuals = FALSE)
 
-    
-    expect_equal(attr(s.lvm,"df"),df.residual(e.lm))
+    keep.coef <- c("Y1","Y1~X1","Y1~X2")
+    GS <- rep(NROW(d),length(keep.coef))
+    expect_equal(as.double(df.adj[keep.coef]),GS)
+
+    df.adj <- dfVariance(e.lvm,
+                         robust = TRUE, adjust.residuals = FALSE)
+    df.adj
 
 })
 
@@ -96,153 +88,55 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
            eta~G+Gender))
 e.lvm <- estimate(m, dW)
 
-## ** clubSandwich - bug
+e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
+               data = dL, REML = FALSE)
+
 e.lme <- lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
+e.gls <- gls(value ~ time + G + Gender,
+             correlation = corCompSymm(form=~ 1|Id),
+             data = dL, method = "ML")
+
+## ** clubSandwich - bug
 expect_equal(logLik(e.lmer),logLik(e.lme))
 coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 ## strange that same type of coef have very different degrees of freedom
 
 ## ** lmerTest - ok
-e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
-               data = dL, REML = FALSE)
 summary(e.lmer, ddf = "Satterthwaite")$coef
-logLik(e.lmer)
 
-## *** try to replicate lmerTest results
-e.lme <- lme(value ~ time + G + Gender,
-             random =~ 1|Id,
-             data = dL, method = "ML")
-logLik(e.lme)
+## ** lava
+expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
-m.lvm <- lvm(Y1[mu1:sigma]~1*eta,Y2[mu2:sigma]~1*eta,Y3[mu3:sigma]~1*eta,eta~G+Gender)
-latent(m.lvm) <- ~eta
-e.lvm <- estimate(m.lvm, data = dW)
-logLik(e.lvm)
+test_that("mixed mode: df",{
+    iidX <- iid2(e.lvm)
+    iidY <- iid2(e.lme)
+    range(iidX[,c(1:5,7,6)]-iidY)
+    
+    V1 <- solve(information(e.lvm, p = pars(e.lvm)+1))
+    V2 <- attr(residuals2(e.lme, p = .coef2(e.lme)+1,
+                          adjust.residuals = FALSE, return.vcov.param = TRUE),
+               "vcov.param")
+    V1-V2
+    
+    df.adj <- dfVariance(e.lvm,
+                         robust = FALSE, adjust.residuals = FALSE)
 
-dfVariance(e.lvm, p = pars(e.lvm),
-           data = model.frame(e.lvm),
-           vcov.param = vcov(e.lvm),
-           robust = FALSE, adjust.residuals = FALSE)
+    expect_equal(as.double(summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]),
+                 as.double(df.adj[1:5]))
 
-dfVariance(e.lvm, p = pars(e.lvm),
-           data = model.frame(e.lvm),
-           vcov.param = crossprod(iid(e.lvm)),
-           robust = TRUE, adjust.residuals = FALSE)
-
-residuals2(e.lvm, adjust.residuals = FALSE, return.vcov.param = TRUE)
-solve(crossprod(score2(e.lvm, adjust.residuals = FALSE)))
-
-round(crossprod(score(e.lvm,indiv=TRUE)) - solve(vcov(e.lvm)), 1)
-
-iid2(e.lvm, adjust.residuals = FALSE)
-
-solve(information(e.lvm))-attr(residuals2(e.lme, return.vcov.param = TRUE),"vcov.param")
-solve(information(e.lvm))-attr(residuals2(e.lvm, return.vcov.param = TRUE),"vcov.param")
-summary2(e.lvm, robust = FALSE, adjust.residuals = FALSE)
-summary2(e.lvm, robust = TRUE, adjust.residuals = FALSE)
-
-summary(e.lvm)
-lava:::summary.lvmfit
-CoefMat(e.lvm, labels = 2, level = 9)
-CoefMat(e.lvm, labels = 0, level = 9)
-
-lava:::summary.lvmfit
-##              (Intercept)        timeY2        timeY3             G       GenderF     corCoef1       sigma2
-## (Intercept)  0.062322690 -2.127369e-02 -2.127369e-02  2.764622e-03 -4.842052e-02  0.000000000  0.000000000
-## timeY2      -0.021273689  4.254738e-02  2.127369e-02  6.554524e-19 -6.372999e-18  0.000000000  0.000000000
-## timeY3      -0.021273689  2.127369e-02  4.254738e-02  4.574516e-19 -3.214343e-18  0.000000000  0.000000000
-## G            0.002764622  6.554524e-19  4.574516e-19  2.441123e-02 -5.239548e-03  0.000000000  0.000000000
-## GenderF     -0.048420521 -6.372999e-18 -3.214343e-18 -5.239548e-03  8.358517e-02  0.000000000  0.000000000
-## corCoef1     0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.042864621 -0.007542831
-## sigma2       0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00 -0.007542831  0.022628493
-
-
-
+    residuals2(e.gls)
+    df.lme <- dfVariance(e.lme,
+                         robust = FALSE, adjust.residuals = FALSE)
+    
+    
+    vcov.param <- attr(residuals2(e.lme, p = .coef2(e.lme)+1,
+                                  adjust.residuals = FALSE, return.vcov.param = TRUE),
+                       "vcov.param")
+    vcov.param
+    vcov(e.lme)
     
 
-ls.rho$sigma
-
-sigma(e.lmer)
-e.lmer@theta
-
-
-str(e.lmer)
-
-## * linear regressions
-m.sim <- lvm(Y1~X1+X2+X3,Y2~X2,Y3~1)
-d <- sim(m.sim,n)
-
-e.lvm <- estimate(m.sim,d)
-
-test_that("linear regressions: df",{
-
-    s.lvm <- score2(e.lvm, adjust.residuals = FALSE)
-    expect_equal(df.residual(e.lvm),attr(s.lvm,"df"))
-    expect_equal(df.residual(e.lvm) ,)
-    
 })
-
-
-
-e1 <- estimate(lvm(Y1~X1,Y2~X2+X3,Y3~1),d)
-s1 <- score2(e1, adjust.residuals = TRUE)
-expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
-                 s0[,c("Y1","Y1~X1","Y1~~Y1")])
-    expect_equal(df.residual(e0),attr(s0,"df"))
-    ## expect_equal(df.residual(e1),attr(s1,"df"))
-
-    ## df.residual(e1)
-    
-##    expect_equal(attr(s1, "df"), NROW(d))
-
-
-## * Robust vcov
-
-## ** linear regression
-mSim <- lvm(Y~X1+X2+X3)
-transform(mSim,Id~Y) <- function(x){1:NROW(x)}
-set.seed(10)
-d <- sim(mSim,n)
-
-m <- lvm(Y~X1+X2+X3)
-e <- estimate(m,d)
-eR <- estimate(m,d,robust = TRUE, cluster = "Id")
-
-test_that("linear regression (at ML)",{
-
-    test <- solve(vcov(e))
-    X <- model.matrix(lm(formula(m)[[1]], data=d))    
-    GS <- Matrix::bdiag(crossprod(X)/coef(e)["Y~~Y"],n/2*(coef(e)["Y~~Y"])^(-2))
-    expect_equal(as.double(test), as.double(GS))
-
-    test <- crossprod(iid(e, return.df = FALSE))
-    
-    GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))
-    expect_equal(unname(test), unname(GS))    
-})
-
-
-p <- length(coef(e))
-fSigma <- function(p){
-    vcovB <- p["Y~~Y"]*solve(crossprod(X))
-    vcovS <- 2/n*(p["Y~~Y"])^2   
-    
-    return(as.double(Matrix::bdiag(vcovB,vcovS)))
-}
-matrix(fSigma(coef(e)),p,p) - vcov(e)
-
-iGrad <- numDeriv::jacobian(func = fSigma, x = coef(e))
-iGrad[,5]
-solve(crossprod(X))
-(4/n*(coef(e)["Y~~Y"]))
-
-(2/n*(coef(e)["Y~~Y"])^2) * solve(crossprod(X))[1] * solve(crossprod(X))[1]
-
-2 / (solve(crossprod(X))[1] * solve(crossprod(X))[1])
-
-iGrad %*% vcov(e) %*% iGrad
-
-2/n*(p["Y~~Y"])^2   
 
 #----------------------------------------------------------------------
 ### test-dfVariance.R ends here

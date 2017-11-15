@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov 15 2017 (15:49) 
+## Last-Updated: nov 15 2017 (18:38) 
 ##           By: Brice Ozenne
-##     Update #: 385
+##     Update #: 431
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,21 +41,43 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
+
     test.var <- !is.null(object$modelStruct$varStruct)
     test.cor <- !is.null(object$modelStruct$corStruct)
+
+    if(test.var){
+        validClass.var <- c("varIdent","varFunc")
+        if(any(class(object$modelStruct$varStruct) %in% validClass.var == FALSE)){
+            stop("can only handle varStruct of class \"varIdent\"\n")
+        }
+    }
+    if(test.cor){
+        validClass.cor <- c("corCompSymm","corSymm","corStruct")
+        if(any(class(object$modelStruct$corStruct) %in% validClass.cor == FALSE)){
+            stop("can only handle corStruct of class \"corCompSymm\" or \"corSymm\"\n")
+        }
+    }
+    
+### ** Extract information
+
+    ## *** parameters
+    pp <- .coef2(object)
+    name.meancoef <- attr(pp,"mean.coef") 
+    attr(pp,"mean.coef") <- NULL
+    name.corcoef <- attr(pp,"cor.coef")
+    attr(pp,"cor.coef") <- NULL
+    name.varcoef <- attr(pp,"var.coef")
+    attr(pp,"var.coef") <- NULL
+
+    ## *** formula
+    formula.object <- evalInParentEnv(object$call$model)
+    
+    ## *** data    
     if(is.null(data)){
         data <- getData(object)
     }
-        
-### ** Extract information
-    ## *** mean parameters
-    mean.coef <- coef(object)
-
-    ## *** data    
-    formula.object <- evalInParentEnv(object$call$model)
-    
     X <- model.matrix(formula.object, data)
-    X <- X[,names(mean.coef),drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
+    X <- X[,name.meancoef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
     
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
@@ -63,26 +85,20 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     name.Y <- all.vars(update(formula.object, ".~1"))
     Y <- data[[name.Y]]
 
-    ## *** variance parameters
-    if(test.var){
-        var.coef <- c(sigma2 = sigma(object),coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
-    }else{
-        var.coef <- c(sigma2 = sigma(object)^2)
-    }
+    ## *** group
+    resGroup <- .getGroups2(object, cluster = cluster, data = data)
 
-    ## *** covariance parameters
-    if(test.cor){
-        cor.coef <- coef(object$modelStruct$corStruct, unconstrained = FALSE)
-        names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-    }else{
-        cor.coef <- NULL
-    }
+    cluster <- resGroup$cluster
+    n.cluster <- resGroup$n.cluster
+    endogenous <- resGroup$endogenous
+    name.endogenous <- resGroup$name.endogenous
+    n.endogenous <- resGroup$n.endogenous
+    index.obs <- resGroup$index.obs
+   
+### ** Prepare
 
-    ## *** update with user-specified values
+    ## *** update parameters with user-specified values
     if(!is.null(p)){
-        name.meancoef <- names(mean.coef) 
-        name.corcoef <- names(cor.coef)
-        name.varcoef <- names(var.coef)
         
         if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
             name.all <- c(name.meancoef,name.corcoef,name.varcoef)
@@ -90,59 +106,15 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                  "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
         }
 
-        mean.coef <- p[name.meancoef]
-        cor.coef <- p[name.corcoef]
-        var.coef <- p[name.varcoef]
+        p <- p[c(name.meancoef,name.corcoef,name.varcoef)]
+    }else{
+        p <- pp
     }
-    name.param <- c(names(mean.coef),names(cor.coef),names(var.coef))
+    mean.coef <- p[name.meancoef]
+    cor.coef <- p[name.corcoef]
+    var.coef <- p[name.varcoef]
+    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
     n.param <- length(name.param)
-   
-    ## *** cluster
-    if(test.cor){
-        cluster <- as.numeric(object$groups)
-        if(any(class(object$modelStruct$corStruct) %in% c("corCompSymm","corSymm","corStruct") == FALSE)){
-            stop("can only handle corStruct of class \"corCompSymm\" or \"corSymm\"\n")
-        }
-    }else{
-        if(length(cluster) == 1 && is.character(cluster)){
-            cluster <- as.numeric(as.factor(data[[cluster]]))
-        }else{
-            if(length(cluster)!=NROW(data)){
-                stop("length of cluster and data do not match \n")
-            }
-            cluster <- as.numeric(as.factor(cluster))
-        }
-    }
-    if(test.var){
-        if(any(class(object$modelStruct$varStruct) %in% c("varIdent","varFunc") == FALSE)){
-            stop("can only handle varStruct of class \"varIdent\"\n")
-        }
-    }
-    
-### ** Prepare
-
-    ## cluster
-    n.cluster <- length(unique(cluster))
-    
-    ## endogenous
-    if(test.var){
-        name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
-        vec.rep <- attr(object$modelStruct$varStruct,"groups")        
-    }else if(test.cor){        
-        vec.rep0 <- unlist(attr(object$modelStruct$corStruct,"covariate"))
-        if(is.factor(vec.rep0)){
-            name.endogenous <- levels(vec.rep0)
-        }else{
-            name.endogenous <- unique(vec.rep0)
-        }
-        vec.rep <- vec.rep0[order(order(cluster))]
-    }else{
-        vec.rep <- rep("1",n.cluster)
-        name.endogenous <- "1"
-    }
-    n.endogenous <- length(name.endogenous)
-    ## convert observations from the vector format to the matrix format
-    index.obs <- cluster+(match(vec.rep,name.endogenous)-1)*n.cluster
 
 ### ** Compute observed residuals
     epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
@@ -152,26 +124,10 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 
 ### ** Partial derivatives
     ## *** Reconstruct variance covariance matrix (residuals)
-    if(test.cor){
-        Omega <- lapply(1:n.cluster,function(iC){ # iC <- 1
-            M <- unclass(getVarCov(object, individual = iC))
-            colnames(M) <- vec.rep[cluster==iC]
-            rownames(M) <- vec.rep[cluster==iC]
-            return(M)
-        })
-    }else{
-        if(test.var){
-            sigma2.base <- (sigma(object)*coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE))^2
-        }else{
-            sigma2.base <- setNames(rep(sigma(object)^2,n.endogenous), name.endogenous)
-        }
-        Omega <- tapply(vec.rep, cluster, function(iRep){
-            M <- diag(sigma2.base[iRep], nrow = length(iRep), ncol = length(iRep))
-            colnames(M) <- iRep
-            rownames(M) <- iRep
-            return(list(M))
-        })
-    }
+    Omega <- .getVarCov2(object, cor.coef = cor.coef, var.coef = var.coef,
+                         n.coef = n.coef,
+                         endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                         cluster = cluster, n.cluster = n.cluster)
 
     ## *** Compute partial derivative
     OPS2 <- prepareScore2(object, X = X, Omega = Omega,
@@ -234,14 +190,20 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
 
 ### ** Extract information
-    ## *** mean parameters
-    mean.coef <- fixef(object)
+    ## *** parameters
+    pp <- .coef2(object)
+    name.meancoef <- attr(pp,"mean.coef") 
+    attr(pp,"mean.coef") <- NULL
+    name.corcoef <- attr(pp,"cor.coef")
+    attr(pp,"cor.coef") <- NULL
+    name.varcoef <- attr(pp,"var.coef")
+    attr(pp,"var.coef") <- NULL
 
     ## *** data    
     formula.object <- evalInParentEnv(object$call$fixed)
     
     X <- model.matrix(formula.object, data)
-    X <- X[,names(mean.coef),drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
+    X <- X[,name.meancoef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
    
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
@@ -249,23 +211,8 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     name.Y <- all.vars(update(formula.object, ".~1"))
     Y <- data[[name.Y]]
 
-   
-    ## *** variance parameters
-    if(test.var){
-        var.coef <- c(sigma2 = sigma(object),coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
-    }else{
-        var.coef <- c(sigma2 = sigma(object)^2)
-    }
-
-    ## *** covariance parameters
-    cor.coef <- as.double(getVarCov(object))
-    names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-
     ## *** update with user-specified values
     if(!is.null(p)){
-        name.meancoef <- names(mean.coef) 
-        name.corcoef <- names(cor.coef)
-        name.varcoef <- names(var.coef)
         
         if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
             name.all <- c(name.meancoef,name.corcoef,name.varcoef)
@@ -273,11 +220,15 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
                  "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
         }
 
-        mean.coef <- p[name.meancoef]
-        cor.coef <- p[name.corcoef]
-        var.coef <- p[name.varcoef]
+        p <- p[c(name.meancoef,name.corcoef,name.varcoef)]
+    }else{
+        p <- pp
     }
-    name.param <- c(names(mean.coef),names(cor.coef),names(var.coef))
+    
+    mean.coef <- p[name.meancoef]
+    cor.coef <- p[name.corcoef]
+    var.coef <- p[name.varcoef]
+    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
     n.param <- length(name.param)
 
     ## *** cluster
@@ -566,3 +517,4 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
 
 ##----------------------------------------------------------------------
 ### residuals2.R ends here
+

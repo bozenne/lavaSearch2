@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (12:57) 
 ## Version: 
-## last-updated: nov 15 2017 (16:06) 
+## last-updated: nov 15 2017 (18:41) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 62
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,7 +24,7 @@ context("iid2-nlme")
 n <- 5e1
 
 
-## * mixed model
+## * data
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,Y4~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
@@ -35,13 +35,14 @@ dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
 setkey(dL, "Id")
 
 
-## ** Heteroscedasticity (gls)
+## * Heteroscedasticity (gls)
 m <- lvm(c(Y1~G,Y2~G,Y3~G,Y4~G))
 e.lvm <- estimate(m, dW)
 
 e.gls <- gls(value ~ 0+time + time:G,
              weight = varIdent(form = ~ 1|time),
              data = dL, method = "ML")
+
 
 factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
 index.coef <- 1:length(coef(e.gls))
@@ -90,7 +91,7 @@ test_that("gls: HC2", {
     expect_equal(as.double(GS),as.double(VsandwichHC2.gls), tolerance = 1e-10) 
 })
 
-## ** Mixed model (gls/lme/lvm - Compound symmetry)
+## * gls/lme/lvm - Compound symmetry
 m <- lvm(c(Y1[mu1:sigma]~1*eta,Y2[mu2:sigma]~1*eta,Y3[mu3:sigma]~1*eta,Y4[mu4:sigma]~1*eta,eta~G))
 e.lvm <- estimate(m, dW)
 
@@ -111,8 +112,9 @@ test_that("lme/gls equivalent to lvm", {
 test_that("lme: HC0/HC1", {
     iid2HC0.lme <- iid2(e.lme, adjust.residuals = FALSE)
     iid2HC0.gls <- iid2(e.gls, adjust.residuals = FALSE)
-    iid2HC0.lvm <- iid2(e.lvm, adjust.residuals = FALSE)    
-    expect_equal(unname(iid2HC0.lme[,index.coef]),unname(iid2HC0.lvm[,index.coef]))
+    iid2HC0.lvm <- iid2(e.lvm, adjust.residuals = FALSE)
+    
+    expect_equal(unname(iid2HC0.lme[,c(index.coef,7,6)]),unname(iid2HC0.lvm))
     expect_equal(unname(iid2HC0.gls[,index.coef]),unname(iid2HC0.lvm[,index.coef]))
 
     VsandwichHC0.lme <- crossprod(iid2HC0.lme)[index.coef,index.coef]
@@ -161,7 +163,7 @@ test_that("lme: HC2", {
 })
 
 
-## ** Mixed model (lme/lvm - CS with weights)
+## * lme/lvm - CS with weights
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,Y4~1*eta,eta~G))
 e.lvm <- estimate(m, dW)
 
@@ -217,7 +219,7 @@ test_that("lme/gls/lvm: HC2", {
 })
 
 
-## ** Mixed model (gls - Unstructured)
+## * gls - Unstructured
 m <- lvm(c(Y1~eta,Y2~eta,Y3~eta,eta~1))
 e.lvm <- estimate(m, dW)
 
