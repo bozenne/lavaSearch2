@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov  9 2017 (16:21) 
+## last-updated: nov 15 2017 (15:08) 
 ##           By: Brice Ozenne
-##     Update #: 1966
+##     Update #: 1974
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,6 +88,16 @@ score2.gls <- function(object, cluster, p = NULL, data = NULL,
     attr(epsilon, "vcov.param") <- NULL
         
 ### ** Compute score
+    ## lapply(OPS2$dOmega.dtheta,"[[",1)
+    ## getVarCov(object)
+
+    ## sigma.base <- sigma(object)^2
+    ## vec.factor <- coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)^2
+    ## cor.coef <- coef(object$modelStruct$corStruct, unconstrained = FALSE)
+    ## sigma.base*vec.factor
+
+    #cor.coef * prod(sqrt(sigma.base)*sqrt(vec.factor[2:3]))
+    
     out.score <- .score2(dmu.dtheta = OPS2$dmu.dtheta,
                          dOmega.dtheta = OPS2$dOmega.dtheta,
                          epsilon = epsilon,

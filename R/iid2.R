@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: nov  9 2017 (16:48) 
+## last-updated: nov 15 2017 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 319
+##     Update #: 331
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,6 @@
 #' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.#' 
 #' @param adjust.residuals Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.#' 
 #' @param power the exponent used for computing the leverage-adjusted residuals. See the details section.
-#' @param return.df Should the degree of freedom be computed?
 #' @param ... arguments to be passed to \code{score2}.
 #'
 #' @details
@@ -47,7 +46,7 @@
 #' Bell, R. M., & McCaffrey, D. F. Bias reduction in standard errors for linear regression with multi-stage samples. Survey Methodology, 28(2), 169-181 (2002). \cr
 #' Kauermann G. and Carroll R. J. A note on the efficiency of sandwich covariance matrix estimation. Journal of the American Statistical Association. Vol. 96, No. 456 (2001).
 #'
-#' @return A matrix with an attribute df if \code{return.df=TRUE}.
+#' @return A matrix.
 #' 
 #' @examples
 #' n <- 5e1
@@ -112,7 +111,7 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
 #' @export
 iid2.gls <- function(x, p = NULL, data = NULL, 
                      adjust.residuals = TRUE, power = 1/2,
-                     return.df = TRUE, ...){
+                     ...){
     
 ### ** compute the score
     e.score <- score2(x, p = p, data = data,
@@ -122,13 +121,6 @@ iid2.gls <- function(x, p = NULL, data = NULL,
     
 ### ** compute the iid
     iid0 <- e.score %*% vcov.param
-
-### ** compute the degrees of freedom
-    if(return.df){
-        df.adj <- calcDDF(x, p = p, iid0 = iid0,
-                          adjust.residuals = adjust.residuals, power = power, ...)
-        attr(iid0,"df") <- df.adj
-    }
     
 ### ** export
     colnames(iid0) <- colnames(e.score)
@@ -139,30 +131,7 @@ iid2.gls <- function(x, p = NULL, data = NULL,
 ## * iid2.lme
 #' @rdname iid2
 #' @export
-iid2.lme <- function(x, p = NULL, data = NULL,
-                     adjust.residuals = TRUE, power = 1/2,
-                     return.df = TRUE, ...){
-    
-### ** compute the score
-    e.score <- score2(x, p = p, data = data,
-                      adjust.residuals = adjust.residuals, power = power,
-                      indiv = TRUE, return.vcov.param = TRUE, ...)
-    vcov.param <- attr(e.score,"vcov.param")
-    
-### ** compute the iid
-    iid0 <- e.score %*% vcov.param
-
-### ** compute the degrees of freedom
-    if(return.df){
-        df.adj <- calcDDF(x, p = p, iid0 = iid0,
-                          adjust.residuals = adjust.residuals, power = power, ...)
-        attr(iid0,"df") <- df.adj
-    }
-    
-### ** export
-    colnames(iid0) <- colnames(e.score)
-    return(iid0)
-}
+iid2.lme <- iid2.gls
 
 
 ## * iid2.lvmfit
@@ -170,7 +139,7 @@ iid2.lme <- function(x, p = NULL, data = NULL,
 #' @export
 iid2.lvmfit <- function(x, p = NULL, data = NULL, 
                         adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                        return.df = TRUE, check.score = TRUE, ...){
+                        check.score = TRUE, ...){
 
     if(is.null(data)){
         data <- model.frame(x)
@@ -200,14 +169,7 @@ iid2.lvmfit <- function(x, p = NULL, data = NULL,
 
 ### ** compute the iid
     iid0 <- e.score %*% vcov.param
-
-### ** degrees of freedom
-    if(return.df){
-        df.adj <- calcDDF(x, p = p, data = data, iid0 = iid0,
-                          adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich, ...)
-        attr(iid0,"df") <- df.adj
-    }
-    
+   
 ### ** export
     colnames(iid0) <- colnames(e.score)
     return(iid0)

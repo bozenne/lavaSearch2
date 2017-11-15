@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: nov  9 2017 (13:41) 
+## Last-Updated: nov 15 2017 (13:34) 
 ##           By: Brice Ozenne
-##     Update #: 24
+##     Update #: 27
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,8 @@ dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
 setkey(dL, "Id")
 dL$Z1 <- rnorm(NROW(dL))
 
-## * univariate linear model
+## * raw residuals
+## ** univariate linear model
 m <- lvm(Y~X)
 d <- sim(m,1e2)
 
@@ -47,7 +48,7 @@ test_that("residuals2 match residuals.lm", {
 })
 
 
-## * multivariate linear models
+## ** multivariate linear models
 m <- lvm(Y~G+X,G~X)
 d <- sim(m,1e2)
 
@@ -89,7 +90,7 @@ test_that("residuals2 match residuals.lm", {
     expect_equal(as.double(res2),as.double(GS))
 })
 
-## * mixed model
+## ** mixed model
 ## ** versus nlme
 mSim <- lvm(c(Y1~1*eta1,Y2~1*eta1,Y3~1*eta1,eta1~G1))
 latent(mSim) <- ~eta1
@@ -149,3 +150,61 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
 
 ##----------------------------------------------------------------------
 ### test-residuals.R ends here
+
+
+## * adjusted residuals
+
+## ** univariate linear model
+m <- lvm(Y~X)
+n <- 1e2
+d <- sim(m,n)
+
+test_that("residuals2 match residuals.lm", {
+    e.lm <- lm(Y~X, data = d)
+    epsilon.lm <- residuals(e.lm)
+    X <- model.matrix(e.lm, d)
+    iH <- diag(1,n,n) - X %*% solve(t(X) %*% X) %*% t(X)
+    GS1 <- epsilon.lm/diag(iH)^(1/2)
+    GS2 <- epsilon.lm/diag(iH)
+    
+    e.lvm <- estimate(lvm(Y~X), d)
+    res1 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1/2)
+    res2 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1)
+
+    expect_equal(as.double(res1),as.double(GS1))
+    expect_equal(as.double(res2),as.double(GS2))
+})
+
+
+
+## ** multivariate linear models
+m <- lvm(Y~G+X,G~X)
+n <- 1e2
+d <- sim(m,n)
+
+test_that("residuals2 match residuals.lm", {
+    e.lm1 <- lm(Y~G+X, data = d)
+    epsilon.lm1 <- residuals(e.lm1)
+    X1 <- model.matrix(e.lm1, d)
+    iH1 <- diag(1,n,n) - X1 %*% solve(t(X1) %*% X1) %*% t(X1)
+    GS1.1 <- epsilon.lm1/diag(iH1)^(1/2)
+    GS1.2 <- epsilon.lm1/diag(iH1)
+
+    e.lm2 <- lm(G~X, data = d)
+    epsilon.lm2 <- residuals(e.lm2)
+    X2 <- model.matrix(e.lm2, d)
+    iH2 <- diag(1,n,n) - X2 %*% solve(t(X2) %*% X2) %*% t(X2)
+    GS2.1 <- epsilon.lm2/diag(iH2)^(1/2)
+    GS2.2 <- epsilon.lm2/diag(iH2)
+
+    e.lvm <- estimate(m, d)
+    res1 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1/2)
+    res2 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1)
+
+    expect_equal(as.double(res1[,1]),as.double(GS1.1))
+    expect_equal(as.double(res2[,1]),as.double(GS1.2))
+
+    expect_equal(as.double(res1[,2]),as.double(GS2.1))
+    expect_equal(as.double(res2[,2]),as.double(GS2.2))
+})
+

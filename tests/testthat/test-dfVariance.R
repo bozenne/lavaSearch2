@@ -1,11 +1,11 @@
-### test-df.residuals.R --- 
+### test-dfVariance.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: nov  9 2017 (18:19) 
+## last-updated: nov 10 2017 (12:15) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 43
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@ library(nlme)
 library(lme4)
 library(lmerTest)
 
-context("df.residuals")
+context("dfVariance")
 n <- 5e1
 
 ## * linear regression
@@ -119,11 +119,34 @@ latent(m.lvm) <- ~eta
 e.lvm <- estimate(m.lvm, data = dW)
 logLik(e.lvm)
 
+dfVariance(e.lvm, p = pars(e.lvm),
+           data = model.frame(e.lvm),
+           vcov.param = vcov(e.lvm),
+           robust = FALSE, adjust.residuals = FALSE)
+
+dfVariance(e.lvm, p = pars(e.lvm),
+           data = model.frame(e.lvm),
+           vcov.param = crossprod(iid(e.lvm)),
+           robust = TRUE, adjust.residuals = FALSE)
+
+residuals2(e.lvm, adjust.residuals = FALSE, return.vcov.param = TRUE)
+solve(crossprod(score2(e.lvm, adjust.residuals = FALSE)))
+
+round(crossprod(score(e.lvm,indiv=TRUE)) - solve(vcov(e.lvm)), 1)
+
+iid2(e.lvm, adjust.residuals = FALSE)
+
 solve(information(e.lvm))-attr(residuals2(e.lme, return.vcov.param = TRUE),"vcov.param")
 solve(information(e.lvm))-attr(residuals2(e.lvm, return.vcov.param = TRUE),"vcov.param")
+summary2(e.lvm, robust = FALSE, adjust.residuals = FALSE)
+summary2(e.lvm, robust = TRUE, adjust.residuals = FALSE)
 
+summary(e.lvm)
+lava:::summary.lvmfit
+CoefMat(e.lvm, labels = 2, level = 9)
+CoefMat(e.lvm, labels = 0, level = 9)
 
-
+lava:::summary.lvmfit
 ##              (Intercept)        timeY2        timeY3             G       GenderF     corCoef1       sigma2
 ## (Intercept)  0.062322690 -2.127369e-02 -2.127369e-02  2.764622e-03 -4.842052e-02  0.000000000  0.000000000
 ## timeY2      -0.021273689  4.254738e-02  2.127369e-02  6.554524e-19 -6.372999e-18  0.000000000  0.000000000
@@ -132,24 +155,6 @@ solve(information(e.lvm))-attr(residuals2(e.lvm, return.vcov.param = TRUE),"vcov
 ## GenderF     -0.048420521 -6.372999e-18 -3.214343e-18 -5.239548e-03  8.358517e-02  0.000000000  0.000000000
 ## corCoef1     0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00  0.042864621 -0.007542831
 ## sigma2       0.000000000  0.000000e+00  0.000000e+00  0.000000e+00  0.000000e+00 -0.007542831  0.022628493
-
-param <- coef(e.lvm)
-n.param <- length(param)
-L <- vector("numeric", length = n.param)
-L[4] <- 1
-fct.obj <- function(x){ # x <- p.obj
-    newSigma <- solve(information(e.lvm, p = x))
-    return(rbind(L) %*% newSigma %*% cbind(L))
-    ## iid.tempo <- iid2(e.lme, p = x, adjust.residuals = FALSE, return.df = FALSE)
-    ## vec.sd <- sqrt(diag(crossprod()))
-    ## vec.sd %*% iL
-}
-fct.obj(x = param)
-
-g <- as.double(numDeriv::jacobian(func = fct.obj, x = param, method = "Richardson"))     
-denom <- t(g) %*% vcov(e.lvm)  %*% g
-2*fct.obj(x = param)^2 / (t(g) %*% vcov(e.lvm)  %*% g)
-calcDF_lmerTest(e.lmer)
 
 
 
@@ -240,4 +245,5 @@ iGrad %*% vcov(e) %*% iGrad
 2/n*(p["Y~~Y"])^2   
 
 #----------------------------------------------------------------------
-### test-df.residuals.R ends here
+### test-dfVariance.R ends here
+

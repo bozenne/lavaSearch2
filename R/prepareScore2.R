@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov  9 2017 (16:37) 
+## last-updated: nov 15 2017 (15:38) 
 ##           By: Brice Ozenne
-##     Update #: 447
+##     Update #: 478
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,7 @@
 prepareScore2.gls <- function(object, X, Omega,
                               var.coef, cor.coef,
                               n.cluster, n.endogenous, name.endogenous, index.obs){
-
+    
 ### ** prepare
     class.var <- class(object$modelStruct$varStruct)
     class.cor <- class(object$modelStruct$corStruct)
@@ -49,14 +49,14 @@ prepareScore2.gls <- function(object, X, Omega,
     name.corcoef <- names(cor.coef)
     n.varcoef <- length(var.coef)
     n.corcoef <- length(cor.coef)
-    
-    if("corSymm" %in% class.cor){
-        M.corcoef <- matrix("", n.endogenous, n.endogenous,
+
+    if("NULL" %in% class.cor == FALSE){
+        M.corcoef <- matrix(0, n.endogenous, n.endogenous,
                             dimnames = list(name.endogenous,name.endogenous))
-        M.corcoef[lower.tri(M.corcoef)] <- name.corcoef
-        M.corcoef[upper.tri(M.corcoef)] <- name.corcoef
+        M.corcoef[which(lower.tri(M.corcoef))] <- name.corcoef
+        M.corcoef <- symmetrize(M.corcoef)
     }
-        
+    
 ### ** score - mean
     name.X <- colnames(X)
     dmu.dtheta <- lapply(name.X, function(iCoef){
@@ -70,7 +70,7 @@ prepareScore2.gls <- function(object, X, Omega,
 ### ** score - variance/covariance
     dOmega.dtheta <- vector(mode = "list", length = n.corcoef + n.varcoef)
     names(dOmega.dtheta) <- c(name.corcoef, name.varcoef)
-
+    
     for(iC in 1:n.cluster){ # iC <- 1
         iOmega <- Omega[[iC]]
         iSigma2.base <- diag(iOmega)
@@ -97,9 +97,10 @@ prepareScore2.gls <- function(object, X, Omega,
                 dOmega.dtheta[[iVar]][[iC]] <- var.coef["sigma2"]*diag(index.iVar,iN.endogenous,iN.endogenous)
 
                 if("NULL" %in% class.cor == FALSE){
-                    index2.iVar <- setdiff(1:iN.endogenous,which(index.iVar))                
-                    dOmega.dtheta[[iVar]][[iC]][index2.iVar,index.iVar] <- iOmega[index2.iVar,index.iVar]/var.coef[iVar]
-                    dOmega.dtheta[[iVar]][[iC]][index.iVar,index2.iVar] <- iOmega[index.iVar,index2.iVar]/var.coef[iVar]
+                    index2.iVar <- setdiff(1:iN.endogenous,which(index.iVar))
+                    ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2 x)
+                    dOmega.dtheta[[iVar]][[iC]][index2.iVar,index.iVar] <- iOmega[index2.iVar,index.iVar]/(2*var.coef[iVar])
+                    dOmega.dtheta[[iVar]][[iC]][index.iVar,index2.iVar] <- iOmega[index.iVar,index2.iVar]/(2*var.coef[iVar])
                 }
                 colnames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
                 rownames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
@@ -107,11 +108,7 @@ prepareScore2.gls <- function(object, X, Omega,
         }
 
         ## *** correlation coefficients
-        if("corCompSymm" %in% class.cor){            
-            dOmega.dtheta[[name.corcoef]][[iC]] <- sqrt(iSigma2.base) %*% t(sqrt(iSigma2.base)) - diag(diag(iOmega))
-            colnames(dOmega.dtheta[[name.corcoef]][[iC]]) <- iName.endogenous
-            rownames(dOmega.dtheta[[name.corcoef]][[iC]]) <- iName.endogenous
-        }else if("corSymm" %in% class.cor){
+        if("NULL" %in% class.cor == FALSE){
             iM.corcoef <- M.corcoef[iName.endogenous,iName.endogenous,drop=FALSE]
             for(iVar in name.corcoef){ # iVar <- name.corcoef[1]
                 dOmega.dtheta[[iVar]][[iC]] <- matrix(0, nrow = iN.endogenous, ncol = iN.endogenous)
@@ -119,10 +116,10 @@ prepareScore2.gls <- function(object, X, Omega,
                 dOmega.dtheta[[iVar]][[iC]][index.iVar] <- iOmega[index.iVar]/cor.coef[iVar]
                 colnames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
                 rownames(dOmega.dtheta[[iVar]][[iC]]) <- iName.endogenous
-            }
+            }       
         }
     }
-
+    
 ### ** export
     Omega_chol <- lapply(Omega,function(i){
         M <- chol(i)

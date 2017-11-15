@@ -1,11 +1,11 @@
-### calcDDF.R --- 
+### dfVariance.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: nov  9 2017 (18:19) 
+## last-updated: nov 10 2017 (11:06) 
 ##           By: Brice Ozenne
-##     Update #: 53
+##     Update #: 92
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,19 +15,19 @@
 ## 
 ### Code:
 
-## * Documentation - calcDDF
+## * Documentation - dfVariance
 #' @title  Compute the degree of freedom of the variance parameters
 #' @description Compute the degree of freedom of the variance parameters
-#' @name calcDDF
+#' @name dfVariance
 #' @export
-`calcDDF` <-
-  function(x, ...) UseMethod("calcDDF")
+`dfVariance` <-
+  function(object, ...) UseMethod("dfVariance")
 
-## * calcDDF.gls
-#' @rdname calcDDF
+## * dfVariance.gls
+#' @rdname dfVariance
 #' @export
-calcDDF.gls <- function(x, p, iid0,
-                        adjust.residuals, power, ...){
+dfVariance.gls <- function(object, p, iid0,
+                           adjust.residuals, power, ...){
     browser()
     x$modelStruct$reStruct
     
@@ -61,10 +61,10 @@ calcDDF.gls <- function(x, p, iid0,
  
 }
 
-## * calcDDF.lme
-#' @rdname calcDDF
+## * dfVariance.lme
+#' @rdname dfVariance
 #' @export
-calcDDF.lme <- function(x, p, iid0,
+dfVariance.lme <- function(object, p, iid0,
                         adjust.residuals, power, ...){
 
 ### ** normalize arguments
@@ -131,46 +131,46 @@ calcDDF.lme <- function(x, p, iid0,
  
 }
 
-#----------------------------------------------------------------------
-### calcDDF.R ends here
-
-## * calcDDF.lvmfit
-#' @rdname calcDDF
+## * dfVariance.lvmfit
+#' @rdname dfVariance
 #' @export
-calcDDF.lvmfit <- function(x, p, data, iid0,
-                           adjust.residuals, power, as.clubSandwich, ...){
+dfVariance.lvmfit <- function(object, p, data, vcov.param,
+                              robust, adjust.residuals, power, as.clubSandwich, ...){
 
-### ** prepare
+    n.param <- length(p)
+    name.param <- names(p)
     
-    calcSigma <- function(iP){ # iP <- vec.allCoef
-        
-        Sigma.tempo <- crossprod(iid2(x = x, p = iP, data = data,
-                                      adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                                      return.df = FALSE, check.score = FALSE, ...))
+### ** Define function to compute the standard errors
+    if(robust == FALSE){
+        if(adjust.residuals==FALSE){
+            calcSigma <- function(iParam){ # x <- p.obj
+                M <- solve(information(object, p = iParam))
+                return(setNames(diag(M), name.param))         
+            }
+        }else{
+            stop("adjust.residuals=TRUE not implemented for standard errors derived obtained from the information matrix \n")
+        }
+    }else{
+        calcSigma <- function(iParam){ # x <- p.obj
+            M <- crossprod(iid2(object, p = iParam, data = data,
+                                adjust.residuals = adjust.residuals,
+                                power = power,
+                                as.clubSandwich = as.clubSandwich,
+                                return.df = FALSE))
+            return(setNames(diag(M), name.param))         
+        }
+    }    
 
-        ## print(Sigma.tempo)
-        ## return(as.double(Sigma.tempo))
-        return(diag(Sigma.tempo))             
-    }
+### ** Compute the gradient of the function computing the standard errors
+dSigma.dtheta <- numDeriv::jacobian(func = calcSigma, x = p, method = "Richardson")
+    
+### ** Compute degrees of freedom
 
-    calcSigma(p+c(0,0,0,0,1))
-    Sigma.beta <- crossprod(iid0)
-    numerator <- 2*Sigma.beta^2
-    browser()
-    jacob.iid0 <- numDeriv::jacobian(func = calcSigma, x = p)
-    denominator <- matrix(rowSums((jacob.iid0 %*% Sigma.beta) * jacob.iid0), nrow = n.coef, ncol = n.coef)
+    ## diag(vcov.param) - calcSigma(p)
+    numerator <- 2*diag(vcov.param)^2
+    denom <- rowSums(dSigma.dtheta %*% vcov.param  * dSigma.dtheta)
 
-    numerator / denominator
-    ## jacob.iid0 %*% Sigma.beta %*% t(jacob.iid0)
-
-        ## calcSigma <- function(iP){ # iP <- p
-        ##     Sigma.tempo <- crossprod(iid2.lvmfit(x, p = iP, data = data, adjust.residuals = adjust.residuals, power = power,
-        ##                                          use.information = use.information, Dmethod = Dmethod, return.df = FALSE,
-        ##                                          check.score = FALSE, ...))
-        ##     return(Sigma.tempo[2,2])             
-        ## }
- 
+    return(numerator/denom)
 }
-
-#----------------------------------------------------------------------
-### calcDDF.R ends here
+##----------------------------------------------------------------------
+### dfVariance.R ends here

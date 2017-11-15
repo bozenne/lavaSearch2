@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov  9 2017 (16:38) 
+## Last-Updated: nov 15 2017 (15:49) 
 ##           By: Brice Ozenne
-##     Update #: 365
+##     Update #: 385
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,18 +48,20 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
         
 ### ** Extract information
+    ## *** mean parameters
+    mean.coef <- coef(object)
+
     ## *** data    
     formula.object <- evalInParentEnv(object$call$model)
     
     X <- model.matrix(formula.object, data)
+    X <- X[,names(mean.coef),drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
+    
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
     
     name.Y <- all.vars(update(formula.object, ".~1"))
     Y <- data[[name.Y]]
-
-    ## *** mean parameters
-    mean.coef <- coef(object)
 
     ## *** variance parameters
     if(test.var){
@@ -94,7 +96,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
     name.param <- c(names(mean.coef),names(cor.coef),names(var.coef))
     n.param <- length(name.param)
-
+   
     ## *** cluster
     if(test.cor){
         cluster <- as.numeric(object$groups)
@@ -232,19 +234,22 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
 
 ### ** Extract information
+    ## *** mean parameters
+    mean.coef <- fixef(object)
+
     ## *** data    
     formula.object <- evalInParentEnv(object$call$fixed)
     
     X <- model.matrix(formula.object, data)
+    X <- X[,names(mean.coef),drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
+   
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
     
     name.Y <- all.vars(update(formula.object, ".~1"))
     Y <- data[[name.Y]]
 
-    ## *** mean parameters
-    mean.coef <- fixef(object)
-
+   
     ## *** variance parameters
     if(test.var){
         var.coef <- c(sigma2 = sigma(object),coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
@@ -289,7 +294,7 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
             stop("can only handle varStruct of class \"varIdent\"\n")
         }
     }
-    
+
 ### ** Prepare
 
     ## cluster
@@ -318,10 +323,14 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     
 ### ** Partial derivatives
 
-        ## *** Reconstruct variance covariance matrix (residuals)
-        Omega <- unclass(getVarCov(object, individual = 1:n.cluster, type = "marginal"))
-        attr(Omega,"group.levels") <- NULL
-
+    ## *** Reconstruct variance covariance matrix (residuals)
+    Omega <- unclass(getVarCov(object, individual = 1:n.cluster, type = "marginal"))
+    for(iC in 1:n.cluster){
+        rownames(Omega[[iC]]) <- name.endogenous[as.numeric(rownames(Omega[[iC]]))]
+        colnames(Omega[[iC]]) <- name.endogenous[as.numeric(colnames(Omega[[iC]]))]
+    }
+    attr(Omega,"group.levels") <- NULL
+    
     ## *** Compute partial derivatives
     OPS2 <- prepareScore2(object, X = X, Omega = Omega,
                           var.coef = var.coef, cor.coef = cor.coef,
@@ -338,7 +347,7 @@ residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
     vcov.param <- chol2inv(chol(Info))
     rownames(vcov.param) <- rownames(Info)
     colnames(vcov.param) <- colnames(Info)        
-    ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
+    ## solve(vcov(object))/Info[rownames(vcov(object)),colnames(vcov(object))] 
 
 ### ** Normalize residuals    
     if(adjust.residuals){
