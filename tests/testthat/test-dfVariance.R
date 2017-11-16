@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: nov 16 2017 (16:52) 
+## last-updated: nov 16 2017 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 70
+##     Update #: 75
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -56,7 +56,7 @@ e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
 e.lm <- lm(Y1~X1+X2, data = dW)
 
 ### *** clubSandwich
-cS.vcov <- vcovCR(e.lm, type = "CR2", cluster = d$Id)
+cS.vcov <- vcovCR(e.lm, type = "CR0", cluster = d$Id)
 cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(d))
 cS.df
 ## cS.df$df is very suspect: should be the same for all coefficient and close to n-p
@@ -64,17 +64,15 @@ cS.df
 ### *** dfVariance
 test_that("linear regression: df",{
 
-    df.adj <- dfVariance(e.lvm,
-                         robust = FALSE, adjust.residuals = FALSE)
+    df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE)
 
     keep.coef <- c("Y1","Y1~X1","Y1~X2")
     GS <- rep(NROW(d),length(keep.coef))
-    expect_equal(as.double(df.adj[keep.coef]),GS)
+    expect_equal(as.double(df.lvm[keep.coef]),GS)
 
-    df.adj <- dfVariance(e.lvm,
-                         robust = TRUE, adjust.residuals = FALSE)
-    df.adj
-
+    df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE)
+    df.adj.lvm
+    
 })
 
 ## * mixed model
@@ -108,18 +106,25 @@ expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 test_that("mixed mode: df",{
     GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
     
-    df.adj.lvm <- dfVariance(e.lvm,
-                             robust = FALSE, adjust.residuals = FALSE)
+    df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE)
     expect_equal(as.double(GS),
-                 as.double(df.adj.lvm[1:5]))
+                 as.double(df.lvm[1:5]))
 
-    df.adj.lme <- dfVariance(e.lme,
-                             robust = FALSE, adjust.residuals = FALSE)
-    expect_equal(GS, df.adj.lme[names(GS)])
+    df.lme <- dfVariance(e.lme, robust = FALSE, adjust.residuals = FALSE)
+    expect_equal(GS, df.lme[names(GS)])
 
-    df.adj.gls <- dfVariance(e.gls,
-                             robust = FALSE, adjust.residuals = FALSE)
-    expect_equal(GS, df.adj.gls[names(GS)], tol = 1e-4)
+    df.gls <- dfVariance(e.gls, robust = FALSE, adjust.residuals = FALSE)
+    expect_equal(GS, df.gls[names(GS)], tol = 1e-4)
+
+
+    df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE, fix.mean = TRUE)
+    df.adj.lvm
+
+    df.adj.lme <- dfVariance(e.lme, robust = FALSE, adjust.residuals = TRUE)
+    df.adj.lme
+
+    df.adj.gls <- dfVariance(e.gls, robust = FALSE, adjust.residuals = TRUE)
+    df.adj.gls
 })
 
 ## ** Unstructured with weights
