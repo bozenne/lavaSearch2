@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: nov 15 2017 (13:34) 
+## Last-Updated: nov 16 2017 (11:59) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 28
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -148,8 +148,6 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
 
 
 
-##----------------------------------------------------------------------
-### test-residuals.R ends here
 
 
 ## * adjusted residuals
@@ -208,3 +206,5 @@ test_that("residuals2 match residuals.lm", {
     expect_equal(as.double(res2[,2]),as.double(GS2.2))
 })
 
+##----------------------------------------------------------------------
+### test-residuals.R ends here

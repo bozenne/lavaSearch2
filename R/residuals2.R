@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov 15 2017 (18:38) 
+## Last-Updated: nov 16 2017 (16:05) 
 ##           By: Brice Ozenne
-##     Update #: 431
+##     Update #: 477
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,26 +59,23 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
     
 ### ** Extract information
-
     ## *** parameters
     pp <- .coef2(object)
-    name.meancoef <- attr(pp,"mean.coef") 
-    attr(pp,"mean.coef") <- NULL
-    name.corcoef <- attr(pp,"cor.coef")
-    attr(pp,"cor.coef") <- NULL
-    name.varcoef <- attr(pp,"var.coef")
-    attr(pp,"var.coef") <- NULL
+    attr.param <- attributes(pp)
+    attributes(pp) <- attr.param["names"]
 
+    name.param <- attr.param$names
+    n.param <- length(name.param)
+    
     ## *** formula
-    formula.object <- evalInParentEnv(object$call$model)
+    formula.object <- .getFormula2(object)
     
     ## *** data    
     if(is.null(data)){
         data <- getData(object)
     }
     X <- model.matrix(formula.object, data)
-    X <- X[,name.meancoef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
-    
+    X <- X[,attr.param$mean.coef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)    
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
     
@@ -100,66 +97,71 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     ## *** update parameters with user-specified values
     if(!is.null(p)){
         
-        if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
-            name.all <- c(name.meancoef,name.corcoef,name.varcoef)
+        if(any(name.param %in% names(p)==FALSE)){
             stop("argument \'p\' is not correctly specified \n",
-                 "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
+                 "missing parameters: \"",paste(name.param[name.param %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
         }
+        
+        p <- p[attr.param$names]
 
-        p <- p[c(name.meancoef,name.corcoef,name.varcoef)]
     }else{
+        
         p <- pp
-    }
-    mean.coef <- p[name.meancoef]
-    cor.coef <- p[name.corcoef]
-    var.coef <- p[name.varcoef]
-    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
-    n.param <- length(name.param)
-
+        
+    }    
+    
 ### ** Compute observed residuals
     epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                       dimnames = list(NULL, name.endogenous))
-    epsilon[index.obs] <- Y - X %*% mean.coef
+    epsilon[index.obs] <- Y - X %*% p[attr.param$mean.coef]
     ## residuals(object)-as.vector(t(epsilon))
 
-### ** Partial derivatives
-    ## *** Reconstruct variance covariance matrix (residuals)
-    Omega <- .getVarCov2(object, cor.coef = cor.coef, var.coef = var.coef,
-                         n.coef = n.coef,
-                         endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                         cluster = cluster, n.cluster = n.cluster)
-
-    ## *** Compute partial derivative
-    OPS2 <- prepareScore2(object, X = X, Omega = Omega,
-                          var.coef = var.coef, cor.coef = cor.coef,
-                          n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                          index.obs = index.obs)
+### ** Compute derivatives
+    if(adjust.residuals || return.vcov.param || return.prepareScore2){
+        ## *** Reconstruct variance covariance matrix (residuals)
+        Omega <- .getVarCov2(object, param = p, attr.param = attr.param,
+                             endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                             cluster = cluster, n.cluster = n.cluster)
     
+        ## *** Compute partial derivative
+        OPS2 <- prepareScore2(object, X = X, Omega = Omega,
+                              param = p, attr.param = attr.param,
+                              n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                              index.obs = index.obs)
+    }
 
 ### ** compute variance covariance matrix (parameters)
-    Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
-                          dOmega.dtheta = OPS2$dOmega.dtheta,
-                          iOmega = OPS2$iOmega,
-                          n.param = n.param,
-                          name.param = name.param,
-                          n.cluster = n.cluster)
-    vcov.param <- chol2inv(chol(Info))
-    rownames(vcov.param) <- rownames(Info)
-    colnames(vcov.param) <- colnames(Info)        
-    ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] / vcov(object) 
+    if(adjust.residuals || return.vcov.param){
+        Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
+                              dOmega.dtheta = OPS2$dOmega.dtheta,
+                              iOmega = OPS2$iOmega,
+                              n.param = n.param,
+                              name.param = name.param,
+                              n.cluster = n.cluster)
+        vcov.param <- try(chol2inv(chol(Info)), silent = TRUE)
+        if("try-error" %in% class(vcov.param)){
+            stop("Singular information matrix \n")
+        }
+        rownames(vcov.param) <- rownames(Info)
+        colnames(vcov.param) <- colnames(Info)
+        ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object)
 
+        ## factor <- (object$dims$N - object$dims$p)/(object$dims$N - object$dims$p * (object$method == "REML"))
+        ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object) * factor
+    }
+    
 ### ** Normalize residuals    
-    if(adjust.residuals){
-        ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta, vcov.param = vcov.param,
-                                     Omega = Omega, iOmega = OPS2$iOmega, Omega_chol = OPS2$Omega_chol,
-                                     n.cluster = n.cluster, name.endogenous = name.endogenous,
-                                     power = power, as.clubSandwich = as.clubSandwich)
+        if(adjust.residuals){
+            ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta, vcov.param = vcov.param,
+                                         Omega = Omega, iOmega = OPS2$iOmega, Omega_chol = OPS2$Omega_chol,
+                                         n.cluster = n.cluster, name.endogenous = name.endogenous,
+                                         power = power, as.clubSandwich = as.clubSandwich)
 
-        epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
-            as.double(ls.leverage[[iG]] %*% epsilon[iG,])
-        }))
-        colnames(epsilon) <- name.endogenous
-    }   
+            epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
+                as.double(ls.leverage[[iG]] %*% epsilon[iG,])
+            }))
+            colnames(epsilon) <- name.endogenous
+        }
     
 ### ** export
     if(return.vcov.param){
@@ -179,154 +181,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 ## * residuals2.lme
 #' @rdname residuals2
 #' @export
-residuals2.lme <- function(object, cluster = NULL, p = NULL, data = NULL,
-                           adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                           return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
-
-    test.var <- !is.null(object$modelStruct$varStruct)
-    test.cor <- !is.null(object$modelStruct$corStruct)
-    if(is.null(data)){
-        data <- getData(object)
-    }
-
-### ** Extract information
-    ## *** parameters
-    pp <- .coef2(object)
-    name.meancoef <- attr(pp,"mean.coef") 
-    attr(pp,"mean.coef") <- NULL
-    name.corcoef <- attr(pp,"cor.coef")
-    attr(pp,"cor.coef") <- NULL
-    name.varcoef <- attr(pp,"var.coef")
-    attr(pp,"var.coef") <- NULL
-
-    ## *** data    
-    formula.object <- evalInParentEnv(object$call$fixed)
-    
-    X <- model.matrix(formula.object, data)
-    X <- X[,name.meancoef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)
-   
-    attr(X,"assign") <- NULL
-    attr(X,"contrasts") <- NULL
-    
-    name.Y <- all.vars(update(formula.object, ".~1"))
-    Y <- data[[name.Y]]
-
-    ## *** update with user-specified values
-    if(!is.null(p)){
-        
-        if(any(c(name.meancoef,name.corcoef,name.varcoef) %in% names(p)==FALSE)){
-            name.all <- c(name.meancoef,name.corcoef,name.varcoef)
-            stop("argument \'p\' is not correctly specified \n",
-                 "missing parameters: \"",paste(name.all[name.all %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
-        }
-
-        p <- p[c(name.meancoef,name.corcoef,name.varcoef)]
-    }else{
-        p <- pp
-    }
-    
-    mean.coef <- p[name.meancoef]
-    cor.coef <- p[name.corcoef]
-    var.coef <- p[name.varcoef]
-    name.param <- c(name.meancoef,name.corcoef,name.varcoef)
-    n.param <- length(name.param)
-
-    ## *** cluster
-    if(test.cor){
-        stop("cannot handle lme objects when corStruct is not null \n")
-    }
-    if(length(getVarCov(object))>1){
-        stop("cannot handle lme objects with more than one random effect \n")
-    }
-    cluster <- as.numeric(object$groups[,1])
-    
-    if(test.var){
-        if(any(class(object$modelStruct$varStruct) %in% c("varIdent","varFunc") == FALSE)){
-            stop("can only handle varStruct of class \"varIdent\"\n")
-        }
-    }
-
-### ** Prepare
-
-    ## cluster
-    n.cluster <- length(unique(cluster))
-    
-    ## endogenous
-    if(test.var){
-        name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
-        vec.rep <- attr(object$modelStruct$varStruct,"groups")        
-    }else{
-        table.cluster <- table(cluster)
-        name.endogenous <- 1:max(table.cluster)
-        vec.rep0 <- unlist(lapply(table.cluster,function(iG){1:iG})) ## not good in presence of missing values
-        vec.rep <- vec.rep0[order(order(cluster))]
-    }
-    n.endogenous <- length(name.endogenous)
-    
-    ## convert observations from the vector format to the matrix format
-    index.obs <- cluster+(match(vec.rep,name.endogenous)-1)*n.cluster
-
-### ** Compute observed residuals
-    epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                      dimnames = list(NULL, name.endogenous))    
-    epsilon[index.obs] <- Y - X %*% mean.coef
-    ## residuals(object)-as.vector(t(epsilon))
-    
-### ** Partial derivatives
-
-    ## *** Reconstruct variance covariance matrix (residuals)
-    Omega <- unclass(getVarCov(object, individual = 1:n.cluster, type = "marginal"))
-    for(iC in 1:n.cluster){
-        rownames(Omega[[iC]]) <- name.endogenous[as.numeric(rownames(Omega[[iC]]))]
-        colnames(Omega[[iC]]) <- name.endogenous[as.numeric(colnames(Omega[[iC]]))]
-    }
-    attr(Omega,"group.levels") <- NULL
-    
-    ## *** Compute partial derivatives
-    OPS2 <- prepareScore2(object, X = X, Omega = Omega,
-                          var.coef = var.coef, cor.coef = cor.coef,
-                          n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                          index.obs = index.obs)
-
-### ** compute variance covariance matrix (parameters)
-    Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
-                          dOmega.dtheta = OPS2$dOmega.dtheta,
-                          iOmega = OPS2$iOmega,
-                          n.param = n.param,
-                          name.param = name.param,
-                          n.cluster = n.cluster)
-    vcov.param <- chol2inv(chol(Info))
-    rownames(vcov.param) <- rownames(Info)
-    colnames(vcov.param) <- colnames(Info)        
-    ## solve(vcov(object))/Info[rownames(vcov(object)),colnames(vcov(object))] 
-
-### ** Normalize residuals    
-    if(adjust.residuals){
-        ls.leverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta, vcov.param = vcov.param,
-                                     Omega = Omega, iOmega = OPS2$iOmega, Omega_chol = OPS2$Omega_chol,
-                                     n.cluster = n.cluster, name.endogenous = name.endogenous,
-                                     power = power, as.clubSandwich = as.clubSandwich)
-
-        epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
-            as.double(ls.leverage[[iG]] %*% epsilon[iG,])
-        }))
-        colnames(epsilon) <- name.endogenous
-    }   
-    
-### ** export
-    if(return.vcov.param){
-        attr(epsilon, "vcov.param") <- vcov.param 
-    }
-    if(return.prepareScore2){
-        OPS2$name.param <- name.param
-        OPS2$n.param <- n.param
-        OPS2$n.cluster <- n.cluster
-        attr(epsilon, "prepareScore2") <- OPS2
-    }
-    
-    return(epsilon)
-
-}
+residuals2.lme <- residuals2.gls
 
 ## * residuals2.lvmfit
 #' @rdname residuals2

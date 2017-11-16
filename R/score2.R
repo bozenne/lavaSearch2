@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov 15 2017 (15:08) 
+## last-updated: nov 16 2017 (16:02) 
 ##           By: Brice Ozenne
-##     Update #: 1974
+##     Update #: 1984
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -74,29 +74,20 @@ score2.gls <- function(object, cluster, p = NULL, data = NULL,
                        adjust.residuals = TRUE, power = 1/2,
                        indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
 
-### ** Compute residuals (and score)
+### ** Compute residuals and partial derivatives
     epsilon <- residuals2(object, cluster = cluster, p = p, data = data,
                           adjust.residuals = adjust.residuals,
                           power = power,
                           as.clubSandwich = as.clubSandwich,
                           return.vcov.param = return.vcov.param,
                           return.prepareScore2 = TRUE)
-    
+
     OPS2 <- attr(epsilon, "prepareScore2")
     vcov.param <- attr(epsilon, "vcov.param")
     attr(epsilon, "prepareScore2") <- NULL
     attr(epsilon, "vcov.param") <- NULL
-        
+
 ### ** Compute score
-    ## lapply(OPS2$dOmega.dtheta,"[[",1)
-    ## getVarCov(object)
-
-    ## sigma.base <- sigma(object)^2
-    ## vec.factor <- coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)^2
-    ## cor.coef <- coef(object$modelStruct$corStruct, unconstrained = FALSE)
-    ## sigma.base*vec.factor
-
-    #cor.coef * prod(sqrt(sigma.base)*sqrt(vec.factor[2:3]))
     
     out.score <- .score2(dmu.dtheta = OPS2$dmu.dtheta,
                          dOmega.dtheta = OPS2$dOmega.dtheta,
