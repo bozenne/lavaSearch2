@@ -7,8 +7,9 @@
 \title{Approximate degree of freedoms of a model}
 \usage{
 \method{df.residual}{lvmfit}(object, power = 1/2, adjust.residuals = TRUE,
-  dmu.dtheta2 = NULL, leverage.adj = NULL, Omega = NULL, iOmega = NULL,
-  data = NULL, p = NULL, ...)
+  as.clubSandwich = TRUE, dmu.dtheta = NULL, vcov.param,
+  ls.leverage.adj = NULL, Omega = NULL, iOmega = NULL,
+  Omega_chol = NULL, ...)
 
 \method{df.residual}{coxph}(object, ...)
 }
@@ -19,19 +20,19 @@
 
 \item{adjust.residuals}{should leverage-adjusted residuals be used?}
 
-\item{dmu.dtheta2}{}
-
-\item{leverage.adj}{}
-
 \item{Omega}{}
 
 \item{iOmega}{}
 
+\item{...}{additional arguments}
+
+\item{dmu.dtheta2}{}
+
+\item{leverage.adj}{}
+
 \item{data}{}
 
 \item{p}{}
-
-\item{...}{additional arguments}
 }
 \description{
 Approximate the degree of freedoms of a model

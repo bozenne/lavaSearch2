@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: nov 15 2017 (13:45) 
+## last-updated: nov 20 2017 (16:59) 
 ##           By: Brice Ozenne
-##     Update #: 116
+##     Update #: 119
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -54,7 +54,7 @@ test_that("iid2 lvm matches iid2 lm", {
     for(iAdj in c(FALSE,TRUE)){ # iAdj <- 1
         for(iPower in c(0.5,1)){ # iPower <- 1
             e.iid2.lm <- iid2(e.lm, adjust.residuals = iAdj, power = iPower)
-            e0.iid2.lvm <- iid2(e.lvm, adjust.residuals = iAdj, power = iPower, use.information = TRUE)
+            e0.iid2.lvm <- iid2(e.lvm, adjust.residuals = iAdj, power = iPower, as.clubSandwich = 2)
             expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
         }
     }
@@ -62,24 +62,24 @@ test_that("iid2 lvm matches iid2 lm", {
 
 ## ** iid2 matches clubSandwich
 test_that("iid2.lm matches clubSandwich", {
-    eHC2.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 0.5)
+    eHC2.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
     VsandwichHC2.lm <- crossprod(eHC2.iid2)
     expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
                  as.double(VsandwichHC2.lm))
 
-    eHC3.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 1)
+    eHC3.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
     VsandwichHC3.lm <- crossprod(eHC3.iid2)
     expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
                  as.double(VsandwichHC3.lm))
 })
 
 test_that("iid2.lvm matches clubSandwich", {
-    eHC2.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5)
+    eHC2.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
     VsandwichHC2.lvm <- crossprod(eHC2.iid2)[1:4,1:4]
     expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
                  as.double(VsandwichHC2.lvm))
 
-    eHC3.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 1)
+    eHC3.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
     VsandwichHC3.lvm <- crossprod(eHC3.iid2)[1:4,1:4]
     expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
                  as.double(VsandwichHC3.lvm))

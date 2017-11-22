@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: nov 16 2017 (11:38) 
+## Last-Updated: nov 17 2017 (11:28) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 19
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,7 +65,8 @@ test_that("Compound symmetry", {
                               cluster = groups.gls$cluster,
                               n.cluster = groups.gls$n.cluster)
 
-    expect_equal(unclass(getVarCov(e.gls)),unname(lsVcov.gls[[1]]))
+    expect_equal(unclass(getVarCov(e.gls)),
+                 unname(lsVcov.gls$Omega))
 
     lsVcov.lme <- .getVarCov2(e.lme,
                               param = vecCoef.lme,
@@ -77,7 +78,7 @@ test_that("Compound symmetry", {
                               n.cluster = groups.lme$n.cluster)
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(lsVcov.lme[[1]]))
+                 unname(lsVcov.lme$Omega))
 
     lsVcov.lme.bis <- .getVarCov2(e.lme.bis,
                                   param = vecCoef.lme.bis,
@@ -89,7 +90,7 @@ test_that("Compound symmetry", {
                                   n.cluster = groups.lme.bis$n.cluster)
 
     expect_equal(unname(getVarCov(e.lme.bis, type = "marginal", individuals = 1)[[1]]),
-                 unname(lsVcov.lme.bis[[1]]))
+                 unname(lsVcov.lme.bis$Omega))
 })
 
 ## * Unstructured 
@@ -118,7 +119,8 @@ test_that("Unstructured ", {
                               cluster = groups.gls$cluster,
                               n.cluster = groups.gls$n.cluster)
 
-    expect_equal(unclass(getVarCov(e.gls)),unname(lsVcov.gls[[1]]))
+    expect_equal(unclass(getVarCov(e.gls)),
+                 unname(lsVcov.gls$Omega))
 
     lsVcov.lme <- .getVarCov2(e.lme,
                               param = vecCoef.lme,
@@ -130,7 +132,7 @@ test_that("Unstructured ", {
                               n.cluster = groups.lme$n.cluster)
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(lsVcov.lme[[1]]))
+                 unname(lsVcov.lme$Omega))
 })
 
 ## * Unstructured with weight
@@ -161,7 +163,8 @@ test_that("Unstructured ", {
                               cluster = groups.gls$cluster,
                               n.cluster = groups.gls$n.cluster)
 
-    expect_equal(unclass(getVarCov(e.gls)),unname(lsVcov.gls[[1]]))
+    expect_equal(unclass(getVarCov(e.gls)),
+                 unname(lsVcov.gls$Omega))
 
     lsVcov.lme <- .getVarCov2(e.lme,
                               param = vecCoef.lme,
@@ -173,7 +176,7 @@ test_that("Unstructured ", {
                               n.cluster = groups.lme$n.cluster)
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(lsVcov.lme[[1]]))
+                 unname(lsVcov.lme$Omega))
 })
 
 ## * 2 random effect model (error)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: nov 16 2017 (15:57) 
+## last-updated: nov 20 2017 (16:40) 
 ##           By: Brice Ozenne
-##     Update #: 64
+##     Update #: 66
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -75,7 +75,7 @@ test_that("score2.gls equivalent to score.lvm", {
 })
 
 test_that("score2.gls equivalent to score.lvm (adjust residuals)", {
-    for(iPower in c(1,0.5)){
+    for(iPower in c(1,0.5)){ # iPower <- 1
         score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = iPower, indiv = TRUE)
         score.gls.p <- score2(e.gls, p = allCoef.gls, cluster = "Id", adjust.residuals = TRUE, power = iPower, indiv = TRUE)
         score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = iPower, indiv = TRUE)

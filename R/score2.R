@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: nov 16 2017 (16:02) 
+## last-updated: nov 20 2017 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 1984
+##     Update #: 2069
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,11 +88,11 @@ score2.gls <- function(object, cluster, p = NULL, data = NULL,
     attr(epsilon, "vcov.param") <- NULL
 
 ### ** Compute score
-    
     out.score <- .score2(dmu.dtheta = OPS2$dmu.dtheta,
                          dOmega.dtheta = OPS2$dOmega.dtheta,
                          epsilon = epsilon,
-                         iOmega = OPS2$iOmega,                         
+                         Omega = OPS2$Omega,                         
+                         ls.indexOmega = OPS2$ls.indexOmega,
                          indiv = indiv,
                          name.param = OPS2$name.param,
                          n.param = OPS2$n.param,
@@ -137,8 +137,9 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     out.score <- .score2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                          dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
                          epsilon = epsilon,
-                         iOmega = OPS2$iOmega,                         
-                         indiv = indiv,
+                         Omega = OPS2$Omega,
+                         ls.indexOmega = NULL,
+                         indiv = indiv,                         
                          name.param = OPS2$name.param,
                          n.param = OPS2$n.param,
                          n.cluster = OPS2$n.cluster)     
@@ -153,103 +154,55 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
 
 
 
-## * .information2
-.information2 <- function(dmu.dtheta, dOmega.dtheta, iOmega,
-                          n.param, name.param, n.cluster){
-
-    missing <- is.list(iOmega)    
-                                        
-### ** Compute information
-    Info <- matrix(NA, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
-    
-    for(iP1 in 1:n.param){ # iP <- 1
-        for(iP2 in iP1:n.param){ # iP <- 1
-            iName1 <- name.param[iP1]
-            iName2 <- name.param[iP2]
-
-            if(!is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])){
-                if(missing){
-                    ls.term1 <- lapply(1:n.cluster, function(iC){ # iC <- 1
-                        dmu.dtheta[[iName1]][iC,,drop=FALSE] %*% iOmega[[iC]] * dmu.dtheta[[iName2]][iC,]
-                    })
-                    term1 <- sum(unlist(ls.term1), na.rm = TRUE)
-                }else{
-                    term1 <- sum(dmu.dtheta[[iName1]] %*% iOmega * dmu.dtheta[[iName2]])
-                }
-            }else{
-                term1 <- 0
-            }
-
-            if(!is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])){
-                if(missing){
-                    ls.term2 <- lapply(1:n.cluster, function(iC){
-                        1/2*tr(iOmega[[iC]] %*% dOmega.dtheta[[iName1]][[iC]] %*% iOmega[[iC]] %*% dOmega.dtheta[[iName2]][[iC]])
-                    })
-                    term2 <- sum(unlist(ls.term2), na.rm = TRUE)
-                }else{                    
-                    term2 <- n.cluster/2*tr(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
-                }
-            }else{
-                term2 <- 0
-            }
-            Info[iP1,iP2] <- (term1+term2)
-        }
-    }
-    Info <- symmetrize(Info, update.upper = FALSE)
-
-### ** export
-    return(Info)
-}
-
 ## * .score2
-.score2 <- function(dmu.dtheta, dOmega.dtheta, epsilon, iOmega,
-                    indiv,
+.score2 <- function(dmu.dtheta, dOmega.dtheta, epsilon,
+                    Omega, ls.indexOmega,
+                    indiv, 
                     name.param, n.param, n.cluster){
 
-     missing <- is.list(iOmega)
-    if(missing == FALSE){
-        epsilon.iOmega <- epsilon %*% iOmega
-    }else{
-        epsilon.iOmega <- lapply(1:n.cluster, function(iC){
-            name.endogenous.tempo <- colnames(iOmega[[iC]])
-            iOmega[[iC]] %*% cbind(epsilon[iC,name.endogenous.tempo])
-        })
-    }
-
+    clusterSpecific <- !is.null(ls.indexOmega)
     name.meanparam <- names(dmu.dtheta)
     name.vcovparam <- names(dOmega.dtheta)
     out.score <- matrix(0, nrow = n.cluster, ncol = n.param, dimnames = list(NULL,name.param))
-    
-### ** Compute score relative to the mean parameters
-    for(iP in name.meanparam){ # iP <- 1
-        if(missing){
-            term1 <- sapply(1:n.cluster, function(iC){ # iC <- 1
-                name.endogenous.tempo <- colnames(iOmega[[iC]])
-                dmu.dtheta[[iP]][iC,name.endogenous.tempo] %*% epsilon.iOmega[[iC]]
-            })                   
-            out.score[,iP] <- out.score[,iP] + term1
-        }else{
-            out.score[,iP] <- out.score[,iP] + rowSums(dmu.dtheta[[iP]] * epsilon.iOmega) 
+
+### ** Individual specific Omega (e.g. presence of missing values)
+    if(clusterSpecific){
+        for(iC in 1:n.cluster){
+            iOmega.tempo <- chol2inv(chol(Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]))
+            epsilon.iOmega.tempo <- iOmega.tempo %*% cbind(epsilon[iC,ls.indexOmega[[iC]]])
+
+            ## *** Compute score relative to the mean parameters
+            for(iP in name.meanparam){ # iP <- name.meanparam[1]
+                out.score[iC,iP] <- out.score[iC,iP] + dmu.dtheta[[iP]][iC,ls.indexOmega[[iC]]] %*% epsilon.iOmega.tempo
+            }
+
+            ## *** Compute score relative to the variance-covariance parameters
+            for(iP in name.vcovparam){ # iP <- name.vcovparam[1]
+                dOmega.dtheta.tempo <-  dOmega.dtheta[[iP]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                                                            
+                term2 <- - 1/2 * tr(iOmega.tempo %*% dOmega.dtheta.tempo)
+                term3 <- 1/2 * sum(epsilon.iOmega.tempo * dOmega.dtheta.tempo %*% epsilon.iOmega.tempo)
+                out.score[iC,iP] <- out.score[iC,iP] + as.double(term2) + term3 
+            }
         }
+    }
             
-    }
-    
-### ** Compute score relative to the variance-covariance parameters
-    for(iP in name.vcovparam){ # iP <- 1
-        if(missing){
-            term2 <- - 1/2 * sapply(1:n.cluster, function(iC){
-                tr(iOmega[[iC]] %*% dOmega.dtheta[[iP]][[iC]])
-                })
-            term3 <- 1/2 * sapply(1:n.cluster, function(iC){
-                sum(epsilon.iOmega[[iC]] * dOmega.dtheta[[iP]][[iC]] %*% epsilon.iOmega[[iC]])
-                })
-        }else{
-            term2 <- - 1/2 * tr(iOmega %*% dOmega.dtheta[[iP]])            
-            term3 <- 1/2 * rowSums(epsilon.iOmega %*% dOmega.dtheta[[iP]] * epsilon.iOmega)           
-        }
-        out.score[,iP] <- out.score[,iP] + as.double(term2) + term3 
-    }
+### ** Same for all individuals
+    if(clusterSpecific == FALSE){
+        epsilon.iOmega <- epsilon %*% chol2inv(chol(Omega))
+        iOmega <- chol2inv(chol(Omega))
         
+        ## *** Compute score relative to the mean parameters
+        for(iP in name.meanparam){ # iP <- 1
+            out.score[,iP] <- out.score[,iP] + rowSums(dmu.dtheta[[iP]] * epsilon.iOmega)            
+        }
+        ## *** Compute score relative to the variance-covariance parameters
+        for(iP in name.vcovparam){ # iP <- 1
+            term2 <- - 1/2 * tr(iOmega %*% dOmega.dtheta[[iP]])            
+            term3 <- 1/2 * rowSums(epsilon.iOmega %*% dOmega.dtheta[[iP]] * epsilon.iOmega)
+            out.score[,iP] <- out.score[,iP] + as.double(term2) + term3 
+        }        
+    }
 
 ### ** export
     if(indiv==FALSE){
@@ -263,3 +216,74 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
 
 #----------------------------------------------------------------------
 ### score2.R ends here
+## * .information2
+.information2 <- function(dmu.dtheta, dOmega.dtheta,
+                          Omega, ls.indexOmega, bias.Omega,
+                          n.param, name.param, n.cluster){
+
+### ** prepare
+    clusterSpecific <- !is.null(ls.indexOmega)
+    correction <- !is.null(bias.Omega)
+    if(clusterSpecific==FALSE){
+
+        if(correction){
+            Tbias.vcov.param <- Reduce("+",bias.Omega)/n.cluster
+            Omega <- Omega + Tbias.vcov.param
+        }
+        iOmega <- chol2inv(chol(Omega))
+        
+    }
+
+### ** compute information matrix for each paire of parameters
+    Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
+    
+    for(iP1 in 1:n.param){ # iP <- 1
+        for(iP2 in iP1:n.param){ # iP <- 1
+            iName1 <- name.param[iP1]
+            iName2 <- name.param[iP2]
+            test.mu <- !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
+            test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
+            
+            ## *** Individual specific Omega (e.g. presence of missing values)
+            if(clusterSpecific){
+                for(iC in 1:n.cluster){
+                    
+                    Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                    if(correction){
+                        Omega.tempo <- Omega.tempo + bias.Omega[[iC]]
+                    }
+                    iOmega.tempo <- chol2inv(chol(Omega.tempo))
+                    
+                    if(test.mu){
+                        dmu.tempo1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
+                        dmu.tempo2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
+                        Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.tempo1 %*% iOmega.tempo * dmu.tempo2)
+                    }
+
+                    if(test.Omega){
+                        dOmega.dtheta.tempo1 <- dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        dOmega.dtheta.tempo2 <- dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*tr(iOmega.tempo %*% dOmega.dtheta.tempo1 %*% iOmega.tempo %*% dOmega.dtheta.tempo2)
+                    }
+                }                
+            }
+            
+            ## *** Same for all individuals
+            if(clusterSpecific == FALSE){
+                if(test.mu){
+                    Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.dtheta[[iName1]] %*% iOmega * dmu.dtheta[[iName2]])
+                }
+
+                if(test.Omega){
+                    Info[iP1,iP2] <- Info[iP1,iP2] + n.cluster/2*tr(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
+                }
+            }
+
+        }
+    }
+    Info <- symmetrize(Info, update.upper = FALSE)
+
+### ** export
+    return(Info)
+}
+

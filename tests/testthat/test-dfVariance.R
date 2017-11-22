@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: nov 16 2017 (17:59) 
+## last-updated: nov 20 2017 (17:02) 
 ##           By: Brice Ozenne
-##     Update #: 75
+##     Update #: 77
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -56,20 +56,22 @@ e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
 e.lm <- lm(Y1~X1+X2, data = dW)
 
 ### *** clubSandwich
-cS.vcov <- vcovCR(e.lm, type = "CR0", cluster = d$Id)
-cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(d))
+cS.vcov <- vcovCR(e.lm, type = "CR0", cluster = dW$Id)
+cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(dW))
 cS.df
 ## cS.df$df is very suspect: should be the same for all coefficient and close to n-p
 
 ### *** dfVariance
 test_that("linear regression: df",{
 
-    df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE)
+    for(iClub in 1:2){
+        df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE, as.clubSandwich = iClub)
 
-    keep.coef <- c("Y1","Y1~X1","Y1~X2")
-    GS <- rep(NROW(d),length(keep.coef))
-    expect_equal(as.double(df.lvm[keep.coef]),GS)
-
+        keep.coef <- c("Y1","Y1~X1","Y1~X2")
+        GS <- rep(NROW(dW),length(keep.coef))
+        expect_equal(as.double(df.lvm[keep.coef]),GS)
+    }
+    
     df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE)
     df.adj.lvm
     

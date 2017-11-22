@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: nov 16 2017 (12:58) 
+## Last-Updated: nov 17 2017 (11:27) 
 ##           By: Brice Ozenne
-##     Update #: 102
+##     Update #: 109
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -242,18 +242,16 @@
         index.lower.arr <- which(lower.tri(template),arr.ind = TRUE)
         vec.sigma.tempo <- apply(index.lower.arr,1,function(x){prod(sqrt(sigma2.base[x]))})        
         template[index.lower] <- cor.coef*vec.sigma.tempo
-    }
-
-    
-    ## ** Individual matrix
-    template <- symmetrize(template)
+        template <- symmetrize(template)
+    }    
     dimnames(template) <- list(name.endogenous, name.endogenous)
     
-    Omega <- tapply(endogenous, cluster, function(iRep){
-        return(list(template[iRep,iRep,drop=FALSE]))
-    })
+    ## ** Index for each cluster    
+    ls.indexOmega <- tapply(endogenous, cluster, function(iRep){iRep})
 
-    return(Omega)
+    ## ** export
+    return(list(Omega = template,
+                ls.indexOmega = ls.indexOmega))
 }
 
 ## * .getVarCov2.lme
@@ -261,40 +259,17 @@
                             endogenous, name.endogenous, n.endogenous,
                             cluster, n.cluster){
 
-    var.coef <- param[attr.param$var.coef]
-    cor.coef <- param[attr.param$cor.coef]
+    ## ** prepare with gls
+    out <- .getVarCov2.gls(object, param = param, attr.param = attr.param,
+                    endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
+                    cluster = cluster, n.cluster = n.cluster)
+
+    ## ** add contribution of the random effect
     ran.coef <- param[attr.param$ran.coef]
+    out$Omega <- out$Omega + ran.coef
 
-    ## ** Diagonal terms
-    name.other <- setdiff(names(var.coef),"sigma2")
-    if(length(name.other)){            
-        sigma2.base <- setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
-    }else{
-        sigma2.base <- setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
-    }
-    template <- diag(as.double(sigma2.base+ran.coef),
-                     nrow = n.endogenous, ncol = n.endogenous)
-    
-    ## ** Extra-diagonal terms
-    index.lower <- which(lower.tri(template))
-    if(length(cor.coef)>0){        
-        index.lower.arr <- which(lower.tri(template),arr.ind = TRUE)
-        vec.sigma.tempo <- apply(index.lower.arr,1,function(x){prod(sqrt(sigma2.base[x]))})        
-        template[index.lower] <- cor.coef*vec.sigma.tempo + ran.coef
-    }else{
-        template[index.lower] <- ran.coef
-    }
-
-    
-    ## ** Individual matrix
-    template <- symmetrize(template)
-    dimnames(template) <- list(name.endogenous, name.endogenous)
-    
-    Omega <- tapply(endogenous, cluster, function(iRep){
-        return(list(template[iRep,iRep,drop=FALSE]))
-    })
-
-    return(Omega)
+    ## ** export
+    return(out)
     
 }
 

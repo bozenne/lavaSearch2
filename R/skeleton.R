@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: nov  9 2017 (14:46) 
+## Last-Updated: nov 17 2017 (10:44) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 220
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -542,6 +542,94 @@ skeletonDtheta.lvmfit <- function(object, data,
 
 }
 
+## * skeletonDtheta2
+#' @rdname skeleton
+#' @export
+`skeletonDtheta2` <-
+    function(object, ...) UseMethod("skeletonDtheta2")
+
+## * skeletonDtheta2.lvmfit
+#' @rdname skeleton
+#' @export
+skeletonDtheta2.lvmfit <- function(object, data,
+                                   dt.param.all, param2originalLink,
+                                   name.endogenous, name.latent,
+                                   B, alpha.XGamma, Lambda, Psi,
+                                   ...){
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
+  
+### ** second order partial derivatives
+    browser()    
+    if(any(OD$toUpdate)){
+        type2update <- OD$type[OD$toUpdate]
+            
+        OD$iIB <- solve(diag(1,n.latent,n.latent)-B)
+        OD$alpha.XGamma.iIB <- alpha.XGamma %*% OD$iIB
+        OD$iIB.Lambda <-  OD$iIB %*% Lambda    
+        OD$Psi.iIB <- Psi %*% OD$iIB
+        OD$tLambda.tiIB.Psi.iIB <- t(OD$iIB.Lambda) %*% OD$Psi.iIB
+        
+        ## *** mean parameters
+        type.meanparam <- type2update[type2update %in% c("alpha","Lambda","Gamma","B")]
+        n.meanparam <- length(type.meanparam)
+        name.meanparam <- names(type.meanparam)
+
+        if(n.meanparam>0){
+            for(iP in 1:n.meanparam){ # iP <- 1
+                iType <- type.meanparam[iP]
+                iName <- name.meanparam[iP]
+            
+                if(iType == "alpha"){
+                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType == "Gamma"){
+                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda 
+                }else if(iType == "Lambda"){
+                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dLambda.dtheta[[iName]]
+                }else if(iType == "B"){
+                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
+                }
+
+                colnames(OD$dmu.dtheta[[iName]]) <- name.endogenous
+            }
+        }
+
+        ## *** variance-covariance parameters
+        type.vcovparam <- type2update[type2update %in% c("Psi_var","Psi_cov","Lambda","B")]
+        n.vcovparam <- length(type.vcovparam)
+        name.vcovparam <- names(type.vcovparam)
+
+        if(n.vcovparam>0){
+            for(iP in 1:n.vcovparam){ # iP <- 1
+                iType <- type.vcovparam[iP]
+                iName <- name.vcovparam[iP]
+        
+                if(iType %in% "Psi_var"){
+                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType %in% "Psi_cov"){
+                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                }else if(iType == "Lambda"){
+                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dLambda.dtheta[[iName]]
+                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                }else if(iType == "B"){
+                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
+                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                }
+
+                colnames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
+                rownames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
+            }
+        }
+        
+    }
+
+### ** Export
+    return(OD)
+
+}
+
 
 ##----------------------------------------------------------------------
 ### skeleton.R ends here
+

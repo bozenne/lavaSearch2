@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: nov  9 2017 (17:49) 
+## last-updated: nov 20 2017 (16:29) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 14
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -96,6 +96,7 @@ test_that("multiple linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
                  "vcov.param")
     GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))
+
     expect_equal(unname(test), unname(GS))    
 })
 

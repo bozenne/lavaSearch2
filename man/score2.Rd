@@ -2,9 +2,24 @@
 % Please edit documentation in R/score2.R
 \name{score2}
 \alias{score2}
+\alias{score2.gls}
+\alias{score2.lme}
+\alias{score2.lvmfit}
 \title{Compute the score directly from the gaussian density}
 \usage{
 score2(x, ...)
+
+\method{score2}{gls}(object, cluster, p = NULL, data = NULL,
+  adjust.residuals = TRUE, power = 1/2, indiv = TRUE,
+  as.clubSandwich = TRUE, return.vcov.param = FALSE, ...)
+
+\method{score2}{lme}(object, cluster, p = NULL, data = NULL,
+  adjust.residuals = TRUE, power = 1/2, indiv = TRUE,
+  as.clubSandwich = TRUE, return.vcov.param = FALSE, ...)
+
+\method{score2}{lvmfit}(object, p = NULL, data = NULL,
+  adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
+  indiv = TRUE, return.vcov.param = FALSE, ...)
 }
 \arguments{
 \item{x}{a linear model or a latent variable model.}
@@ -15,15 +30,16 @@ score2(x, ...)
 
 \item{data}{[optional] data set.}
 
-\item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
-
 \item{adjust.residuals}{Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
 \item{power}{the exponent used for computing the leverage-adjusted residuals. See the documentation of the \code{\link{iid2}} function for more details.}
 
-\item{return.df}{Should the degree of freedom be computed?}
+\item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
 
 \item{as.clubSandwich}{The method use to apply the \code{power} argument.}
+}
+\value{
+A matrix.
 }
 \description{
 Compute the score directly from the gaussian density
@@ -52,4 +68,13 @@ and:
 \deqn{ \frac{\partial \Omega(\beta)}{\partial \sigma} = \delta_{\sigma \in \Sigma} }
 \deqn{ \frac{\partial \Omega(\beta)}{\partial \lambda} = \delta_{\lambda \in \Lambda} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda + \Lambda^t (1-B)^{-t} \Psi (1-B)^{-1} \delta_{\lambda \in \Lambda} }
 \deqn{ \frac{\partial \Omega(\beta)}{\partial b} = \Lambda^t (1-B)^{-t} \delta_{b \in B} (1-B)^{-t} \Psi (1-B)^{-1} \Lambda - \Lambda^t (1-B)^{-t} \Psi (1-B)^{-1} \delta_{b \in B} (1-B)^{-1} \Lambda}
+}
+\examples{
+
+m <- lvm(Y1~eta,Y2~eta,Y3~eta)
+latent(m) <- ~eta
+
+e <- estimate(m,sim(m,1e2))
+score2(e)
+
 }
