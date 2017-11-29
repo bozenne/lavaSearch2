@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: nov 20 2017 (16:29) 
+## last-updated: nov 29 2017 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 15
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,6 +19,8 @@ library(testthat)
 
 context("score2")
 n <- 5e1
+
+
 
 ## * Model vcov
 ## ** function
@@ -317,7 +319,29 @@ test_that("2 factor model, correlation (not at ML: +1:p)",{
     expect_equal(unname(test), GS)    
 })
 
+## * Corrected vcov
+n <- 5e1
+
+m <- lvm(Y~X1+X2+X3)
+set.seed(10)
+d <- sim(m,n)
+
+e <- estimate(lvm(Y~X1+X2+X3),d)
+e <- estimate(lvm(Y~X1+X2+X3),d)
+Sigma.test <- attr(residuals2(e, return.vcov.param = TRUE), "vcov.param")
+
+mean.coef <- coef(e)[1:4]
+expect_equal(Sigma.test[mean.coef,mean.coef],
+             vcov(e)[mean.coef,mean.coef] *(n+length(mean.coef))/n)
+dfVariance(e, adjust.residuals = FALSE)
+dfVariance(e, adjust.residuals = TRUE)
+
+X <- model.matrix(Y~X1+X2+X3, data = d)
+2 * t(X) %*% X * coef(e)["Y~~Y"]
 
 #----------------------------------------------------------------------
 ### test-vcov.R ends here
+
+
+
 

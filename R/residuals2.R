@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov 20 2017 (16:40) 
+## Last-Updated: nov 29 2017 (13:23) 
 ##           By: Brice Ozenne
-##     Update #: 594
+##     Update #: 608
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,6 +33,59 @@
 #' @export
 `residuals2` <-
     function(object, ...) UseMethod("residuals2")
+
+## * residuals2.lm
+residuals2.lm <- function(object, 
+                          adjust.residuals = TRUE,
+                          return.vcov.param = FALSE, ...){
+
+### ** Extract information
+
+    ## *** parameters
+    p <- coef(object)
+    name.param <- names(p)
+    n.param <- length(name.param)
+    
+    ## *** formula
+    formula.object <- formula(object)
+    
+    ## *** data    
+    X <- model.matrix(object)
+    
+    name.Y <- all.vars(update(formula.object, ".~1"))
+    Y <- model.frame(object)[[name.Y]]
+
+### ** Variance-covariance matrix of the estimates
+    if(return.vcov.param){
+        vcov.param <- vcov(object)
+    }
+    
+### ** Compute observed residuals
+    epsilon <- residuals(object, type = "response")
+
+### ** Small sample adjustement
+    if(adjust.residuals){
+        ## *** Compute the leverage
+        sigma2 <- sigma(object)^2
+
+        leverage <- diag(X %*% vcov.param %*% t(X) / sigma2)
+        ## same as influence(object)$hat
+        ## range(leverage-influence(object)$hat)
+
+        epsilon <- epsilon/sqrt(leverage)
+        if(return.vcov.param){
+            object.n <- NROW(object$model)
+            object.p <- sum(leverage)
+            vcov.param <- vcov.param *(1+p/n)^2
+        }
+    }
+
+    if(return.vcov.param){
+        attr(epsilon, "vcov.param") <- vcov.param 
+    }
+       
+    return(epsilon)
+}
 
 ## * residuals2.gls
 #' @rdname residuals2
@@ -378,6 +431,14 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         }
     }
 
+### ** correct Omega
+    if(FALSE){
+        Omega.corrected <- Omega + Reduce(mean,bias.Omega)
+        Omega.corrected/Omega
+        df <- Reduce(sum,bias.Omega)/Omega
+        df
+    }
+    
 ### ** correct vcov
     Info <- .information2(dmu.dtheta = dmu.dtheta,
                           dOmega.dtheta = dOmega.dtheta,

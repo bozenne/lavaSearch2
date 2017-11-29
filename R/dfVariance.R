@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: nov 17 2017 (10:33) 
+## last-updated: nov 29 2017 (15:24) 
 ##           By: Brice Ozenne
-##     Update #: 219
+##     Update #: 227
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,6 +26,26 @@
 #' @export
 `dfVariance` <-
   function(object, ...) UseMethod("dfVariance")
+
+## * dfVariance.lm
+#' @rdname dfVariance
+#' @export
+dfVariance.lm <- function(object, adjust.residuals = FALSE, ...){
+    name.coef <- names(coef(object))
+    n.coef <- length(name.coef)
+    df <- setNames(rep(NA,n.coef), name.coef)
+
+    n <- NROW(object$model)
+    p <- object$rank
+
+    if(adjust.residuals){
+        df[] <- n*(n/(n+p))^2
+    }else{
+        df[] <- n
+    }
+    return(df)
+}
+     
 
 ## * dfVariance.gls
 #' @rdname dfVariance
@@ -81,7 +101,7 @@ dfVariance.lme <- dfVariance.gls
 ## * dfVariance.lvmfit
 #' @rdname dfVariance
 #' @export
-dfVariance.lvmfit <- function(object, fix.mean = FALSE, 
+dfVariance.lvmfit <- function(object, 
                               robust = FALSE, adjust.residuals = FALSE, power = 0.5, as.clubSandwich = TRUE, ...){
 
     p <- pars(object)
@@ -148,6 +168,13 @@ dfVariance.lvmfit <- function(object, fix.mean = FALSE,
     jac.param <- p[keep.param]
     dVcov.dtheta <- numDeriv::jacobian(calcDiagVcov, x = jac.param, method = "Richardson")
 
+     vcov.param/vcov(e)
+    browser()
+    vcov.param[1:4,1:4] - coef(e)["Y~~Y"] * solve(t(X) %*% X)
+    dVcov.dtheta[1:4] - diag(vcov.param)[1:4] / coef(e)["Y~~Y"]
+
+    diag(vcov.param)[1:4]^3 / coef(e)["Y~~Y"]^2
+    vcov.param[keep.param,keep.param,drop=FALSE] -  (2/n*coef(e)["Y~~Y"]^(2))
 ### ** Compute degrees of freedom
 
     ## diag(vcov.param) - calcVcov(p)

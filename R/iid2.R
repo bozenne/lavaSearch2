@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:16) 
 ## Version: 
-## last-updated: nov 15 2017 (13:52) 
+## last-updated: nov 29 2017 (15:20) 
 ##           By: Brice Ozenne
-##     Update #: 331
+##     Update #: 336
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,11 +95,10 @@ iid2.lm <- function(x, data = NULL, adjust.residuals = TRUE, power = 1/2, ...){
     XX_m1 <- solve(t(data)%*%data)
     H <- data %*% XX_m1 %*% t(data)    
     if(adjust.residuals){
-        epsilon <- residuals(x)/(1 - diag(H))^{power}
+        epsilon <- residuals(x)/(1 - diag(H))^(power)
     }else{
         epsilon <- residuals(x)
     }
-
     iid0 <- sweep(data, MARGIN = 1, FUN = "*", STATS = epsilon) %*% XX_m1
     
 ### ** export
