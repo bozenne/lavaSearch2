@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: nov 29 2017 (15:24) 
+## last-updated: nov 30 2017 (15:28) 
 ##           By: Brice Ozenne
-##     Update #: 227
+##     Update #: 274
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -51,12 +51,15 @@ dfVariance.lm <- function(object, adjust.residuals = FALSE, ...){
 #' @rdname dfVariance
 #' @export
 dfVariance.gls <- function(object, cluster,
-                           robust = FALSE, adjust.residuals = FALSE, power = 0.5, as.clubSandwich = TRUE, ...){
+                           robust = FALSE, adjust.residuals = FALSE, ...){
 
     p <- .coef2(object)
     data <- getData(object)
     N.param <- length(p)
     name.param <- names(p)
+
+    power <- 0.5
+    as.clubSandwich <- 2
     
 ### ** Define function to compute the standard errors
     if(robust){
@@ -102,13 +105,16 @@ dfVariance.lme <- dfVariance.gls
 #' @rdname dfVariance
 #' @export
 dfVariance.lvmfit <- function(object, 
-                              robust = FALSE, adjust.residuals = FALSE, power = 0.5, as.clubSandwich = TRUE, ...){
+                              robust = FALSE, adjust.residuals = FALSE, ...){
 
     p <- pars(object)
     data <- model.frame(object)
  
     n.param <- length(p)
     name.param <- names(p)
+
+    power <- 0.5
+    as.clubSandwich <- 2
     
 ### ** Define function to compute the information matrix
     if(robust == FALSE){
@@ -185,6 +191,119 @@ dfVariance.lvmfit <- function(object,
     return(df)
 }
 
+
+## * .dinformation2
+.dinformation2 <- function(dmu.dtheta, d2mu.d2theta,
+                           dOmega.dtheta, d2Omega.d2theta,
+                           Omega, ls.indexOmega, bias.Omega,
+                           n.param, name.param, n.cluster){
+
+### ** prepare
+    clusterSpecific <- !is.null(ls.indexOmega)
+    correction <- !is.null(bias.Omega)
+    if(clusterSpecific==FALSE){
+
+        if(correction){
+            Tbias.vcov.param <- Reduce("+",bias.Omega)/n.cluster
+            Omega <- Omega + Tbias.vcov.param
+        }
+        
+        iOmega <- chol2inv(chol(Omega))
+        
+    }
+
+### ** compute the derivative of the information matrix for each parameters
+    dInfo <-  matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
+    
+    for(iP1 in 1:n.param){ # iP <- 1
+        for(iP3 in 1:n.param){ # iP <- 1
+                
+                iName1 <- name.param[iP1]
+                iName3 <- name.param[iP3]
+
+                test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName3]])
+                test.mu <- !is.null(dmu.dtheta[[iName1]])
+                
+                ## *** Individual specific Omega (e.g. presence of missing values)
+                if(clusterSpecific){
+                    for(iC in 1:n.cluster){
+                    
+                    Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                    if(correction){
+                        Omega.tempo <- Omega.tempo + bias.Omega[[iC]]
+                    }
+                    iOmega.tempo <- chol2inv(chol(Omega.tempo))
+
+                    if(test.Omega){
+                        iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        iOmega.dOmega.3 <- iOmega.tempo %*% dOmega.dtheta[[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.dOmega.3 %*% iOmega.dOmega.1 %*% iOmega.dOmega.1)
+                        
+                        if(!is.null(d2Omega.d2theta[[iName1]][[iName3]])){
+                            iOmega.d2Omega.13 <- iOmega.tempo %*% d2Omega.d2theta[[iName1]][[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.d2Omega.13 %*% iOmega.dOmega.1)                
+                        }else if(!is.null(d2Omega.d2theta[[iName3]][[iName1]])){
+                            iOmega.d2Omega.13 <- iOmega.tempo %*% d2Omega.d2theta[[iName3]][[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.d2Omega.13 %*% iOmega.dOmega.1)                
+                        }                        
+                    }                    
+                    
+                    if(test.mu){
+                        dmu.1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
+
+                        if(!is.null(d2mu.d2theta[[name1]][[name3]])){
+                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name1]][[name3]] %*% iOmega.tempo * dmu.1)
+                        }else if(!is.null(d2mu.d2theta[[name3]][[name1]])){
+                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name3]][[name1]] %*% iOmega.tempo * dmu.1)
+                        }
+                        if(!is.null(dOmega.dtheta[[name3]])){
+                            dOmega.3 <- dOmega.dtheta[[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + sum(dmu.tempo1 %*% iOmega.tempo %*% dOmega.3 %*% iOmega.tempo * dmu.tempo1)
+                        }
+                        
+                    }
+                    
+                }
+            }
+            
+            ## *** Same for all individuals
+            if(clusterSpecific == FALSE){
+                if(test.Omega){
+                    iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]]
+                    iOmega.dOmega.3 <- iOmega.tempo %*% dOmega.dtheta[[iName3]]
+
+                    dInfo[iP1,iP3] <- dInfo[iP1,iP3] + n.cluster * tr(iOmega.dOmega.3 %*% iOmega.dOmega.1 %*% iOmega.dOmega.1)
+                    
+                    if(!is.null(d2Omega.d2theta[[iName1]][[iName3]])){
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + n.cluster * tr(iOmega.tempo %*% d2Omega.d2theta[[iName1]][[iName3]] %*% iOmega.dOmega.1)                
+                    }else if(!is.null(d2Omega.d2theta[[iName3]][[iName1]])){
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + n.cluster * tr(iOmega.tempo %*% d2Omega.d2theta[[iName3]][[iName1]] %*% iOmega.dOmega.1)                
+                    }
+                    
+                }
+                                
+                if(test.mu){
+
+                    if(!is.null(d2mu.d2theta[[name1]][[name3]])){
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name1]][[name3]] %*% iOmega.tempo * dmu.dtheta[[iName1]])
+                    }else if(!is.null(d2mu.d2theta[[name3]][[name1]])){
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name3]][[name1]] %*% iOmega.tempo * dmu.dtheta[[iName1]])
+                    }
+
+                    if(!is.null(dOmega.dtheta[[name3]])){
+                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + sum(dmu.dtheta[[iName1]] %*% iOmega.tempo %*% dOmega.dtheta[[name3]] %*% iOmega.tempo * dmu.dtheta[[iName1]])
+                    }
+
+                }
+
+            }
+        }
+    }
+
+### ** export
+    return(dInfo)
+}
 
 
 ##----------------------------------------------------------------------
