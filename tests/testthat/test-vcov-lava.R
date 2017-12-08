@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: nov 29 2017 (17:46) 
+## last-updated: dec  7 2017 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 20
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -320,24 +320,101 @@ test_that("2 factor model, correlation (not at ML: +1:p)",{
 })
 
 ## * Corrected vcov
-n <- 5e1
+n <- 1e4
 
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
 d <- sim(m,n)
 
-e <- estimate(lvm(Y~X1+X2+X3),d)
-e <- estimate(lvm(Y~X1+X2+X3),d)
-Sigma.test <- attr(residuals2(e, return.vcov.param = TRUE), "vcov.param")
+e.lvm <- estimate(lvm(Y~X1+X2+X3),d)
+e.lm <- lm(Y~X1+X2+X3, data = d)
+Sigma.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE), "vcov.param")
+Sigma.lm <- attr(residuals2(e.lm, return.vcov.param = TRUE), "vcov.param")
 
-mean.coef <- coef(e)[1:4]
+mean.coef <- names(coef(e.lvm))[1:4]
 expect_equal(Sigma.test[mean.coef,mean.coef],
-             vcov(e)[mean.coef,mean.coef] *(n+length(mean.coef))/n)
-dfVariance(e, adjust.residuals = FALSE)
-dfVariance(e, adjust.residuals = TRUE)
+             vcov(e.lvm)[mean.coef,mean.coef] * (n+length(mean.coef))/n)
 
-X <- model.matrix(Y~X1+X2+X3, data = d)
-2 * t(X) %*% X * coef(e)["Y~~Y"]
+expect_equal(Sigma.test[mean.coef,mean.coef],
+             vcov(e.lvm)[mean.coef,mean.coef] * (n+length(mean.coef))/n)
+
+
+
+
+
+
+tr(X %*% solve(t(X) %*% X) %*% t(X))
+
+iObs <- 1
+lsH <- lapply(1:n, function(iObs){
+    X[iObs,,drop=FALSE] %*% solve(t(X) %*% X) %*% t(X[iObs,,drop=FALSE])
+})
+
+t(X) %*% X
+
+dVcov.dtheta
+
+2*((1+n.coef/n)*coef(e)["Y~~Y"])^2/n
+iXX*(1+n.coef/n)
+
+vcov.param[keep.param,keep.param,drop=FALSE]
+
+diag(solve(t(X) %*% X ))^2 - diag(solve(t(X) %*% X %*% t(X) %*% X))
+
+H <- X %*% solve(t(X) %*% X) %*% t(X)
+
+epsilon <- residuals(e)
+sigma_corrected <- mean(sapply(1:n, function(iObs){    
+    epsilon[iObs]^2/(1-H[iObs,iObs])
+}))
+n/(n-4)*coef(e)["Y~~Y"]
+coef(e)["Y~~Y"]*(1+4/n)
+sigma_corrected
+
+
+vcov.lm <- attr(residuals2(e.lm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
+vcov.lvm <- attr(residuals2(e.lvm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
+
+vcov.lm/vcov(e.lm)
+vcov.lvm[1:4,1:4]/vcov(e.lm)
+
+library(pbkrtest)
+
+data(beets, package='pbkrtest')
+lg <- lmer(sugpct ~ block + sow + harvest + (1|block:harvest),
+data=beets, REML=FALSE)
+xx <- KRmodcomp(lg, sm)
+
+getKR(xx)
+
+
+(fmLarge <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy))
+## removing Days
+(fmSmall <- lmer(Reaction ~ 1 + (Days|Subject), sleepstudy))
+anova(fmLarge,fmSmall)
+KRmodcomp(fmLarge, fmSmall)  ## 17 denominator df
+
+
+
+
+fm1 <- lmer(value ~ G + (1|Id), data = dL)
+logLik(fm1)
+fm2 <- lme(value ~ G,
+           random = ~ 1|Id,
+           data = dL)
+logLik(fm2)
+
+vcov(fm1)
+v1 <- vcovAdj(fm1, detail = 1)
+v1/vcov(fm1)
+
+v2 <- attr(residuals2(fm2, adjust.residuals = TRUE, return.vcov.param = TRUE),
+           "vcov.param")
+v2[1:2,1:2]/vcov(fm1)
+## Here the adjusted and unadjusted covariance matrices are identical,
+## but that is not generally the case
+v1 <- vcov(fm1)
+v2 <- vcovAdj(fm1,detail=0)
 
 #----------------------------------------------------------------------
 ### test-vcov.R ends here

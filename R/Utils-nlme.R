@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: nov 17 2017 (11:27) 
+## Last-Updated: dec  7 2017 (17:34) 
 ##           By: Brice Ozenne
-##     Update #: 109
+##     Update #: 111
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -152,15 +152,11 @@
                 index.obs = index.obs))
 }
 
-
-##----------------------------------------------------------------------
-### coef2.R ends here
-
 ## * .getGroups2.lme
 .getGroups2.lme <- function(object, ...){
 
     ## ** get cluster
-    if(NCOL(e.lme$groups)!=1){
+    if(NCOL(object$groups)!=1){
         stop("cannot only handle one random effect \n")
     }
     cluster <- as.numeric(nlme::getGroups(object))

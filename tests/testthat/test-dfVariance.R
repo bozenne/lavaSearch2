@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: nov 20 2017 (17:02) 
+## last-updated: dec  7 2017 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 77
+##     Update #: 81
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -53,6 +53,11 @@ df-e.ttest$parameter
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
+
+
+df.lvm <- dfVariance(e.lvm,
+                     robust = FALSE, adjust.residuals = TRUE)
+
 e.lm <- lm(Y1~X1+X2, data = dW)
 
 ### *** clubSandwich
@@ -64,7 +69,7 @@ cS.df
 ### *** dfVariance
 test_that("linear regression: df",{
 
-    for(iClub in 1:2){
+    for(iClub in 1:2){ # iClub <- 1
         df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE, as.clubSandwich = iClub)
 
         keep.coef <- c("Y1","Y1~X1","Y1~X2")
@@ -74,6 +79,10 @@ test_that("linear regression: df",{
     
     df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE)
     df.adj.lvm
+    coef(e.lvm)
+    n <- 50
+    p <- 3
+    n/(1+p/n)^2
     
 })
 

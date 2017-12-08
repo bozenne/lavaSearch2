@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov 20 2017 (16:42) 
+## last-updated: nov 30 2017 (16:09) 
 ##           By: Brice Ozenne
-##     Update #: 628
+##     Update #: 639
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,12 +95,12 @@ prepareScore2.gls <- function(object, X,
     dOmega.dtheta <- vector(mode = "list", length = n.corcoef + n.varcoef)
     names(dOmega.dtheta) <- c(name.corcoef, name.varcoef)
     
-
     ## *** dispersion coefficient
     dOmega.dtheta[["sigma2"]] <- diag(sigma2.base0[name.endogenous], nrow = n.endogenous, ncol = n.endogenous)
+   
     if("NULL" %in% class.cor == FALSE){
         dOmega.dtheta[["sigma2"]][index.lower.tri] <- Msigma2.base0[index.lower.tri] * cor.coef[M.corcoef[index.lower.tri]]
-        dOmega.dtheta[["sigma2"]] <- symmetrize(dOmega.dtheta[["sigma2"]])
+        dOmega.dtheta[["sigma2"]] <- symmetrize(dOmega.dtheta[["sigma2"]])      
     }
     dimnames(dOmega.dtheta[["sigma2"]]) <-  list(name.endogenous, name.endogenous)
 
@@ -117,7 +117,6 @@ prepareScore2.gls <- function(object, X,
                 ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2*x)
                 dOmega.dtheta[[iVar]][index.lower.tri[index.iVar]] <- var.coef["sigma2"]*dOmega.dtheta[["sigma2"]][index.lower.tri[index.iVar]]/(2*var.coef[iVar])
                 dOmega.dtheta[[iVar]] <- symmetrize(dOmega.dtheta[[iVar]])
-
             }
             
             dimnames(dOmega.dtheta[[iVar]]) <- list(name.endogenous, name.endogenous)            
@@ -130,10 +129,43 @@ prepareScore2.gls <- function(object, X,
             dOmega.dtheta[[iVar]] <- Msigma2.base0 * var.coef["sigma2"] * (M.corcoef==iVar)
         }
     }
+
+### ** second order
+    d2Omega.d2theta <- list()
+
+    if(second.order){
+
+        if("NULL" %in% class.var == FALSE){
+            for(iVar in name.other){ ## iVar <- name.other[1]
+                d2Omega.d2theta[["sigma"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+            }
+        }
+
+        if("NULL" %in% class.cor == FALSE){
+            for(iVar in name.corcoef){
+                d2Omega.d2theta[["sigma"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+            }
+        }
+
+        if("NULL" %in% class.var == FALSE && "NULL" %in% class.cor == FALSE){
+            for(iVar1 in name.other){ ## iVar <- name.other[1]
+                for(iVar2 in name.corcoef){
+                    M.tempo <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
+                    M.tempo[index.lower.tri] <- cor.coef[M.corcoef[index.lower.tri]]
+                    M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
+                    
+                    d2Omega.d2theta[[iVar1]][[iVar2]] <- dOmega.dtheta[[iVar1]]/M.tempo
+                    diag(d2Omega.d2theta[[iVar1]][[iVar2]]) <- 0
+                }
+            }
+        }
+
+    }
     
 ### ** export
     return(list(dmu.dtheta = dmu.dtheta,
-                dOmega.dtheta = dOmega.dtheta))
+                dOmega.dtheta = dOmega.dtheta,
+                d2Omega.d2theta = d2Omega.d2theta))
     
 }
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: nov 29 2017 (13:23) 
+## Last-Updated: dec  7 2017 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 608
+##     Update #: 638
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,6 +35,7 @@
     function(object, ...) UseMethod("residuals2")
 
 ## * residuals2.lm
+
 residuals2.lm <- function(object, 
                           adjust.residuals = TRUE,
                           return.vcov.param = FALSE, ...){
@@ -43,6 +44,7 @@ residuals2.lm <- function(object,
 
     ## *** parameters
     p <- coef(object)
+    n <- NROW(object$model)
     name.param <- names(p)
     n.param <- length(name.param)
     
@@ -55,33 +57,42 @@ residuals2.lm <- function(object,
     name.Y <- all.vars(update(formula.object, ".~1"))
     Y <- model.frame(object)[[name.Y]]
 
-### ** Variance-covariance matrix of the estimates
-    if(return.vcov.param){
-        vcov.param <- vcov(object)
-    }
-    
 ### ** Compute observed residuals
     epsilon <- residuals(object, type = "response")
 
 ### ** Small sample adjustement
     if(adjust.residuals){
         ## *** Compute the leverage
-        sigma2 <- sigma(object)^2
+        iXX <- solve(t(X) %*% X)
 
-        leverage <- diag(X %*% vcov.param %*% t(X) / sigma2)
+        leverage <- rowSums((X %*% iXX) * X)
         ## same as influence(object)$hat
         ## range(leverage-influence(object)$hat)
+        ## save as (but faster)
+        ## leverage - diag(X %*% iXX %*% t(X))
+
+        if(return.vcov.param){
+           
+            sigma_corrected <- mean(epsilon * 1/(1-leverage) * epsilon)
+            # sigma_corrected / sigma(object)^2
+            # sigma_corrected / (1/(n-sum(leverage))*sum(epsilon * epsilon))
+            
+            vcov.param <- sigma_corrected * iXX
+            # vcov.param / (1/(n-sum(leverage))*sum(epsilon * epsilon)) * iXX
+            # vcov.param / vcov(object)
+            
+        }
 
         epsilon <- epsilon/sqrt(leverage)
-        if(return.vcov.param){
-            object.n <- NROW(object$model)
-            object.p <- sum(leverage)
-            vcov.param <- vcov.param *(1+p/n)^2
-        }
+        
+    }else if(return.vcov.param){
+        vcov.param <- vcov(object)
+        sigma <- sigma(object)^2
     }
 
     if(return.vcov.param){
         attr(epsilon, "vcov.param") <- vcov.param 
+        attr(epsilon, "sigma2") <- sigma_corrected
     }
        
     return(epsilon)
@@ -94,8 +105,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
                            second.order = FALSE,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
-
-
+    
     test.var <- !is.null(object$modelStruct$varStruct)
     test.cor <- !is.null(object$modelStruct$corStruct)
 
@@ -137,7 +147,9 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     Y <- data[[name.Y]]
 
     ## *** group
-    resGroup <- .getGroups2(object, cluster = cluster, data = data)
+    resGroup <- .getGroups2(object,
+                            cluster = cluster,
+                            data = data)
 
     cluster <- resGroup$cluster
     n.cluster <- resGroup$n.cluster
@@ -147,7 +159,8 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     index.obs <- resGroup$index.obs
    
 ### ** Prepare
-
+    
+    
     ## *** update parameters with user-specified values
     if(!is.null(p)){
         
@@ -231,6 +244,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     if(return.vcov.param){
         attr(epsilon, "vcov.param") <- vcov.param 
     }
+
     if(return.prepareScore2){
         OPS2$name.param <- name.param
         OPS2$n.param <- n.param
@@ -239,7 +253,6 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         OPS2$ls.indexOmega <- resVcov$ls.indexOmega
         attr(epsilon, "prepareScore2") <- OPS2
     }
-    
     return(epsilon)
 
 }
@@ -442,7 +455,8 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
 ### ** correct vcov
     Info <- .information2(dmu.dtheta = dmu.dtheta,
                           dOmega.dtheta = dOmega.dtheta,
-                          Omega = Omega, ls.indexOmega = ls.indexOmega, bias.Omega = bias.Omega,
+                          Omega = Omega, ls.indexOmega = ls.indexOmega,
+                          bias.Omega = bias.Omega,
                           n.param = n.param, name.param = name.param,
                           n.cluster = n.cluster)
     vcov.param <- chol2inv(chol(Info))

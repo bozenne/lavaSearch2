@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: nov 30 2017 (15:28) 
+## last-updated: dec  7 2017 (16:34) 
 ##           By: Brice Ozenne
-##     Update #: 274
+##     Update #: 287
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,18 +31,16 @@
 #' @rdname dfVariance
 #' @export
 dfVariance.lm <- function(object, adjust.residuals = FALSE, ...){
-    name.coef <- names(coef(object))
+    object.coef <- coef(object)
+    name.coef <- names(object.coef)
     n.coef <- length(name.coef)
     df <- setNames(rep(NA,n.coef), name.coef)
 
     n <- NROW(object$model)
     p <- object$rank
 
-    if(adjust.residuals){
-        df[] <- n*(n/(n+p))^2
-    }else{
-        df[] <- n
-    }
+    df[] <- n
+    
     return(df)
 }
      
@@ -50,8 +48,8 @@ dfVariance.lm <- function(object, adjust.residuals = FALSE, ...){
 ## * dfVariance.gls
 #' @rdname dfVariance
 #' @export
-dfVariance.gls <- function(object, cluster,
-                           robust = FALSE, adjust.residuals = FALSE, ...){
+dfVariance.gls <- function(object, cluster, adjust.residuals = FALSE,
+                           numericDerivative = FALSE, ...){
 
     p <- .coef2(object)
     data <- getData(object)
@@ -59,30 +57,41 @@ dfVariance.gls <- function(object, cluster,
     name.param <- names(p)
 
     power <- 0.5
-    as.clubSandwich <- 2
-    
-### ** Define function to compute the standard errors
-    if(robust){
-        stop("not implemented \n")
-    }else{
+    as.clubSandwich <- 1
+
+    keep.param <- setdiff(name.param,attr(.coef2(object),"mean.coef"))
+
+### ** Compute the gradient of the standard errors
+    if(numericDerivative){
         calcSigma <- function(iParam){ # x <- p.obj
             pp <- p
             pp[names(iParam)] <- iParam
             return(attr(residuals2(object, cluster = cluster, p = pp, data = data,
-                                 adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                                 return.vcov.param = TRUE),
-                      "vcov.param"))
+                                   adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                                   return.vcov.param = TRUE, second.order = FALSE),
+                        "vcov.param"))
         }
+    
+        calcDiagSigma <- function(iParam){
+            return(setNames(diag(calcSigma(iParam)), name.param))         
+        }
+
+        jac.param <- p[keep.param]
+        dSigma.dtheta <- numDeriv::jacobian(func = calcDiagSigma, x = jac.param, method = "Richardson")
+        
+    }else{
+
+        dots <- list(...)
+        if("prepareScore" %in% names(dots)){
+            prepareScore <- dots$prepareScore
+        }else{
+            prepareScore  <- residuals2(object, cluster = cluster, p = pp, data = data,
+                                        adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                                        return.prepareScore = FALSE, second.order = TRUE)
+        }
+        ## call dInformation
     }
     
-    calcDiagSigma <- function(iParam){
-        return(setNames(diag(calcSigma(iParam)), name.param))         
-    }
-
-### ** Compute the gradient of the function computing the standard errors
-    keep.param <- setdiff(name.param,attr(.coef2(object),"mean.coef"))
-    jac.param <- p[keep.param]
-    dSigma.dtheta <- numDeriv::jacobian(func = calcDiagSigma, x = jac.param, method = "Richardson")
     
 ### ** Compute degrees of freedom
 
@@ -114,7 +123,7 @@ dfVariance.lvmfit <- function(object,
     name.param <- names(p)
 
     power <- 0.5
-    as.clubSandwich <- 2
+    as.clubSandwich <- 1
     
 ### ** Define function to compute the information matrix
     if(robust == FALSE){
@@ -174,16 +183,11 @@ dfVariance.lvmfit <- function(object,
     jac.param <- p[keep.param]
     dVcov.dtheta <- numDeriv::jacobian(calcDiagVcov, x = jac.param, method = "Richardson")
 
-     vcov.param/vcov(e)
-    browser()
-    vcov.param[1:4,1:4] - coef(e)["Y~~Y"] * solve(t(X) %*% X)
-    dVcov.dtheta[1:4] - diag(vcov.param)[1:4] / coef(e)["Y~~Y"]
-
-    diag(vcov.param)[1:4]^3 / coef(e)["Y~~Y"]^2
-    vcov.param[keep.param,keep.param,drop=FALSE] -  (2/n*coef(e)["Y~~Y"]^(2))
 ### ** Compute degrees of freedom
 
     ## diag(vcov.param) - calcVcov(p)
+
+    browser()
     numerator <- 2*diag(vcov.param)^2
     denom <- rowSums(dVcov.dtheta %*% vcov.param[keep.param,keep.param,drop=FALSE] * dVcov.dtheta)
     df <- numerator/denom

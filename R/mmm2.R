@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: nov 29 2017 (17:31) 
+## Last-Updated: dec  1 2017 (16:44) 
 ##           By: Brice Ozenne
-##     Update #: 37
+##     Update #: 47
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,7 +35,7 @@ coef.mmm2 <- multcomp:::coef.mmm
 
 ### set-up total covariance matrix
 vcov.mmm2 <- function(object, return.null = TRUE,
-                      adjust.residuals = TRUE, rescale = FALSE,
+                      adjust.residuals = TRUE, rescale = TRUE,
                       ...) {
 
     name.coef <- names(coef(object))
@@ -45,13 +45,16 @@ vcov.mmm2 <- function(object, return.null = TRUE,
         return(matrix(NA,n.coef,n.coef))
     }
 
-    ## ** Extract influence functions from all models
+    ## ** Extract influence functions from all models    
     ls.iid <- lapply(object, iid2, adjust.residuals = adjust.residuals, power = 1/2)
     M.iid <- do.call(cbind, ls.iid)
 
     ## ** Rescale iid with sd/sd.robust 
-    if(rescale){
-        vec.sigma <- sqrt(unlist(lapply(object, function(x){diag(vcov(x))})))
+    if(rescale){        
+        vec.sigma <- sqrt(unlist(lapply(object, function(x){
+            diag(attr(residuals2(x, adjust.residuals = adjust.residuals,
+                                 power = 1/2, return.vcov.param = TRUE), "vcov.param"))
+        })))
         vec.sigma.robust <- sqrt(apply(M.iid^2,2,sum))
         M.iid <- sweep(M.iid, MARGIN = 2, FUN = "*", STATS = vec.sigma/vec.sigma.robust)
     }

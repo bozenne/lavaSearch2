@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: nov 10 2017 (12:08) 
+## Last-Updated: nov 30 2017 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 33
+##     Update #: 48
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,6 +22,60 @@
 #' @export
 `summary2` <-
   function(object, ...) UseMethod("summary2")
+
+## * summary2.gls
+#' @rdname summary
+#' @export
+summary2.gls <- function(object, cluster,
+                         digits = max(3, getOption("digit")),
+                         robust = FALSE,
+                         adjust.residuals = TRUE, ...){
+
+    power <- 1/2
+    as.clubSandwich <- 1
+    
+### ** create summary
+    object.summary <- summary(object, digits = digits, ...)
+
+    tTable <- object.summary$tTable
+    n.coef <- NROW(tTable)
+    name.coef <- rownames(tTable)
+    name.col <- c(colnames(tTable)[1:3],"df",colnames(tTable)[4])
+    object.summary$tTable <- matrix(NA,nrow = n.coef, ncol = 5,
+                                    dimnames = list(name.coef, name.col))
+    object.summary$tTable[,1] <- tTable[,1]
+
+### ** compute df
+    df <- dfVariance(object, adjust.residuals = adjust.residuals,
+                     cluster = cluster)
+
+    object.summary$tTable[,4] <- df[name.coef]
+
+### ** compute variance
+    if(adjust.residuals==FALSE && robust == FALSE){
+        object.summary$tTable[,2:3] <- tTable[,2:3]
+    }else if(robust == FALSE){
+
+        vcov2 <- attr(residuals2(object, cluster = cluster,
+                                 adjust.residuals = adjust.residuals,
+                                 power = power, as.clubSandwich = as.clubSandwich,
+                                 return.vcov.param = TRUE), "vcov.param")
+        
+        object.summary$tTable[,2] <- sqrt(diag(vcov2))[name.coef]
+        object.summary$tTable[,3] <- object.summary$tTable[,1]/object.summary$tTable[,2]
+    }else{
+        vcov2 <- crossprod(iid2(object, cluster = cluster,
+                                adjust.residuals = adjust.residuals,
+                                power = power, as.clubSandwich = as.clubSandwich))
+        object.summary$tTable[,2] <- sqrt(diag(vcov2))[name.coef]
+        object.summary$tTable[,3] <- object.summary$tTable[,1]/object.summary$tTable[,2]
+    }
+
+    object.summary$tTable[,5] <- 2*(1-pt(abs(object.summary$tTable[,3]), df = object.summary$tTable[,4]))
+    return(object.summary)
+
+}
+
 
 ## * summary2.lvmfit
 #' @rdname summary
@@ -48,7 +102,7 @@ summary2.lvmfit <- function(object, digits = max(3, getOption("digit")),
 
 ### ** compute degrees of freedom
     df.adj <- dfVariance(object, p = param, data = data, vcov.param = vcov.object,
-                         robust = robust,
+                         robust = FALSE,
                          adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich, ...)
 
 ### ** update summary
