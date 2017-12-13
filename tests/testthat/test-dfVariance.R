@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: dec  7 2017 (17:46) 
+## last-updated: dec 13 2017 (16:19) 
 ##           By: Brice Ozenne
-##     Update #: 81
+##     Update #: 85
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -60,6 +60,7 @@ df.lvm <- dfVariance(e.lvm,
 
 e.lm <- lm(Y1~X1+X2, data = dW)
 
+
 ### *** clubSandwich
 cS.vcov <- vcovCR(e.lm, type = "CR0", cluster = dW$Id)
 cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NROW(dW))
@@ -69,21 +70,17 @@ cS.df
 ### *** dfVariance
 test_that("linear regression: df",{
 
-    for(iClub in 1:2){ # iClub <- 1
-        df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE, as.clubSandwich = iClub)
+    df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE)
 
-        keep.coef <- c("Y1","Y1~X1","Y1~X2")
-        GS <- rep(NROW(dW),length(keep.coef))
-        expect_equal(as.double(df.lvm[keep.coef]),GS)
-    }
+    
+    n.param <- length(df.lvm)
+    GS <- c(rep(NROW(dW),n.param-1), NROW(dW)/4)
+    expect_equal(as.double(df.lvm),GS)
     
     df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE)
     df.adj.lvm
     coef(e.lvm)
-    n <- 50
-    p <- 3
-    n/(1+p/n)^2
-    
+        
 })
 
 ## * mixed model
@@ -92,7 +89,7 @@ test_that("linear regression: df",{
 m <- lvm(c(Y1[mu1:sigma]~1*eta,
            Y2[mu2:sigma]~1*eta,
            Y3[mu3:sigma]~1*eta,
-           eta~G+Gender))
+           eta~G+Gender)) 
 e.lvm <- estimate(m, dW)
 
 e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
@@ -108,23 +105,22 @@ expect_equal(logLik(e.lmer),logLik(e.lme))
 coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 ## strange that same type of coef have very different degrees of freedom
 
-## *** lmerTest - ok
-summary(e.lmer, ddf = "Satterthwaite")$coef
- 
+library(pbkrtest)
+
 ## *** lava - ok
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
 test_that("mixed mode: df",{
     GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
     
-    df.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = FALSE)
+    df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE)
     expect_equal(as.double(GS),
                  as.double(df.lvm[1:5]))
 
-    df.lme <- dfVariance(e.lme, robust = FALSE, adjust.residuals = FALSE)
+    df.lme <- dfVariance(e.lme, adjust.residuals = FALSE)
     expect_equal(GS, df.lme[names(GS)])
 
-    df.gls <- dfVariance(e.gls, robust = FALSE, adjust.residuals = FALSE)
+    df.gls <- dfVariance(e.gls, adjust.residuals = FALSE)
     expect_equal(GS, df.gls[names(GS)], tol = 1e-4)
 
 

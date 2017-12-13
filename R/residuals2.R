@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: dec  7 2017 (17:45) 
+## Last-Updated: dec 13 2017 (16:02) 
 ##           By: Brice Ozenne
-##     Update #: 638
+##     Update #: 681
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -60,39 +60,39 @@ residuals2.lm <- function(object,
 ### ** Compute observed residuals
     epsilon <- residuals(object, type = "response")
 
-### ** Small sample adjustement
+    ### ** Small sample adjustement
+    iXX <- solve(t(X) %*% X)
     if(adjust.residuals){
         ## *** Compute the leverage
-        iXX <- solve(t(X) %*% X)
-
         leverage <- rowSums((X %*% iXX) * X)
-        ## same as influence(object)$hat
+        ### same as influence(object)$hat
         ## range(leverage-influence(object)$hat)
         ## save as (but faster)
-        ## leverage - diag(X %*% iXX %*% t(X))
-
-        if(return.vcov.param){
-           
-            sigma_corrected <- mean(epsilon * 1/(1-leverage) * epsilon)
-            # sigma_corrected / sigma(object)^2
-            # sigma_corrected / (1/(n-sum(leverage))*sum(epsilon * epsilon))
-            
-            vcov.param <- sigma_corrected * iXX
-            # vcov.param / (1/(n-sum(leverage))*sum(epsilon * epsilon)) * iXX
-            # vcov.param / vcov(object)
-            
+        ## leverage - diag(X %*% iXX %*% t(X))        
+        if(return.vcov.param){            
+            sigma0 <- mean(epsilon^2)
+            sigma2 <- sigma0 + mean(sigma0 * leverage)
+            ### same as
+            ## sigma0 + sigma0 / n * tr(X %*% iXX %*% t(X))
+            ## sigma0 * (n+sum(leverage))/n
+            ## sigma_corrected / sigma(object)^2
+            vcov.param <- sigma2 * iXX            
+            ## vcov.param / (1/(n-sum(leverage))*sum(epsilon * epsilon)) * iXX
+            ## vcov.param / vcov(object)
+            vcov.sigma2 <- 2*sigma2^2/(n-sum(leverage))
         }
-
         epsilon <- epsilon/sqrt(leverage)
         
     }else if(return.vcov.param){
-        vcov.param <- vcov(object)
-        sigma <- sigma(object)^2
+        sigma2 <- mean(epsilon^2)
+        vcov.param <- sigma2 * iXX        
+        vcov.sigma2 <- 2*sigma2^2/n 
     }
 
     if(return.vcov.param){
-        attr(epsilon, "vcov.param") <- vcov.param 
-        attr(epsilon, "sigma2") <- sigma_corrected
+        vcov.all <- as.matrix(bdiag(vcov.param, vcov.sigma2))
+        attr(epsilon, "vcov.param") <- vcov.all
+        attr(epsilon, "sigma2") <- sigma2
     }
        
     return(epsilon)
@@ -105,6 +105,10 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
                            second.order = FALSE,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
+
+    if(object$method!="ML"){
+        stop("Only work with Maximum Likelihood estimation \n")
+    }
     
     test.var <- !is.null(object$modelStruct$varStruct)
     test.cor <- !is.null(object$modelStruct$corStruct)
@@ -200,13 +204,20 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 
     }
 
-### ** compute variance covariance matrix (parameters)
+    ### ** compute variance covariance matrix (parameters)
     if(adjust.residuals || return.vcov.param){
+        ls.leverage <- lapply(1:n.cluster, function(iC){
+            iN.endo <- length(resVcov$ls.indexOmega[[iC]])
+            matrix(0, ncol = iN.endo, nrow = iN.endo,
+                   dimnames = list(name.endogenous[resVcov$ls.indexOmega[[iC]]],
+                                   name.endogenous[resVcov$ls.indexOmega[[iC]]])
+                   )
+        })
         Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
                               dOmega.dtheta = OPS2$dOmega.dtheta,
                               Omega = resVcov$Omega,
                               ls.indexOmega = resVcov$ls.indexOmega,
-                              bias.Omega = NULL,
+                              bias.Omega = NULL, leverage = ls.leverage,
                               n.param = n.param,
                               name.param = name.param,
                               n.cluster = n.cluster)
@@ -222,7 +233,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object) * factor
     }
     
-### ** Normalize residuals    
+    ### ** Normalize residuals    
     if(adjust.residuals){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta,
                                      dOmega.dtheta = OPS2$dOmega.dtheta,
@@ -231,14 +242,13 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                                      n.cluster = n.cluster, name.endogenous = name.endogenous,
                                      power = power, as.clubSandwich = as.clubSandwich)
 
-            epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
-                as.double(resLeverage$leverage[[iG]] %*% epsilon[iG,])
-            }))
-            colnames(epsilon) <- name.endogenous
-            if(as.clubSandwich<2){vcov.param <- resLeverage$vcov.param}
-            
-
-        }
+        epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
+            as.double(resLeverage$leverage[[iG]] %*% epsilon[iG,])
+        }))
+        colnames(epsilon) <- name.endogenous
+        if(as.clubSandwich<2){vcov.param <- resLeverage$vcov.param}
+     
+    }
     
 ### ** export
     if(return.vcov.param){
@@ -328,17 +338,20 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     }
     ## range(Omega - moments(object, p = p, conditional=TRUE, data = data)$C)
     
-### ** Compute variance covariance matrix (parameters)
-
+    ### ** Compute variance covariance matrix (parameters)
     if(null.p){
         vcov.param <- vcov(object)
         attr(vcov.param, "det") <- NULL
         attr(vcov.param, "pseudo") <- NULL
         attr(vcov.param, "minSV") <- NULL
     }else{
+
+        ls.leverage <- lapply(1:n.cluster, function(iC){
+            matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
+        })
         Info <- .information2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                               dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
-                              Omega = Omega, ls.indexOmega = NULL, bias.Omega = NULL,
+                              Omega = Omega, ls.indexOmega = NULL, bias.Omega = NULL, leverage = ls.leverage,
                               n.param = n.param, name.param = name.param, n.cluster = n.cluster)
 
         vcov.param <- solve(Info)
@@ -399,6 +412,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     
 ### ** Compute leverage
     bias.Omega <- list()
+    leverage <- list()
     ls.iIH <- list()
     
     for(iG in 1:n.cluster){ ## iG <- 1
@@ -423,7 +437,8 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
 
         ## *** Compute IH
         bias.Omega[[iG]] <- dmu.dtheta.tempo %*% vcov.param %*% t(dmu.dtheta.tempo)
-        IH <- Id.tempo - bias.Omega[[iG]] %*% iOmega.tempo
+        leverage[[iG]] <- bias.Omega[[iG]] %*% iOmega.tempo
+        IH <- Id.tempo - leverage[[iG]]
 
         ## correction
         if(power == 1){
@@ -444,25 +459,17 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         }
     }
 
-### ** correct Omega
-    if(FALSE){
-        Omega.corrected <- Omega + Reduce(mean,bias.Omega)
-        Omega.corrected/Omega
-        df <- Reduce(sum,bias.Omega)/Omega
-        df
-    }
-    
 ### ** correct vcov
     Info <- .information2(dmu.dtheta = dmu.dtheta,
                           dOmega.dtheta = dOmega.dtheta,
                           Omega = Omega, ls.indexOmega = ls.indexOmega,
                           bias.Omega = bias.Omega,
+                          leverage = leverage,
                           n.param = n.param, name.param = name.param,
                           n.cluster = n.cluster)
     vcov.param <- chol2inv(chol(Info))
     rownames(vcov.param) <- rownames(Info)
     colnames(vcov.param) <- colnames(Info)
-    
     
 ### ** export
     out <- list(leverage = ls.iIH,

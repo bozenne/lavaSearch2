@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: dec  7 2017 (17:46) 
+## last-updated: dec 13 2017 (15:46) 
 ##           By: Brice Ozenne
-##     Update #: 20
+##     Update #: 35
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,11 +16,11 @@
 ### Code:
 
 library(testthat)
+library(lme4)
+library(lmerTest)
 
 context("score2")
 n <- 5e1
-
-
 
 ## * Model vcov
 ## ** function
@@ -320,8 +320,9 @@ test_that("2 factor model, correlation (not at ML: +1:p)",{
 })
 
 ## * Corrected vcov
-n <- 1e4
+n <- 2e1
 
+## ** linear model
 m <- lvm(Y~X1+X2+X3)
 set.seed(10)
 d <- sim(m,n)
@@ -331,90 +332,81 @@ e.lm <- lm(Y~X1+X2+X3, data = d)
 Sigma.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE), "vcov.param")
 Sigma.lm <- attr(residuals2(e.lm, return.vcov.param = TRUE), "vcov.param")
 
-mean.coef <- names(coef(e.lvm))[1:4]
-expect_equal(Sigma.test[mean.coef,mean.coef],
-             vcov(e.lvm)[mean.coef,mean.coef] * (n+length(mean.coef))/n)
+test_that("Corrected vcov - linear model",{
+    expect_equal(unname(Sigma.lvm), unname(Sigma.lm))
 
-expect_equal(Sigma.test[mean.coef,mean.coef],
-             vcov(e.lvm)[mean.coef,mean.coef] * (n+length(mean.coef))/n)
+    Sigma.uncorrected <- vcov(e.lvm)
+    attr(Sigma.uncorrected, "det") <- NULL
+    attr(Sigma.uncorrected, "pseudo") <- NULL
+    attr(Sigma.uncorrected, "minSV") <- NULL
 
+    p <- 4
+    factor_beta <- (n+p)/n 
+    expect_equal(Sigma.lvm[1:p,1:p], factor_beta * Sigma.uncorrected[1:p,1:p])
 
-
-
-
-
-tr(X %*% solve(t(X) %*% X) %*% t(X))
-
-iObs <- 1
-lsH <- lapply(1:n, function(iObs){
-    X[iObs,,drop=FALSE] %*% solve(t(X) %*% X) %*% t(X[iObs,,drop=FALSE])
+    factor_sigma <- n/(n-p)*(n+p)^2/n^2
+    expect_equal(Sigma.lvm[p+1,p+1], factor_sigma * Sigma.uncorrected[p+1,p+1])
 })
 
-t(X) %*% X
+## ** multiple linear model
 
-dVcov.dtheta
+## *** simulation
+m <- lvm(c(Y1,Y2)~X1+X2)
+set.seed(10)
+df <- sim(m,2e1)
 
-2*((1+n.coef/n)*coef(e)["Y~~Y"])^2/n
-iXX*(1+n.coef/n)
+## *** model fit
+e1.lm <- lm(Y1~X1+X2, data = df)
+e2.lm <- lm(Y2~X1+X2, data = df)
+e.lvm <- estimate(m, data = df)
 
-vcov.param[keep.param,keep.param,drop=FALSE]
+## *** tests
+Sigma.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE, adjust.residuals = TRUE),
+                 "vcov.param")
 
-diag(solve(t(X) %*% X ))^2 - diag(solve(t(X) %*% X %*% t(X) %*% X))
+Sigma.lvm[c("Y1","Y1~X1","Y1~X2"),c("Y1","Y1~X1","Y1~X2")]/vcov(e1.lm)
+Sigma.lvm[c("Y2","Y2~X1","Y2~X2"),c("Y2","Y2~X1","Y2~X2")]/vcov(e2.lm)
 
-H <- X %*% solve(t(X) %*% X) %*% t(X)
-
-epsilon <- residuals(e)
-sigma_corrected <- mean(sapply(1:n, function(iObs){    
-    epsilon[iObs]^2/(1-H[iObs,iObs])
-}))
-n/(n-4)*coef(e)["Y~~Y"]
-coef(e)["Y~~Y"]*(1+4/n)
-sigma_corrected
-
-
-vcov.lm <- attr(residuals2(e.lm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
-vcov.lvm <- attr(residuals2(e.lvm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
-
-vcov.lm/vcov(e.lm)
-vcov.lvm[1:4,1:4]/vcov(e.lm)
-
-library(pbkrtest)
-
-data(beets, package='pbkrtest')
-lg <- lmer(sugpct ~ block + sow + harvest + (1|block:harvest),
-data=beets, REML=FALSE)
-xx <- KRmodcomp(lg, sm)
-
-getKR(xx)
-
-
-(fmLarge <- lmer(Reaction ~ Days + (Days|Subject), sleepstudy))
-## removing Days
-(fmSmall <- lmer(Reaction ~ 1 + (Days|Subject), sleepstudy))
-anova(fmLarge,fmSmall)
-KRmodcomp(fmLarge, fmSmall)  ## 17 denominator df
+Sigma.lvm[c("Y1~~Y1"),c("Y1~~Y1")]/(2*sigma(e1.lm)^4/(NROW(df)-length(coef(e1.lm))))
+Sigma.lvm[c("Y2~~Y2"),c("Y2~~Y2")]/(2*sigma(e2.lm)^4/(NROW(df)-length(coef(e2.lm))))
 
 
 
+## ** mixed model
 
-fm1 <- lmer(value ~ G + (1|Id), data = dL)
-logLik(fm1)
-fm2 <- lme(value ~ G,
-           random = ~ 1|Id,
-           data = dL)
-logLik(fm2)
+## *** simulate
+mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G+Gender,X1~1,X2~1))
+latent(mSim) <- ~eta
+categorical(mSim, labels = c("M","F")) <- ~Gender
+transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
+set.seed(10)
+dW <- as.data.table(sim(mSim,n,latent = FALSE))
+setkey(dW, "Id")
+dL <- melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
+setkey(dL, "Id")
 
-vcov(fm1)
-v1 <- vcovAdj(fm1, detail = 1)
-v1/vcov(fm1)
+## *** model fit
+m <- lvm(c(Y1[mu1:sigma]~1*eta,
+           Y2[mu2:sigma]~1*eta,
+           Y3[mu3:sigma]~1*eta,
+           eta~G+Gender))
+e.lvm <- estimate(m, dW)
 
-v2 <- attr(residuals2(fm2, adjust.residuals = TRUE, return.vcov.param = TRUE),
-           "vcov.param")
-v2[1:2,1:2]/vcov(fm1)
-## Here the adjusted and unadjusted covariance matrices are identical,
-## but that is not generally the case
-v1 <- vcov(fm1)
-v2 <- vcovAdj(fm1,detail=0)
+
+e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
+               data = dL, REML = FALSE)
+
+
+## *** tests
+Sigma0.lvm <- vcov(e.lvm)
+SigmaAdj.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE), "vcov.param")
+## Sigma0.lvm/SigmaAdj.lvm
+SigmaAdjRed.lvm <- SigmaAdj.lvm[1:5,1:5]
+Sigma.GS <- vcovAdj(e.lmer)
+
+## not far from KR correction
+SigmaAdjRed.lvm/Sigma.GS
+
 
 #----------------------------------------------------------------------
 ### test-vcov.R ends here

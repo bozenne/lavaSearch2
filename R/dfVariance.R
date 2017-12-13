@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: dec  7 2017 (16:34) 
+## last-updated: dec 13 2017 (14:02) 
 ##           By: Brice Ozenne
-##     Update #: 287
+##     Update #: 301
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,16 +30,22 @@
 ## * dfVariance.lm
 #' @rdname dfVariance
 #' @export
-dfVariance.lm <- function(object, adjust.residuals = FALSE, ...){
+dfVariance.lm <- function(object, adjust.residuals = TRUE, ...){
     object.coef <- coef(object)
     name.coef <- names(object.coef)
     n.coef <- length(name.coef)
-    df <- setNames(rep(NA,n.coef), name.coef)
+    df <- setNames(rep(NA,n.coef+1), c(name.coef,"sigma"))
 
     n <- NROW(object$model)
     p <- object$rank
 
-    df[] <- n
+    if(adjust.residuals==FALSE){
+        df[name.coef] <- n
+        df["sigma"] <- n/4
+    }else{
+        df[name.coef] <- n^2/(n+p)
+        df["sigma"] <- n^2/(4*(n+p))
+    }
     
     return(df)
 }
@@ -113,8 +119,7 @@ dfVariance.lme <- dfVariance.gls
 ## * dfVariance.lvmfit
 #' @rdname dfVariance
 #' @export
-dfVariance.lvmfit <- function(object, 
-                              robust = FALSE, adjust.residuals = FALSE, ...){
+dfVariance.lvmfit <- function(object, adjust.residuals = FALSE, ...){
 
     p <- pars(object)
     data <- model.frame(object)
@@ -125,47 +130,35 @@ dfVariance.lvmfit <- function(object,
     power <- 0.5
     as.clubSandwich <- 1
     
-### ** Define function to compute the information matrix
-    if(robust == FALSE){
-        if(adjust.residuals==FALSE){
-            calcI <- function(iParam){ # x <- p.obj
-                pp <- p
-                pp[names(iParam)] <- iParam
-                return(information(object, p = pp))
-            }
-        }else{
-            calcVcov <- function(iParam){ # x <- p.obj
-                pp <- p
-                pp[names(iParam)] <- iParam                
-                return(attr(residuals2(object, p = pp, data = data,
-                                              adjust.residuals = adjust.residuals,
-                                              power = power,
-                                              as.clubSandwich = as.clubSandwich,
-                                              return.vcov.param = TRUE), "vcov.param"))
-            }
+    ### ** Define function to compute the information matrix
+    if(adjust.residuals==FALSE){
+        calcI <- function(iParam){ # x <- p.obj
+            pp <- p
+            pp[names(iParam)] <- iParam
+            return(information(object, p = pp))
         }
     }else{
         calcVcov <- function(iParam){ # x <- p.obj
             pp <- p
-            pp[names(iParam)] <- iParam
-            return(crossprod(iid2(object, p = pp, data = data,
-                                  adjust.residuals = adjust.residuals,
-                                  power = power,
-                                  as.clubSandwich = as.clubSandwich)))
+            pp[names(iParam)] <- iParam                
+            return(attr(residuals2(object, p = pp, data = data,
+                                   adjust.residuals = adjust.residuals,
+                                   power = power,
+                                   as.clubSandwich = as.clubSandwich,
+                                   return.vcov.param = TRUE), "vcov.param"))
         }
-        
     }
     
 ### ** Compute variance-covariance matrix
-    if(robust == FALSE && adjust.residuals==FALSE){
+    if(adjust.residuals==FALSE){
         vcov.param <- chol2inv(chol(calcI(p)))
     }else{
         vcov.param <- calcVcov(p)
-    }
+    }    
     dimnames(vcov.param) <- list(name.param, name.param)
     
 ### ** Compute the gradient of the function computing the standard errors
-    if(robust == FALSE && adjust.residuals==FALSE){
+    if(adjust.residuals==FALSE){
         calcDiagVcov <- function(iParam){
             dVcov.dtheta <-  - vcov.param %*% calcI(iParam) %*% vcov.param
             return(as.double(diag(dVcov.dtheta)))         
@@ -182,12 +175,12 @@ dfVariance.lvmfit <- function(object,
 
     jac.param <- p[keep.param]
     dVcov.dtheta <- numDeriv::jacobian(calcDiagVcov, x = jac.param, method = "Richardson")
-
+    dimnames(dVcov.dtheta) <- list(names(p), names(jac.param))
+    dVcov.dtheta[c(1,3,4),1]/diag(solve(t(model.matrix(e.lm)) %*% model.matrix(e.lm)))
+    
 ### ** Compute degrees of freedom
 
     ## diag(vcov.param) - calcVcov(p)
-
-    browser()
     numerator <- 2*diag(vcov.param)^2
     denom <- rowSums(dVcov.dtheta %*% vcov.param[keep.param,keep.param,drop=FALSE] * dVcov.dtheta)
     df <- numerator/denom
