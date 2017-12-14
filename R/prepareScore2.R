@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: nov 30 2017 (16:09) 
+## last-updated: dec 14 2017 (14:03) 
 ##           By: Brice Ozenne
-##     Update #: 639
+##     Update #: 640
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,13 +137,13 @@ prepareScore2.gls <- function(object, X,
 
         if("NULL" %in% class.var == FALSE){
             for(iVar in name.other){ ## iVar <- name.other[1]
-                d2Omega.d2theta[["sigma"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+                d2Omega.d2theta[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
             }
         }
 
         if("NULL" %in% class.cor == FALSE){
             for(iVar in name.corcoef){
-                d2Omega.d2theta[["sigma"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+                d2Omega.d2theta[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
             }
         }
 

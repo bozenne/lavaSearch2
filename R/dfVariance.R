@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: dec 13 2017 (14:02) 
+## last-updated: dec 14 2017 (14:04) 
 ##           By: Brice Ozenne
-##     Update #: 301
+##     Update #: 440
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -54,8 +54,8 @@ dfVariance.lm <- function(object, adjust.residuals = TRUE, ...){
 ## * dfVariance.gls
 #' @rdname dfVariance
 #' @export
-dfVariance.gls <- function(object, cluster, adjust.residuals = FALSE,
-                           numericDerivative = FALSE, ...){
+dfVariance.gls <- function(object, cluster, vcov.param = NULL,
+                           adjust.residuals = FALSE, numericDerivative = FALSE, ...){
 
     p <- .coef2(object)
     data <- getData(object)
@@ -65,18 +65,23 @@ dfVariance.gls <- function(object, cluster, adjust.residuals = FALSE,
     power <- 0.5
     as.clubSandwich <- 1
 
-    keep.param <- setdiff(name.param,attr(.coef2(object),"mean.coef"))
+    keep.param <- setdiff(name.param, attr(.coef2(object),"mean.coef"))
 
-### ** Compute the gradient of the standard errors
+    ### ** Compute the covariance matrix
+    calcSigma <- function(iParam){ # x <- p.obj
+        pp <- p
+        pp[names(iParam)] <- iParam
+        return(attr(residuals2(object, cluster = cluster, p = pp, data = data,
+                               adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                               return.vcov.param = TRUE, second.order = FALSE),
+                    "vcov.param"))
+    }
+    if(is.null(vcov.param)){
+        vcov.param <- calcSigma(p)
+    }
+    
+    ### ** Compute the gradient of the standard errors
     if(numericDerivative){
-        calcSigma <- function(iParam){ # x <- p.obj
-            pp <- p
-            pp[names(iParam)] <- iParam
-            return(attr(residuals2(object, cluster = cluster, p = pp, data = data,
-                                   adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                                   return.vcov.param = TRUE, second.order = FALSE),
-                        "vcov.param"))
-        }
     
         calcDiagSigma <- function(iParam){
             return(setNames(diag(calcSigma(iParam)), name.param))         
@@ -91,18 +96,34 @@ dfVariance.gls <- function(object, cluster, adjust.residuals = FALSE,
         if("prepareScore" %in% names(dots)){
             prepareScore <- dots$prepareScore
         }else{
-            prepareScore  <- residuals2(object, cluster = cluster, p = pp, data = data,
+            prepareScore  <- attr(residuals2(object, cluster = cluster, p = p, data = data,
                                         adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                                        return.prepareScore = FALSE, second.order = TRUE)
+                                        return.prepareScore2 = TRUE, second.order = TRUE), "prepareScore2")
         }
-        ## call dInformation
+
+        dInfo.dtheta <- .dinformation2(dmu.dtheta = prepareScore$dmu.dtheta,
+                                       d2mu.d2theta = NULL,
+                                       dOmega.dtheta = prepareScore$dOmega.dtheta,
+                                       d2Omega.d2theta = prepareScore$d2Omega.d2theta,
+                                       Omega = prepareScore$Omega,
+                                       ls.indexOmega = prepareScore$ls.indexOmega,
+                                       hat = prepareScore$hat,
+                                       n.param  = prepareScore$n.param,
+                                       name.param  = prepareScore$name.param,
+                                       name.deriv = keep.param,
+                                       n.cluster = prepareScore$n.cluster)
+
+        if(dim(dInfo.dtheta)[3]==1){
+            dSigma.dtheta <- -diag(vcov.param %*% dInfo.dtheta[,,1] %*% vcov.param)
+        }else{
+            dSigma.dtheta <- apply(dInfo.dtheta, 3, function(x){ - diag(vcov.param %*% x %*% vcov.param)})
+        }
     }
+    print(dSigma.dtheta)
     
-    
-### ** Compute degrees of freedom
+    ### ** Compute degrees of freedom
 
     ## diag(vcov.param) - calcSigma(p)
-    vcov.param <- calcSigma(p)
     numerator <- 2*diag(vcov.param)^2
     denom <- rowSums(dSigma.dtheta %*% vcov.param[keep.param,keep.param,drop=FALSE] * dSigma.dtheta)
     df <- numerator/denom
@@ -176,7 +197,6 @@ dfVariance.lvmfit <- function(object, adjust.residuals = FALSE, ...){
     jac.param <- p[keep.param]
     dVcov.dtheta <- numDeriv::jacobian(calcDiagVcov, x = jac.param, method = "Richardson")
     dimnames(dVcov.dtheta) <- list(names(p), names(jac.param))
-    dVcov.dtheta[c(1,3,4),1]/diag(solve(t(model.matrix(e.lm)) %*% model.matrix(e.lm)))
     
 ### ** Compute degrees of freedom
 
@@ -192,74 +212,104 @@ dfVariance.lvmfit <- function(object, adjust.residuals = FALSE, ...){
 ## * .dinformation2
 .dinformation2 <- function(dmu.dtheta, d2mu.d2theta,
                            dOmega.dtheta, d2Omega.d2theta,
-                           Omega, ls.indexOmega, bias.Omega,
-                           n.param, name.param, n.cluster){
+                           Omega, ls.indexOmega, hat,
+                           n.param, name.param, name.deriv,
+                           n.cluster){
 
 ### ** prepare
+    index.deriv <- match(name.deriv, name.param)
     clusterSpecific <- !is.null(ls.indexOmega)
-    correction <- !is.null(bias.Omega)
-    if(clusterSpecific==FALSE){
+    iOmega <- chol2inv(chol(Omega))        
 
-        if(correction){
-            Tbias.vcov.param <- Reduce("+",bias.Omega)/n.cluster
-            Omega <- Omega + Tbias.vcov.param
-        }
-        
-        iOmega <- chol2inv(chol(Omega))
-        
-    }
-
-### ** compute the derivative of the information matrix for each parameters
-    dInfo <-  matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
+    ### ** compute the derivative of the information matrix for each parameters
+    dInfo <-  array(0,
+                    dim = c(n.param, n.param, length(name.deriv)),
+                    dimnames = list(name.param, name.param, name.deriv))
     
-    for(iP1 in 1:n.param){ # iP <- 1
-        for(iP3 in 1:n.param){ # iP <- 1
+    for(iDeriv in index.deriv){ # iDeriv <- 4
+        for(iP1 in 1:n.param){ # iP1 <- 1
+            for(iP2 in iP1:n.param){ # iP2 <- 1
                 
+                iNameD <- name.param[iDeriv]
                 iName1 <- name.param[iP1]
-                iName3 <- name.param[iP3]
-
-                test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName3]])
-                test.mu <- !is.null(dmu.dtheta[[iName1]])
+                iName2 <- name.param[iP2]
+                
+                test.Omega1 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
+                test.Omega2a <- !is.null(d2Omega.d2theta[[iNameD]][[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
+                test.Omega2b <- !is.null(d2Omega.d2theta[[iName1]][[iNameD]]) && !is.null(dOmega.dtheta[[iName2]])
+                test.Omega3a <- !is.null(d2Omega.d2theta[[iNameD]][[iName2]]) && !is.null(dOmega.dtheta[[iName1]])
+                test.Omega3b <- !is.null(d2Omega.d2theta[[iName2]][[iNameD]]) && !is.null(dOmega.dtheta[[iName1]])
+                
+                test.mu1a <- !is.null(d2mu.d2theta[[iNameD]][[iName1]]) && !is.null(dmu.dtheta[[iName2]])
+                test.mu1b <- !is.null(d2mu.d2theta[[iName1]][[iNameD]]) && !is.null(dmu.dtheta[[iName2]])
+                test.mu2a <- !is.null(d2mu.d2theta[[iNameD]][[iName2]]) && !is.null(dmu.dtheta[[iName1]])
+                test.mu2a <- !is.null(d2mu.d2theta[[iName2]][[iNameD]]) && !is.null(dmu.dtheta[[iName1]])
+                test.mu3 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
                 
                 ## *** Individual specific Omega (e.g. presence of missing values)
                 if(clusterSpecific){
+                    
                     for(iC in 1:n.cluster){
-                    
-                    Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                    if(correction){
-                        Omega.tempo <- Omega.tempo + bias.Omega[[iC]]
-                    }
-                    iOmega.tempo <- chol2inv(chol(Omega.tempo))
 
-                    if(test.Omega){
-                        iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        iOmega.dOmega.3 <- iOmega.tempo %*% dOmega.dtheta[[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        
-                        dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.dOmega.3 %*% iOmega.dOmega.1 %*% iOmega.dOmega.1)
-                        
-                        if(!is.null(d2Omega.d2theta[[iName1]][[iName3]])){
-                            iOmega.d2Omega.13 <- iOmega.tempo %*% d2Omega.d2theta[[iName1]][[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.d2Omega.13 %*% iOmega.dOmega.1)                
-                        }else if(!is.null(d2Omega.d2theta[[iName3]][[iName1]])){
-                            iOmega.d2Omega.13 <- iOmega.tempo %*% d2Omega.d2theta[[iName3]][[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + tr(iOmega.d2Omega.13 %*% iOmega.dOmega.1)                
-                        }                        
-                    }                    
-                    
-                    if(test.mu){
-                        dmu.1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-
-                        if(!is.null(d2mu.d2theta[[name1]][[name3]])){
-                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name1]][[name3]] %*% iOmega.tempo * dmu.1)
-                        }else if(!is.null(d2mu.d2theta[[name3]][[name1]])){
-                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name3]][[name1]] %*% iOmega.tempo * dmu.1)
+                        ## prepare
+                        Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        iOmega.tempo <- iOmega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        if(!is.null(dmu.dtheta[[iName1]])){
+                            dmu.1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
                         }
-                        if(!is.null(dOmega.dtheta[[name3]])){
-                            dOmega.3 <- dOmega.dtheta[[iName3]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                            dInfo[iP1,iP3] <- dInfo[iP1,iP3] + sum(dmu.tempo1 %*% iOmega.tempo %*% dOmega.3 %*% iOmega.tempo * dmu.tempo1)
+                        if(!is.null(dmu.dtheta[[iName2]])){
+                            dmu.2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
+                        }
+                        if(!is.null(dOmega.dtheta[[iNameD]])){
+                            iOmega.dOmega.D <- iOmega.tempo %*% dOmega.dtheta[[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        }
+                        if(!is.null(dOmega.dtheta[[iName1]])){
+                            iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        }
+                        if(!is.null(dOmega.dtheta[[iName2]])){
+                            iOmega.dOmega.2 <- iOmega.tempo %*% dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        }
+
+                        ## small sample correction  
+                        iW.cluster <- 1 -  diag(hat[[iC]])
+                        
+                        #cat(iName1," ",iName2," ",iNameD,"\n")
+                        ## compute
+                        if(test.Omega1){
+                            iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
+                            iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iW.cluster + iDiag2 * iW.cluster)
                         }
                         
-                    }
+                        if(test.Omega2a){
+                            d2Omega.D <- d2Omega.d2theta[[iNameD]][[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            iDiag <- diag(iOmega %*% d2Omega.D %*% iOmega.dOmega.2)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
+                        }else if(test.Omega2b){
+                            d2Omega.D <- d2Omega.d2theta[[iName1]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            iDiag <- diag(iOmega %*% d2Omega.D %*% iOmega.dOmega.2)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
+                        }
+
+                        if(test.Omega3a){
+                            d2Omega.D <- d2Omega.d2theta[[iNameD]][[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
+                        }else if(test.Omega3b){
+                            d2Omega.D <- d2Omega.d2theta[[iName2]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                            iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
+                        }
+                                            
+                        if(test.mu3){
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo %*% t(dmu.2)
+                        }
+
+                    ## if(!is.null(d2mu.d2theta[[name1]][[name3]])){
+                    ##     dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name1]][[name3]] %*% iOmega.tempo * dmu.1)
+                    ## }else if(!is.null(d2mu.d2theta[[name3]][[name1]])){
+                    ##     dInfo[iP1,iP3] <- dInfo[iP1,iP3] + 2 * sum(d2mu.d2theta[[name3]][[name1]] %*% iOmega.tempo * dmu.1)
+                    ## }                        
                     
                 }
             }
@@ -295,10 +345,13 @@ dfVariance.lvmfit <- function(object, adjust.residuals = FALSE, ...){
                 }
 
             }
+            
+            }
         }
+        dInfo[,,iNameD] <- dInfo[,,iNameD] + t(dInfo[,,iNameD]) - diag(diag(dInfo[,,iNameD]))
     }
 
-### ** export
+    ### ** export
     return(dInfo)
 }
 

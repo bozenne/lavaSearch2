@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: dec 13 2017 (16:02) 
+## Last-Updated: dec 14 2017 (13:15) 
 ##           By: Brice Ozenne
-##     Update #: 681
+##     Update #: 716
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -194,7 +194,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                                cluster = cluster, n.cluster = n.cluster)
     }
     
-### ** Compute partial derivatives
+    ### ** Compute partial derivatives
     if(adjust.residuals || return.vcov.param || return.prepareScore2){
         OPS2 <- prepareScore2(object, X = X,
                               param = p, attr.param = attr.param,
@@ -204,20 +204,22 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 
     }
 
-    ### ** compute variance covariance matrix (parameters)
-    if(adjust.residuals || return.vcov.param){
-        ls.leverage <- lapply(1:n.cluster, function(iC){
+    ### ** initialize hat matrix
+    ls.hat <- lapply(1:n.cluster, function(iC){
             iN.endo <- length(resVcov$ls.indexOmega[[iC]])
             matrix(0, ncol = iN.endo, nrow = iN.endo,
                    dimnames = list(name.endogenous[resVcov$ls.indexOmega[[iC]]],
                                    name.endogenous[resVcov$ls.indexOmega[[iC]]])
                    )
-        })
+    })
+    
+    ### ** compute variance covariance matrix (parameters)
+    if(adjust.residuals || return.vcov.param){        
         Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
                               dOmega.dtheta = OPS2$dOmega.dtheta,
                               Omega = resVcov$Omega,
                               ls.indexOmega = resVcov$ls.indexOmega,
-                              bias.Omega = NULL, leverage = ls.leverage,
+                              hat = ls.hat,
                               n.param = n.param,
                               name.param = name.param,
                               n.cluster = n.cluster)
@@ -242,15 +244,19 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                                      n.cluster = n.cluster, name.endogenous = name.endogenous,
                                      power = power, as.clubSandwich = as.clubSandwich)
 
+        ls.hat <- resLeverage$hat
         epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
-            as.double(resLeverage$leverage[[iG]] %*% epsilon[iG,])
+            as.double(resLeverage$powerIH[[iG]] %*% epsilon[iG,])
         }))
         colnames(epsilon) <- name.endogenous
-        if(as.clubSandwich<2){vcov.param <- resLeverage$vcov.param}
+        if(as.clubSandwich<2){
+            vcov.param <- resLeverage$vcov.param
+            resVcov$Omega <- resLeverage$Omega
+        }
      
     }
     
-### ** export
+    ### ** export
     if(return.vcov.param){
         attr(epsilon, "vcov.param") <- vcov.param 
     }
@@ -260,6 +266,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         OPS2$n.param <- n.param
         OPS2$n.cluster <- n.cluster
         OPS2$Omega <- resVcov$Omega
+        OPS2$hat <- ls.hat
         OPS2$ls.indexOmega <- resVcov$ls.indexOmega
         attr(epsilon, "prepareScore2") <- OPS2
     }
@@ -346,12 +353,13 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         attr(vcov.param, "minSV") <- NULL
     }else{
 
-        ls.leverage <- lapply(1:n.cluster, function(iC){
+        ls.hat <- lapply(1:n.cluster, function(iC){
             matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
         })
         Info <- .information2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                               dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
-                              Omega = Omega, ls.indexOmega = NULL, bias.Omega = NULL, leverage = ls.leverage,
+                              Omega = Omega, ls.indexOmega = NULL,
+                              hat = ls.hat,
                               n.param = n.param, name.param = name.param, n.cluster = n.cluster)
 
         vcov.param <- solve(Info)
@@ -371,10 +379,13 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
                                      power = power, as.clubSandwich = as.clubSandwich)
 
         epsilon <- do.call(rbind,lapply(1:n.cluster, function(iG){ # iG <- 1
-            as.double(resLeverage$leverage[[iG]] %*% epsilon[iG,])
+            as.double(resLeverage$powerIH[[iG]] %*% epsilon[iG,])
         }))
         colnames(epsilon) <- name.endogenous
-        if(as.clubSandwich<2){vcov.param <- resLeverage$vcov.param}
+        if(as.clubSandwich<2){
+            vcov.param <- resLeverage$vcov.param
+            Omega <- resLeverage$Omega
+        }
     }   
 
 ### ** Export
@@ -411,9 +422,9 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     
     
 ### ** Compute leverage
-    bias.Omega <- list()
-    leverage <- list()
-    ls.iIH <- list()
+    ls.biasOmega <- list()
+    ls.H <- list()
+    ls.powerIH <- list()
     
     for(iG in 1:n.cluster){ ## iG <- 1
         
@@ -436,35 +447,36 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         }
 
         ## *** Compute IH
-        bias.Omega[[iG]] <- dmu.dtheta.tempo %*% vcov.param %*% t(dmu.dtheta.tempo)
-        leverage[[iG]] <- bias.Omega[[iG]] %*% iOmega.tempo
-        IH <- Id.tempo - leverage[[iG]]
+        ls.biasOmega[[iG]] <- dmu.dtheta.tempo %*% vcov.param %*% t(dmu.dtheta.tempo)
+        ls.H[[iG]] <- ls.biasOmega[[iG]] %*% iOmega.tempo
+        IH <- Id.tempo - ls.H[[iG]]
 
         ## correction
         if(power == 1){
-            ls.iIH[[iG]] <- solve(IH)
+            ls.powerIH[[iG]] <- solve(IH)
         }else{
             if(as.clubSandwich){
                 M.tempo <- Omega_chol.tempo %*% IH %*% Omega.tempo %*% t(Omega_chol.tempo)
-                ls.iIH[[iG]] <- as.matrix(t(Omega_chol.tempo) %*% matrixPower(M.tempo, power = -1/2, symmetric = TRUE) %*% Omega_chol.tempo)
+                ls.powerIH[[iG]] <- as.matrix(t(Omega_chol.tempo) %*% matrixPower(M.tempo, power = -1/2, symmetric = TRUE) %*% Omega_chol.tempo)
                 ## crossprod(iIH) %*% IH
             }else{
                 IH_sym <- iOmega.tempo %*% IH
                 iIH_sym <- matrixPower(IH_sym, power = -power, symmetric = TRUE)
                 
-                ls.iIH[[iG]] <- chol(iOmega.tempo) %*% iIH_sym
+                ls.powerIH[[iG]] <- chol(iOmega.tempo) %*% iIH_sym
                 ## crossprod(iIH_sym) %*% IH_sym
             }
                 
         }
     }
 
-### ** correct vcov
+    ### ** correct vcov
+    Omega <- Omega + Reduce("+",ls.biasOmega)/n.cluster
+    
     Info <- .information2(dmu.dtheta = dmu.dtheta,
                           dOmega.dtheta = dOmega.dtheta,
                           Omega = Omega, ls.indexOmega = ls.indexOmega,
-                          bias.Omega = bias.Omega,
-                          leverage = leverage,
+                          hat = ls.H,
                           n.param = n.param, name.param = name.param,
                           n.cluster = n.cluster)
     vcov.param <- chol2inv(chol(Info))
@@ -472,8 +484,10 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     colnames(vcov.param) <- colnames(Info)
     
 ### ** export
-    out <- list(leverage = ls.iIH,
-                vcov.param = vcov.param)
+    out <- list(powerIH = ls.powerIH,
+                hat = ls.H,
+                vcov.param = vcov.param,
+                Omega = Omega)
     
     return(out)
 }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: dec 13 2017 (16:19) 
+## last-updated: dec 14 2017 (15:27) 
 ##           By: Brice Ozenne
-##     Update #: 85
+##     Update #: 104
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,6 +20,7 @@ library(clubSandwich)
 library(nlme)
 library(lme4)
 library(lmerTest)
+library(pbkrtest)
 
 context("dfVariance")
 n <- 5e1
@@ -53,13 +54,10 @@ df-e.ttest$parameter
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
-
-
-df.lvm <- dfVariance(e.lvm,
-                     robust = FALSE, adjust.residuals = TRUE)
-
 e.lm <- lm(Y1~X1+X2, data = dW)
+e.gls <- gls(Y1~X1+X2, data = dW, method = "ML")
 
+## vcov(e.lvm)
 
 ### *** clubSandwich
 cS.vcov <- vcovCR(e.lm, type = "CR0", cluster = dW$Id)
@@ -71,16 +69,28 @@ cS.df
 test_that("linear regression: df",{
 
     df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE)
+    df.lm <- dfVariance(e.lm, adjust.residuals = FALSE)
+    df1.gls <- dfVariance(e.gls, cluster = 1:n, adjust.residuals = FALSE,
+                          numericDerivative = TRUE)
+    df2.gls <- dfVariance(e.gls, cluster = 1:n, adjust.residuals = FALSE,
+                          numericDerivative = FALSE)
+    ## test equivalence
+    expect_equal(as.double(df.lvm),as.double(df.lm))
+    expect_equal(as.double(df1.gls),as.double(df.lm))
+    expect_equal(as.double(df2.gls),as.double(df.lm))
 
-    
+    ## test value
     n.param <- length(df.lvm)
     GS <- c(rep(NROW(dW),n.param-1), NROW(dW)/4)
     expect_equal(as.double(df.lvm),GS)
-    
-    df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE)
-    df.adj.lvm
-    coef(e.lvm)
-        
+})
+
+test_that("linear regression: df adjusted",{
+    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = TRUE)
+    df.adj.gls <- dfVariance(e.gls, cluster = 1:n, adjust.residuals = TRUE,
+                             numericDerivative = FALSE)
+    GS <- c(rep(NROW(dW)-(n.param-1),n.param-1), (NROW(dW)-(n.param-1))/4)
+    expect_equal(as.double(df.adj.gls),GS)
 })
 
 ## * mixed model
@@ -105,32 +115,50 @@ expect_equal(logLik(e.lmer),logLik(e.lme))
 coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 ## strange that same type of coef have very different degrees of freedom
 
-library(pbkrtest)
 
 ## *** lava - ok
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
-test_that("mixed mode: df",{
+test_that("mixed model: df",{
     GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
     
-    df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE)
+    df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE,
+                         numericDerivative = TRUE)
     expect_equal(as.double(GS),
                  as.double(df.lvm[1:5]))
 
-    df.lme <- dfVariance(e.lme, adjust.residuals = FALSE)
-    expect_equal(GS, df.lme[names(GS)])
+    df1.lme <- dfVariance(e.lme, adjust.residuals = FALSE,
+                          numericDerivative = TRUE)
+    expect_equal(GS, df1.lme[names(GS)])
 
-    df.gls <- dfVariance(e.gls, adjust.residuals = FALSE)
-    expect_equal(GS, df.gls[names(GS)], tol = 1e-4)
+    df2.lme <- dfVariance(e.lme, adjust.residuals = FALSE,
+                          numericDerivative = FALSE)
+    expect_equal(GS, df2.lme[names(GS)], tol = 1e-5)
 
+    df1.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
+                          numericDerivative = TRUE)
+    expect_equal(GS, df1.gls[names(GS)], tol = 1e-5)
 
-    df.adj.lvm <- dfVariance(e.lvm, robust = FALSE, adjust.residuals = TRUE, fix.mean = TRUE)
+    df2.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
+                          numericDerivative = FALSE)
+    expect_equal(GS, df2.gls[names(GS)], tol = 1e-5)
+})
+
+test_that("mixed model: df adjusted",{
+    GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
+    ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
+    ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
+    
+    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = TRUE,
+                             numericDerivative = TRUE)
     df.adj.lvm
 
-    df.adj.lme <- dfVariance(e.lme, robust = FALSE, adjust.residuals = TRUE)
+    df.adj.lme <- dfVariance(e.lme, adjust.residuals = TRUE,
+                             numericDerivative = FALSE)
     df.adj.lme
 
-    df.adj.gls <- dfVariance(e.gls, robust = FALSE, adjust.residuals = TRUE)
+    df.adj.gls <- dfVariance(e.gls, adjust.residuals = TRUE,
+                             numericDerivative = FALSE)
     df.adj.gls
 })
 
@@ -153,16 +181,26 @@ logLik(e.lme)
 logLik(e.gls)
 
 test_that("mixed mode: df",{
-    df.adj.lvm <- dfVariance(e.lvm, fast = FALSE,
-                             robust = FALSE, adjust.residuals = FALSE)
+    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE,
+                             numericDerivative = TRUE)
     df.adj.lvm
 
     ## df.adj.lme <- dfVariance(e.lme,
     ##                          robust = FALSE, adjust.residuals = FALSE)
 
-    df.adj.gls <- dfVariance(e.gls,
-                             robust = FALSE, adjust.residuals = FALSE)
-    df.adj.gls
+    system.time(
+        df1.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
+                                  numericDerivative = TRUE)
+    )
+    system.time(
+        df2.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
+                                  numericDerivative = FALSE)
+    )
+    system.time(
+        df2.adj.gls <- dfVariance(e.gls, adjust.residuals = TRUE,
+                                  numericDerivative = FALSE)
+    )
+    df2.adj.gls
 })
 
 

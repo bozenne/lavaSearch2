@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 13 2017 (16:17) 
+## last-updated: dec 14 2017 (12:32) 
 ##           By: Brice Ozenne
-##     Update #: 2136
+##     Update #: 2147
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -218,30 +218,20 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
 ### score2.R ends here
 ## * .information2
 .information2 <- function(dmu.dtheta, dOmega.dtheta,
-                          Omega, ls.indexOmega, bias.Omega, leverage,
+                          Omega, ls.indexOmega, hat,
                           n.param, name.param, n.cluster){
 
 ### ** prepare
     clusterSpecific <- !is.null(ls.indexOmega)
-    correction <- !is.null(bias.Omega)
-
-    if(correction){
-        Omega <- Omega + Reduce("+",bias.Omega)/n.cluster
-    }
     iOmega <- chol2inv(chol(Omega))
 
     if(!clusterSpecific){
-        if(correction){
-            df.mean <- Reduce("+",leverage)
-        }else{
-            df.mean <- matrix(0,nrow = NROW(Omega), ncol = NCOL(Omega))
-        }
+        df.mean <- Reduce("+",hat)
     }
         
 
 ### ** compute information matrix for each pair of parameters
     Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
-    tol <- 1e-8
     
     for(iP1 in 1:n.param){ # iP <- 1
         for(iP2 in iP1:n.param){ # iP <- 1
@@ -249,8 +239,6 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
             iName2 <- name.param[iP2]
             test.mu <- !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
             test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-            test.dOmega1 <- abs(diag(dOmega.dtheta[[iName1]]))>tol
-            test.dOmega2 <- abs(diag(dOmega.dtheta[[iName2]]))>tol
                     
             
             ## *** Individual specific Omega (e.g. presence of missing values)
@@ -269,11 +257,12 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
                     if(test.Omega){
                         dOmega.dtheta.tempo1 <- dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
                         dOmega.dtheta.tempo2 <- dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-
+                        iDiag <- diag(iOmega.tempo %*% dOmega.dtheta.tempo1 %*% iOmega.tempo %*% dOmega.dtheta.tempo2)
+                        
                         ## small sample correction  
-                        iW.cluster <- as.double(1 - (test.dOmega1 * test.dOmega2) %*% leverage[[iC]])
-                            
-                        Info[iP1,iP2] <- Info[iP1,iP2] + iW.cluster/2*tr(iOmega.tempo %*% dOmega.dtheta.tempo1 %*% iOmega.tempo %*% dOmega.dtheta.tempo2)
+                        iW.cluster <- 1 -  diag(hat[[iC]])
+
+                        Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag * iW.cluster)
                     }
                 }                
             }
@@ -285,11 +274,12 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
                 }
 
                 if(test.Omega){
-                    iProd <- iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]]
+                    iDiag <- diag(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
+
                     ## small sample correction                    
-                    iN.cluster <- as.double(n.cluster - (test.dOmega1 * test.dOmega2) %*% diag(df.mean))
+                    iN.cluster <- as.double(n.cluster - diag(df.mean))
                     
-                    Info[iP1,iP2] <- Info[iP1,iP2] + iN.cluster/2*tr(iProd)
+                    Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.cluster)
                 }
             }
 

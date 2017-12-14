@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: dec 13 2017 (15:46) 
+## last-updated: dec 14 2017 (18:23) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 37
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 library(testthat)
 library(lme4)
-library(lmerTest)
+library(pbkrtest)
 
 context("score2")
 n <- 5e1
@@ -406,6 +406,7 @@ Sigma.GS <- vcovAdj(e.lmer)
 
 ## not far from KR correction
 SigmaAdjRed.lvm/Sigma.GS
+Sigma0.lvm[1:5,1:5]/Sigma.GS
 
 
 #----------------------------------------------------------------------
