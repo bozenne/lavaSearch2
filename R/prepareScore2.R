@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 15 2017 (16:54) 
+## last-updated: dec 15 2017 (17:05) 
 ##           By: Brice Ozenne
-##     Update #: 648
+##     Update #: 649
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -290,6 +290,7 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL,
 ### ** Compute second order partial derivatives with current estimates
     if(second.order){
         prepareScore2$dtheta2 <- skeletonDtheta2(object, data = data,
+                                                 OD = prepareScore2$dtheta,
                                                  dt.param.all = prepareScore2$skeleton$dt.param,
                                                  param2originalLink = prepareScore2$skeleton$param2originalLink,
                                                  name.endogenous = name.endogenous, 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: nov 17 2017 (10:44) 
+## Last-Updated: dec 15 2017 (18:03) 
 ##           By: Brice Ozenne
-##     Update #: 220
+##     Update #: 246
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -548,10 +548,85 @@ skeletonDtheta.lvmfit <- function(object, data,
 `skeletonDtheta2` <-
     function(object, ...) UseMethod("skeletonDtheta2")
 
+## * skeletonDtheta2.lvm
+#' @rdname skeleton
+#' @export
+skeletonDtheta2.lvm <- function(object, data,
+                               dt.param.all, param2originalLink,
+                               name.endogenous, name.latent, ...){
+
+    ### ** identify all combinations of parameters with second derivative
+    grid.mean <- list()
+    grid.mean$alpha.B <- expand.grid(alpha = dt.param.all[detail=="alpha",name],
+                                     B = dt.param.all[detail=="B",name])
+    grid.mean$alpha.Lambda <- expand.grid(alpha = dt.param.all[detail=="alpha",name],
+                                          Lambda = dt.param.all[detail=="Lambda",name])        
+    grid.mean$Gamma.B <- expand.grid(Gamma = dt.param.all[detail=="Gamma",name],
+                                     B = dt.param.all[detail=="B",name])
+    grid.mean$Gamma.Lambda <- expand.grid(Gamma = dt.param.all[detail=="Gamma",name],
+                                          Lambda = dt.param.all[detail=="Lambda",name])
+    grid.mean$Lambda.B <- expand.grid(Lambda = dt.param.all[detail=="Lambda",name],
+                                      B = dt.param.all[detail=="B",name])
+    grid.mean$B.B <- expand.grid(B = dt.param.all[detail=="B",name],
+                                 B = dt.param.all[detail=="B",name])
+    n.mean <- lapply(grid.mean, NROW)
+
+    grid.vcov <- list()
+    grid.vcov$Psi.Lambda <- expand.grid(Psi = dt.param.all[detail %in% c("Psi_var","Psi_cov"),name],
+                                        Lambda = dt.param.all[detail == "Lambda",name])
+    grid.vcov$Psi.B <- expand.grid(Psi = dt.param.all[detail %in% c("Psi_var","Psi_cov"),name],
+                                   B = dt.param.all[detail == "B",name])        
+    grid.vcov$Lambda.B <- expand.grid(Lambda = dt.param.all[detail == "Lambda",name],
+                                      B = dt.param.all[detail == "B",name])        
+    grid.vcov$Lambda.Lambda <- expand.grid(Lambda = dt.param.all[detail == "Lambda",name],
+                                           Lambda = dt.param.all[detail == "Lambda",name])        
+    grid.vcov$B.B <- expand.grid(B = dt.param.all[detail == "B",name],
+                                 B = dt.param.all[detail == "B",name])        
+    n.vcov <- lapply(grid.vcov, NROW)
+
+    ### ** prepare export
+    collapseGrid <- rbindlist(grid.mean)
+    name.tempo <- as.character(unique(collapseGrid[[1]]))
+    d2mu.dtheta2 <- lapply(name.tempo, function(x){
+        iIndex <- which(collapseGrid[[1]]==x)
+        v <- vector(mode = "list", length(iIndex))
+        names(v) <- collapseGrid[[2]][iIndex]
+        return(v)
+    })
+    names(d2mu.dtheta2) <- name.tempo
+           
+    ## ** Store X for Gamma
+    if(n.mean$Gamma.b>0){
+        for(iP in 1:NROW(grid.mean$Gamma.b)){
+            iName1 <- grid.mean$Gamma.b[iP,Gamma]
+            iName2 <- grid.mean$Gamma.b[iP,B]
+
+            iName2 <- as.character(param2originalLink[iName])
+            type[iName2] <- unique(dt.param[param == iName,detail])
+            iY <- dt.param[param %in% iName,Y]
+            iX <- dt.param[param %in% iName,X]
+
+            
+            d2mu.dtheta2[[iName1]][[iName2]] <- matrix(0, nrow = n, ncol = n.latent, byrow = TRUE,
+                                                       dimnames = list(NULL, name.latent))
+            for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
+                d2mu.dtheta2[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+            }
+
+            }
+    }
+
+
+
+### ** export
+    return(list(
+    ))
+}
+
 ## * skeletonDtheta2.lvmfit
 #' @rdname skeleton
 #' @export
-skeletonDtheta2.lvmfit <- function(object, data,
+skeletonDtheta2.lvmfit <- function(object, data, OD,
                                    dt.param.all, param2originalLink,
                                    name.endogenous, name.latent,
                                    B, alpha.XGamma, Lambda, Psi,
@@ -560,41 +635,57 @@ skeletonDtheta2.lvmfit <- function(object, data,
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
   
-### ** second order partial derivatives
+    ### ** second order partial derivatives
+    OD2 <- list()
     browser()    
     if(any(OD$toUpdate)){
-        type2update <- OD$type[OD$toUpdate]
-            
-        OD$iIB <- solve(diag(1,n.latent,n.latent)-B)
-        OD$alpha.XGamma.iIB <- alpha.XGamma %*% OD$iIB
-        OD$iIB.Lambda <-  OD$iIB %*% Lambda    
-        OD$Psi.iIB <- Psi %*% OD$iIB
-        OD$tLambda.tiIB.Psi.iIB <- t(OD$iIB.Lambda) %*% OD$Psi.iIB
-        
         ## *** mean parameters
-        type.meanparam <- type2update[type2update %in% c("alpha","Lambda","Gamma","B")]
-        n.meanparam <- length(type.meanparam)
-        name.meanparam <- names(type.meanparam)
+        
+        if(n.mean$alpha.B>0){
+            for(iP in 1:n.mean$alpha.B){ # iP <- 1
+                iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
+                iName2 <- grid.mean$alpha.Lambda[iP,"B"]
 
-        if(n.meanparam>0){
-            for(iP in 1:n.meanparam){ # iP <- 1
-                iType <- type.meanparam[iP]
-                iName <- name.meanparam[iP]
-            
-                if(iType == "alpha"){
-                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda
-                }else if(iType == "Gamma"){
-                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda 
-                }else if(iType == "Lambda"){
-                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dLambda.dtheta[[iName]]
-                }else if(iType == "B"){
-                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
-                }
+                OD$d2mu.dtheta[[iName1]][[iName2]] <- OD$iIB %*% OD$db.dtheta[[iName1]] %*% OD$iIB.Lambda
+            }
+        }
+        
+        if(n.mean$alpha.Lambda>0){
+            for(iP in 1:n.mean$alpha.Lambda){ # iP <- 1
+                iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
+                iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
 
-                colnames(OD$dmu.dtheta[[iName]]) <- name.endogenous
+                OD$d2mu.dtheta[[iName1]][[iName2]] <- OD$iIB %*% OD$dLambda.dtheta[[iName1]]
             }
         }
 
+        if(n.mean$Gamma.B>0){
+            for(iP in 1:n.mean$Gamma.B){ # iP <- 1
+                iName1 <- grid.mean$alpha.Lambda[iP,"Gamma"]
+                iName2 <- grid.mean$alpha.Lambda[iP,"B"]
+
+                OD$d2mu.dtheta[[iName1]][[iName2]] <- OD$d2mu.dtheta[[iName1]][[iName2]] %*% OD$iIB %*% OD$dB.dtheta %*% OD$iIB.Lambda
+            }
+        }        
+
+        if(n.mean$Gamma.Lambda>0){
+            for(iP in 1:n.mean$Gamma.Lambda){ # iP <- 1
+                iName1 <- grid.mean$alpha.Lambda[iP,"Gamma"]
+                iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
+
+                OD$d2mu.dtheta[[iName1]][[iName2]] <- OD$d2mu.dtheta[[iName1]][[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta
+            }
+        }        
+
+        if(n.mean$Lambda.B>0){
+            for(iP in 1:n.mean$Lambda.B){ # iP <- 1
+                iName1 <- grid.mean$alpha.Lambda[iP,"Lambda"]
+                iName2 <- grid.mean$alpha.Lambda[iP,"B"]
+
+                OD$d2mu.dtheta[[iName1]][[iName2]] <- OD$alpha.XGamma.iIB %*% OD$iIB %*% OD$db.dtheta %*% OD$iIB.Lambda + OD$alpha.XGamma.iIB %*% OD$dB.dtheta %*% OD$iIB %*% OD$iIB.Lambda
+            }
+        }
+        
         ## *** variance-covariance parameters
         type.vcovparam <- type2update[type2update %in% c("Psi_var","Psi_cov","Lambda","B")]
         n.vcovparam <- length(type.vcovparam)
@@ -625,7 +716,7 @@ skeletonDtheta2.lvmfit <- function(object, data,
     }
 
 ### ** Export
-    return(OD)
+    return(OD2)
 
 }
 
