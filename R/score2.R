@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 14 2017 (12:32) 
+## last-updated: dec 15 2017 (16:22) 
 ##           By: Brice Ozenne
-##     Update #: 2147
+##     Update #: 2148
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -225,10 +225,11 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     clusterSpecific <- !is.null(ls.indexOmega)
     iOmega <- chol2inv(chol(Omega))
 
-    if(!clusterSpecific){
+    
+    if(!clusterSpecific){ ## small sample correction          
         df.mean <- Reduce("+",hat)
+        iN.cluster <- as.double(n.cluster - diag(df.mean))   
     }
-        
 
 ### ** compute information matrix for each pair of parameters
     Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
@@ -275,10 +276,6 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
 
                 if(test.Omega){
                     iDiag <- diag(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
-
-                    ## small sample correction                    
-                    iN.cluster <- as.double(n.cluster - diag(df.mean))
-                    
                     Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.cluster)
                 }
             }

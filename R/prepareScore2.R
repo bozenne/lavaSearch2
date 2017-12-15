@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 14 2017 (14:03) 
+## last-updated: dec 15 2017 (16:54) 
 ##           By: Brice Ozenne
-##     Update #: 640
+##     Update #: 648
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,6 +15,7 @@
 ## 
 ### Code:
 
+## * prepareScore2 - documentation
 #' @title Prepare the computation of score2.
 #' @description Compute partial derivatives regarding to the mean and the variance, and compute the design matrices.
 #' @name prepareScore2
@@ -148,14 +149,17 @@ prepareScore2.gls <- function(object, X,
         }
 
         if("NULL" %in% class.var == FALSE && "NULL" %in% class.cor == FALSE){
+            M.corvalue <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
+            M.corvalue[index.lower.tri] <- cor.coef[M.corcoef[index.lower.tri]]
+            M.corvalue <- symmetrize(M.corvalue, update.upper = TRUE)
+
             for(iVar1 in name.other){ ## iVar <- name.other[1]
-                for(iVar2 in name.corcoef){
-                    M.tempo <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
-                    M.tempo[index.lower.tri] <- cor.coef[M.corcoef[index.lower.tri]]
-                    M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
-                    
-                    d2Omega.d2theta[[iVar1]][[iVar2]] <- dOmega.dtheta[[iVar1]]/M.tempo
-                    diag(d2Omega.d2theta[[iVar1]][[iVar2]]) <- 0
+                for(iVar2 in name.corcoef){                    
+                    M.tempo <- dOmega.dtheta[[iVar1]]/M.corvalue
+                    M.tempo[M.corcoef!=iVar2] <- 0
+                    if(any(M.tempo!=0)){
+                        d2Omega.d2theta[[iVar1]][[iVar2]] <- M.tempo
+                    }
                 }
             }
         }
