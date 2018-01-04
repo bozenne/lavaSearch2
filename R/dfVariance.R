@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  4 2018 (10:24) 
+## last-updated: jan  4 2018 (12:35) 
 ##           By: Brice Ozenne
-##     Update #: 553
+##     Update #: 573
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -102,11 +102,10 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
     attr(dVcov.dtheta, "vcov.param") <- NULL
     keep.param <- dimnames(dVcov.dtheta)[[3]]
 
-    q <- NROW(C)
     n.param <- length(p)
     name.param <- names(p)
 
-    ### ** normalize C 
+    ### ** normalize C
     if(is.null(C)){
         C <- diag(1, nrow = n.param, ncol = n.param)
         dimnames(C) <- list(name.param, name.param)
@@ -127,7 +126,7 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
             rownames(C) <- .contrast2name(C)
         }
     }
-
+    q <- NROW(C)
        
     ### ** Compute degrees of freedom
     df.table <- as.data.frame(matrix(NA, nrow = q+1, ncol = 5))
@@ -143,6 +142,7 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
         
         numerator <- 2 *(C.vcov.C)^2
         denom <- rowSums(C.dVcov.C %*% vcov.param[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
+        CC <<- c(CC,list(C.dVcov.C))
         df <- numerator/denom
         return(df)
     }
@@ -173,10 +173,11 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
     svd.tempo <- eigen(i.C.vcov.C)
     D.svd <- diag(svd.tempo$values, nrow = q, ncol = q)
     P.svd <- svd.tempo$vectors
-
+     
     C.anova <- sqrt(D.svd) %*% t(P.svd) %*% C
     ## Fstat - crossprod(C.anova %*% p)/q
     nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
+    
     EQ <- sum(nu_m/(nu_m-2))
     df.F <- 2*EQ / (EQ - q)
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: dec  7 2017 (17:34) 
+## Last-Updated: jan  4 2018 (11:56) 
 ##           By: Brice Ozenne
-##     Update #: 111
+##     Update #: 118
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,7 +105,7 @@
 ## * .getGroups2.gls
 .getGroups2.gls <- function(object, cluster, data, ...){
 
-### ** get cluster
+    ### ** get cluster
     cluster2 <- as.numeric(nlme::getGroups(object))
     if(length(cluster2)==0){ ## no correlation
         if(length(cluster) == 1 && is.character(cluster)){
@@ -119,7 +119,7 @@
     }
     n.cluster <- length(unique(cluster2))
 
-### ** get outcome
+    ### ** get outcome
     if(!is.null(object$modelStruct$varStruct)){
         name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
         vec.rep <- attr(object$modelStruct$varStruct,"groups")        
@@ -132,16 +132,17 @@
         }
         vec.rep <- vec.rep0[order(order(cluster2))]
     }else{
-        vec.rep <- rep("1",n.cluster)
-        name.endogenous <- "1"
+        vec.rep <- as.data.table(cluster2)[, rep := 1:.N, by = cluster2][["rep"]]
+        # vec.rep <- rep("1",NROW(data))
+        name.endogenous <- unique(vec.rep)
     }
     vec.rep <- as.numeric(factor(vec.rep, levels = name.endogenous))
     n.endogenous <- length(name.endogenous)
     
-### ** convert observations from the vector format to the matrix format
+    ### ** convert observations from the vector format to the matrix format
     index.obs <- cluster2+(vec.rep-1)*n.cluster
 
-### ** export
+    ### ** export
     name.endogenous <- as.character(name.endogenous)
 
     return(list(cluster = cluster2,

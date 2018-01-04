@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan  3 2018 (18:41) 
+## Last-Updated: jan  4 2018 (15:05) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 23
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,12 +35,8 @@ setkey(dL, "Id")
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
-e.lvm$prepareScore2 <- prepareScore2(e.lvm, second.order = TRUE, update = FALSE)
+e.lvm$prepareScore2 <- prepareScore2(e.lvm, second.order = TRUE, usefit = FALSE)
 e.gls <- gls(Y1~X1+X2, data = dW, method = "ML")
-
-dfVariance(e.lvm)
-anova(e.gls)
-
 
 test_that("linear regression: dVcov2",{
     ## lvm
@@ -51,20 +47,12 @@ test_that("linear regression: dVcov2",{
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
-    GS.gls <- dVcov2(e.lvm, adjust.residuals = FALSE,
+    GS.gls <- dVcov2(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.gls <- dVcov2(e.lvm, adjust.residuals = FALSE,
+    res.gls <- dVcov2(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.gls, res.gls)
     
-})
-
-test_that("linear regression: df adjusted",{
-    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = TRUE)
-    df.adj.gls <- dfVariance(e.gls, cluster = 1:n, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    GS <- c(rep(NROW(dW)-(n.param-1),n.param-1), (NROW(dW)-(n.param-1))/4)
-    expect_equal(as.double(df.adj.gls),GS)
 })
 
 ## * mixed model
@@ -84,56 +72,29 @@ e.gls <- gls(value ~ time + G + Gender,
              correlation = corCompSymm(form=~ 1|Id),
              data = dL, method = "ML")
 
-## *** clubSandwich - bug
-expect_equal(logLik(e.lmer),logLik(e.lme))
-coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
-## strange that same type of coef have very different degrees of freedom
-
-
-## *** lava - ok
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
-test_that("mixed model: df",{
-    GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
-    
-    df.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE,
-                         numericDerivative = TRUE)
-    expect_equal(as.double(GS),
-                 as.double(df.lvm[1:5]))
+test_that("mixed model CS: dVcov2",{
+    ## lvm
+    GS.lvm <- dVcov2(e.lvm, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.lvm <- dVcov2(e.lvm, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    expect_equal(GS.lvm, res.lvm)
 
-    df1.lme <- dfVariance(e.lme, adjust.residuals = FALSE,
-                          numericDerivative = TRUE)
-    expect_equal(GS, df1.lme[names(GS)])
+    ## gls
+    GS.gls <- dVcov2(e.gls, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.gls <- dVcov2(e.gls, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    expect_equal(GS.gls, res.gls)
 
-    df2.lme <- dfVariance(e.lme, adjust.residuals = FALSE,
-                          numericDerivative = FALSE)
-    expect_equal(GS, df2.lme[names(GS)], tol = 1e-5)
-
-    df1.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
-                          numericDerivative = TRUE)
-    expect_equal(GS, df1.gls[names(GS)], tol = 1e-5)
-
-    df2.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
-                          numericDerivative = FALSE)
-    expect_equal(GS, df2.gls[names(GS)], tol = 1e-5)
-})
-
-test_that("mixed model: df adjusted",{
-    GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
-    ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
-    ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
-    
-    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = TRUE,
-                             numericDerivative = TRUE)
-    df.adj.lvm
-
-    df.adj.lme <- dfVariance(e.lme, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    df.adj.lme
-
-    df.adj.gls <- dfVariance(e.gls, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    df.adj.gls
+    ## lme
+    GS.lme <- dVcov2(e.lme, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.lme <- dVcov2(e.lme, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    expect_equal(GS.lme, res.lme)
 })
 
 ## ** Unstructured with weights
@@ -149,34 +110,108 @@ e.gls <- gls(value ~ time + G + Gender,
              correlation = corSymm(form=~ 1|Id),
              weight = varIdent(form = ~1|time),
              data = dL, method = "ML")
+e.gls <- gls(value ~ 1,#time + G + Gender,
+             correlation = corSymm(form=~ 1|Id),
+             weight = varIdent(form = ~1|time),
+             data = dL, method = "ML")
 
 logLik(e.lvm)
 logLik(e.lme)
 logLik(e.gls)
 
-test_that("mixed mode: df",{
-    df.adj.lvm <- dfVariance(e.lvm, adjust.residuals = FALSE,
-                             numericDerivative = TRUE)
-    df.adj.lvm
+test_that("mixed model UN: dVcov2",{
+    ## lvm
+    GS.lvm <- dVcov2(e.lvm, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.lvm <- dVcov2(e.lvm, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    expect_equal(GS.lvm, res.lvm)
 
-    ## df.adj.lme <- dfVariance(e.lme,
-    ##                          robust = FALSE, adjust.residuals = FALSE)
+    ## gls
+    GS.gls <- dVcov2(e.gls, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.gls <- dVcov2(e.gls, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
 
-    system.time(
-        df1.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
-                                  numericDerivative = TRUE)
-    )
-    system.time(
-        df2.gls <- dfVariance(e.gls, adjust.residuals = FALSE,
-                                  numericDerivative = FALSE)
-    )
-    system.time(
-        df2.adj.gls <- dfVariance(e.gls, adjust.residuals = TRUE,
-                                  numericDerivative = FALSE)
-    )
-    df2.adj.gls
+    expect_equal(GS.gls, res.gls)
+
+    ## lme
+    ## pb: singular information matrix
+    ## GS.lme <- dVcov2(e.lme, adjust.residuals = FALSE,
+    ##                  numericDerivative = TRUE)
+    ## res.lme <- dVcov2(e.lme, adjust.residuals = FALSE,
+    ##                   numericDerivative = FALSE)
 })
 
+## * latent variable model
+
+m.sim <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+               Z1~eta2,Z2~eta2,Z3~eta2+X3))
+regression(m.sim) <- eta1~X1+X2
+latent(m.sim) <- ~eta1+eta2
+set.seed(10)
+d <- sim(m.sim,n,latent=FALSE)
+
+
+## ** 1 factor model
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
+latent(m) <- ~eta1
+regression(m) <- eta1~X1+X2
+
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1))
+latent(m) <- ~eta1
+
+e.lvm1F <- estimate(m,d)
+
+GS.lvm1F <- dVcov2(e.lvm1F, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+test_that("1 factor model (at ML)",{    
+    res.lvm1F <- dVcov2(e.lvm1F, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    expect_equal(GS.lvm1F, res.lvm1F)
+    ##    dfVariance(e.lvm1F)
+})
+
+## ** 2 factor model
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+regression(m) <- eta1~X1+X2
+latent(m) <- ~eta1+eta2
+
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1,
+           Z1~eta2,Z2~eta2,Z3~eta2))
+latent(m) <- ~eta1+eta2
+
+e.lvm2F <- estimate(m,d)
+
+GS.lvm2F <- dVcov2(e.lvm2F, adjust.residuals = FALSE,
+                   numericDerivative = TRUE)
+test_that("2 factor model (at ML)",{
+    res.lvm2F <- dVcov2(e.lvm2F, adjust.residuals = FALSE,
+                        numericDerivative = FALSE)
+    
+    expect_equal(GS.lvm2F, res.lvm2F)
+
+    expect_equal(GS.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],dimnames(GS.lvm1F)[[3]]],
+             GS.lvm1F)
+    ##    dfVariance(e.lvm)
+})
+
+expect_equal(res.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],dimnames(GS.lvm1F)[[3]]],
+             GS.lvm1F)
+
+round(res.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],"eta1"]-GS.lvm1F[,,"eta1"],7)
+
+attr(GS.lvm1F, "vcov.param") <- NULL
+attr(GS.lvm1F, "param") <- NULL
+attr(GS.lvm2F, "vcov.param") <- NULL
+attr(GS.lvm2F, "param") <- NULL
+attr(res.lvm2F, "vcov.param") <- NULL
+attr(res.lvm2F, "param") <- NULL
+
+## ** 2 factor model (covariance)
+
+## ** 2 factor model (correlation)
 
 ##----------------------------------------------------------------------
 ### test-dVcov2.R ends here

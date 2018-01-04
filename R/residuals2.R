@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan  3 2018 (15:56) 
+## Last-Updated: jan  4 2018 (11:22) 
 ##           By: Brice Ozenne
-##     Update #: 729
+##     Update #: 754
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -180,19 +180,18 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         p <- pp
         
     }    
-    
-### ** Compute observed residuals
+ 
+    ### ** Compute observed residuals
     epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                       dimnames = list(NULL, name.endogenous))
     epsilon[index.obs] <- Y - X %*% p[attr.param$mean.coef]
     ## residuals(object)-as.vector(t(epsilon))
 
-### ** Reconstruct variance covariance matrix (residuals)
-    if(adjust.residuals || return.vcov.param || return.prepareScore2){
-        resVcov <- .getVarCov2(object, param = p, attr.param = attr.param,
-                               endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                               cluster = cluster, n.cluster = n.cluster)
-    }
+    ### ** Reconstruct variance covariance matrix (residuals)
+    resVcov <- .getVarCov2(object, param = p, attr.param = attr.param,
+                           endogenous = endogenous, name.endogenous = name.endogenous,
+                           n.endogenous = n.endogenous,
+                           cluster = cluster, n.cluster = n.cluster)
     
     ### ** Compute partial derivatives
     if(adjust.residuals || return.vcov.param || return.prepareScore2){
@@ -203,16 +202,16 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                               second.order = second.order)
 
     }
-
-    ### ** initialize hat matrix
+  
+    ### ** initialize hat matrix 
     ls.hat <- lapply(1:n.cluster, function(iC){
-            iN.endo <- length(resVcov$ls.indexOmega[[iC]])
-            matrix(0, ncol = iN.endo, nrow = iN.endo,
-                   dimnames = list(name.endogenous[resVcov$ls.indexOmega[[iC]]],
-                                   name.endogenous[resVcov$ls.indexOmega[[iC]]])
-                   )
+        iN.endo <- length(resVcov$ls.indexOmega[[iC]])
+        matrix(0, ncol = iN.endo, nrow = iN.endo,
+               dimnames = list(name.endogenous[resVcov$ls.indexOmega[[iC]]],
+                               name.endogenous[resVcov$ls.indexOmega[[iC]]])
+               )
     })
-    
+   
     ### ** compute variance covariance matrix (parameters)
     if(adjust.residuals || return.vcov.param){        
         Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
@@ -235,7 +234,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         ## vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object) * factor
     }
     
-    ### ** Normalize residuals    
+    ### ** Normalize residuals
     if(adjust.residuals){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta,
                                      dOmega.dtheta = OPS2$dOmega.dtheta,

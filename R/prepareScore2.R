@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  3 2018 (17:29) 
+## last-updated: jan  4 2018 (15:02) 
 ##           By: Brice Ozenne
-##     Update #: 673
+##     Update #: 706
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -139,19 +139,19 @@ prepareScore2.gls <- function(object, X,
     }
 
 ### ** second order
-    d2Omega.d2theta <- list()
+    d2Omega.dtheta2 <- list()
 
     if(second.order){
 
         if("NULL" %in% class.var == FALSE){
             for(iVar in name.other){ ## iVar <- name.other[1]
-                d2Omega.d2theta[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+                d2Omega.dtheta2[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
             }
         }
 
         if("NULL" %in% class.cor == FALSE){
             for(iVar in name.corcoef){
-                d2Omega.d2theta[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
+                d2Omega.dtheta2[["sigma2"]][[iVar]] <- dOmega.dtheta[[iVar]]/var.coef["sigma2"]
             }
         }
 
@@ -161,13 +161,41 @@ prepareScore2.gls <- function(object, X,
             M.corvalue <- symmetrize(M.corvalue, update.upper = TRUE)
 
             for(iVar1 in name.other){ ## iVar <- name.other[1]
+
+                iIndex.var1 <- which(names(sigma2.base0) == iVar1)
+                
+                ## var var
+                for(iVar2 in name.varcoef[iIndex.var1:n.varcoef]){
+
+                    ##
+                    M.tempo <- c(1,-1)[(iVar1==iVar2)+1] * dOmega.dtheta[[iVar1]]/(2*var.coef[iVar2])
+
+                    ## remove null derivative on the diagonal
+                    diag(M.tempo) <- 0
+
+                    ## remove null derivative outside the diagonal
+                    iIndex.var2 <- which(name.varcoef == iVar2)
+                    
+                    index0 <- union(which(rowSums(indexArr.lower.tri==iIndex.var1)==0),
+                                    which(rowSums(indexArr.lower.tri==iIndex.var2)==0))
+                    M.tempo[index.lower.tri[index0]] <- 0
+                    M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
+
+                    ##
+                    ##if(iVar1==iVar2){
+                    d2Omega.dtheta2[[iVar1]][[iVar2]] <- M.tempo
+                    ##}
+                }                
+                
+                ## var cor
                 for(iVar2 in name.corcoef){                    
                     M.tempo <- dOmega.dtheta[[iVar1]]/M.corvalue
                     M.tempo[M.corcoef!=iVar2] <- 0
                     if(any(M.tempo!=0)){
-                        d2Omega.d2theta[[iVar1]][[iVar2]] <- M.tempo
+                        d2Omega.dtheta2[[iVar1]][[iVar2]] <- M.tempo
                     }
                 }
+
             }
         }
 
@@ -176,7 +204,7 @@ prepareScore2.gls <- function(object, X,
 ### ** export
     return(list(dmu.dtheta = dmu.dtheta,
                 dOmega.dtheta = dOmega.dtheta,
-                d2Omega.d2theta = d2Omega.d2theta))
+                d2Omega.dtheta2 = d2Omega.dtheta2))
     
 }
 
@@ -221,32 +249,32 @@ prepareScore2.lme <- function(object, X,
 prepareScore2.lvm <- function(object, data, second.order,
                               name.endogenous = NULL, name.latent = NULL){
 
-    prepareScore2 <- list()
+    pS2 <- list()
     
     ### ** Compute skeleton   
-    prepareScore2$skeleton <- skeleton(object,
+    pS2$skeleton <- skeleton(object,
                                        name.endogenous = name.endogenous, 
                                        name.latent = name.latent, 
                                        as.lava = TRUE)
     
     ### ** Initialize partial derivatives
-    prepareScore2$dtheta <- skeletonDtheta(object, data = data,
-                                           dt.param.all = prepareScore2$skeleton$dt.param,
-                                           param2originalLink = prepareScore2$skeleton$param2originalLink,
+    pS2$dtheta <- skeletonDtheta(object, data = data,
+                                           dt.param.all = pS2$skeleton$dt.param,
+                                           param2originalLink = pS2$skeleton$param2originalLink,
                                            name.endogenous = name.endogenous, 
                                            name.latent = name.latent)
 
     ### ** Initialize second order partial derivatives
     if(second.order){
-        prepareScore2$dtheta2 <- skeletonDtheta2(object, data = data,
-                                                 dt.param.all = prepareScore2$skeleton$dt.param,
-                                                 param2originalLink = prepareScore2$skeleton$param2originalLink,
+        pS2$dtheta2 <- skeletonDtheta2(object, data = data,
+                                                 dt.param.all = pS2$skeleton$dt.param,
+                                                 param2originalLink = pS2$skeleton$param2originalLink,
                                                  name.latent = name.latent)
     }
     
     ### ** Export
-    prepareScore2$update <- TRUE
-    return(prepareScore2)
+    pS2$update <- TRUE
+    return(pS2)
 }
     
     
@@ -295,7 +323,7 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
                                  param2originalLink = pS2$skeleton$param2originalLink,
                                  name.endogenous = name.endogenous, 
                                  name.latent = name.latent,
-                                 B = prepareScore2$skeleton$value$B,
+                                 B = pS2$skeleton$value$B,
                                  alpha.XGamma = pS2$skeleton$value$alpha.XGamma,
                                  Lambda = pS2$skeleton$value$Lambda,
                                  Psi = pS2$skeleton$value$Psi)
