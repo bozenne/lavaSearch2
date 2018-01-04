@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 15 2017 (17:05) 
+## last-updated: jan  3 2018 (17:29) 
 ##           By: Brice Ozenne
-##     Update #: 649
+##     Update #: 673
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,9 +21,16 @@
 #' @name prepareScore2
 #' 
 #' @param object a latent variable model
+#' @param usefit If TRUE the parameters estimated by the model are used to pre-compute quantities. Only for lvmfit objects.
 #' @param data [optional] data set.
 #' @param name.endogenous [optional] name of the endogenous variables
 #' @param name.latent [optional] name of the latent variables
+#'
+#' @details For lvmfit objects, there are two levels of pre-computation:
+#' \itemize{
+#' \item a basic one that do no involve the model parameter
+#' \item an advanced one that require the model parameters. 
+#' }
 #' 
 #' @examples
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
@@ -211,35 +218,34 @@ prepareScore2.lme <- function(object, X,
 ## * prepareScore2.lvm
 #' @rdname prepareScore2
 #' @export
-prepareScore2.lvm <- function(object, data,
+prepareScore2.lvm <- function(object, data, second.order,
                               name.endogenous = NULL, name.latent = NULL){
-
-### ** normalize arguments
-    if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
-    n.endogenous <- length(name.endogenous)
-    if(is.null(name.latent)){name.latent <- latent(object)}
-    n.latent <- length(name.latent)
-
-    if(!is.matrix(data)){
-        data <- as.matrix(data)
-    }
 
     prepareScore2 <- list()
     
-### ** Compute skeleton   
+    ### ** Compute skeleton   
     prepareScore2$skeleton <- skeleton(object,
                                        name.endogenous = name.endogenous, 
                                        name.latent = name.latent, 
                                        as.lava = TRUE)
     
-### ** Initialize partial derivatives
+    ### ** Initialize partial derivatives
     prepareScore2$dtheta <- skeletonDtheta(object, data = data,
                                            dt.param.all = prepareScore2$skeleton$dt.param,
                                            param2originalLink = prepareScore2$skeleton$param2originalLink,
                                            name.endogenous = name.endogenous, 
                                            name.latent = name.latent)
+
+    ### ** Initialize second order partial derivatives
+    if(second.order){
+        prepareScore2$dtheta2 <- skeletonDtheta2(object, data = data,
+                                                 dt.param.all = prepareScore2$skeleton$dt.param,
+                                                 param2originalLink = prepareScore2$skeleton$param2originalLink,
+                                                 name.latent = name.latent)
+    }
     
-### ** Export
+    ### ** Export
+    prepareScore2$update <- TRUE
     return(prepareScore2)
 }
     
@@ -247,11 +253,11 @@ prepareScore2.lvm <- function(object, data,
 ## * prepareScore2.lvmfit
 #' @rdname prepareScore2
 #' @export
-prepareScore2.lvmfit <- function(object, data = NULL, p = NULL,
+prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
                                  name.endogenous = NULL, name.latent = NULL,
                                  second.order = FALSE){
 
-### ** normalize arguments
+    ### ** normalize arguments
     if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
     n.endogenous <- length(name.endogenous)
     if(is.null(name.latent)){name.latent <- latent(object)}
@@ -264,45 +270,53 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL,
         data <- as.matrix(data)
     }
 
+    
+    if(usefit==FALSE){
+        pS2 <- prepareScore2(lava::Model(object), data = data, second.order = second.order,
+                             name.endogenous = name.endogenous, name.latent = name.latent)
+        return(pS2)    
+    }
+    
     if(is.null(p)){
         p <- pars(object)        
     }
     
-    prepareScore2 <- list()
+    pS2 <- list()
 
-### ** Update skeleton with current estimates
-    prepareScore2$skeleton <- skeleton(object, data = data, p = p,
-                                       name.endogenous = name.endogenous, 
-                                       name.latent = name.latent, 
-                                       as.lava = TRUE)
+    ### ** Update skeleton with current estimates
+    pS2$skeleton <- skeleton(object, data = data, p = p,
+                             name.endogenous = name.endogenous, 
+                             name.latent = name.latent, 
+                             as.lava = TRUE)
     
-### ** Update first order partial derivatives with current estimates
-    prepareScore2$dtheta <- skeletonDtheta(object, data = data,
-                                           dt.param.all = prepareScore2$skeleton$dt.param,
-                                           param2originalLink = prepareScore2$skeleton$param2originalLink,
-                                           name.endogenous = name.endogenous, 
-                                           name.latent = name.latent,
-                                           B = prepareScore2$skeleton$value$B,
-                                           alpha.XGamma = prepareScore2$skeleton$value$alpha.XGamma,
-                                           Lambda = prepareScore2$skeleton$value$Lambda,
-                                           Psi = prepareScore2$skeleton$value$Psi)
+    ### ** Update first order partial derivatives with current estimates
+    pS2$dtheta <- skeletonDtheta(object, data = data,
+                                 dt.param.all = pS2$skeleton$dt.param,
+                                 param2originalLink = pS2$skeleton$param2originalLink,
+                                 name.endogenous = name.endogenous, 
+                                 name.latent = name.latent,
+                                 B = prepareScore2$skeleton$value$B,
+                                 alpha.XGamma = pS2$skeleton$value$alpha.XGamma,
+                                 Lambda = pS2$skeleton$value$Lambda,
+                                 Psi = pS2$skeleton$value$Psi)
 
-### ** Compute second order partial derivatives with current estimates
+    ### ** Compute second order partial derivatives with current estimates
     if(second.order){
-        prepareScore2$dtheta2 <- skeletonDtheta2(object, data = data,
-                                                 OD = prepareScore2$dtheta,
-                                                 dt.param.all = prepareScore2$skeleton$dt.param,
-                                                 param2originalLink = prepareScore2$skeleton$param2originalLink,
-                                                 name.endogenous = name.endogenous, 
-                                                 name.latent = name.latent,
-                                                 B = prepareScore2$skeleton$value$B,
-                                                 alpha.XGamma = prepareScore2$skeleton$value$alpha.XGamma,
-                                                 Lambda = prepareScore2$skeleton$value$Lambda,
-                                                 Psi = prepareScore2$skeleton$value$Psi)
+        pS2$dtheta2 <- skeletonDtheta2(object, data = data,
+                                       OD = pS2$dtheta,
+                                       dt.param.all = pS2$skeleton$dt.param,
+                                       param2originalLink = pS2$skeleton$param2originalLink,
+                                       name.endogenous = name.endogenous,
+                                       name.latent = name.latent,
+                                       B = pS2$skeleton$value$B,
+                                       alpha.XGamma = pS2$skeleton$value$alpha.XGamma,
+                                       Lambda = pS2$skeleton$value$Lambda,
+                                       Psi = pS2$skeleton$value$Psi)
     }
     
-### ** Export
-    return(prepareScore2)    
+    ### ** Export
+    pS2$update <- FALSE
+    return(pS2)    
     
 }
 

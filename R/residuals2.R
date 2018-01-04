@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: dec 14 2017 (13:15) 
+## Last-Updated: jan  3 2018 (15:56) 
 ##           By: Brice Ozenne
-##     Update #: 716
+##     Update #: 729
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -322,11 +322,15 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     name.latent <- latent(object)
     n.latent <- length(name.latent)
     
-### ** Reconstruct nu.KX and alpha.XGamma.iIB.Lambda
-    OPS2 <- prepareScore2(object, data = data, p = p,
-                          name.endogenous = name.endogenous,
-                          name.latent = name.latent,
-                          second.order = second.order)
+    ### ** Reconstruct nu.KX and alpha.XGamma.iIB.Lambda
+    if(is.null(object$prepareScore2$update) || object$prepareScore2$update == TRUE){
+        OPS2 <- prepareScore2(object, data = data, p = p,
+                              name.endogenous = name.endogenous,
+                              name.latent = name.latent,
+                              second.order = second.order)
+    }else{
+        OPS2 <- object$prepareScore2
+    }
 
 ### ** Compute predicted value
     object.fitted <- OPS2$skeleton$value$nu.XK
@@ -344,6 +348,11 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         Omega <- OPS2$skeleton$value$Sigma
     }
     ## range(Omega - moments(object, p = p, conditional=TRUE, data = data)$C)
+
+    ### ** Initialize hat matrix
+    ls.hat <- lapply(1:n.cluster, function(iC){
+        matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
+    })
     
     ### ** Compute variance covariance matrix (parameters)
     if(null.p){
@@ -352,10 +361,6 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         attr(vcov.param, "pseudo") <- NULL
         attr(vcov.param, "minSV") <- NULL
     }else{
-
-        ls.hat <- lapply(1:n.cluster, function(iC){
-            matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
-        })
         Info <- .information2(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                               dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
                               Omega = Omega, ls.indexOmega = NULL,
@@ -368,7 +373,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     }        
     ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
 
-### ** Normalize residuals
+    ### ** Normalize residuals
     if(adjust.residuals){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                                      dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
@@ -382,11 +387,14 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
             as.double(resLeverage$powerIH[[iG]] %*% epsilon[iG,])
         }))
         colnames(epsilon) <- name.endogenous
+        
         if(as.clubSandwich<2){
             vcov.param <- resLeverage$vcov.param
             Omega <- resLeverage$Omega
         }
-    }   
+        ls.hat <- resLeverage$hat        
+        
+    }
 
 ### ** Export
     if(return.vcov.param){
@@ -397,6 +405,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         OPS2$n.param <- n.param
         OPS2$n.cluster <- n.cluster
         OPS2$Omega <- Omega
+        OPS2$hat <- ls.hat
         attr(epsilon, "prepareScore2") <- OPS2
     }
     return(epsilon)
