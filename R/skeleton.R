@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  3 2018 (15:57) 
+## Last-Updated: jan  4 2018 (16:21) 
 ##           By: Brice Ozenne
-##     Update #: 422
+##     Update #: 435
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -434,9 +434,12 @@ skeletonDtheta.lvm <- function(object, data,
         } 
     }
 
-### ** export
+    ### ** export
+    save.dtheta <- dt.param[detail %in% c("alpha","Gamma"), originalLink]
+
     return(list(
         dmu.dtheta = dmu.dtheta,
+        dmu.dtheta.save = dmu.dtheta[save.dtheta],
         dOmega.dtheta = dOmega.dtheta,
         dLambda.dtheta = dLambda.dtheta,
         dB.dtheta = dB.dtheta,
@@ -496,7 +499,7 @@ skeletonDtheta.lvmfit <- function(object, data,
                     OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda
                 }else if(iType == "Gamma"){
                     OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda 
-                }else if(iType == "Lambda"){
+                }else if(iType == "Lambda"){                    
                     OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dLambda.dtheta[[iName]]
                 }else if(iType == "B"){
                     OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
@@ -685,7 +688,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- grid.mean$alpha.B[iP,"alpha"]
                 iName2 <- grid.mean$alpha.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD2$iIB.Lambda
+                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$dmu.dtheta.save[[iName1]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD2$iIB.Lambda
             }
         }
         
@@ -693,10 +696,8 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
             for(iP in 1:OD2$n.mean$alpha.Lambda){ # iP <- 1
                 iName1 <- OD2$grid.mean$alpha.Lambda[iP,"alpha"]
                 iName2 <- OD2$grid.mean$alpha.Lambda[iP,"Lambda"]
-                iValue <- as.numeric(OD$iIB %*% OD$dLambda.dtheta[[iName2]])
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- matrix(iValue,
-                                                               nrow = n.data, ncol = n.endogenous, byrow = TRUE,
-                                                               dimnames = list(NULL, name.endogenous))
+
+                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$dmu.dtheta.save[[iName1]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName2]]
                 
             }
         }

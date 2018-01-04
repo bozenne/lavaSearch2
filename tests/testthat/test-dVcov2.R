@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan  4 2018 (15:05) 
+## Last-Updated: jan  4 2018 (16:35) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 31
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -158,17 +158,15 @@ m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 latent(m) <- ~eta1
 regression(m) <- eta1~X1+X2
 
-m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1))
-latent(m) <- ~eta1
-
 e.lvm1F <- estimate(m,d)
 
 GS.lvm1F <- dVcov2(e.lvm1F, adjust.residuals = FALSE,
-                     numericDerivative = TRUE)
-test_that("1 factor model (at ML)",{    
+                   numericDerivative = TRUE)
+test_that("1 factor model: dVcov2",{    
     res.lvm1F <- dVcov2(e.lvm1F, adjust.residuals = FALSE,
-                      numericDerivative = FALSE)
+                        numericDerivative = FALSE)
     expect_equal(GS.lvm1F, res.lvm1F)
+    ## range(GS.lvm1F-res.lvm1F)
     ##    dfVariance(e.lvm1F)
 })
 
@@ -178,40 +176,57 @@ m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
 regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1+eta2
 
-m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1,
-           Z1~eta2,Z2~eta2,Z3~eta2))
-latent(m) <- ~eta1+eta2
-
 e.lvm2F <- estimate(m,d)
 
 GS.lvm2F <- dVcov2(e.lvm2F, adjust.residuals = FALSE,
                    numericDerivative = TRUE)
-test_that("2 factor model (at ML)",{
+
+test_that("2 factor model: dVcov2",{
     res.lvm2F <- dVcov2(e.lvm2F, adjust.residuals = FALSE,
                         numericDerivative = FALSE)
     
     expect_equal(GS.lvm2F, res.lvm2F)
-
-    expect_equal(GS.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],dimnames(GS.lvm1F)[[3]]],
-             GS.lvm1F)
-    ##    dfVariance(e.lvm)
+    ## range(GS.lvm2F-res.lvm2F)
 })
 
-expect_equal(res.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],dimnames(GS.lvm1F)[[3]]],
-             GS.lvm1F)
-
-round(res.lvm2F[dimnames(GS.lvm1F)[[1]],dimnames(GS.lvm1F)[[2]],"eta1"]-GS.lvm1F[,,"eta1"],7)
-
-attr(GS.lvm1F, "vcov.param") <- NULL
-attr(GS.lvm1F, "param") <- NULL
-attr(GS.lvm2F, "vcov.param") <- NULL
-attr(GS.lvm2F, "param") <- NULL
-attr(res.lvm2F, "vcov.param") <- NULL
-attr(res.lvm2F, "param") <- NULL
 
 ## ** 2 factor model (covariance)
 
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+covariance(m) <- eta1 ~ eta2
+## covariance(m) <- Y1 ~ Z1
+latent(m) <- ~eta1+eta2
+
+e <- estimate(m,d)
+
+test_that("2 factor model (covariance between LV): dVcov2",{
+    GS.lvm <- dVcov2(e, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.lvm <- dVcov2(e, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    
+    expect_equal(GS.lvm, res.lvm)
+    ## range(GS.lvm2F-res.lvm2F)
+})
+
 ## ** 2 factor model (correlation)
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
+           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+regression(m) <- eta2 ~ X1
+regression(m) <- eta1 ~ eta2+X2+X3
+
+e <- estimate(m,d)
+
+test_that("2 factor model (correlation between LV): dVcov2",{
+    GS.lvm <- dVcov2(e, adjust.residuals = FALSE,
+                     numericDerivative = TRUE)
+    res.lvm <- dVcov2(e, adjust.residuals = FALSE,
+                      numericDerivative = FALSE)
+    
+    expect_equal(GS.lvm, res.lvm)
+    ## range(GS.lvm2F-res.lvm2F)
+})
 
 ##----------------------------------------------------------------------
 ### test-dVcov2.R ends here

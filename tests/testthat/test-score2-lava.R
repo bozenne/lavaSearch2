@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: nov  9 2017 (16:33) 
+## last-updated: jan  4 2018 (16:29) 
 ##           By: Brice Ozenne
-##     Update #: 169
+##     Update #: 171
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -260,11 +260,10 @@ test_that("2 factor model: constrains",{
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 covariance(m) <- eta1 ~ eta2
+## covariance(m) <- Y1 ~ Z1
 latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
-param <- coef(e)
-prepareScore2(e) <- d
 
 test_that("2 factor model, covariance (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)

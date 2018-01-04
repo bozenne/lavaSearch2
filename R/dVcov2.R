@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  4 2018 (15:11) 
+## Last-Updated: jan  4 2018 (16:24) 
 ##           By: Brice Ozenne
-##     Update #: 112
+##     Update #: 125
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -154,7 +154,8 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                 pp <- p
                 pp[names(iParam)] <- iParam
                 Info <- information(object, p = pp)
-                return(chol2inv(chol(Info)))
+                return(chol2inv(chol(Info))) 
+                ## return(Info) ## [:DEBUG]
             }                        
         }else{            
             calcVcov <- function(iParam){ # x <- p.obj
@@ -205,7 +206,8 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
         p3 <- dim(dInfo.dtheta)[3]
         dVcov.dtheta <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
         for(iP in 1:p3){
-            dVcov.dtheta[,,iP] <- - vcov.param %*% dInfo.dtheta[,,iP] %*% vcov.param
+            dVcov.dtheta[,,iP] <- - vcov.param %*% dInfo.dtheta[,,iP] %*% vcov.param 
+            ## dVcov.dtheta[,,iP] <- dInfo.dtheta[,,iP] ## [:DEBUG]
         }
 
     }
@@ -251,8 +253,8 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                 iName1 <- name.param[iP1]
                 iName2 <- name.param[iP2]
 
-                ## cat(iNameD," ",iName1,"",iName2,"\n")
-              
+                ##cat(iNameD," ",iName1,"",iName2,"\n")
+                
                 test.Omega1 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
                 test.Omega2a <- !is.null(d2Omega.dtheta2[[iNameD]][[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
                 test.Omega2b <- !is.null(d2Omega.dtheta2[[iName1]][[iNameD]]) && !is.null(dOmega.dtheta[[iName2]])
@@ -411,6 +413,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                         dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu.1 %*% iOmega * d2mu.D2)
                     }
 
+                  
                     if(test.mu3){
                         dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo * dmu.2)
                     }
