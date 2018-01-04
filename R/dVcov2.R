@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  3 2018 (17:30) 
+## Last-Updated: jan  4 2018 (10:16) 
 ##           By: Brice Ozenne
-##     Update #: 54
+##     Update #: 70
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,68 +39,72 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
 
     p <- .coef2(object)
     data <- getData(object)
-    N.param <- length(p)
+
+    n.param <- length(p)
     name.param <- names(p)
 
     power <- 0.5
     as.clubSandwich <- 1
 
+    ## ** param with non-zero third derivative
     keep.param <- setdiff(name.param, attr(.coef2(object),"mean.coef"))
 
-    ### ** Compute the covariance matrix
-    calcSigma <- function(iParam){ # x <- p.obj
-        pp <- p
-        pp[names(iParam)] <- iParam
-        return(attr(residuals2(object, cluster = cluster, p = pp, data = data,
-                               adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                               return.vcov.param = TRUE, second.order = FALSE),
-                    "vcov.param"))
-    }
-    if(is.null(vcov.param)){
-        vcov.param <- calcSigma(p)
-    }
-    
-    ### ** Compute the gradient of the standard errors
+    ### ** Compute the gradient
     if(numericDerivative){
-    
-        calcDiagSigma <- function(iParam){
-            return(setNames(diag(calcSigma(iParam)), name.param))         
-        }
-
-        jac.param <- p[keep.param]
-        dSigma.dtheta <- numDeriv::jacobian(func = calcDiagSigma, x = jac.param, method = "Richardson")
         
+        ### *** Define function to compute the variance-covariance matrix
+        calcSigma <- function(iParam){ # x <- p.obj
+            pp <- p
+            pp[names(iParam)] <- iParam
+            return(attr(residuals2(object, cluster = cluster, p = pp, data = data,
+                                   adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
+                                   return.vcov.param = TRUE, second.order = FALSE),
+                        "vcov.param"))
+        }
+        
+        if(is.null(vcov.param)){
+            vcov.param <- calcSigma(p)
+        }
+
+        ### *** numerical derivative
+        jac.param <- p[keep.param]
+        res.tempo <- numDeriv::jacobian(calcSigma, x = jac.param, method = "Richardson")
+
+        dVcov.dtheta <- array(res.tempo,
+                              dim = c(n.param,n.param,length(jac.param)),
+                              dimnames = list(name.param, name.param, keep.param))
+
     }else{
-
-        dots <- list(...)
-        if("prepareScore" %in% names(dots)){
-            prepareScore <- dots$prepareScore
-        }else{
-            prepareScore  <- attr(residuals2(object, cluster = cluster, p = p, data = data,
-                                        adjust.residuals = adjust.residuals, power = power, as.clubSandwich = as.clubSandwich,
-                                        return.prepareScore2 = TRUE, second.order = TRUE), "prepareScore2")
-        }
-
-        dInfo.dtheta <- .dinformation2(dmu.dtheta = prepareScore$dmu.dtheta,
+        res.tempo <- residuals2(object, p = p, data = data, cluster = cluster,
+                                adjust.residuals = adjust.residuals,
+                                power = power, as.clubSandwich = as.clubSandwich,
+                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
+        pS2  <- attr(res.tempo, "prepareScore2")
+        vcov.param  <- attr(res.tempo, "vcov.param")
+        dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dmu.dtheta,
                                        d2mu.d2theta = NULL,
-                                       dOmega.dtheta = prepareScore$dOmega.dtheta,
-                                       d2Omega.d2theta = prepareScore$d2Omega.d2theta,
-                                       Omega = prepareScore$Omega,
-                                       ls.indexOmega = prepareScore$ls.indexOmega,
-                                       hat = prepareScore$hat,
-                                       n.param  = prepareScore$n.param,
-                                       name.param  = prepareScore$name.param,
+                                       dOmega.dtheta = pS2$dOmega.dtheta,
+                                       d2Omega.d2theta = pS2$d2Omega.dtheta2,
+                                       Omega = pS2$Omega,
+                                       ls.indexOmega = pS2$ls.indexOmega,
+                                       hat = pS2$hat,
+                                       n.param  = pS2$n.param,
+                                       name.param  = pS2$name.param,
                                        name.deriv = keep.param,
-                                       n.cluster = prepareScore$n.cluster)
+                                       n.cluster = pS2$n.cluster)
 
-        if(dim(dInfo.dtheta)[3]==1){
-            dSigma.dtheta <- -diag(vcov.param %*% dInfo.dtheta[,,1] %*% vcov.param)
-        }else{
-            dSigma.dtheta <- apply(dInfo.dtheta, 3, function(x){ - diag(vcov.param %*% x %*% vcov.param)})
+        p3 <- dim(dInfo.dtheta)[3]
+        dVcov.dtheta <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
+        for(iP in 1:p3){
+            dVcov.dtheta[,,iP] <- - vcov.param %*% dInfo.dtheta[,,iP] %*% vcov.param
         }
+        
     }
    
-    return(df)
+    ## ** export
+    attr(dVcov.dtheta, "vcov.param") <- vcov.param
+    attr(dVcov.dtheta, "param") <- p
+    return(dVcov.dtheta)      
  
 }
 
@@ -142,16 +146,21 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     ### ** Compute the gradient 
     if(numericDerivative){
 
-        ### *** Define function to compute the information matrix
+        ### *** Define function to compute the information/variance-covariance matrix
         if(adjust.residuals==FALSE){
             calcI <- function(iParam){ # x <- p.obj
                 pp <- p
                 pp[names(iParam)] <- iParam
                 return(information(object, p = pp))
             }
-            vcov.param <- chol2inv(chol(calcI(p)))
-            dimnames(vcov.param) <- list(name.param, name.param)
+            
+            if(is.null(vcov.param)){
+                vcov.param <- chol2inv(chol(calcI(p)))
+                dimnames(vcov.param) <- list(name.param, name.param)
+            }
+            
         }else{
+            
             calcVcov <- function(iParam){ # x <- p.obj
                 pp <- p
                 pp[names(iParam)] <- iParam                
@@ -161,7 +170,10 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                                        as.clubSandwich = as.clubSandwich,
                                        return.vcov.param = TRUE), "vcov.param"))
             }
-            vcov.param <- calcVcov(p)
+            
+            if(is.null(vcov.param)){
+                vcov.param <- calcVcov(p)
+            }
         }
     
         ### *** Compute variance-covariance matrix
@@ -174,7 +186,9 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
             calcDiagVcov <- function(iParam){        
                 return(as.double(calcVcov(iParam)))         
             }
-        }    
+        }
+
+        ### *** numerical derivative
         jac.param <- p[keep.param]
         res.tempo <- numDeriv::jacobian(calcDiagVcov, x = jac.param, method = "Richardson")
 
@@ -213,6 +227,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
 
     ## ** export
     attr(dVcov.dtheta, "vcov.param") <- vcov.param
+    attr(dVcov.dtheta, "param") <- p
     return(dVcov.dtheta)       
 }
 
