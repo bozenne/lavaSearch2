@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  4 2018 (15:02) 
+## last-updated: jan  5 2018 (09:26) 
 ##           By: Brice Ozenne
-##     Update #: 706
+##     Update #: 707
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -337,7 +337,6 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
                                        name.endogenous = name.endogenous,
                                        name.latent = name.latent,
                                        B = pS2$skeleton$value$B,
-                                       alpha.XGamma = pS2$skeleton$value$alpha.XGamma,
                                        Lambda = pS2$skeleton$value$Lambda,
                                        Psi = pS2$skeleton$value$Psi)
     }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  4 2018 (12:35) 
+## last-updated: jan  5 2018 (09:33) 
 ##           By: Brice Ozenne
-##     Update #: 573
+##     Update #: 574
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -142,7 +142,6 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
         
         numerator <- 2 *(C.vcov.C)^2
         denom <- rowSums(C.dVcov.C %*% vcov.param[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
-        CC <<- c(CC,list(C.dVcov.C))
         df <- numerator/denom
         return(df)
     }

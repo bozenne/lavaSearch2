@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  4 2018 (16:21) 
+## Last-Updated: jan  5 2018 (09:49) 
 ##           By: Brice Ozenne
-##     Update #: 435
+##     Update #: 487
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -435,11 +435,8 @@ skeletonDtheta.lvm <- function(object, data,
     }
 
     ### ** export
-    save.dtheta <- dt.param[detail %in% c("alpha","Gamma"), originalLink]
-
     return(list(
         dmu.dtheta = dmu.dtheta,
-        dmu.dtheta.save = dmu.dtheta[save.dtheta],
         dOmega.dtheta = dOmega.dtheta,
         dLambda.dtheta = dLambda.dtheta,
         dB.dtheta = dB.dtheta,
@@ -609,6 +606,35 @@ skeletonDtheta2.lvm <- function(object, data, dt.param.all,
         return(v)
     })
     names(d2Omega.dtheta2) <- name.tempo
+
+    ## ** prepare alpha.B and alpha.Lambda
+    name.alpha <- dt.param[!duplicated(param)][detail == "alpha",param]
+    ls.Malpha <- list()
+    for(iName in name.alpha){ # iName <- name.param[1]
+
+        iName2 <- as.character(param2originalLink[iName])
+        iY <- dt.param[param %in% iName,Y]
+
+        ls.Malpha[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)),
+                                      nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                      dimnames = list(NULL, name.latent))
+    }
+    if(n.mean$alpha.B>0){
+        for(iP in 1:n.mean$alpha.B){ ## iP <- 1
+            iName1 <- grid.mean$alpha.B[iP,"alpha"]
+            iName2 <- grid.mean$alpha.B[iP,"B"]
+            
+            d2mu.dtheta2[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+        }
+    }
+    if(n.mean$alpha.Lambda>0){
+        for(iP in 1:n.mean$alpha.Lambda){ ## iP <- 1
+            iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
+            iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
+            
+            d2mu.dtheta2[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+        }
+    }
     
     ## ** Store X for Gamma
     if(n.mean$Gamma.Lambda>0){
@@ -662,7 +688,7 @@ skeletonDtheta2.lvm <- function(object, data, dt.param.all,
 skeletonDtheta2.lvmfit <- function(object, data, OD,
                                    dt.param.all, param2originalLink,
                                    name.endogenous, name.latent,
-                                   B, alpha.XGamma, Lambda, Psi,
+                                   B, Lambda, Psi,
                                    ...){
 
     n.endogenous <- length(name.endogenous)
@@ -685,10 +711,10 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
         ## *** mean parameters        
         if(OD2$n.mean$alpha.B>0){
             for(iP in 1:OD2$n.mean$alpha.B){ # iP <- 1
-                iName1 <- grid.mean$alpha.B[iP,"alpha"]
-                iName2 <- grid.mean$alpha.B[iP,"B"]
+                iName1 <- OD2$grid.mean$alpha.B[iP,"alpha"]
+                iName2 <- OD2$grid.mean$alpha.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$dmu.dtheta.save[[iName1]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD2$iIB.Lambda
+                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
             }
         }
         
@@ -697,7 +723,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- OD2$grid.mean$alpha.Lambda[iP,"alpha"]
                 iName2 <- OD2$grid.mean$alpha.Lambda[iP,"Lambda"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$dmu.dtheta.save[[iName1]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName2]]
+                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName2]]
                 
             }
         }
@@ -724,7 +750,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- OD2$grid.mean$Lambda.B[iP,"Lambda"]
                 iName2 <- OD2$grid.mean$Lambda.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$alpha.XGamma.iIB %*% OD$iIB %*% OD$dB.dtheta %*% OD$iIB.Lambda %*% OD$iIB.Lambda %*% OD$dLambda.dtheta[[iName2]]
+                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName1]]
             }
         }
 
@@ -733,8 +759,8 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- OD2$grid.mean$B.B[iP,"B1"]
                 iName2 <- OD2$grid.mean$B.B[iP,"B2"]
 
-                term1 <- OD$alpha.XGamma.iIB %*% dB.dtheta[[iName2]] %*% OD$iIB %*% dB.dtheta[[iName1]] %*% OD$iIB.Lambda
-                term1 <- OD$alpha.XGamma.iIB %*% dB.dtheta[[iName1]] %*% OD$iIB %*% dB.dtheta[[iName2]] %*% OD$iIB.Lambda
+                term1 <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dB.dtheta[[iName1]] %*% OD$iIB.Lambda
+                term2 <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName1]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
                 OD2$d2mu.dtheta2[[iName1]][[iName2]] <- term1 + term2
             }
         }
@@ -765,8 +791,9 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- OD2$grid.vcov$Lambda.B[iP,"Lambda"]
                 iName2 <- OD2$grid.vcov$Lambda.B[iP,"B"]
 
-                term1 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$dPsi.dtheta[[iName1]] %*% OD$iIB.Lambda
-                term2 <- OD$tLambda.tiIB.Psi.iIB %*% dB.dtheta[[iName2]] %*% t(OD$iIB) %*% dLambda.dtheta[[iName1]]
+                term1 <- t(OD$dLambda.dtheta[[iName1]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% Psi %*% OD$iIB.Lambda
+                term2 <- t(OD$dLambda.dtheta[[iName1]]) %*% t(OD$iIB) %*% Psi %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
+                ## term2 <- OD$tLambda.tiIB.Psi.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName1]]                
                 OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2)
             }
         }
@@ -786,9 +813,9 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                 iName1 <- OD2$grid.vcov$B.B[iP,"B1"]
                 iName2 <- OD2$grid.vcov$B.B[iP,"B2"]
 
-                term1 <- t(OD$iIB.Lambda) %*% t(dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% t(dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% OD$Lambda
-                term2 <- t(OD$iIB.Lambda) %*% t(dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% t(dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% OD$Lambda
-                term3 <- t(OD$iIB.Lambda) %*% t(dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% dB.dtheta[[iName2]] %*% OD$iIB %*% OD$Lambda
+                term1 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% Lambda
+                term2 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% Lambda
+                term3 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% Lambda
                 OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
             }
         }
@@ -806,6 +833,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
 #' @description Form all unique combinations between two vectors (removing symmetric combinations).
 #'
 #' @examples
+#' .combination(1,1)
 #' .combination(1:2,1:2)
 #' .combination(c(1:2,1:2),1:2)
 #' 
@@ -825,12 +853,12 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
     grid <- expand.grid(dots, stringsAsFactors = FALSE) 
     
     ## ** remove combinations (b,a) when (a,b) is already there
-    if(NROW(grid)>0 && any(grid[,1] %in% grid[,2])){ 
+    name1 <- paste0(grid[,1],grid[,2])
+    name2 <- paste0(grid[,2],grid[,1])
+
+    if(NROW(grid)>1 && any(name1 %in% name2)){ 
 
         n.grid <- NROW(grid)
-        name1 <- paste0(grid[,1],grid[,2])
-        name2 <- paste0(grid[,2],grid[,1])
-
         test.duplicated <- c(FALSE,sapply(2:n.grid, function(iG){
             any(name2[iG] %in% name1[1:(iG-1)]) ## find duplicates
         }))

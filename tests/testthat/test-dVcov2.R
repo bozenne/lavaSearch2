@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan  4 2018 (16:35) 
+## Last-Updated: jan  5 2018 (09:52) 
 ##           By: Brice Ozenne
-##     Update #: 31
+##     Update #: 39
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -223,10 +223,12 @@ test_that("2 factor model (correlation between LV): dVcov2",{
                      numericDerivative = TRUE)
     res.lvm <- dVcov2(e, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
-    
     expect_equal(GS.lvm, res.lvm)
     ## range(GS.lvm2F-res.lvm2F)
 })
 
 ##----------------------------------------------------------------------
 ### test-dVcov2.R ends here
+
+## * constrain
+
