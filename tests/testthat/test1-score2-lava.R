@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: jan  4 2018 (16:29) 
+## last-updated: jan  5 2018 (12:06) 
 ##           By: Brice Ozenne
-##     Update #: 171
+##     Update #: 173
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("linear regression (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -77,8 +77,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -123,7 +122,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression, covariance link (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -165,7 +164,7 @@ regression(m) <- eta1~X1+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("factor model (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -218,7 +217,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -264,6 +263,8 @@ covariance(m) <- eta1 ~ eta2
 latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
+param <- coef(e)
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model, covariance (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -300,7 +301,7 @@ regression(m) <- eta1 ~ eta2+X2+X3
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model, correlation LV (at ML)",{
     test <- score2(e, indiv=TRUE, adjust.residuals = FALSE)
@@ -352,7 +353,6 @@ test_that("compare score2.lm with score2.lvm",{
 
 
 ## ** lvm model with leverage adjusted residuals
-
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1

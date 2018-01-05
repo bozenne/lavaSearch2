@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan  5 2018 (09:52) 
+## Last-Updated: jan  5 2018 (09:55) 
 ##           By: Brice Ozenne
-##     Update #: 39
+##     Update #: 41
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -230,5 +230,19 @@ test_that("2 factor model (correlation between LV): dVcov2",{
 ##----------------------------------------------------------------------
 ### test-dVcov2.R ends here
 
-## * constrain
+## * constrains
 
+m.sim <- lvm(c(Y1[mu:sigma]~X1+X2+X3,
+               Y2[mu:sigma]~X1+X4+X5))
+set.seed(10)
+d <- sim(m.sim,n,latent=FALSE)
+
+e.lvmC <- estimate(m.sim,d)
+
+test_that("1 factor model: dVcov2",{    
+    GS.lvmC <- dVcov2(e.lvmC, adjust.residuals = FALSE,
+                       numericDerivative = TRUE)
+    res.lvmC <- dVcov2(e.lvmC, adjust.residuals = FALSE,
+                        numericDerivative = FALSE)
+    expect_equal(GS.lvmC, res.lvmC)
+})

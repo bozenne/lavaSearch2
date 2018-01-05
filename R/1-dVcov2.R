@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  5 2018 (09:50) 
+## Last-Updated: jan  5 2018 (17:43) 
 ##           By: Brice Ozenne
-##     Update #: 129
+##     Update #: 153
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,12 +25,44 @@
 #'                Only required for gls models with no correlation argument.
 #' @param vcov.param the variance-covariance matrix of the estimates.
 #' @param adjust.residuals If TRUE, a small sample correction is used.
+#' @param value same as adjust.residuals.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
 #' 
 #' @export
 `dVcov2` <-
   function(object, ...) UseMethod("dVcov2")
 
+
+## * dVcov.lm
+#' @rdname dVcov2.gls
+#' @export
+dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
+
+  
+    ## ** extract information
+    X <- model.matrix(object)
+    sigma2 <- mean(residuals(object)^2)
+    
+    res.tempo <- residuals2(object, adjust.residuals = adjust.residuals,
+                            return.vcov.param = TRUE)
+    p <- c(coef(object), sigma2 = sigma2)
+    name.param <- names(p)
+    n.param <- length(p)
+    vcov.param <- attr(res.tempo, "vcov.param")
+    sigma2.cor <- attr(res.tempo, "sigma2")
+
+    dVcov.dtheta <- array(0,dim = c(n.param, n.param, 1),
+                          dimnames = list(name.param, name.param, "sigma2"))
+
+    dVcov.dtheta[setdiff(name.param,"sigma2"),setdiff(name.param,"sigma2"),"sigma2"] <- solve(t(X) %*% X)
+    dVcov.dtheta["sigma2","sigma2","sigma2"] <- 2*vcov.param["sigma2","sigma2"]/sigma2.cor
+    
+    ## ** export
+    attr(dVcov.dtheta, "vcov.param") <- vcov.param
+    attr(dVcov.dtheta, "param") <- p
+    return(dVcov.dtheta)
+    
+}
 ## * dVcov2.gls
 #' @rdname dVcov2.gls
 #' @export
@@ -218,6 +250,65 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     return(dVcov.dtheta)       
 }
 
+
+
+
+
+## * dVcov2.lvmfit2
+#' @rdname dVcov2
+#' @export
+dVcov2.lvmfit2 <- function(object, ...){
+    class(object) <- setdiff(class(object),"lvmfit2")
+    return(dVcov2(object, ...))    
+}
+
+## * dVcov2<-
+#' @rdname dVcov2
+#' @export
+`dVcov2<-` <-
+  function(x, ..., value) UseMethod("dVcov2<-")
+
+## * dVcov2<-.gls
+#' @rdname dVcov2
+#' @export
+`dVcov2<-.gls` <- function(x, ..., value){
+    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    class(x) <- append("gls2",class(x))
+
+    return(x)
+}    
+
+## * dVcov2<-.lme
+#' @rdname dVcov2
+#' @export
+`dVcov2<-.lme` <- function(x, ..., value){
+    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    class(x) <- append("lme2",class(x))
+    
+    return(x)
+}    
+
+## * dVcov2<-.lvmfit
+#' @rdname dVcov2
+#' @export
+`dVcov2<-.lvmfit` <- function(x, ..., value){
+    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    class(x) <- append("lvmfit2",class(x))
+
+    return(x)
+}    
+
+## * dVcov2<-.lvmfit2
+#' @rdname dVcov2
+#' @export
+`dVcov2<-.lvmfit2` <- function(x, ..., value){
+
+    class(x) <- setdiff(class(x),"lvmfit2")
+    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    class(x) <- append("lvmfit2",class(x))
+    
+    return(x)
+}
 
 ## * .dinformation2
 .dinformation2 <- function(dmu.dtheta, d2mu.dtheta2,
@@ -431,3 +522,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
 
 ##----------------------------------------------------------------------
 ### dVcov2.R ends here
+
+
+
+

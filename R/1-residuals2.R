@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan  4 2018 (11:22) 
+## Last-Updated: jan  5 2018 (14:13) 
 ##           By: Brice Ozenne
-##     Update #: 754
+##     Update #: 761
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,6 +91,8 @@ residuals2.lm <- function(object,
 
     if(return.vcov.param){
         vcov.all <- as.matrix(bdiag(vcov.param, vcov.sigma2))
+        dimnames(vcov.all) <- list(c(name.param,"sigma2"),
+                                   c(name.param,"sigma2"))
         attr(epsilon, "vcov.param") <- vcov.all
         attr(epsilon, "sigma2") <- sigma2
     }
@@ -322,7 +324,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     n.latent <- length(name.latent)
     
     ### ** Reconstruct nu.KX and alpha.XGamma.iIB.Lambda
-    if(is.null(object$prepareScore2$update) || object$prepareScore2$update == TRUE){
+    if(is.null(object$prepareScore2$toUpdate) || object$prepareScore2$toUpdate == TRUE){
         OPS2 <- prepareScore2(object, data = data, p = p,
                               name.endogenous = name.endogenous,
                               name.latent = name.latent,
@@ -386,7 +388,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
             as.double(resLeverage$powerIH[[iG]] %*% epsilon[iG,])
         }))
         colnames(epsilon) <- name.endogenous
-        
+
         if(as.clubSandwich<2){
             vcov.param <- resLeverage$vcov.param
             Omega <- resLeverage$Omega

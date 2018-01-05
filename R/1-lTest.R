@@ -1,11 +1,11 @@
-### dfVariance.R --- 
+### lTest.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  5 2018 (09:33) 
+## last-updated: jan  5 2018 (14:57) 
 ##           By: Brice Ozenne
-##     Update #: 574
+##     Update #: 600
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,10 +15,10 @@
 ## 
 ### Code:
 
-## * Documentation - dfVariance
+## * Documentation - lTest
 #' @title  Compute the degree of freedom of the variance parameters
 #' @description Compute the degree of freedom of the variance parameters
-#' @name dfVariance
+#' @name lTest
 #'
 #' @param object a lvm object
 #' @param cluster the grouping variable relative to which the observations are i.i.d.
@@ -31,7 +31,10 @@
 #' df.data <- sim(mSim, 1e2)
 #'
 #' ## gold standard
-#' anova(lm(Y~X1+X2, data = df.data))
+#' anova(e.lm)
+#' 
+#' e.lm <- lm(Y~X1+X2, data = df.data)
+#' lTest(e.lm)
 #' 
 #' ## gls model
 #' e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
@@ -39,11 +42,11 @@
 #' 
 #' C <- rbind(c(0,1,0,0,0),c(0,0,1,0,0))
 #' colnames(C) <- names(attr(e.gls$dVcov,"param"))
-#' dfVariance(e.gls, C = C)
+#' lTest(e.gls, C = C)
 #'
 #' C <- rbind(c(0,0,0,1,0))
 #' colnames(C) <- names(attr(e.gls$dVcov,"param"))
-#' dfVariance(e.gls, C = C)
+#' lTest(e.gls, C = C)
 #' 
 #' ## latent variable model
 #' m <- lvm(Y~X1+X2)
@@ -52,47 +55,25 @@
 #' 
 #' C <- rbind(c(0,0,1,0,0),c(0,0,0,1,0))
 #' colnames(C) <- names(coef(e.lvm))
-#' dfVariance(e.lvm, C = C)
+#' lTest(e.lvm, C = C)
 #'
 #' C <- rbind(c(0,1,0,0,0))
 #' colnames(C) <- names(coef(e.lvm))
-#' dfVariance(e.lvm, C = C)
+#' lTest(e.lvm, C = C)
 #' 
 #' @export
-`dfVariance` <-
-  function(object, ...) UseMethod("dfVariance")
+`lTest` <-
+  function(object, ...) UseMethod("lTest")
 
-## * dfVariance.lm
-#' @rdname dfVariance
+## * lTest.lm
+#' @rdname lTest
 #' @export
-dfVariance.lm <- function(object, adjust.residuals = TRUE, ...){
-    object.coef <- coef(object)
-    name.coef <- names(object.coef)
-    n.coef <- length(name.coef)
-    df <- setNames(rep(NA,n.coef+1), c(name.coef,"sigma"))
+lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
+                     Ftest = TRUE, ...){
 
-    n <- NROW(object$model)
-    p <- object$rank
-
-    if(adjust.residuals==FALSE){
-        df[name.coef] <- n
-        df["sigma"] <- n/4
-    }else{
-        df[name.coef] <- n^2/(n+p)
-        df["sigma"] <- n^2/(4*(n+p))
-    }
-    
-    return(df)
-}
-
-## * dfVariance.lvmfit
-#' @rdname dfVariance
-#' @export
-dfVariance.lvmfit <- function(object, C = NULL, ...){
-
-    ### ** Extract information
+    ## ** Extract information
     if(is.null(object$dVcov)){
-        dVcov.dtheta  <- dVcov2(object, ...)
+        dVcov.dtheta  <- dVcov2(object, adjust.residuals = adjust.residuals, ...)
     }else{
         dVcov.dtheta <- object$dVcov
     }
@@ -113,9 +94,9 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
         if(NCOL(C) != n.param){
             stop("Argument \'C\' should be a matrix with ",n.param," columns \n")
         }
-        if(is.null(colnames(C)) || any(colnames(C) != name.param)){
-            stop("Argument \'C\' has incorrect column names \n")
-        }
+        ## if(is.null(colnames(C)) || any(colnames(C) != name.param)){
+        ##     stop("Argument \'C\' has incorrect column names \n")
+        ## }
         if(any(abs(svd(C)$d)<1e-10)){
             stop("Argument \'C\' is singular \n")
         }
@@ -129,9 +110,9 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
     q <- NROW(C)
        
     ### ** Compute degrees of freedom
-    df.table <- as.data.frame(matrix(NA, nrow = q+1, ncol = 5))
+    df.table <- as.data.frame(matrix(NA, nrow = q, ncol = 5))
     colnames(df.table) <- c("estimate","std","statistic","df","p-value")
-    rownames(df.table) <- c(rownames(C),"global")
+    rownames(df.table) <- rownames(C)
 
     calcDF <- function(M.C){ # M.C <- C
         C.vcov.C <- rowSums(M.C %*% vcov.param * M.C)
@@ -155,52 +136,66 @@ dfVariance.lvmfit <- function(object, C = NULL, ...){
     
     ## df
     df.Wald  <- calcDF(C)
-
+    ## if(adjust.residuals==FALSE){ ## for univariate linear models
+    ##     df[name.coef] <- n
+    ##     df["sigma2"] <- n/4
+    ## }else{
+    ##     df[name.coef] <- n^2/(n+p)
+    ##     df["sigma2"] <- n^2/(4*(n+p))
+    ## }
+    
     ## store
     df.table[rownames(C), "estimate"] <- C.p
     df.table[rownames(C), "std"] <- sd.C.p
     df.table[rownames(C), "statistic"] <- stat.Wald
     df.table[rownames(C), "df"] <- df.Wald
     df.table[rownames(C), "p-value"] <- 2*(1-pt(abs(df.table[rownames(C), "statistic"]),
-                                                    df = df.table[rownames(C), "df"]))
+                                                df = df.table[rownames(C), "df"]))
     
     ### *** F test
-    i.C.vcov.C <- solve(C.vcov.C)
-    stat.F <- t(C.p) %*% i.C.vcov.C %*% (C.p) / q
+    if(Ftest){
+        i.C.vcov.C <- solve(C.vcov.C)
+        stat.F <- t(C.p) %*% i.C.vcov.C %*% (C.p) / q
 
-    ## df
-    svd.tempo <- eigen(i.C.vcov.C)
-    D.svd <- diag(svd.tempo$values, nrow = q, ncol = q)
-    P.svd <- svd.tempo$vectors
+        ## df
+        svd.tempo <- eigen(i.C.vcov.C)
+        D.svd <- diag(svd.tempo$values, nrow = q, ncol = q)
+        P.svd <- svd.tempo$vectors
      
-    C.anova <- sqrt(D.svd) %*% t(P.svd) %*% C
-    ## Fstat - crossprod(C.anova %*% p)/q
-    nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
+        C.anova <- sqrt(D.svd) %*% t(P.svd) %*% C
+        ## Fstat - crossprod(C.anova %*% p)/q
+        nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
     
-    EQ <- sum(nu_m/(nu_m-2))
-    df.F <- 2*EQ / (EQ - q)
+        EQ <- sum(nu_m/(nu_m-2))
+        df.F <- 2*EQ / (EQ - q)
 
-    ## store
-    df.table["global", "statistic"] <- as.numeric(stat.F)
-    df.table["global", "df"] <- df.F
-    df.table["global", "p-value"] <- 1 - pf(df.table["global", "statistic"],
-                                            df1 = q,
-                                            df2 = df.table["global", "df"])
+        ## store
+        df.table <- rbind(df.table, global = c(NA,NA,NA,NA,NA))
+        df.table["global", "statistic"] <- as.numeric(stat.F)
+        df.table["global", "df"] <- df.F
+        df.table["global", "p-value"] <- 1 - pf(df.table["global", "statistic"],
+                                                df1 = q,
+                                                df2 = df.table["global", "df"])
+    }
     
     ## ** export
     return(df.table)
-    
 }
 
-## * dfVariance.gls
-#' @rdname dfVariance
+## * lTest.gls
+#' @rdname lTest
 #' @export
-dfVariance.gls <- dfVariance.lvmfit
+lTest.gls <- lTest.lm
 
-## * dfVariance.lme
-#' @rdname dfVariance
+## * lTest.lme
+#' @rdname lTest
 #' @export
-dfVariance.lme <- dfVariance.lvmfit
+lTest.lme <- lTest.lm
+
+## * lTest.lvmfit
+#' @rdname lTest
+#' @export
+lTest.lvmfit <- lTest.lm
 
 ## * .contrast2name
 #' @title Create rownames for a contrast matrix
@@ -230,4 +225,4 @@ dfVariance.lme <- dfVariance.lvmfit
 
 
 ##----------------------------------------------------------------------
-### dfVariance.R ends here
+### lTest.R ends here

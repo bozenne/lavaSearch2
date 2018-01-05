@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: nov 29 2017 (17:31) 
+## Last-Updated: jan  5 2018 (14:37) 
 ##           By: Brice Ozenne
-##     Update #: 32
+##     Update #: 46
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,6 +34,7 @@ mlf2 <- function(...) {
 ## copy of multcomp:::glht.mlf, allowing mmm2 objects
 glht.mlf2 <- function(model, linfct, ...) {
 
+    ## ** check
     stopifnot(inherits(model, c("mmm2")))
     if (length(linfct) == 1) {
         linfct <- linfct[rep(1, length(model))]
@@ -43,22 +44,38 @@ glht.mlf2 <- function(model, linfct, ...) {
         stop("names of ", sQuote("model"), " and ", sQuote("linfct"),
              " are not identical")
 
-    K <- lapply(names(model), function(i) 
-        glht(model[[i]], linfct = linfct[[i]], ...)$linfct)
-    for (k in 1:length(K)) {
-        rownames(K[[k]]) <- paste(names(model)[k], 
-                                  rownames(K[[k]]), sep = ": ")
-        colnames(K[[k]]) <- paste(names(model)[k], 
-                                  colnames(K[[k]]), sep = ": ")
+    ## ** define contrast matrix
+    n.model <- length(model)
+    name.model <- names(model)
+    if(is.null(name.model)){
+        name.model <- 1:n.coef
+        names(model) <- name.model
     }
-    ## do not add variance in the first run because cannot pass addtional arguments
+    
+    K <- lapply(names(model), function(i) {
+        glht(model[[i]], linfct = linfct[[i]], ...)$linfct
+    })
+    
+    for (iK in 1:n.model) {
+        rownames(K[[iK]]) <- paste(names(model)[iK], rownames(K[[iK]]), sep = ": ")
+        colnames(K[[iK]]) <- paste(names(model)[iK], colnames(K[[iK]]), sep = ": ")
+    }
+    
+    ## ** do not add variance in the first run because cannot pass addtional arguments
     out <- multcomp_glht.matrix(model, linfct = multcomp_.bdiag(K), ...)
     
-    ## add variance
+    ## ** add variance
+    ## call vcov.mmm2
     out$vcov <- vcov(model, return.null = FALSE, ...)
 
     ## add degrees of freedom
-    df <- unlist(lapply(model,dfVariance,...))
+    names(K) <- names(model)
+    df <- sapply(names(model), function(iName){ ## iName <- names(model)[1]
+        if(identical(class(model[[iName]]),"lm") && "sigma2" %in% names(K[[iName]]) == FALSE){
+            K[[iName]] <- cbind(K[[iName]], sigma2 = 0)
+        }
+        lTest(model[[iName]], C = K[[iName]], Ftest = FALSE, ...)$df
+    })
     out$df <- as.double(round(median(df)))
     return(out)
 }

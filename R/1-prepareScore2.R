@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  5 2018 (09:26) 
+## last-updated: jan  5 2018 (11:59) 
 ##           By: Brice Ozenne
-##     Update #: 707
+##     Update #: 711
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,6 +22,7 @@
 #' 
 #' @param object a latent variable model
 #' @param usefit If TRUE the parameters estimated by the model are used to pre-compute quantities. Only for lvmfit objects.
+#' @param value same as usefit.
 #' @param data [optional] data set.
 #' @param name.endogenous [optional] name of the endogenous variables
 #' @param name.latent [optional] name of the latent variables
@@ -273,7 +274,7 @@ prepareScore2.lvm <- function(object, data, second.order,
     }
     
     ### ** Export
-    pS2$update <- TRUE
+    pS2$toUpdate <- TRUE
     return(pS2)
 }
     
@@ -342,13 +343,28 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     }
     
     ### ** Export
-    pS2$update <- FALSE
+    pS2$toUpdate <- FALSE
     return(pS2)    
     
 }
+
+## * prepareScore2<-
+#' @rdname prepareScore2
+#' @export
+`prepareScore2<-` <-
+  function(x, ..., value) UseMethod("prepareScore2<-")
+
+## * prepareScore2<-.gls
+#' @rdname prepareScore2
+#' @export
+`prepareScore2<-.lvmfit` <- function(x, ..., value){
+    x$prepareScore2 <- prepareScore2(x, ..., usefit = value)
+    return(x)
+}    
 
 
 
 
 #----------------------------------------------------------------------
 ### prepareScore2.R ends here
+

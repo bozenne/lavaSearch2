@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: nov 29 2017 (17:44) 
+## Last-Updated: jan  5 2018 (14:39) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 16
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,6 +37,7 @@ ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
 ls.lm <- lapply(ls.formula, lm, data = dt.data)
 names(ls.lm) <- name.Y
 
+
 test_that("mmm2 vs mmm", {
     ## rescaling using std dev
     class(ls.lm) <- "mmm"
@@ -44,12 +45,14 @@ test_that("mmm2 vs mmm", {
     
     class(ls.lm) <- "mmm2"
     e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, rescale = TRUE)
-    
+
+    expect_equal(e.glht$vcov, n/(n-2)*e.glht2$vcov)
+    e.glht$vcov <- NULL
+    e.glht2$vcov <- NULL
+    ##e.glht$df <- 0    
     e.glht2$df <- 0
     e.glht2$model <- NULL
     e.glht$model <- NULL
-    dimnames(e.glht$vcov) <- NULL
-    dimnames(e.glht2$vcov) <- NULL
     expect_equal(e.glht,e.glht2)
 
     ## no rescaling

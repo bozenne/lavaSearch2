@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: nov 16 2017 (11:59) 
+## Last-Updated: jan  5 2018 (12:10) 
 ##           By: Brice Ozenne
-##     Update #: 28
+##     Update #: 29
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,7 +91,7 @@ test_that("residuals2 match residuals.lm", {
 })
 
 ## ** mixed model
-## ** versus nlme
+## *** versus nlme
 mSim <- lvm(c(Y1~1*eta1,Y2~1*eta1,Y3~1*eta1,eta1~G1))
 latent(mSim) <- ~eta1
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
@@ -105,13 +105,15 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
     e.lvm <- estimate(m,dW)
 
     e.gls <- gls(value ~ variable + G1, data = dL,
-                 correlation = corCompSymm(form =~ variable|Id))
+                 correlation = corCompSymm(form =~ variable|Id),
+                 method = "ML")
     e.lme <- lme(value ~ variable + G1, data = dL,
-                 random =~ 1|Id)
+                 random =~ 1|Id,
+                 method = "ML")
 
-    ##   logLik(e.lvm)
-    ##   logLik(e.gls)    # not equal!
-    ##   logLik(e.lme)    # not equal!
+    expect_equal(as.double(logLik(e.lvm)),as.double(logLik(e.gls)))
+    expect_equal(as.double(logLik(e.lvm)),as.double(logLik(e.lme)))
+    
     test.gls <- residuals2(e.gls, adjust.residuals = FALSE)
     test.lme <- residuals2(e.lme, adjust.residuals = FALSE)
     expect_equal(unname(test.gls),unname(test.lme))
@@ -127,7 +129,7 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
     expect_equal(GS.lme,as.double(residuals(e.lvm)))
 })
 
-## ** versus lvm
+## *** versus lvm
 m <- lvm(c(Y1~1*eta1,Y2~1*eta1,Y3~1*eta1,eta1~beta*G1,
            Z1~1*eta2,Z2~1*eta2,Z3~1*eta2,eta2~beta*G2)
          )
@@ -136,7 +138,7 @@ d <- sim(m, 5e1)
 e.lvm <- estimate(m,d)
 
 e.lvm2 <- e.lvm
-e.lvm2$prepareScore2 <- prepareScore2(lava::Model(e.lvm2), data = d)
+prepareScore2(e.lvm2) <- TRUE
 
 test_that("equivalence residuals2.lvm residuals.lvm", {
     test <- residuals2(e.lvm, adjust.residuals = FALSE)

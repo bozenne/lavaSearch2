@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: dec 14 2017 (18:23) 
+## last-updated: jan  5 2018 (12:03) 
 ##           By: Brice Ozenne
-##     Update #: 37
+##     Update #: 41
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -91,8 +91,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -134,7 +133,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-e$prepareScore2 <- prepareScore2(e)
+prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression, covariance link (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -171,7 +170,7 @@ regression(m) <- eta1~X1+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -223,7 +222,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -265,7 +264,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model, covariance (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -296,7 +295,7 @@ regression(m) <- eta1 ~ eta2+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- d
+prepareScore2(e) <- FALSE
 
 test_that("2 factor model, correlation (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
@@ -329,8 +328,8 @@ d <- sim(m,n)
 
 e.lvm <- estimate(lvm(Y~X1+X2+X3),d)
 e.lm <- lm(Y~X1+X2+X3, data = d)
-Sigma.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE), "vcov.param")
-Sigma.lm <- attr(residuals2(e.lm, return.vcov.param = TRUE), "vcov.param")
+Sigma.lvm <- attr(residuals2(e.lvm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
+Sigma.lm <- attr(residuals2(e.lm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
 
 test_that("Corrected vcov - linear model",{
     expect_equal(unname(Sigma.lvm), unname(Sigma.lm))
@@ -399,7 +398,7 @@ e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
 
 ## *** tests
 Sigma0.lvm <- vcov(e.lvm)
-SigmaAdj.lvm <- attr(residuals2(e.lvm, return.vcov.param = TRUE), "vcov.param")
+SigmaAdj.lvm <- attr(residuals2(e.lvm, adjust.residuals = TRUE, return.vcov.param = TRUE), "vcov.param")
 ## Sigma0.lvm/SigmaAdj.lvm
 SigmaAdjRed.lvm <- SigmaAdj.lvm[1:5,1:5]
 Sigma.GS <- vcovAdj(e.lmer)
