@@ -12,13 +12,11 @@ defineCategoricalLink(x, ...)
 \arguments{
 \item{x}{a lvm model.}
 
+\item{...}{arguments to be passed to lower level methods.}
+
 \item{link}{the links to be analyzed. If NULL, all the coefficients from the lvm model are used instead.}
 
 \item{data}{the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.}
-
-\item{Y.name}{the outcome variable of each link.}
-
-\item{X.name}{the regression variable of each link.}
 }
 \description{
 Identify categorical links in lvm

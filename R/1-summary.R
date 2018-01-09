@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan  5 2018 (11:31) 
+## Last-Updated: jan  9 2018 (18:21) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 109
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,8 +19,14 @@
 #' @title  Summary with small sample correction
 #' @description Summary with small sample correction
 #' @name summary
-#' @examples
 #'
+#' @param object a \code{gls}, \code{lme} or \code{lvm} object.
+#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param digit the number of digit to keep when diplaying the summary.
+#' @param ... arguments passed to lower level methods.
+#' 
+#' 
+#' @examples
 #' m <- lvm(Y~X1+X2)
 #' set.seed(10)
 #' d <- sim(m, 2e1)
@@ -50,9 +56,8 @@
 ## * summary.gls2
 #' @rdname summary
 #' @export
-summary.gls2 <- function(object, cluster,
+summary.gls2 <- function(object, 
                          digits = max(3, getOption("digit")),
-                         robust = FALSE,
                          adjust.residuals = TRUE, ...){
 
     class(object) <- setdiff(class(object),"gls2")
@@ -69,13 +74,15 @@ summary.gls2 <- function(object, cluster,
     return(object.summary)
 }
 
+## * summary.lme2
+#' @rdname summary
+#' @export
+summary.lme2 <- summary.gls2
 
 ## * summary.lvmfit2
 #' @rdname summary
 #' @export
-summary.lvmfit2 <- function(object, robust = FALSE,
-                            adjust.residuals = FALSE, power = 0.5, as.clubSandwich = TRUE,
-                            ...){
+summary.lvmfit2 <- function(object, adjust.residuals = FALSE, ...){
 
     class(object) <- setdiff(class(object),"lvmfit2")
     

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan  4 2018 (11:56) 
+## Last-Updated: jan  9 2018 (17:50) 
 ##           By: Brice Ozenne
-##     Update #: 118
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -201,7 +201,11 @@
 ## * .getVarCov2
 #' @title Reconstruct the marginal variance covariance matrix from a nlme model
 #' @description Reconstruct the marginal variance covariance matrix from a nlme model
+#' @name getVarCov2
 #'
+#' @param object a gls or lme object
+#' @param ... arguments to be passed to lower level methods.
+#'  
 #' @details The marginal variance covariance matrix for gls model is of the form:
 #' \deqn{\Sigma = \begin{bmatrix}
 #' \sigma^2 & sigma^2 \sigma_2 \rho_{1,2} & sigma^2 \sigma_3 \rho_{1,3} \\

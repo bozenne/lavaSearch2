@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  9 2018 (12:04) 
+## last-updated: jan  9 2018 (17:57) 
 ##           By: Brice Ozenne
-##     Update #: 603
+##     Update #: 610
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,9 +20,14 @@
 #' @description Compute the degree of freedom of the variance parameters
 #' @name lTest
 #'
-#' @param object a lvm object
-#' @param cluster the grouping variable relative to which the observations are i.i.d.
+#' @param object a lvm object.
+#' @param C [optional] a contrast matrix.
+#' @param adjust.residuals should a small-sample correction be used when computing the variance of the parameters and the degree of freedoms.
+#' @param Ftest should a join test be computed. 
 #'
+#' @details In the case of a \code{lm} object, the contrast matrix need not to contain
+#' a column for the variance parameter when the columns are named. When so, a column containing 0 is added to the contrast matrix.
+#' 
 #' @examples
 #' set.seed(10)
 #' mSim <- lvm(Y~0.1*X1+0.2*X2)
@@ -205,6 +210,10 @@ lTest.lvmfit <- lTest.lm
 #' @title Create rownames for a contrast matrix
 #' @description Create rownames for a contrast matrix
 #' using the coefficients and the names of the parameters
+#' @name contrast2name
+#'
+#' @param C a constrast matrix.
+#' 
 .contrast2name <- function(C){
     col <- coef <- coefname <- rowname <- nrow <- NULL
     

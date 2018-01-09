@@ -36,15 +36,33 @@ prepareScore2(x, ...) <- value
 \method{prepareScore2}{lvmfit}(x, ...) <- value
 }
 \arguments{
-\item{object}{a latent variable model}
+\item{object}{a latent variable model.}
+
+\item{X}{the design matrix.}
+
+\item{param}{the fitted parameters.}
+
+\item{attr.param}{the type of each parameter (e.g. mean or variance parameter).}
+
+\item{second.order}{should the terms relative to the third derivative of the likelihood be be pre-computed?}
+
+\item{n.cluster}{the number of i.i.d. observations.}
+
+\item{n.endogenous}{the number of outcomes}
 
 \item{name.endogenous}{[optional] name of the endogenous variables}
+
+\item{index.obs}{the indexes of the outcomes relative to each observation (e.g. 1,3 if only outcome 1 and 3 are observed for the observation).}
+
+\item{x}{same as object.}
 
 \item{value}{same as usefit.}
 
 \item{data}{[optional] data set.}
 
 \item{name.latent}{[optional] name of the latent variables}
+
+\item{p}{same as param.}
 
 \item{usefit}{If TRUE the parameters estimated by the model are used to pre-compute quantities. Only for lvmfit objects.}
 }

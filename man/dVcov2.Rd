@@ -2,9 +2,13 @@
 % Please edit documentation in R/1-dVcov2.R
 \name{dVcov2}
 \alias{dVcov2}
+\alias{dVcov2.lm}
+\alias{dVcov2.gls}
+\alias{dVcov2.lme}
 \alias{dVcov2.lvmfit}
 \alias{dVcov2.lvmfit2}
 \alias{dVcov2<-}
+\alias{dVcov2<-.lm}
 \alias{dVcov2<-.gls}
 \alias{dVcov2<-.lme}
 \alias{dVcov2<-.lvmfit}
@@ -13,12 +17,22 @@
 \usage{
 dVcov2(object, ...)
 
-\method{dVcov2}{lvmfit}(object, vcov.param = NULL, adjust.residuals = FALSE,
+\method{dVcov2}{lm}(object, adjust.residuals = FALSE, ...)
+
+\method{dVcov2}{gls}(object, cluster, vcov.param = NULL,
+  adjust.residuals = FALSE, numericDerivative = FALSE, ...)
+
+\method{dVcov2}{lme}(object, cluster, vcov.param = NULL,
+  adjust.residuals = FALSE, numericDerivative = FALSE, ...)
+
+\method{dVcov2}{lvmfit}(object, vcov.param = NULL, adjust.residuals = TRUE,
   numericDerivative = FALSE, ...)
 
 \method{dVcov2}{lvmfit2}(object, ...)
 
 dVcov2(x, ...) <- value
+
+\method{dVcov2}{lm}(x, ...) <- value
 
 \method{dVcov2}{gls}(x, ...) <- value
 
@@ -29,18 +43,22 @@ dVcov2(x, ...) <- value
 \method{dVcov2}{lvmfit2}(x, ...) <- value
 }
 \arguments{
-\item{object}{a gls, lme, or lvm object}
+\item{object}{a gls, lme, or lvm object.}
 
-\item{vcov.param}{the variance-covariance matrix of the estimates.}
+\item{...}{arguments to be passed to lower level methods.}
 
 \item{adjust.residuals}{If TRUE, a small sample correction is used.}
 
-\item{numericDerivative}{If TRUE, the degree of freedom are computed using a numerical derivative.}
-
-\item{value}{same as adjust.residuals.}
-
 \item{cluster}{the grouping variable relative to which the observations are iid.
 Only required for gls models with no correlation argument.}
+
+\item{vcov.param}{the variance-covariance matrix of the estimates.}
+
+\item{numericDerivative}{If TRUE, the degree of freedom are computed using a numerical derivative.}
+
+\item{x}{same as object.}
+
+\item{value}{same as adjust.residuals.}
 }
 \description{
 Compute the derivative of the information matrix.

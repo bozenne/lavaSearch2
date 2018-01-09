@@ -20,7 +20,7 @@ modelsearch2(x, ...)
   packages = NULL, statistic = "Wald", conditional = FALSE,
   exposure = NULL, method.p.adjust = "max", nStep = NULL,
   na.omit = TRUE, alpha = 0.05, method.max = "integration", ncpus = 1,
-  display.warnings = TRUE, trace = 1, export.iid = FALSE)
+  display.warnings = TRUE, trace = 1, export.iid = FALSE, ...)
 }
 \arguments{
 \item{x}{a lvm model}

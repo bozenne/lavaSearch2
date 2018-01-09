@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan  9 2018 (16:45) 
+## Last-Updated: jan  9 2018 (18:11) 
 ##           By: Brice Ozenne
-##     Update #: 771
+##     Update #: 778
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,10 +20,18 @@
 #' @description Compute the residuals from a lvmfit objects
 #' @name residuals2
 #' 
-#' @param x a fitted latent variable model.
+#' @param object a fitted latent variable model.
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
-#'
+#' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
+#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param as.clubSandwich method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
+#' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
+#' @param return.vcov.param should the variance covariance matrix of the parameters be returned?
+#' @param return.prepareScore2 should the quantities that have been pre-computed be returned?
+#' 
+#' @param ... arguments to be passed to lower level methods.
+#' 
 #' @examples
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
@@ -104,10 +112,12 @@ residuals2.lm <- function(object,
 #' @rdname residuals2
 #' @export
 residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
-                           adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
+                           adjust.residuals = TRUE, as.clubSandwich = TRUE,
                            second.order = FALSE,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
+    power <- 1/2
+    
     if(object$method!="ML"){
         warning("Implemented for Maximum Likelihood estimation not for REML\n")
     }
@@ -288,11 +298,13 @@ residuals2.lme <- residuals2.gls
 #' @rdname residuals2
 #' @export
 residuals2.lvmfit <- function(object, p = NULL, data = NULL,
-                              adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
+                              adjust.residuals = TRUE, as.clubSandwich = TRUE,
                               second.order = FALSE,
                               return.vcov.param = FALSE, return.prepareScore2 = FALSE,
                               ...){
 
+    power <- 1/2
+    
     ### ** normalize arguments
     ## test
     if(!identical(class(object),"lvmfit")){

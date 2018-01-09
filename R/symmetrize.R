@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:42) 
 ## Version: 
-## Last-Updated: nov  8 2017 (09:49) 
+## Last-Updated: jan  9 2018 (17:58) 
 ##           By: Brice Ozenne
-##     Update #: 8
+##     Update #: 11
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,8 @@
 #' @title Symmetrize a matrix
 #' @description Complete the upper (or lower) extra-diagonal terms  in order to obtain a symmetric matrix.
 #' @param M a matrix
-#' @param upper should the upp
+#' @param update.upper should the upper extra diagonal terms be updated using the lower extra diagonal terms?
+#' 
 #' @examples
 #' M <- matrix(NA, 4, 4)
 #' M[lower.tri(M)] <- 1:6

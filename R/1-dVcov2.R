@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  9 2018 (12:04) 
+## Last-Updated: jan  9 2018 (18:22) 
 ##           By: Brice Ozenne
-##     Update #: 165
+##     Update #: 168
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,13 +20,15 @@
 #' @description Compute the derivative of the information matrix.
 #' @name dVcov2
 #'
-#' @param object a gls, lme, or lvm object
+#' @param object a gls, lme, or lvm object.
+#' @param x same as object.
 #' @param cluster the grouping variable relative to which the observations are iid.
 #'                Only required for gls models with no correlation argument.
 #' @param vcov.param the variance-covariance matrix of the estimates.
-#' @param adjust.residuals If TRUE, a small sample correction is used.
+#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param value same as adjust.residuals.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
+#' @param ... arguments to be passed to lower level methods.
 #' 
 #' @export
 `dVcov2` <-
@@ -34,7 +36,7 @@
 
 
 ## * dVcov.lm
-#' @rdname dVcov2.gls
+#' @rdname dVcov2
 #' @export
 dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
 
@@ -64,7 +66,7 @@ dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
     
 }
 ## * dVcov2.gls
-#' @rdname dVcov2.gls
+#' @rdname dVcov2
 #' @export
 dVcov2.gls <- function(object, cluster, vcov.param = NULL,
                        adjust.residuals = FALSE, numericDerivative = FALSE, ...){
@@ -146,7 +148,7 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
 }
 
 ## * dVcov2.lme
-#' @rdname dVcov2.lme
+#' @rdname dVcov2
 #' @export
 dVcov2.lme <- dVcov2.gls
 

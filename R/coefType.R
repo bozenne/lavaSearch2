@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: nov  9 2017 (12:03) 
+## last-updated: jan  9 2018 (17:43) 
 ##           By: Brice Ozenne
-##     Update #: 339
+##     Update #: 340
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,9 +23,9 @@
 #' 
 #' @param x a lvm model or a fitted lvm model 
 #' @param value should the name of the coefficient be returned? Else return the coefficients
+#' @param data [optional] the dataset. Help to identify the categor
 #' @param as.lava export the type of parameters mimicking lava:::coef.
 #' @param keep.var should the variance parameters be returned?
-#' @param index.model returns as an attribute to which of the model is from each parameter. Relevant for multigroup lvm models.
 #' @param ... arguments to be passed to \code{lava::coef}
 #'
 #' @details A lvm can be written as a measurement model:

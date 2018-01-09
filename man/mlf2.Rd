@@ -7,7 +7,7 @@
 mlf2(...)
 }
 \arguments{
-\item{..}{A names argument list containing the fitted model.
+\item{...}{A names argument list containing the fitted model.
 See the documentation of \code{multcomp::mmm} for more details.}
 }
 \description{

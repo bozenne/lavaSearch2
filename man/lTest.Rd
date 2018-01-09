@@ -23,12 +23,20 @@ lTest(object, ...)
   Ftest = TRUE, ...)
 }
 \arguments{
-\item{object}{a lvm object}
+\item{object}{a lvm object.}
 
-\item{cluster}{the grouping variable relative to which the observations are i.i.d.}
+\item{C}{[optional] a contrast matrix.}
+
+\item{adjust.residuals}{should a small-sample correction be used when computing the variance of the parameters and the degree of freedoms.}
+
+\item{Ftest}{should a join test be computed.}
 }
 \description{
 Compute the degree of freedom of the variance parameters
+}
+\details{
+In the case of a \code{lm} object, the contrast matrix need not to contain
+a column for the variance parameter when the columns are named. When so, a column containing 0 is added to the contrast matrix.
 }
 \examples{
 set.seed(10)
@@ -38,9 +46,9 @@ transform(mSim, Id~Y) <- function(x){1:NROW(x)}
 df.data <- sim(mSim, 1e2)
 
 ## gold standard
+e.lm <- lm(Y~X1+X2, data = df.data)
 anova(e.lm)
 
-e.lm <- lm(Y~X1+X2, data = df.data)
 lTest(e.lm)
 
 ## gls model

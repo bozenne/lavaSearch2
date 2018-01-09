@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (16:35) 
 ## Version: 
-## last-updated: okt 26 2017 (18:37) 
+## last-updated: jan  9 2018 (17:48) 
 ##           By: Brice Ozenne
-##     Update #: 98
+##     Update #: 100
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,9 +22,8 @@
 #' 
 #' @param x a lvm model.
 #' @param link the links to be analyzed. If NULL, all the coefficients from the lvm model are used instead.
-#' @param Y.name the outcome variable of each link.
-#' @param X.name the regression variable of each link.
 #' @param data the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.
+#' @param ... arguments to be passed to lower level methods.
 #' 
 #' @examples  
 #' m <- lvm(Y1~X1+X2,Y2~X1+X3)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  5 2018 (11:59) 
+## last-updated: jan  9 2018 (18:04) 
 ##           By: Brice Ozenne
-##     Update #: 711
+##     Update #: 717
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,16 @@
 #' @description Compute partial derivatives regarding to the mean and the variance, and compute the design matrices.
 #' @name prepareScore2
 #' 
-#' @param object a latent variable model
+#' @param object a latent variable model.
+#' @param x same as object.
+#' @param X the design matrix.
+#' @param param the fitted parameters.
+#' @param p same as param.
+#' @param attr.param the type of each parameter (e.g. mean or variance parameter).
+#' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
+#' @param n.cluster the number of i.i.d. observations.
+#' @param n.endogenous the number of outcomes
+#' @param index.obs the indexes of the outcomes relative to each observation (e.g. 1,3 if only outcome 1 and 3 are observed for the observation).
 #' @param usefit If TRUE the parameters estimated by the model are used to pre-compute quantities. Only for lvmfit objects.
 #' @param value same as usefit.
 #' @param data [optional] data set.

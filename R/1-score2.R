@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 15 2017 (16:22) 
+## last-updated: jan  9 2018 (18:11) 
 ##           By: Brice Ozenne
-##     Update #: 2148
+##     Update #: 2151
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,8 +24,8 @@
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
 #' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.
-#' @param adjust.residuals Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
-#' @param power the exponent used for computing the leverage-adjusted residuals. See the documentation of the \code{\link{iid2}} function for more details.
+#' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
+#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param as.clubSandwich The method use to apply the \code{power} argument.
 #' @param ... not used.
 #'
@@ -71,9 +71,11 @@
 #' @rdname score2
 #' @export
 score2.gls <- function(object, cluster, p = NULL, data = NULL,
-                       adjust.residuals = TRUE, power = 1/2,
+                       adjust.residuals = TRUE, 
                        indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
 
+    power <- 1/2
+    
 ### ** Compute residuals and partial derivatives
     epsilon <- residuals2(object, cluster = cluster, p = p, data = data,
                           adjust.residuals = adjust.residuals,

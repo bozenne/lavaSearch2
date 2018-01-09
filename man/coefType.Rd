@@ -98,13 +98,13 @@ coefVar(x, ...)
 
 \item{...}{arguments to be passed to \code{lava::coef}}
 
+\item{data}{[optional] the dataset. Help to identify the categor}
+
 \item{as.lava}{export the type of parameters mimicking lava:::coef.}
 
 \item{value}{should the name of the coefficient be returned? Else return the coefficients}
 
 \item{keep.var}{should the variance parameters be returned?}
-
-\item{index.model}{returns as an attribute to which of the model is from each parameter. Relevant for multigroup lvm models.}
 }
 \value{
 \code{coefType} either returns a data.table:

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  5 2018 (09:49) 
+## Last-Updated: jan  9 2018 (18:20) 
 ##           By: Brice Ozenne
-##     Update #: 487
+##     Update #: 491
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,17 +16,22 @@
 ### Code:
 
 ## * Documentation - skeleton
-#' @title
-#' @description
+#' @title Pre-computation for the score
+#' @description Pre-compute quantities that are necessary to compute the score of a lvm model.
 #' @name skeleton
 #' 
 #' @param object a latent variable model
+#' @param dt.param.all a \code{data.table} object containing detailing the type of each parameter.
+#' @param param2originalLink matching between the name of the parameter in lava and their label.
+#' @param B pre-computed matrix.
+#' @param alpha.XGamma pre-computed matrix.
+#' @param Lambda pre-computed matrix.
+#' @param Psi pre-computed matrix.
+#' @param OD list containing the pre-computed quantities for the second derivatives. 
 #' @param as.lava should the name of the links be used to name the parameters?
 #' Otherwise uses the labels (when defined) of each parameter.
 #' @param name.endogenous name of the endogenous variables
-#' @param n.endogenous number of endogenous variables
 #' @param name.latent name of the latent variables
-#' @param n.latent number of latent variables
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
 #' @details
@@ -40,11 +45,11 @@
 #' e <- estimate(m,sim(m,1e2))
 #' skeleton(e, as.lava = TRUE,
 #'          name.endogenous = endogenous(e), n.endogenous = 3,
-#'          name.latent = latent(e), n.latent = 1,
+#'          name.latent = latent(e), 
 #'          update.value = FALSE)
 #' skeleton(e, as.lava = TRUE,
 #'          name.endogenous = endogenous(e), n.endogenous = 3,
-#'          name.latent = latent(e), n.latent = 1,
+#'          name.latent = latent(e), 
 #'          update.value = TRUE,
 #'          data = as.matrix(e$data$model.frame), p = pars(e))$value
 #'
@@ -54,12 +59,12 @@
 #'
 #' skeleton(e, as.lava = TRUE,
 #'          name.endogenous = "Y", n.endogenous = 1,
-#'          name.latent = NULL, n.latent = 0,
+#'          name.latent = NULL, 
 #'          update.value = FALSE)$skeleton
 #' 
 #' skeleton(e, as.lava = FALSE,
 #'          name.endogenous = "Y", n.endogenous = 1,
-#'          name.latent = NULL, n.latent = 0,
+#'          name.latent = NULL, 
 #'          update.value = FALSE)$skeleton
 #' 
 #' @export
@@ -831,7 +836,10 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
 ## * .combination
 #' @title Form all unique combinations between two vectors
 #' @description Form all unique combinations between two vectors (removing symmetric combinations).
+#' @name combination
 #'
+#' @param ... vectors
+#' 
 #' @examples
 #' .combination(1,1)
 #' .combination(1:2,1:2)

@@ -10,26 +10,37 @@
 residuals2(object, ...)
 
 \method{residuals2}{gls}(object, cluster = NULL, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-  second.order = FALSE, return.vcov.param = FALSE,
-  return.prepareScore2 = FALSE, ...)
+  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 
 \method{residuals2}{lme}(object, cluster = NULL, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-  second.order = FALSE, return.vcov.param = FALSE,
-  return.prepareScore2 = FALSE, ...)
+  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 
 \method{residuals2}{lvmfit}(object, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-  second.order = FALSE, return.vcov.param = FALSE,
-  return.prepareScore2 = FALSE, ...)
+  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 }
 \arguments{
+\item{object}{a fitted latent variable model.}
+
+\item{...}{arguments to be passed to lower level methods.}
+
+\item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
+
 \item{p}{[optional] vector of parameters at which to evaluate the score.}
 
 \item{data}{[optional] data set.}
 
-\item{x}{a fitted latent variable model.}
+\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+
+\item{as.clubSandwich}{method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.}
+
+\item{second.order}{should the terms relative to the third derivative of the likelihood be be pre-computed?}
+
+\item{return.vcov.param}{should the variance covariance matrix of the parameters be returned?}
+
+\item{return.prepareScore2}{should the quantities that have been pre-computed be returned?}
 }
 \description{
 Compute the residuals from a lvmfit objects

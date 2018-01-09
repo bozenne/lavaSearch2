@@ -9,7 +9,7 @@ symmetrize(M, update.upper = TRUE)
 \arguments{
 \item{M}{a matrix}
 
-\item{upper}{should the upp}
+\item{update.upper}{should the upper extra diagonal terms be updated using the lower extra diagonal terms?}
 }
 \description{
 Complete the upper (or lower) extra-diagonal terms  in order to obtain a symmetric matrix.

@@ -27,13 +27,15 @@ iid2(x, ...)
 
 \item{...}{arguments to be passed to \code{score2}.}
 
-\item{data}{[optional] data set.}
+\item{data}{[optional] the data set.}
 
 \item{adjust.residuals}{Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.#'}
 
 \item{power}{the exponent used for computing the leverage-adjusted residuals. See the details section.}
 
-\item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.#'}
+\item{p}{[optional] the fitted parameters.}
+
+\item{as.clubSandwich}{see the documentation of \code{\link{residuals2}}.}
 }
 \value{
 A matrix.

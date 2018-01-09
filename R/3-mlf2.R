@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan  5 2018 (14:37) 
+## Last-Updated: jan  9 2018 (17:57) 
 ##           By: Brice Ozenne
-##     Update #: 46
+##     Update #: 47
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,7 @@
 #' @title Simultaneous Inference for Multiple Models
 #' @description Calculation of correlation between test statistics from multiple marginal models using the score decomposition. Similar to \code{multcomp::mmm} but with small sample corrections.
 #'
-#' @param .. A names argument list containing the fitted model.
+#' @param ... A names argument list containing the fitted model.
 #' See the documentation of \code{multcomp::mmm} for more details.
 #'
 #' @export

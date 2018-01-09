@@ -10,12 +10,12 @@
 score2(x, ...)
 
 \method{score2}{gls}(object, cluster, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, indiv = TRUE,
-  as.clubSandwich = TRUE, return.vcov.param = FALSE, ...)
+  adjust.residuals = TRUE, indiv = TRUE, as.clubSandwich = TRUE,
+  return.vcov.param = FALSE, ...)
 
 \method{score2}{lme}(object, cluster, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, indiv = TRUE,
-  as.clubSandwich = TRUE, return.vcov.param = FALSE, ...)
+  adjust.residuals = TRUE, indiv = TRUE, as.clubSandwich = TRUE,
+  return.vcov.param = FALSE, ...)
 
 \method{score2}{lvmfit}(object, p = NULL, data = NULL,
   adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
@@ -26,13 +26,13 @@ score2(x, ...)
 
 \item{...}{not used.}
 
+\item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
+
 \item{p}{[optional] vector of parameters at which to evaluate the score.}
 
 \item{data}{[optional] data set.}
 
-\item{adjust.residuals}{Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
-
-\item{power}{the exponent used for computing the leverage-adjusted residuals. See the documentation of the \code{\link{iid2}} function for more details.}
+\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
 \item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
 
