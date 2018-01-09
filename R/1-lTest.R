@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  5 2018 (14:57) 
+## last-updated: jan  9 2018 (12:04) 
 ##           By: Brice Ozenne
-##     Update #: 600
+##     Update #: 603
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,9 +31,9 @@
 #' df.data <- sim(mSim, 1e2)
 #'
 #' ## gold standard
+#' e.lm <- lm(Y~X1+X2, data = df.data)
 #' anova(e.lm)
 #' 
-#' e.lm <- lm(Y~X1+X2, data = df.data)
 #' lTest(e.lm)
 #' 
 #' ## gls model
@@ -80,6 +80,7 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
     p <- attr(dVcov.dtheta, "param")
 
     vcov.param <- attr(dVcov.dtheta, "vcov.param")
+    warn <- attr(vcov.param, "warning")
     attr(dVcov.dtheta, "vcov.param") <- NULL
     keep.param <- dimnames(dVcov.dtheta)[[3]]
 
@@ -91,7 +92,9 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
         C <- diag(1, nrow = n.param, ncol = n.param)
         dimnames(C) <- list(name.param, name.param)
     }else{
-        if(NCOL(C) != n.param){
+        if(NCOL(C) == (n.param-1) && all(names(coef(object)) %in% colnames(C)) ){
+            C <- cbind(C, sigma = 0)
+            }else if(NCOL(C) != n.param){
             stop("Argument \'C\' should be a matrix with ",n.param," columns \n")
         }
         ## if(is.null(colnames(C)) || any(colnames(C) != name.param)){
@@ -179,6 +182,7 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
     }
     
     ## ** export
+    attr(df.table, "warning") <- warn
     return(df.table)
 }
 

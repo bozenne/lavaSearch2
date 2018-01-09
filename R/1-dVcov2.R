@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  5 2018 (17:43) 
+## Last-Updated: jan  9 2018 (12:04) 
 ##           By: Brice Ozenne
-##     Update #: 153
+##     Update #: 165
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,11 +88,12 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
         calcSigma <- function(iParam){ # x <- p.obj
             pp <- p
             pp[names(iParam)] <- iParam
-            vcov.tempo <- attr(residuals2(object, cluster = cluster, p = pp, data = data,
+            res.tempo <- residuals2(object, cluster = cluster, p = pp, data = data,
                                           adjust.residuals = adjust.residuals, power = power,
                                           as.clubSandwich = as.clubSandwich,
-                                          return.vcov.param = TRUE, second.order = FALSE),
-                               "vcov.param")
+                                          return.vcov.param = TRUE, second.order = FALSE)
+            vcov.tempo <- attr(res.tempo, "vcov.param")
+            attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
             return(vcov.tempo)
         }
         
@@ -115,6 +116,8 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
                                 return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
         pS2  <- attr(res.tempo, "prepareScore2")
         vcov.param  <- attr(res.tempo, "vcov.param")
+        attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
+        
         dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dmu.dtheta,
                                        d2mu.dtheta2 = NULL,
                                        dOmega.dtheta = pS2$dOmega.dtheta,
@@ -151,7 +154,7 @@ dVcov2.lme <- dVcov2.gls
 #' @rdname dVcov2
 #' @export
 dVcov2.lvmfit <- function(object, vcov.param = NULL,
-                          adjust.residuals = FALSE, numericDerivative = FALSE, ...){
+                          adjust.residuals = TRUE, numericDerivative = FALSE, ...){
 
     p <- pars(object)
     data <- model.frame(object)
@@ -192,12 +195,15 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
         }else{            
             calcVcov <- function(iParam){ # x <- p.obj
                 pp <- p
-                pp[names(iParam)] <- iParam                
-                return(attr(residuals2(object, p = pp, data = data,
-                                       adjust.residuals = adjust.residuals,
-                                       power = power,
-                                       as.clubSandwich = as.clubSandwich,
-                                       return.vcov.param = TRUE), "vcov.param"))
+                pp[names(iParam)] <- iParam
+                res.tempo <- residuals2(object, p = pp, data = data,
+                                        adjust.residuals = adjust.residuals,
+                                        power = power,
+                                        as.clubSandwich = as.clubSandwich,
+                                        return.vcov.param = TRUE)
+                vcov.tempo <- attr(res.tempo, "vcov.param")
+                attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
+                return(vcov.tempo)
             }
         }
 
@@ -221,7 +227,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                                 return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
         pS2  <- attr(res.tempo, "prepareScore2")
         vcov.param  <- attr(res.tempo, "vcov.param")
-        
+        attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
 
         dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dtheta$dmu.dtheta,
                                        d2mu.dtheta2 = pS2$dtheta2$d2mu.dtheta2,
@@ -268,6 +274,15 @@ dVcov2.lvmfit2 <- function(object, ...){
 `dVcov2<-` <-
   function(x, ..., value) UseMethod("dVcov2<-")
 
+## * dVcov2<-.lm
+#' @rdname dVcov2
+#' @export
+`dVcov2<-.lm` <- function(x, ..., value){
+    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    class(x) <- append("lm2",class(x))
+
+    return(x)
+}    
 ## * dVcov2<-.gls
 #' @rdname dVcov2
 #' @export
@@ -277,7 +292,6 @@ dVcov2.lvmfit2 <- function(object, ...){
 
     return(x)
 }    
-
 ## * dVcov2<-.lme
 #' @rdname dVcov2
 #' @export

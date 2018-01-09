@@ -355,7 +355,7 @@ modelsearch2.default <- function(x, link, data = NULL,
                           nStep = NULL, na.omit = TRUE,
                           alpha = 0.05, method.max = "integration", 
                           ncpus = 1,
-                          display.warnings = TRUE, trace = 1, export.iid = FALSE){
+                          display.warnings = TRUE, trace = 1, export.iid = FALSE, ...){
 
     ## ** preliminary tests    
     method.max <- match.arg(method.max, lava.options()$search.calcMaxDist)
@@ -470,7 +470,8 @@ modelsearch2.default <- function(x, link, data = NULL,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
-                                         export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE) 
+                                         export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE,
+                                         ...) 
            
         }
 
@@ -489,7 +490,7 @@ modelsearch2.default <- function(x, link, data = NULL,
             }
         }
 
-        ### *** identify most pryomising test
+        ### *** identify most promising test
         index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
 
         ### *** update the output

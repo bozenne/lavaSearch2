@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan  5 2018 (17:43) 
+## last-updated: jan  8 2018 (18:21) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 121
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-library(testthat)
+library(tesstthat)
 library(clubSandwich)
 library(nlme)
 library(lme4)
@@ -106,6 +106,7 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
            Y3[mu3:sigma]~1*eta,
            eta~G+Gender)) 
 e.lvm <- estimate(m, dW)
+## lTest(e.lvm)
 
 e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
                data = dL, REML = FALSE)

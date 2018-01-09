@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan  5 2018 (14:13) 
+## Last-Updated: jan  9 2018 (16:45) 
 ##           By: Brice Ozenne
-##     Update #: 761
+##     Update #: 771
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,7 +109,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
     if(object$method!="ML"){
-        stop("Only work with Maximum Likelihood estimation \n")
+        warning("Implemented for Maximum Likelihood estimation not for REML\n")
     }
     
     test.var <- !is.null(object$modelStruct$varStruct)
@@ -252,6 +252,10 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
         colnames(epsilon) <- name.endogenous
         if(as.clubSandwich<2){
             vcov.param <- resLeverage$vcov.param
+            if(!is.null(resLeverage$warn)){
+                attr(epsilon, "warning") <- resLeverage$warn
+            }
+
             resVcov$Omega <- resLeverage$Omega
         }
      
@@ -289,7 +293,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
                               return.vcov.param = FALSE, return.prepareScore2 = FALSE,
                               ...){
 
-### ** normalize arguments
+    ### ** normalize arguments
     ## test
     if(!identical(class(object),"lvmfit")){
         wrongClass <- paste(setdiff(class(object),"lvmfit"), collapse = " ")
@@ -373,7 +377,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         colnames(vcov.param) <- colnames(Info)
     }        
     ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
-
+    
     ### ** Normalize residuals
     if(adjust.residuals){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
@@ -388,9 +392,13 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
             as.double(resLeverage$powerIH[[iG]] %*% epsilon[iG,])
         }))
         colnames(epsilon) <- name.endogenous
-
+        
         if(as.clubSandwich<2){
             vcov.param <- resLeverage$vcov.param
+            if(!is.null(resLeverage$warn)){
+                attr(epsilon, "warning") <- resLeverage$warn
+            }
+
             Omega <- resLeverage$Omega
         }
         ls.hat <- resLeverage$hat        
@@ -482,22 +490,29 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
 
     ### ** correct vcov
     Omega <- Omega + Reduce("+",ls.biasOmega)/n.cluster
-    
+
     Info <- .information2(dmu.dtheta = dmu.dtheta,
                           dOmega.dtheta = dOmega.dtheta,
                           Omega = Omega, ls.indexOmega = ls.indexOmega,
                           hat = ls.H,
                           n.param = n.param, name.param = name.param,
-                          n.cluster = n.cluster)
-    vcov.param <- chol2inv(chol(Info))
+                          n.cluster = n.cluster)    
+    vcov.param <- try(chol2inv(chol(Info)), silent = TRUE)
+    if(class(vcov.param) %in% "try-error"){
+      warn <- vcov.param
+      vcov.param <- solve(Info)
+    }else{
+      warn <- NULL
+    }
     rownames(vcov.param) <- rownames(Info)
     colnames(vcov.param) <- colnames(Info)
-    
+
 ### ** export
     out <- list(powerIH = ls.powerIH,
                 hat = ls.H,
                 vcov.param = vcov.param,
-                Omega = Omega)
+                Omega = Omega, 
+                warn = warn)
     
     return(out)
 }

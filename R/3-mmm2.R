@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan  5 2018 (13:52) 
+## Last-Updated: jan  8 2018 (11:06) 
 ##           By: Brice Ozenne
-##     Update #: 53
+##     Update #: 55
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,7 +35,7 @@ coef.mmm2 <- multcomp:::coef.mmm
 
 ### set-up total covariance matrix
 vcov.mmm2 <- function(object, return.null = TRUE,
-                      adjust.residuals = TRUE, rescale = TRUE,
+                      adjust.residuals = TRUE, robust = TRUE,
                       ...) {
 
     name.coef <- names(coef(object))
@@ -56,7 +56,7 @@ vcov.mmm2 <- function(object, return.null = TRUE,
     M.iid <- do.call(cbind, ls.iid)
 
     ## ** Rescale iid with sd/sd.robust 
-    if(rescale){
+    if(robust){
         ls.sd <- lapply(object, function(x){
             iVcov <- attr(residuals2(x, adjust.residuals = adjust.residuals,
                                      power = 1/2, return.vcov.param = TRUE), "vcov.param")
