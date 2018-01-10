@@ -7,24 +7,21 @@
 \alias{score2.lvmfit}
 \title{Compute the score directly from the gaussian density}
 \usage{
-score2(x, ...)
+score2(object, ...)
 
-\method{score2}{gls}(object, cluster, p = NULL, data = NULL,
-  adjust.residuals = TRUE, indiv = TRUE, as.clubSandwich = TRUE,
+\method{score2}{gls}(object, cluster, p = NULL, data = NULL, indiv = TRUE,
   return.vcov.param = FALSE, ...)
 
-\method{score2}{lme}(object, cluster, p = NULL, data = NULL,
-  adjust.residuals = TRUE, indiv = TRUE, as.clubSandwich = TRUE,
+\method{score2}{lme}(object, cluster, p = NULL, data = NULL, indiv = TRUE,
   return.vcov.param = FALSE, ...)
 
-\method{score2}{lvmfit}(object, p = NULL, data = NULL,
-  adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-  indiv = TRUE, return.vcov.param = FALSE, ...)
+\method{score2}{lvmfit}(object, p = NULL, data = NULL, indiv = TRUE,
+  return.vcov.param = FALSE, ...)
 }
 \arguments{
-\item{x}{a linear model or a latent variable model.}
+\item{object}{a linear model or a latent variable model.}
 
-\item{...}{not used.}
+\item{...}{Arguments to be passed to \code{\link{residuals2}}}
 
 \item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
 
@@ -32,11 +29,9 @@ score2(x, ...)
 
 \item{data}{[optional] data set.}
 
-\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
-
 \item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
 
-\item{as.clubSandwich}{The method use to apply the \code{power} argument.}
+\item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
 }
 \value{
 A matrix.

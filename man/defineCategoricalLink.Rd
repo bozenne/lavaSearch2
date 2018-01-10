@@ -5,14 +5,12 @@
 \alias{defineCategoricalLink.lvm}
 \title{Identify categorical links in lvm}
 \usage{
-defineCategoricalLink(x, ...)
+defineCategoricalLink(object, link, data)
 
-\method{defineCategoricalLink}{lvm}(x, link = NULL, data = NULL)
+\method{defineCategoricalLink}{lvm}(object, link = NULL, data = NULL)
 }
 \arguments{
-\item{x}{a lvm model.}
-
-\item{...}{arguments to be passed to lower level methods.}
+\item{object}{a lvm model.}
 
 \item{link}{the links to be analyzed. If NULL, all the coefficients from the lvm model are used instead.}
 

@@ -86,7 +86,7 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
         
       }
     }else{
-      data <- try(model.frame(object), silent = TRUE)
+      data <- try(stats::model.frame(object), silent = TRUE)
     }
     
     ## check error

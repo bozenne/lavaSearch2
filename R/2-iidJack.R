@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: okt  5 2017 (13:47) 
+## last-updated: jan 10 2018 (16:44) 
 ##           By: Brice Ozenne
-##     Update #: 248
+##     Update #: 250
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -156,7 +156,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
 
     ## ** warper
     warper <- function(i){ # i <- "31"
-        xnew <- tryWithWarnings(update(x, data = myData[myData[[grouping]]!=i,]))
+        xnew <- tryWithWarnings(stats::update(x, data = myData[myData[[grouping]]!=i,]))
         if(!is.null(xnew$error)){
             xnew$value <- rep(NA, n.coef)
         }else{
@@ -214,7 +214,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
         toExport <- c(unique(toExport),"tryWithWarnings")
         
         #sapply(as.list(x$call),as.character)
-        i <- NULL # for CRAN check
+        i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(
                                 foreach::foreach(i = 1:n.group, .packages =  vec.packages,
                                                  .export = toExport,

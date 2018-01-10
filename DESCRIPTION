@@ -18,7 +18,9 @@ Imports:
     ggplot2,
     inline,
     MASS,
+    Matrix,
     methods,
+    multcomp,
     mvtnorm,
     nlme,
     numDeriv,
@@ -30,7 +32,6 @@ Imports:
     tmvtnorm,
     utils
 Suggests:
-    multcomp,
     pbapply,
     survival,
     testthat

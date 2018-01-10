@@ -87,7 +87,6 @@ calcType1postSelection(levelC, quantile.previous = z2, distribution = "gaussian"
                         mu = mu, Sigma = Sigma, correct = FALSE)
 }
 
-
 }
 \author{
 Brice Ozenne

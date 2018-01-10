@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan 10 2018 (13:26) 
+## Last-Updated: jan 10 2018 (15:49) 
 ##           By: Brice Ozenne
-##     Update #: 123
+##     Update #: 130
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,18 +23,20 @@
 .coef2.gls <- function(object){
 
      ## *** mean parameters
-    mean.coef <- coef(object)
+    mean.coef <- stats::coef(object)
 
     ## *** variance parameters
     if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(sigma2 = sigma(object),coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
+        var.coef <- c(sigma2 = stats::sigma(object),
+                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)
+                      )^2
     }else{
-        var.coef <- c(sigma2 = sigma(object)^2)
+        var.coef <- c(sigma2 = stats::sigma(object)^2)
     }
 
     ## *** covariance parameters
     if(!is.null(object$modelStruct$corStruct)){
-        cor.coef <- coef(object$modelStruct$corStruct, unconstrained = FALSE)
+        cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
         names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
     }else{
         cor.coef <- NULL
@@ -54,22 +56,22 @@
 .coef2.lme <- function(object){
 
      ## *** mean parameters
-    mean.coef <- fixef(object)
+    mean.coef <- nlme::fixef(object)
 
     ## *** variance parameters
     if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(sigma2 = sigma(object),coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
+        var.coef <- c(sigma2 = stats::sigma(object),stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
     }else{
-        var.coef <- c(sigma2 = sigma(object)^2)
+        var.coef <- c(sigma2 = stats::sigma(object)^2)
     }
 
     ## *** random effect parameters
-    random.coef <- as.double(getVarCov(object))    
+    random.coef <- as.double(nlme::getVarCov(object))    
     names(random.coef) <- paste0("ranCoef",1:length(random.coef))
 
      ## *** correlation parameters
     if(!is.null(object$modelStruct$corStruct)){
-        cor.coef <- coef(object$modelStruct$corStruct, unconstrained = FALSE)
+        cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
         names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
     }else{
         cor.coef <- NULL
@@ -231,9 +233,9 @@
     ## ** Diagonal terms
     name.other <- setdiff(names(var.coef),"sigma2")
     if(length(name.other)>0){            
-        sigma2.base <- setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
+        sigma2.base <- stats::setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
     }else{
-        sigma2.base <- setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
+        sigma2.base <- stats::setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
     }
     template <- diag(as.double(sigma2.base),
                      nrow = n.endogenous, ncol = n.endogenous)

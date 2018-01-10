@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  9 2018 (18:20) 
+## Last-Updated: jan 10 2018 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 491
+##     Update #: 521
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,6 +34,8 @@
 #' @param name.latent name of the latent variables
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
+#' @param ... [internal] Only used by the generic method.
+#' 
 #' @details
 #' When the use specify names for the parameters (e.g. Y1[mu:sigma]) or uses constrains (Y1~beta*X1), \code{as.lava=FALSE} will use the names specified by the user (e.g. mu, sigma, beta) while \code{as.lava=TRUE} will use the name of the first link defining the parameter.
 #'
@@ -76,42 +78,46 @@
 #' @rdname skeleton
 #' @export
 skeleton.lvm <- function(object, as.lava,
-                         name.endogenous, name.latent){
+                         name.endogenous, name.latent,
+                         ...){
 
+    detail <- lava <- originalLink <- param <- value <- X <- Y <- . <- NULL ## [:for CRAN check] data.table
+    
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
 
 ### ** prepare
     dt.param.all <- coefType(object, as.lava = FALSE)
     if(as.lava){
-        param2originalLink <- dt.param.all[!is.na(lava)][,setNames(originalLink,param)]
+        param2originalLink <- dt.param.all[!is.na(lava), stats::setNames(originalLink, param)]
     }else{
-        param2originalLink <- dt.param.all[!is.na(param),setNames(param,param)]
+        param2originalLink <- dt.param.all[!is.na(param), stats::setNames(param,param)]
     }
     
     skeleton <- list()
     value <- list()
 
-### ** Measurement model
+    ### ** Measurement model
+
     ## *** nu
-    dt.param.nu <-  dt.param.all[detail=="nu",.(value,param,Y),by="name"]
-    value$nu <- setNames(dt.param.nu$value,dt.param.nu$Y)
-    skeleton$nu <- setNames(param2originalLink[dt.param.nu$param],dt.param.nu$Y)
+    dt.param.nu <-  dt.param.all[detail=="nu", .(value, param, Y), by="name"]
+    value$nu <- dt.param.nu[,stats::setNames(value,Y)]
+    skeleton$nu <- dt.param.nu[,stats::setNames(param2originalLink[param],Y)]
 
     ## *** X K
-    dt.param.K <- dt.param.all[detail=="K",.(value,param,X),by="Y"]
+    dt.param.K <- dt.param.all[detail=="K", .(value, param, X), by="Y"]
 
     if(NROW(dt.param.K)>0){
-        value$K <- setNames(lapply(1:n.endogenous, function(iEndogenous){
-            dt.param.K$value[dt.param.K$Y==name.endogenous[iEndogenous]]
+        value$K <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){ # iEndogenous <- 1
+            dt.param.K[Y == name.endogenous[iEndogenous], value]
         }), name.endogenous)
             
-        skeleton$K <- setNames(lapply(1:n.endogenous, function(iEndogenous){
-            param2originalLink[dt.param.K$param[dt.param.K$Y==name.endogenous[iEndogenous]]]
+        skeleton$K <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){
+            dt.param.K[Y == name.endogenous[iEndogenous], param2originalLink[param]]
         }), name.endogenous)
     
-        skeleton$XK <- setNames(lapply(1:n.endogenous, function(iEndogenous){
-            dt.param.K$X[dt.param.K$Y==name.endogenous[iEndogenous]]
+        skeleton$XK <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){
+            dt.param.K[dt.param.K$Y == name.endogenous[iEndogenous], X]
         }), name.endogenous)
     }
     
@@ -125,10 +131,10 @@ skeleton.lvm <- function(object, as.lava,
         ## update according to the model
         dt.param.Lambda <- dt.param.all[detail %in% "Lambda",
                                        .(index = which(name.latent %in% X) + n.latent*(which(name.endogenous %in% Y)-1), param, value),
-                                       by = name]
+                                       by = "name"]
         
-        skeleton$Lambda[dt.param.Lambda[is.na(value)]$index] <- setNames(param2originalLink[dt.param.Lambda[is.na(value)]$param],dt.param.Lambda$Y)
-        value$Lambda[dt.param.Lambda[!is.na(value)]$index] <- setNames(dt.param.Lambda[!is.na(value)]$value,dt.param.Lambda$Y)
+        skeleton$Lambda[dt.param.Lambda[is.na(value),index]] <- dt.param.Lambda[is.na(value), stats::setNames(param2originalLink[param],dt.param.Lambda$Y)]
+        value$Lambda[dt.param.Lambda[!is.na(value),index]] <- dt.param.Lambda[!is.na(value), stats::setNames(value,Y)]
         value$Lambda[!is.na(skeleton$Lambda)] <- NA
     }
     
@@ -142,10 +148,10 @@ skeleton.lvm <- function(object, as.lava,
     ## update according to the model
     dt.param.Sigma <- dt.param.all[detail %in% c("Sigma_var","Sigma_cov"),
                                    .(index = which(name.endogenous %in% X) + n.endogenous*(which(name.endogenous %in% Y)-1), param, value),
-                                   by = name]
+                                   by = "name"]
     
-    skeleton$Sigma[dt.param.Sigma[is.na(value)]$index] <- param2originalLink[dt.param.Sigma[is.na(value)]$param]
-    value$Sigma[dt.param.Sigma[!is.na(value)]$index] <- dt.param.Sigma[!is.na(value)]$value
+    skeleton$Sigma[dt.param.Sigma[is.na(value),index]] <- dt.param.Sigma[is.na(value),param2originalLink[param]]
+    value$Sigma[dt.param.Sigma[!is.na(value),index]] <- dt.param.Sigma[!is.na(value),value]
 
     ## symmetrize
     skeleton$Sigma <- symmetrize(skeleton$Sigma, update.upper = TRUE)
@@ -155,23 +161,24 @@ skeleton.lvm <- function(object, as.lava,
 ### ** Structural model
     if(n.latent>0){
         ## *** alpha 
-        dt.param.alpha <-  dt.param.all[detail=="alpha",.(value,param,Y),by="name"]
-        value$alpha <- setNames(dt.param.alpha$value,dt.param.alpha$Y)
-        skeleton$alpha <- param2originalLink[setNames(dt.param.alpha$param,dt.param.alpha$Y)]
+        dt.param.alpha <-  dt.param.all[detail=="alpha", list(value,param,Y),by="name"]
+        value$alpha <- stats::setNames(dt.param.alpha$value,dt.param.alpha$Y)
+        skeleton$alpha <- dt.param.alpha[, param2originalLink[stats::setNames(param,Y)]]
 
         ## *** X Gamma
-        dt.param.Gamma <- dt.param.all[detail=="Gamma",.(value,param,X),by="Y"]
+        dt.param.Gamma <- dt.param.all[detail=="Gamma", .(value,param,X),by="Y"]
 
         if(NROW(dt.param.Gamma)>0){
-            value$Gamma <- setNames(lapply(1:n.latent, function(iLatent){
+            
+            value$Gamma <- stats::setNames(lapply(1:n.latent, function(iLatent){
                 dt.param.Gamma$value[dt.param.Gamma$Y==name.latent[iLatent]]
             }), name.latent)
             
-            skeleton$Gamma <- setNames(lapply(1:n.latent, function(iLatent){
+            skeleton$Gamma <- stats::setNames(lapply(1:n.latent, function(iLatent){
                 param2originalLink[dt.param.Gamma$param[dt.param.Gamma$Y==name.latent[iLatent]]]
             }), name.latent)
     
-            skeleton$XGamma <- setNames(lapply(1:n.latent, function(iLatent){
+            skeleton$XGamma <- stats::setNames(lapply(1:n.latent, function(iLatent){
                 dt.param.Gamma$X[dt.param.Gamma$Y==name.latent[iLatent]]
             }), name.latent)
         }
@@ -185,9 +192,9 @@ skeleton.lvm <- function(object, as.lava,
 
         if(any("B" %in% dt.param.all$detail)){
             ## update according to the model
-            dt.param.B <- dt.param.all[detail == "B", .(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value), by = name]
-            skeleton$B[dt.param.B[is.na(value)]$index] <- param2originalLink[dt.param.B[is.na(value),param]]
-            value$B[dt.param.B[!is.na(value)]$index] <- dt.param.B[!is.na(value),value]
+            dt.param.B <- dt.param.all[detail == "B", .(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value), by = "name"]
+            skeleton$B[dt.param.B[is.na(value), index]] <- dt.param.B[is.na(value), param2originalLink[param]]
+            value$B[dt.param.B[!is.na(value), index]] <- dt.param.B[!is.na(value),value]
             value$B[!is.na(skeleton$B)] <- NA            
         }
     
@@ -199,9 +206,9 @@ skeleton.lvm <- function(object, as.lava,
                                dimnames = list(name.latent,name.latent))
     
         ## update according to the model
-        dt.param.Psi <- dt.param.all[detail %in% c("Psi_var","Psi_cov"), .(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value, Y), by = name]
-        skeleton$Psi[dt.param.Psi[is.na(value)]$index] <- param2originalLink[dt.param.Psi[is.na(value)]$param]
-        value$Psi[dt.param.Psi[!is.na(value)]$index] <- dt.param.Psi[!is.na(value)]$value
+        dt.param.Psi <- dt.param.all[detail %in% c("Psi_var","Psi_cov"), list(index = which(name.latent %in% X) + n.latent*(which(name.latent %in% Y)-1), param, value, Y), by = "name"]
+        skeleton$Psi[dt.param.Psi[is.na(value), index]] <- dt.param.Psi[is.na(value), param2originalLink[param]]
+        value$Psi[dt.param.Psi[!is.na(value), index]] <- dt.param.Psi[!is.na(value), value]
 
         ## symmetrize
         skeleton$Psi <- symmetrize(skeleton$Psi, update.upper = TRUE)
@@ -209,7 +216,7 @@ skeleton.lvm <- function(object, as.lava,
         value$Psi[!is.na(skeleton$Psi)] <- NA
     }
     
-### ** export
+    ### ** export
     return(list(skeleton = skeleton,
                 value = value,
                 dt.param = dt.param.all,
@@ -223,8 +230,9 @@ skeleton.lvm <- function(object, as.lava,
 #' @export
 skeleton.lvmfit <- function(object, as.lava,
                             p, data,
-                            name.endogenous, name.latent){
-
+                            name.endogenous, name.latent,
+                            ...){
+ 
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
     n.data <- NROW(data)
@@ -326,11 +334,13 @@ skeletonDtheta.lvm <- function(object, data,
                                dt.param.all, param2originalLink,
                                name.endogenous, name.latent, ...){
 
+    detail <- factice <- marginal <- param <- value <- X <- Y <- . <- NULL ## [:for CRAN check] data.table
+       
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
     
     dt.param <- dt.param.all[is.na(value) & marginal == FALSE & factice == FALSE]
-    Utype.by.detail <- dt.param[,.(n.type = length(unique(detail))), by = param][["n.type"]]
+    Utype.by.detail <- dt.param[, list(n.type = length(unique(detail))), by = param][["n.type"]]
     if(any(Utype.by.detail>1)){
         stop("cannot constrain two parameters of different types to be equal \n")
     }
@@ -351,8 +361,8 @@ skeletonDtheta.lvm <- function(object, data,
     dB.dtheta <- list()
     dPsi.dtheta <- list()
 
-    type <- setNames(vector(mode = "character", n.param),name.originalLink)
-    toUpdate <- setNames(vector(mode = "logical", n.param),name.originalLink)
+    type <- stats::setNames(vector(mode = "character", n.param),name.originalLink)
+    toUpdate <- stats::setNames(vector(mode = "logical", n.param),name.originalLink)
     
     ### ** Compute derivative or prepare for the derivative
     for(iName in name.param){ # iName <- name.param[1]
@@ -480,7 +490,7 @@ skeletonDtheta.lvmfit <- function(object, data,
     
     if(any(OD$toUpdate)){
         type2update <- OD$type[OD$toUpdate]
-            
+        
         OD$iIB <- solve(diag(1,n.latent,n.latent)-B)
         OD$alpha.XGamma.iIB <- alpha.XGamma %*% OD$iIB
         OD$iIB.Lambda <-  OD$iIB %*% Lambda    
@@ -556,6 +566,8 @@ skeletonDtheta.lvmfit <- function(object, data,
 #' @export
 skeletonDtheta2.lvm <- function(object, data, dt.param.all,
                                 param2originalLink, name.latent, ...){
+
+    detail <- factice <- marginal <- NULL ## [:for CRAN check] data.table
 
     dt.param <- dt.param.all[is.na(value) & marginal == FALSE & factice == FALSE]
     n.latent <- length(name.latent)

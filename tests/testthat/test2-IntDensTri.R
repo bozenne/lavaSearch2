@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:32) 
 ## Version: 
-## last-updated: aug 31 2017 (16:40) 
+## last-updated: jan 10 2018 (17:07) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 8
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@ test_that("Integrate standard gaussian density (2D)", {
     Sigma <- diag(p)
     mu <- rep(0, p)
 
-    for(n in c(5,10,20,50,100)){
+    for(n in c(5,10,20,50,100)){ # n <- 5
         res <- IntDensTri(mu = mu, Sigma = Sigma, n=n, x.min=0)
         expect_equal(res$value,
                      1/2,

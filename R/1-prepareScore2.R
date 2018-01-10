@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  9 2018 (18:04) 
+## last-updated: jan 10 2018 (15:34) 
 ##           By: Brice Ozenne
-##     Update #: 717
+##     Update #: 725
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,7 +35,8 @@
 #' @param data [optional] data set.
 #' @param name.endogenous [optional] name of the endogenous variables
 #' @param name.latent [optional] name of the latent variables
-#'
+#' @param ... [internal] Only used by the generic method.
+#' 
 #' @details For lvmfit objects, there are two levels of pre-computation:
 #' \itemize{
 #' \item a basic one that do no involve the model parameter
@@ -59,7 +60,8 @@
 prepareScore2.gls <- function(object, X, 
                               param, attr.param,
                               second.order,
-                              n.cluster, n.endogenous, name.endogenous, index.obs){
+                              n.cluster, n.endogenous, name.endogenous, index.obs,
+                              ...){
     
 ### ** prepare
     
@@ -77,9 +79,9 @@ prepareScore2.gls <- function(object, X,
     ## *** variance terms
     name.other <- setdiff(names(var.coef),"sigma2")
     if("NULL" %in% class.var){            
-        sigma2.base <- setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
+        sigma2.base <- stats::setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
     }else{
-        sigma2.base <- setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
+        sigma2.base <- stats::setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
     }
     sigma2.base0 <- sigma2.base/var.coef["sigma2"]
 
@@ -224,7 +226,7 @@ prepareScore2.gls <- function(object, X,
 prepareScore2.lme <- function(object, X, 
                               param, attr.param,
                               second.order,
-                              n.cluster, n.endogenous, name.endogenous, index.obs){
+                              n.cluster, n.endogenous, name.endogenous, index.obs, ...){
 
     resGLS <- prepareScore2.gls(object, X = X, param = param, attr.param = attr.param,
                                 n.cluster = n.cluster,
@@ -257,7 +259,8 @@ prepareScore2.lme <- function(object, X,
 #' @rdname prepareScore2
 #' @export
 prepareScore2.lvm <- function(object, data, second.order,
-                              name.endogenous = NULL, name.latent = NULL){
+                              name.endogenous = NULL, name.latent = NULL,
+                              ...){
 
     pS2 <- list()
     
@@ -293,7 +296,7 @@ prepareScore2.lvm <- function(object, data, second.order,
 #' @export
 prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
                                  name.endogenous = NULL, name.latent = NULL,
-                                 second.order = FALSE){
+                                 second.order = FALSE, ...){
 
     ### ** normalize arguments
     if(is.null(name.endogenous)){name.endogenous <- endogenous(object)}
@@ -302,7 +305,7 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     n.latent <- length(name.latent)
 
     if(is.null(data)){
-        data <- model.frame(object)
+        data <- stats::model.frame(object)
     }
     if(!is.matrix(data)){
         data <- as.matrix(data)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: jan  9 2018 (17:12) 
+## last-updated: jan 10 2018 (16:44) 
 ##           By: Brice Ozenne
-##     Update #: 378
+##     Update #: 383
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -131,7 +131,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     # center to be under the null
     # scale since we want the distribution of the Wald statistic (i.e. statistic with unit variance)
     iid.statistic <- scale(iid.all, center = TRUE, scale = TRUE)
-    Sigma.statistic <- cov(iid.statistic, use = "pairwise.complete.obs")
+    Sigma.statistic <- stats::cov(iid.statistic, use = "pairwise.complete.obs")
     out <- list(p.adjust = NULL, z = NULL, Sigma = Sigma.statistic[index.new,index.new,drop=FALSE])
     
     ## ** Definition of the functions used to compute the quantiles
@@ -180,7 +180,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
             opts <- NULL
         }
 
-        value <- NULL # for CRAN check
+        value <- NULL # [:for CRAN check] foreach
         out$p.adjust <- foreach::`%dopar%`(
                                      foreach::foreach(value = index.new,
                                                       .packages = c("tmvtnorm","mvtnorm"),
@@ -205,7 +205,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         }
                         
     }
-    out$p.adjust <- setNames(out$p.adjust, names(statistic))
+    out$p.adjust <- stats::setNames(out$p.adjust, names(statistic))
         
     if(trace > 0){ cat("done \n") }
 
@@ -237,7 +237,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     # center to be under the null
     # scale since we want the distribution of the Wald statistic (i.e. statistic with unit variance)
     iid.statistic <- scale(iid.all, center = TRUE, scale = TRUE)
-    Sigma.statistic <- cov(iid.statistic, use = "pairwise.complete.obs")
+    Sigma.statistic <- stats::cov(iid.statistic, use = "pairwise.complete.obs")
 
     ## ** Computation
     if(trace > 0){ cat("Bootsrap simulations to get the 95% quantile of the max statistic: ") }
@@ -251,7 +251,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
           doSNOW::registerDoSNOW(cl)
       }
   
-        i <- NULL # for CRAN check
+        i <- NULL # [:for CRAN check] foreach
         distMax <- foreach::`%dopar%`(
                                 foreach::foreach(i = 1:ncpus, .packages =  c("MASS"),
                                                  .export = "calcDistMax",
@@ -288,7 +288,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
 
     ## ** export
     out <- list()
-    out$z <- quantile(distMax, probs = 1-alpha, na.rm = TRUE)
+    out$z <- stats::quantile(distMax, probs = 1-alpha, na.rm = TRUE)
     out$p.adjust <- sapply(abs(statistic), function(x){mean(distMax>x,na.rm=TRUE)})
     out$Sigma <- Sigma.statistic
     out$correctedLevel <- NA
@@ -347,12 +347,12 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
         }else if(method == "residual"){
             iid.sim <- MASS::mvrnorm(n,rep(0,NCOL(sigma)),sigma)                    
         }else if(method == "wild"){
-            e <- rnorm(n,mean=0,sd=1)
+            e <- stats::rnorm(n,mean=0,sd=1)
             iid.sim <- sapply(1:NCOL(sigma),function(x){e*iid[,x]})        
         }
         if(!is.null(quantile.previous)){
             iid.previous <- iid.sim[,index.previous]
-            test.previous <- apply(iid.previous,2,function(x){sqrt(n)*mean(x)/sd(x)})
+            test.previous <- apply(iid.previous,2,function(x){sqrt(n)*mean(x)/stats::sd(x)})
             max.previous <- max(abs(test.previous))        
             if(max.previous<quantile.previous){
                 iRep <- iRep + 1
@@ -367,7 +367,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     
     ## ** compute the bootstrap test statistic
     if(cv){
-        Test <- apply(iid.sim,2,function(x){sqrt(n)*mean(x)/sd(x)})
+        Test <- apply(iid.sim,2,function(x){sqrt(n)*mean(x)/stats::sd(x)})
     }else{
         Test <- NA
     }

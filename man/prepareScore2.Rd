@@ -15,21 +15,21 @@
 prepareScore2(object, ...)
 
 \method{prepareScore2}{gls}(object, X, param, attr.param, second.order,
-  n.cluster, n.endogenous, name.endogenous, index.obs)
+  n.cluster, n.endogenous, name.endogenous, index.obs, ...)
 
 \method{prepareScore2}{lme}(object, X, param, attr.param, second.order,
-  n.cluster, n.endogenous, name.endogenous, index.obs)
+  n.cluster, n.endogenous, name.endogenous, index.obs, ...)
 
 prepareScore2(x, ...) <- value
 
 \method{prepareScore2}{lvmfit}(x, ...) <- value
 
 \method{prepareScore2}{lvm}(object, data, second.order,
-  name.endogenous = NULL, name.latent = NULL)
+  name.endogenous = NULL, name.latent = NULL, ...)
 
 \method{prepareScore2}{lvmfit}(object, data = NULL, p = NULL,
   usefit = TRUE, name.endogenous = NULL, name.latent = NULL,
-  second.order = FALSE)
+  second.order = FALSE, ...)
 
 prepareScore2(x, ...) <- value
 
@@ -37,6 +37,8 @@ prepareScore2(x, ...) <- value
 }
 \arguments{
 \item{object}{a latent variable model.}
+
+\item{...}{[internal] Only used by the generic method.}
 
 \item{X}{the design matrix.}
 

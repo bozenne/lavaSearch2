@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan  8 2018 (11:06) 
+## Last-Updated: jan 10 2018 (14:52) 
 ##           By: Brice Ozenne
-##     Update #: 55
+##     Update #: 56
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,7 +38,7 @@ vcov.mmm2 <- function(object, return.null = TRUE,
                       adjust.residuals = TRUE, robust = TRUE,
                       ...) {
 
-    name.coef <- names(coef(object))
+    name.coef <- names(stats::coef(object))
     n.coef <- length(name.coef)
     
     if(return.null){

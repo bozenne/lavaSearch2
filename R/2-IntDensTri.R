@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: jan 10 2018 (14:36) 
+## last-updated: jan 10 2018 (16:47) 
 ##           By: Brice Ozenne
-##     Update #: 453
+##     Update #: 456
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,7 +109,7 @@
 IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
                        type = "double", proba.min = 1e-6, prune = NULL, distribution = "pmvnorm"){
 
-    interior <- NULL
+    area <- interior <- weight <- NULL ## [:for CRAN check] data.table
     
     ## ** normalize arguments
     type <- match.arg(type, c("raw","fine","double"))
@@ -123,7 +123,7 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
         if(distribution=="pmvnorm"){
             prune <- ceiling(abs(qmvnorm(proba.min, sigma = diag(1,d.y))$quantile))
         }else if(distribution=="pmvt"){
-            prune <- ceiling(abs(qmvt(proba.min, sigma = diag(1,d.y), df = df)$quantile))
+            prune <- ceiling(abs(mvtnorm::qmvt(proba.min, sigma = diag(1,d.y), df = df)$quantile))
         }else {
             stop("distribution must be either \"pmvnorm\" or \"pmvt\" \n")
         }
@@ -167,11 +167,11 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
     })
 
     if(type=="double"){
-        area.interior <- grid[interior==TRUE,sum(.SD$area*.SD$weight)]
-        area.exterior <- grid[interior==FALSE,sum(.SD$area*.SD$weight)]
+        area.interior <- grid[interior==TRUE,sum(area*weight)]
+        area.exterior <- grid[interior==FALSE,sum(area*weight)]
         total.area <- area.interior + (area.exterior-area.interior)/2
     }else{
-        total.area <- grid[,sum(.SD$area*.SD$weight)]
+        total.area <- grid[,sum(area*weight)]
     }
 
     ## ** export

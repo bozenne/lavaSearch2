@@ -14,10 +14,10 @@
 \usage{
 skeleton(object, ...)
 
-\method{skeleton}{lvm}(object, as.lava, name.endogenous, name.latent)
+\method{skeleton}{lvm}(object, as.lava, name.endogenous, name.latent, ...)
 
 \method{skeleton}{lvmfit}(object, as.lava, p, data, name.endogenous,
-  name.latent)
+  name.latent, ...)
 
 skeletonDtheta(object, ...)
 
@@ -37,6 +37,8 @@ skeletonDtheta2(object, ...)
 }
 \arguments{
 \item{object}{a latent variable model}
+
+\item{...}{[internal] Only used by the generic method.}
 
 \item{as.lava}{should the name of the links be used to name the parameters?
 Otherwise uses the labels (when defined) of each parameter.}

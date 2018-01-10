@@ -24,7 +24,7 @@ residuals2(object, ...)
 \arguments{
 \item{object}{a fitted latent variable model.}
 
-\item{...}{arguments to be passed to lower level methods.}
+\item{...}{[internal] Only used by the generic method.}
 
 \item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
 
@@ -38,7 +38,7 @@ residuals2(object, ...)
 
 \item{second.order}{should the terms relative to the third derivative of the likelihood be be pre-computed?}
 
-\item{return.vcov.param}{should the variance covariance matrix of the parameters be returned?}
+\item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
 
 \item{return.prepareScore2}{should the quantities that have been pre-computed be returned?}
 }

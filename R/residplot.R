@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
 ## Version: 
-## last-updated: jan 10 2018 (14:35) 
+## last-updated: jan 10 2018 (17:11) 
 ##           By: Brice Ozenne
-##     Update #: 111
+##     Update #: 118
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -69,6 +69,8 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
                              sd.kernel = 0.5, kernel = "dnorm", plot.weights = FALSE, ncol = NULL,
                              smooth.mean = TRUE, smooth.sd = TRUE, plot = TRUE,...){
 
+    fitted <- observed <- NULL ## [:for CRAN check] data.table
+    
     if(any(obs.variables %in% lava::vars(object) == FALSE)){
         missing.var <- obs.variables[obs.variables %in% lava::vars(object) == FALSE]
         stop("variable \"",paste(missing.var, collapse = "\"\""),"\" not found \n",
@@ -97,7 +99,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
     }
 
     ## observed values
-    res <- model.frame(object)
+    res <- stats::model.frame(object)
     if(is.data.table(res)){
         data <- res[,.SD,.SDcols=obs.variables]
     }else{
@@ -110,12 +112,12 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
                      variable.name = "endogenous")
     
     ## predicted values
-    #predicted <- as.data.table(predict(object)[,variables])
+    #predicted <- as.data.table(stats::predict(object)[,variables])
     #predicted[, "XXXXIdXXXX" := 1:.N]
 
     ## residuals values
     dt.residuals <- as.data.table(stats::residuals(object)[,res.variables])
-    ## dt.residuals <- as.data.table(stats::predict(object)[,res.variables])
+    ## dt.residuals <- as.data.table(stats::stats::predict(object)[,res.variables])
     names(dt.residuals) <- res.variables
     dt.residuals[, "XXXXIdXXXX" := 1:.N]
 
@@ -127,7 +129,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
     
     ## compute standard deviation
     setkeyv(dtL.all, "observed")
-    dtL.all[, "sdY" := smoothSD(Y = .SD$fitted, time = .SD$observed,
+    dtL.all[, "sdY" := smoothSD(Y = fitted, time = observed,
                                 plot.weights = plot.weights,
                                 sd.kernel = sd.kernel, kernel = kernel),
             by = "endogenous"]
@@ -139,7 +141,7 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
         gg <- gg + geom_smooth(method = "lm",aes(color = "mean"))
     }
     if(smooth.sd){
-        sdY <- NULL ## for CRAN check (don't want to move to aes_string because color is indeed a character)
+        sdY <- NULL ## [:for CRAN check] we don't want to move to aes_string because color is indeed a character
         gg <- gg + geom_line(aes(y = sdY, color = "standard devation"))
     }
     if(is.null(ncol)){
@@ -170,7 +172,7 @@ smoothSD <- function(Y, time, sd.kernel, kernel, plot.weights){
         weight <- abs(do.call(kernel, args = list(x = dt$time[i]-dt$time, sd = sd.kernel)))
         #weight[weight<1e-6] <- 0
         weight <- weight/sum(weight)
-        if(plot.weights){plot(weight)}
+        if(plot.weights){graphics::plot(weight)}
         w.mean <- stats::weighted.mean(Y, weight)
         w.sd <- sqrt(sum(weight * (Y - w.mean)^2))
         return(w.sd)

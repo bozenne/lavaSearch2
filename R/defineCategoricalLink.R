@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (16:35) 
 ## Version: 
-## last-updated: jan 10 2018 (13:54) 
+## last-updated: jan 10 2018 (15:20) 
 ##           By: Brice Ozenne
-##     Update #: 113
+##     Update #: 117
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,10 +20,9 @@
 #' @description Identify categorical links in lvm
 #' @name defineCategoricalLink
 #' 
-#' @param x a lvm model.
+#' @param object a lvm model.
 #' @param link the links to be analyzed. If NULL, all the coefficients from the lvm model are used instead.
 #' @param data the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.
-#' @param ... arguments to be passed to lower level methods.
 #' 
 #' @examples  
 #' m <- lvm(Y1~X1+X2,Y2~X1+X3)
@@ -41,36 +40,36 @@
 #'
 #' @export
 `defineCategoricalLink` <-
-  function(x, ...) UseMethod("defineCategoricalLink")
+  function(object, link, data) UseMethod("defineCategoricalLink")
 
 
 ## * defineCategoricalLink.lvm
 #' @rdname defineCategoricalLink
 #' @export
-defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
+defineCategoricalLink.lvm <- function(object, link = NULL, data = NULL){
 
     ### ** normalize arguments
     if(is.null(link)){
-        link <- coef(x)
+        link <- stats::coef(object)
     }
     if(is.null(data)){
-        data <- sim(x, 1)
+        data <- sim(object, 1)
     }
     
     ### ** identify the type of regression variable (continuous or categorical)
-    index.cat <- which(link %in% unlist(x$attributes$ordinalparname))
+    index.cat <- which(link %in% unlist(object$attributes$ordinalparname))
     index.Ncat <- setdiff(1:length(link), index.cat)
-    link.Ncat <- setdiff(link[index.Ncat], names(x$attributes$ordinalparname))
+    link.Ncat <- setdiff(link[index.Ncat], names(object$attributes$ordinalparname))
 
     ### ** caracterize links involving categorical variables    
     if(length(index.cat)>0){
         link.cat <- link[index.cat]
-        xCAT <- lava_categorical2dummy(x, data)$x
+        xCAT <- lava_categorical2dummy(object, data)$x
 
         ## *** find exogenous variable
         X.name.allcat <- sapply(link.cat, function(iL){
-            test <- unlist(lapply(x$attributes$ordinalparname, function(vec.coef){iL %in% vec.coef}))
-            return(names(x$attributes$ordinalparname)[test])
+            test <- unlist(lapply(object$attributes$ordinalparname, function(vec.coef){iL %in% vec.coef}))
+            return(names(object$attributes$ordinalparname)[test])
         })
         UX.name.cat <- unique(X.name.allcat)
     
@@ -78,7 +77,7 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
         X.level.cat <- unlist(lapply(UX.name.cat, function(iL){ 
             if(iL %in% names(xCAT$attributes$labels)){
                 labels <- xCAT$attributes$labels[[iL]]
-                index.label <- which(x$attributes$ordinalparname[[iL]] %in% link.cat)                
+                index.label <- which(object$attributes$ordinalparname[[iL]] %in% link.cat)                
                 return(labels[1+index.label])
             }else {
                 stop("Categorical variables must have labels. Specify argument \'labels\' when calling categorical. \n")
@@ -119,7 +118,7 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
         var.tempo <- initVarLinks(link.Ncat)
         Y.name.Ncat <- var.tempo$var1
         X.name.Ncat <- var.tempo$var2
-        test.factice <- X.name.Ncat %in% names(x$attributes$ordinalparname)
+        test.factice <- X.name.Ncat %in% names(object$attributes$ordinalparname)
 
         dt.Ncat <- data.table::data.table(link = link.Ncat,
                                           endogenous = Y.name.Ncat,

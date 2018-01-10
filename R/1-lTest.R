@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan  9 2018 (17:57) 
+## last-updated: jan 10 2018 (15:24) 
 ##           By: Brice Ozenne
-##     Update #: 610
+##     Update #: 615
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,8 @@
 #' @param object a lvm object.
 #' @param C [optional] a contrast matrix.
 #' @param adjust.residuals should a small-sample correction be used when computing the variance of the parameters and the degree of freedoms.
-#' @param Ftest should a join test be computed. 
+#' @param Ftest should a join test be computed.
+#' @param ... arguments to be passed to \code{\link{dVcov2}}.
 #'
 #' @details In the case of a \code{lm} object, the contrast matrix need not to contain
 #' a column for the variance parameter when the columns are named. When so, a column containing 0 is added to the contrast matrix.
@@ -97,7 +98,7 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
         C <- diag(1, nrow = n.param, ncol = n.param)
         dimnames(C) <- list(name.param, name.param)
     }else{
-        if(NCOL(C) == (n.param-1) && all(names(coef(object)) %in% colnames(C)) ){
+        if(NCOL(C) == (n.param-1) && all(names(stats::coef(object)) %in% colnames(C)) ){
             C <- cbind(C, sigma = 0)
             }else if(NCOL(C) != n.param){
             stop("Argument \'C\' should be a matrix with ",n.param," columns \n")
@@ -157,7 +158,7 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
     df.table[rownames(C), "std"] <- sd.C.p
     df.table[rownames(C), "statistic"] <- stat.Wald
     df.table[rownames(C), "df"] <- df.Wald
-    df.table[rownames(C), "p-value"] <- 2*(1-pt(abs(df.table[rownames(C), "statistic"]),
+    df.table[rownames(C), "p-value"] <- 2*(1-stats::pt(abs(df.table[rownames(C), "statistic"]),
                                                 df = df.table[rownames(C), "df"]))
     
     ### *** F test
@@ -181,9 +182,9 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
         df.table <- rbind(df.table, global = c(NA,NA,NA,NA,NA))
         df.table["global", "statistic"] <- as.numeric(stat.F)
         df.table["global", "df"] <- df.F
-        df.table["global", "p-value"] <- 1 - pf(df.table["global", "statistic"],
-                                                df1 = q,
-                                                df2 = df.table["global", "df"])
+        df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
+                                                       df1 = q,
+                                                       df2 = df.table["global", "df"])
     }
     
     ## ** export

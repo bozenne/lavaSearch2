@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan  9 2018 (18:11) 
+## last-updated: jan 10 2018 (15:38) 
 ##           By: Brice Ozenne
-##     Update #: 2151
+##     Update #: 2168
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,14 +20,13 @@
 #' @description Compute the score directly from the gaussian density
 #' @name score2
 #' 
-#' @param x a linear model or a latent variable model.
+#' @param object a linear model or a latent variable model.
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
-#' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.
 #' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
-#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
-#' @param as.clubSandwich The method use to apply the \code{power} argument.
-#' @param ... not used.
+#' @param indiv Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.
+#' @param return.vcov.param Should the variance covariance matrix of the parameters be included in the output?
+#' @param ... Arguments to be passed to \code{\link{residuals2}}
 #'
 #' @return A matrix.
 #' 
@@ -65,24 +64,19 @@
 #' 
 #' @export
 `score2` <-
-  function(x, ...) UseMethod("score2")
+  function(object, ...) UseMethod("score2")
 
 ## * score2.gls
 #' @rdname score2
 #' @export
 score2.gls <- function(object, cluster, p = NULL, data = NULL,
-                       adjust.residuals = TRUE, 
-                       indiv = TRUE, as.clubSandwich = TRUE, return.vcov.param = FALSE, ...){
+                       indiv = TRUE, return.vcov.param = FALSE,
+                       ...){
 
-    power <- 1/2
-    
 ### ** Compute residuals and partial derivatives
     epsilon <- residuals2(object, cluster = cluster, p = p, data = data,
-                          adjust.residuals = adjust.residuals,
-                          power = power,
-                          as.clubSandwich = as.clubSandwich,
                           return.vcov.param = return.vcov.param,
-                          return.prepareScore2 = TRUE)
+                          return.prepareScore2 = TRUE, ...)
 
     OPS2 <- attr(epsilon, "prepareScore2")
     vcov.param <- attr(epsilon, "vcov.param")
@@ -116,19 +110,15 @@ score2.lme <- score2.gls
 #' @rdname score2
 #' @export
 score2.lvmfit <- function(object, p = NULL, data = NULL, 
-                          adjust.residuals = TRUE, power = 1/2, as.clubSandwich = TRUE,
-                          indiv = TRUE, 
-                          return.vcov.param = FALSE, ...){
+                          indiv = TRUE, return.vcov.param = FALSE,
+                          ...){
 
 ### ** Compute residuals
     epsilon <- residuals2(object,
                           p = p,
                           data = data,
-                          adjust.residuals = adjust.residuals,
-                          power = power,
-                          as.clubSandwich = as.clubSandwich,
                           return.vcov.param = return.vcov.param,
-                          return.prepareScore2 = TRUE)
+                          return.prepareScore2 = TRUE, ...)
 
     OPS2 <- attr(epsilon, "prepareScore2")
     vcov.param <- attr(epsilon, "vcov.param")

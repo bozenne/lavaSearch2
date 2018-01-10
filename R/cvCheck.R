@@ -63,13 +63,14 @@ cvCheck.lvm <- function(object,
     suppressWarnings(
         lvm.init <- estimate(object, data, ...)  
     )
-    
-    names.coef <- names(coef(lvm.init))
-    n.coef <- length(names.coef)
-    var.param <- grep(",",names.coef, fixed = TRUE)
+
+    e.coef <- stats::coef(lvm.init)
+    name.coef <- names(e.coef)
+    n.coef <- length(name.coef)
+    var.param <- grep(",",name.coef, fixed = TRUE)
     mean.param <- setdiff(1:n.coef, var.param)
 
-    lvm.vcov <- vcov(lvm.init)
+    lvm.vcov <- stats::vcov(lvm.init)
     if(keep.cov){        
         VCOV <- lvm.vcov
     }else{
@@ -77,7 +78,7 @@ cvCheck.lvm <- function(object,
     }
     diag(VCOV) <-  diag(lvm.vcov)*factor.vcov
     
-    sample.start <- tmvtnorm::rtmvnorm(n = n.init, mean = coef(lvm.init), sigma = VCOV,
+    sample.start <- tmvtnorm::rtmvnorm(n = n.init, mean = name.coef, sigma = VCOV,
                                         lower = c(rep(-Inf, length(mean.param)), rep(0, length = length(var.param))),
                                         algorithm = "gibbs"
                                         )
@@ -93,7 +94,9 @@ cvCheck.lvm <- function(object,
         )
         
         if(class(resStart) != "try-error"){
-            return(c(resStart$opt$convergence, as.numeric(logLik(resStart)), coef(resStart) ))
+            return(c(resStart$opt$convergence,
+                     as.numeric(stats::logLik(resStart)),
+                     stats::coef(resStart) ))
         }else{
             return(rep(NA, n.coef+2))
         }
@@ -112,7 +115,7 @@ cvCheck.lvm <- function(object,
         opts <- NULL
       }
       
-      i <- NULL # for CRAN check
+      i <- NULL # [:for CRAN check] (foreach)
       Mres <- foreach::`%dopar%`(
         foreach::foreach(i = 1:n.init,
                          .packages =  "lava",
@@ -137,8 +140,10 @@ cvCheck.lvm <- function(object,
 
     ## ** postprocess and export
     Mres <- cbind(Mres,
-                  c(lvm.init$opt$convergence, as.numeric(logLik(lvm.init)), coef(lvm.init) ))  
-    df.resCV <- setNames(as.data.frame(t(Mres)), c("cv", "logLik",names.coef))
+                  c(lvm.init$opt$convergence,
+                    as.numeric(stats::logLik(lvm.init)),
+                    stats::coef(lvm.init) ))  
+    df.resCV <- stats::setNames(as.data.frame(t(Mres)), c("cv", "logLik",name.coef))
     
     ## ** export
     out <- list(estimates = df.resCV,
@@ -178,8 +183,8 @@ summary.cvlvm <- function(object, threshold = NULL, ...){
     n.cv <- length(index.cv)
     indexRed.bestcv <- which.max(e$logLik[index.cv])
             
-    dist.coef <- dist(e[index.cv,-(1:2),drop=FALSE]) 
-    hclust.res <- hclust(dist.coef, method="complete")
+    dist.coef <- stats::dist(e[index.cv,-(1:2),drop=FALSE]) 
+    hclust.res <- stats::hclust(dist.coef, method="complete")
     n.clusters <- 1 + sum(hclust.res$height > threshold)
     
     dist.coef <- sum(as.matrix(dist.coef)[indexRed.bestcv,] < threshold)
@@ -216,19 +221,19 @@ optimx1 <- function(start,objective,gradient,hessian,...) {
     optimx.method <- mypar$control$optimx.method
     mypar$control$optimx.method <- NULL
     
-    optimx.res <- optimx(par = mypar$start, 
-                         fn = mypar$objective, 
-                         gr = mypar$gradient,
-                         method = optimx.method,
-                         control = mypar$control)
+    optimx.res <- optimx::optimx(par = mypar$start, 
+                                 fn = mypar$objective, 
+                                 gr = mypar$gradient,
+                                 method = optimx.method,
+                                 control = mypar$control)
     
   }else{
     mypar$control$all.methods <- TRUE
     
-    optimx.res <- optimx(par = mypar$start, 
-                         fn = mypar$objective, 
-                         gr = mypar$gradient,
-                         control = mypar$control)  
+    optimx.res <- optimx::optimx(par = mypar$start, 
+                                 fn = mypar$objective, 
+                                 gr = mypar$gradient,
+                                 control = mypar$control)  
   }
   
   

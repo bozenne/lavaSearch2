@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan  9 2018 (17:57) 
+## Last-Updated: jan 10 2018 (16:11) 
 ##           By: Brice Ozenne
-##     Update #: 47
+##     Update #: 52
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,12 +48,12 @@ glht.mlf2 <- function(model, linfct, ...) {
     n.model <- length(model)
     name.model <- names(model)
     if(is.null(name.model)){
-        name.model <- 1:n.coef
+        name.model <- 1:n.model
         names(model) <- name.model
     }
     
     K <- lapply(names(model), function(i) {
-        glht(model[[i]], linfct = linfct[[i]], ...)$linfct
+        multcomp::glht(model[[i]], linfct = linfct[[i]], ...)$linfct
     })
     
     for (iK in 1:n.model) {
@@ -66,7 +66,7 @@ glht.mlf2 <- function(model, linfct, ...) {
     
     ## ** add variance
     ## call vcov.mmm2
-    out$vcov <- vcov(model, return.null = FALSE, ...)
+    out$vcov <- stats::vcov(model, return.null = FALSE, ...)
 
     ## add degrees of freedom
     names(K) <- names(model)
@@ -76,7 +76,7 @@ glht.mlf2 <- function(model, linfct, ...) {
         }
         lTest(model[[iName]], C = K[[iName]], Ftest = FALSE, ...)$df
     })
-    out$df <- as.double(round(median(df)))
+    out$df <- as.double(round(stats::median(df)))
     return(out)
 }
 

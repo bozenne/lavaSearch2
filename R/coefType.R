@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 10 2018 (14:37) 
+## last-updated: jan 10 2018 (17:17) 
 ##           By: Brice Ozenne
-##     Update #: 369
+##     Update #: 392
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -143,7 +143,9 @@
 ## ** method - coefType.lvm
 #' @rdname coefType
 #' @export
-coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){ 
+coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
+
+   endogenous <- exogenous <- externalLink <- factice <- level <- link <- originalLink <- type <- NULL ## [:for CRAN check] data.table
 
     ## *** extract all coef
     index.all <- which(!is.na(x$M), arr.ind = FALSE)
@@ -273,14 +275,19 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
         resCar <- defineCategoricalLink(x, link = dt.param$name, data = data)
 
         ## normal parameters
-        resCar.Nexternal <- resCar[is.na(externalLink),.(name = link, distribution = type,factice,level,originalLink,externalLink)]
+        resCar.Nexternal <- resCar[is.na(resCar$externalLink),
+                                   .(name = link, distribution = type,
+                                     factice, level, originalLink, externalLink)]
         dt.Nexternal <- merge(dt.param[type != "external"],resCar.Nexternal,by = "name")
 
         ## external parameters
-        resCar.external <- resCar[!is.na(externalLink),.(name = link, Y = endogenous, X = paste0(exogenous,level), data = exogenous, distribution = type,factice,level, originalLink, externalLink)]
+        resCar.external <- resCar[!is.na(resCar$externalLink),
+                                  .(name = link, Y = endogenous, X = paste0(exogenous,level),
+                                    data = exogenous, distribution = type,
+                                    factice, level, originalLink, externalLink)]
         resCar.external[,param := name]
         for(iCol in c("type","value","marginal")){ # iCol <- "Y"
-            name2col <- setNames(dt.param[[iCol]],dt.param$name)
+            name2col <- stats::setNames(dt.param[[iCol]],dt.param$name)
             resCar.external[,c(iCol) := name2col[originalLink]]
         }
 
@@ -295,23 +302,25 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 
     ## *** merge with lava
     coef.lava <- coef(x)
+    name.coef <- names(coef.lava)
+
     dt.param[type!="external" & factice == FALSE & marginal == FALSE,
              detail := detailName(x, name.coef = name, type.coef = type)]
-    dt.param[,lava:=names(coef(x))[match(originalLink,coef.lava)]]
+    dt.param[,lava:=name.coef[match(originalLink,coef.lava)]]
     setkeyv(dt.param, c("type","detail","name"))
        
     ## *** export
     if(as.lava){
         ## add extra parameter as links
-        vec.extra <- unique(na.omit(dt.param[["externalLink"]]))
+        vec.extra <- unique(stats::na.omit(dt.param[["externalLink"]]))
         if(length(vec.extra)>0){
             dt.extra <- data.table(name = vec.extra, type = "extra",
-                                   lava = names(coef(x))[match(vec.extra,coef.lava)])
+                                   lava = name.coef[match(vec.extra,coef.lava)])
             dt.param <- rbind(dt.param[,.(name, type, lava)], dt.extra)
         }
         
         ## 
-        out <- dt.param[!is.na(lava), setNames(type,name)]
+        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
         out <- out[!duplicated(names(out))]
         return(out[coef.lava])    
     }else{
@@ -323,14 +332,16 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 #' @rdname coefType
 #' @export
 coefType.lvmfit <- function(x, as.lava = TRUE, ...){ 
+
+    lava <- name <- type <- NULL ## [:for CRAN check] data.table
     
     ## *** find type of the coefficients in the original model
     dt.param <- coefType(x$model0, as.lava = FALSE)
     
     ## *** export
     if(as.lava){
-        out <- dt.param[!is.na(lava), setNames(type,name)]
-        coef.lava <- names(coef(x))
+        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
+        coef.lava <- names(stats::coef(x))
         return(out[coef.lava])    
     }else{
         return(dt.param[])
@@ -340,7 +351,10 @@ coefType.lvmfit <- function(x, as.lava = TRUE, ...){
 ## ** method - coefType.multigroup
 #' @rdname coefType
 #' @export
-coefType.multigroup <- function(x, as.lava = TRUE, ...){ 
+coefType.multigroup <- function(x, as.lava = TRUE, ...){
+
+    lava <- name <- type <- NULL ## [:for CRAN check] data.table
+    
     n.model <- length(x$lvm)
     dt.param <- NULL
     
@@ -356,7 +370,7 @@ coefType.multigroup <- function(x, as.lava = TRUE, ...){
     
     ## *** export
     if(as.lava){        
-        out <- dt.param[!is.na(lava), setNames(type,name)]
+        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
         ## coef.lava <- names(coef(x))
         ## return(out[coef.lava])
         return(out)
@@ -425,7 +439,7 @@ coefExtra.multigroup <- coefExtra.lvm
 #' @rdname coefType
 #' @export
 coefIndexModel.lvm <- function(x, ...){
-    name.coef <- coef(x)
+    name.coef <- stats::coef(x)
     index <- rep(1, length(name.coef))
     names(index) <- name.coef
     return(index)
@@ -434,7 +448,7 @@ coefIndexModel.lvm <- function(x, ...){
 #' @rdname coefType
 #' @export
 coefIndexModel.lvmfit <- function(x, ...){
-    name.coef <- names(coef(x))
+    name.coef <- names(stats::coef(x))
     index <- rep(1, length(name.coef))
     names(index) <- name.coef
     return(index)
@@ -450,7 +464,7 @@ coefIndexModel.multigroup <- function(x, ...){
     n.allCoef <- length(allCoef)
     index.AllCoef <- x$coef
   
-    index <- setNames(rep(NA, n.allCoef), allCoef)
+    index <- stats::setNames(rep(NA, n.allCoef), allCoef)
   
     for(iModel in 1:n.model){ # iModel <- 1
         index[index.AllCoef[[iModel]]] <- iModel
@@ -464,7 +478,7 @@ coefIndexModel.multigroup <- function(x, ...){
 #' @export
 coefIndexModel.multigroupfit <- function(x, ...){
     out <- coefIndexModel(x$model)
-    return(out[names(coef(x))])
+    return(out[names(stats::coef(x))])
 }
   
 ## * method - coefIntercept

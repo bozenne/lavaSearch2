@@ -187,7 +187,7 @@ addLink.lvm <- function(x,
     ####
     if(is.na(var2)){
         
-        intercept(x) <- as.formula(paste0("~", var1))
+        intercept(x) <- stats::as.formula(paste0("~", var1))
         
     }else{
         
@@ -215,16 +215,16 @@ addLink.lvm <- function(x,
     
        
         if(covariance){
-            covariance(x) <- as.formula(paste(var1, var2, sep = "~"))  
+            covariance(x) <- stats::as.formula(paste(var1, var2, sep = "~"))  
         }else if(var1 %in% endogenous(x) || var2 %in% exogenous(x)){
-            regression(x) <- as.formula(paste(var1, var2,  sep = "~"))
+            regression(x) <- stats::as.formula(paste(var1, var2,  sep = "~"))
         }else if(var2 %in% endogenous(x) || var1 %in% exogenous(x)){
-            regression(x) <- as.formula(paste(var2, var1, sep = "~"))
+            regression(x) <- stats::as.formula(paste(var2, var1, sep = "~"))
         }else {
             if(var1 %in% latent(x)){
-                regression(x) <- as.formula(paste(var1, var2, sep = "~"))  
+                regression(x) <- stats::as.formula(paste(var1, var2, sep = "~"))  
             }else if(var2 %in% latent(x)){
-                regression(x) <- as.formula(paste(var2, var1, sep = "~"))  
+                regression(x) <- stats::as.formula(paste(var2, var1, sep = "~"))  
             }else{
                 stop("unknow configuration \n")
             }
@@ -285,13 +285,13 @@ setLink.lvm <- function(x, var1, var2, value, warnings = FALSE){
   
   #### set the link
   if(is.na(var2)){
-    intercept(x, as.formula(paste0("~",var1))) <- value
-  }else if(paste(var1, var2, sep = "~") %in% coef(x)){
-    regression(x, as.formula(paste(var1,var2, sep = "~"))) <- value
-  }else if(paste(var1,var2, sep = ",") %in% coef(x)){
-    covariance(x, as.formula(paste(var1,var2, sep = "~"))) <- value
-  }else if(paste(var2,var1, sep = ",") %in% coef(x)){
-    covariance(x, as.formula(paste(var1,var2, sep = "~"))) <- value
+    intercept(x, stats::as.formula(paste0("~",var1))) <- value
+  }else if(paste(var1, var2, sep = "~") %in% stats::coef(x)){
+    regression(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
+  }else if(paste(var1,var2, sep = ",") %in% stats::coef(x)){
+    covariance(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
+  }else if(paste(var2,var1, sep = ",") %in% stats::coef(x)){
+    covariance(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
   }else{
     if(warnings){
       warning("setLink.lvm: no link was found from var1 to var2, no link is set \n",

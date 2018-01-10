@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: okt  5 2017 (11:35) 
+## last-updated: jan 10 2018 (15:16) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 14
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,7 +46,7 @@
 #' @rdname var2dummy
 var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
 
-    var <- setNames(var,var)
+    var <- stats::setNames(var,var)
     ## convertion to dummy variable name for categorical variables
     factor.var <- names(x$x$attributes$labels)
     
@@ -55,7 +55,7 @@ var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
         for(iFactor in subvar){ # iFactor <- "X1"
             newvar <- paste0(iFactor,x$x$attributes$labels[[iFactor]])
             if(rm.first.factor){newvar <- newvar[-1]}
-            newvar <- setNames(newvar, rep(iFactor, length(newvar)))
+            newvar <- stats::setNames(newvar, rep(iFactor, length(newvar)))
             var <- c(var[names(var)!=iFactor],newvar)            
         }
     }

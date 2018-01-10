@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan  9 2018 (18:21) 
+## Last-Updated: jan 10 2018 (15:48) 
 ##           By: Brice Ozenne
-##     Update #: 109
+##     Update #: 117
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -55,13 +55,14 @@
 
 ## * summary.gls2
 #' @rdname summary
+#' @method summary gls2
 #' @export
 summary.gls2 <- function(object, 
-                         digits = max(3, getOption("digit")),
+                         digit = max(3, getOption("digit")),
                          adjust.residuals = TRUE, ...){
 
     class(object) <- setdiff(class(object),"gls2")
-    object.summary <- summary(object, digits = digits, ...)
+    object.summary <- summary(object, digits = digit, ...)
 
     ## find digit
     
@@ -76,11 +77,13 @@ summary.gls2 <- function(object,
 
 ## * summary.lme2
 #' @rdname summary
+#' @method summary lme2
 #' @export
 summary.lme2 <- summary.gls2
 
 ## * summary.lvmfit2
 #' @rdname summary
+#' @method summary lvmfit2
 #' @export
 summary.lvmfit2 <- function(object, adjust.residuals = FALSE, ...){
 
@@ -90,14 +93,14 @@ summary.lvmfit2 <- function(object, adjust.residuals = FALSE, ...){
 
     ## find digit
     vec.char <- setdiff(object.summary$coefmat[,"Estimate"],"")
-    digits <- max(c(nchar(gsub(".","",vec.char,fixed = TRUE)))-1,1)
+    digit <- max(c(nchar(gsub(".","",vec.char,fixed = TRUE)))-1,1)
 
     ##
-    param <- pars(object)
+    param <- lava::pars(object)
     name.param <- names(param)
     name.allParam <- rownames(object.summary$coef)
     n.allParam <- length(name.allParam)
-    data <- model.frame(object)
+    data <- stats::model.frame(object)
     
     vcov.object <- attr(object$dVcov, "vcov.param")
         
@@ -123,16 +126,16 @@ summary.lvmfit2 <- function(object, adjust.residuals = FALSE, ...){
     colnames(table.coefmat)[3:5] <- c("t-value","P-value","df")
     
     ## mimic lava:::CoefMat (called by lava:::summary.lvmfit)    
-    e2add <- format(round(table.coef[,"Estimate"], max(1, digits - 1)), digits = digits - 1)
+    e2add <- format(round(table.coef[,"Estimate"], max(1, digit - 1)), digits = digit - 1)
     e2add <- gsub(" NA","",e2add)
-    sd2add <- format(round(table.coef[,"Std. Error"], max(1, digits - 1)), digits = digits - 1)
+    sd2add <- format(round(table.coef[,"Std. Error"], max(1, digit - 1)), digits = digit - 1)
     sd2add <- gsub(" NA","",sd2add)
     df2add <- as.character(round(table.coef[,"df"],2))    
     df2add[is.na(df2add)] <- ""
-    t2add <- format(round(table.coef[,"t-value"], max(1, digits - 1)), digits = digits - 1)
+    t2add <- format(round(table.coef[,"t-value"], max(1, digit - 1)), digits = digit - 1)
     t2add <- gsub(" NA","",t2add)
 
-    p2add <- formatC(table.coef[,"P-value"], digit = digits - 1, format = "g",  preserve.width = "common", flag = "")
+    p2add <- formatC(table.coef[,"P-value"], digits = digit - 1, format = "g",  preserve.width = "common", flag = "")
     p2add <- gsub(" NA","",p2add)
     p2add[table.coef[,"P-value"] < 1e-12] <- "  <1e-12"
 

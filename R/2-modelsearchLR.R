@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: jan 10 2018 (14:30) 
+## last-updated: jan 10 2018 (17:17) 
 ##           By: Brice Ozenne
-##     Update #: 71
+##     Update #: 76
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,6 +30,8 @@ modelsearchLR <- function (x, data, restricted, link, directive,
                            update.FCT, update.args,
                            method.p.adjust, display.warnings, trace){
 
+    p.value <- NULL ## [:for CRAN check] data.table
+    
     ## ** initialisation
     n.link <- length(link)
     dt.test <- data.table("link" = link,
@@ -51,17 +53,17 @@ modelsearchLR <- function (x, data, restricted, link, directive,
         newfit <- update.FCT(x, args = update.args,
                              restricted = restricted[iterI,], directive = directive[iterI])
 
-        if(class(newfit) != "try-error" && !is.na(logLik(newfit))){ 
+        if(class(newfit) != "try-error" && !is.na(stats::logLik(newfit))){ 
 
             if(newfit$opt$convergence == 0 ){ # test whether the model has correctly converged
-                newCoef.tempo <- coef(newfit)[setdiff(names(coef(newfit)),names(coef(x)))]
+                newCoef.tempo <- stats::coef(newfit)[setdiff(names(coef(newfit)),names(coef(x)))]
                 dt.test[iterI, c("coefBeta") := newCoef.tempo]
                 if(class(newfit) == "lvmfit"){
                     compareT <- lava::compare(x,newfit)
                     dt.test[iterI, c("statistic") := compareT$statistic[[1]]]
                     dt.test[iterI, c("p.value") := compareT$p.value[[1]]]
                 }else{
-                    compareT <- anova(x, newfit)
+                    compareT <- stats::anova(x, newfit)
                     dt.test[iterI, c("statistic") := compareT$F[2]]
                     dt.test[iterI, c("p.value") := compareT$`Pr(>F)`[2]]
                 }
@@ -79,7 +81,7 @@ modelsearchLR <- function (x, data, restricted, link, directive,
         if(trace > 0){ utils::setTxtProgressBar(pb, value = iterI) }    
     }
     if(trace > 0){  close(pb) }
-    dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
+    dt.test[, c("adjusted.p.value") := stats::p.adjust(p.value, method = method.p.adjust)]
     
     ## ** export 
     return(list(dt.test = dt.test,

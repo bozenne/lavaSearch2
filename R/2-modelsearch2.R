@@ -113,13 +113,15 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
                                 exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
                                 ...){
 
+    link <- selected <- statistic <- adjusted.p.value <- NULL ## [:for CRAN check] data.table
+
     ## ** normalise arguments
     method.iid <- match.arg(method.iid, lava.options()$search.iid)
 
     ## ** normalize the links
     if(is.null(link)){
         res.find <- findNewLink(x$model,
-                                data = model.frame(x),
+                                data = stats::model.frame(x),
                                 exclude.var = exclude.var,
                                 rm.latent_latent = rm.latent_latent,
                                 rm.endo_endo = rm.endo_endo, rm.latent_endo = rm.latent_endo,
@@ -171,7 +173,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
             ## modelsearch require to have the variable corresponding to the links in the model
             if(list(...)$statistic == "score" && any(allVars.data %in% missing.var)){
                 addVars <- allVars.data[allVars.data %in% missing.var]
-                ff <- as.formula(paste0("~",paste(addVars, collapse = " + ")))
+                ff <- stats::as.formula(paste0("~",paste(addVars, collapse = " + ")))
                 addvar(x$model) <- ff
                 allVars.model <- vars(x$model)        
             }
@@ -196,7 +198,7 @@ modelsearch2.lvmfit <- function(x, data = NULL, link = NULL,
     ls.call <- lapply(add.args, function(arg){x$call[[arg]]})
     names(ls.call) <- add.args
 
-    ls.call$data <- as.data.table(model.frame(x))
+    ls.call$data <- as.data.table(stats::model.frame(x))
     if(!is.null(data)){
         index.cols <- which(names(data)%in%names(ls.call$data)==FALSE)
         if(length(index.cols)>0){
@@ -264,7 +266,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     }
 
     ## ** get model vars
-    model.var <- all.vars(formula(x))
+    model.var <- all.vars(stats::formula(x))
     
     ## ** normalize the links
     restricted <- do.call(cbind,initVarLinks(link, Slink = "~"))
@@ -362,7 +364,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     method.p.adjust <- match.arg(method.p.adjust, lava.options()$search.p.adjust)
     statistic <-  match.arg(statistic, choices = lava.options()$search.statistic)
 
-    if(any(exposure %in% names(coef(x)) == FALSE)){
+    if(any(exposure %in% names(stats::coef(x)) == FALSE)){
         stop("exposure does not correspond to a coefficient in \'x\' \n")
     }    
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
@@ -448,9 +450,9 @@ modelsearch2.default <- function(x, link, data = NULL,
                                              )
             index.match <- match(gsub("~~","~",iLink), res.search$res[,"Index"])
                                         ## res.search$res[index.match,"Index"]
-            res.search$dt.test[, c("statistic") := res.search$test[index.match,"Test Statistic"]]
-            res.search$dt.test[, c("p.value") := res.search$test[index.match,"P-value"]]
-            res.search$dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
+            res.search$dt.test[, "statistic" := res.search$test[index.match,"Test Statistic"]]
+            res.search$dt.test[, "p.value" := res.search$test[index.match,"P-value"]]
+            res.search$dt.test[, "adjusted.p.value" := stats::p.adjust(.SD$p.value, method = method.p.adjust)] ## keep .SD for clarity
         }else if(statistic == "LR"){
 ### *** run modelsearchLR
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
@@ -478,7 +480,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         ## ** update according the most significant p.value
         ### *** check convergence
         if(na.omit){
-            cv <- all(na.omit(res.search$dt.test[["adjusted.p.value"]]) > alpha)
+            cv <- all(stats::na.omit(res.search$dt.test[["adjusted.p.value"]]) > alpha)
             test.na <- FALSE
         }else{
             cv <- all(res.search$dt.test[["adjusted.p.value"]] > alpha)
@@ -497,7 +499,7 @@ modelsearch2.default <- function(x, link, data = NULL,
         res.search$dt.test[,c("selected") := .I==index.rm*(1-cv)]
         res.search$dt.test[,c("nTests") := .N]
         setkey(res.search$dt.test,statistic)
-        rowSelected <- res.search$dt.test[, .I[.SD$selected==TRUE]]
+        rowSelected <- res.search$dt.test[, .I[selected==TRUE]]
 		
         ls.seqTests[[iStep]] <- copy(res.search$dt.test)
         if(method.p.adjust == "max"){
@@ -520,9 +522,9 @@ modelsearch2.default <- function(x, link, data = NULL,
         if(trace > 0){
             if(cv==FALSE){
                 
-                cat("add ",ls.seqTests[[iStep]][rowSelected, .SD$link],
-                    " (statistic = ",ls.seqTests[[iStep]][rowSelected,.SD$statistic],
-                    ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected,.SD$adjusted.p.value],
+                cat("add ",ls.seqTests[[iStep]][rowSelected, link],
+                    " (statistic = ",ls.seqTests[[iStep]][rowSelected, statistic],
+                    ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, adjusted.p.value],
                     ")\n",sep="")
             }else{
                 if(test.na){
@@ -616,7 +618,7 @@ modelsearch2.default <- function(x, link, data = NULL,
                       covariance = 1-directive)
 
     ## first attempt
-    args$start <- coef(x)
+    args$start <- stats::coef(x)
     suppressWarnings(
         newx <- tryCatch(do.call(estimate, args = args),
                          error = function(x){NA},
@@ -640,16 +642,16 @@ modelsearch2.default <- function(x, link, data = NULL,
     FCT.estimate <- as.character(x$call[[1]])
 
     ## update the formula
-    f <- formula(x) #evalInParentEnv(x$call$formula, envir = environment())
+    f <- stats::formula(x) #evalInParentEnv(x$call$formula, envir = environment())
     if(is.list(f)){
         test.Y <-  lapply(f, function(ff){
             restricted[1] %in% selectResponse(ff)
         })
         index.Y <- which(unlist(test.Y))
-        f[[index.Y]] <- update(f[[index.Y]], as.formula(paste0(".~",restricted[2])))
+        f[[index.Y]] <- stats::update(f[[index.Y]], stats::as.formula(paste0(".~",restricted[2])))
             
     }else{
-        f <- update(f, as.formula(paste0(".~.+",restricted[2])))
+        f <- stats::update(f, stats::as.formula(paste0(".~.+",restricted[2])))
     }
 
     ## update the arguments
@@ -660,7 +662,7 @@ modelsearch2.default <- function(x, link, data = NULL,
     }
         
     suppressWarnings(
-        newx <- update(x, formula = f)
+        newx <- stats::update(x, formula = f)
     )
     newx$opt$convergence <- 0
     return(newx)

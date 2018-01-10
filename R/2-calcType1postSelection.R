@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:42) 
 ## Version: 
-## last-updated: jan 10 2018 (14:27) 
+## last-updated: jan 10 2018 (15:12) 
 ##           By: Brice Ozenne
-##     Update #: 104
+##     Update #: 105
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -142,7 +142,7 @@ calcType1postSelection <- function(level, mu, Sigma, quantile.previous, distribu
 
     ## ** compute type1 error
     if(correct){
-        out <- optim(par = level, fn = function(x){
+        out <- stats::optim(par = level, fn = function(x){
             obj <- abs((1-level)-warper(x))
             # cat("level:",x," obj:",obj,"\n")
             return(obj)

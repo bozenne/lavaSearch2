@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (09:26) 
 ## Version: 
-## last-updated: jan 10 2018 (14:34) 
+## last-updated: jan 10 2018 (15:13) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 12
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -53,7 +53,7 @@ qqplot2 <- function (object, ...) {
 qqplot2.lvmfit <- function(object, variables = NULL, mfrow = NULL,
                              type = "qqtest",  centralPercents = 0.95,...){
 
-    M.res <- predict(object, residual = TRUE)
+    M.res <- stats::predict(object, residual = TRUE)
     name.vars <- colnames(M.res)
     
     if(!is.null(variables)){
@@ -74,22 +74,22 @@ qqplot2.lvmfit <- function(object, variables = NULL, mfrow = NULL,
     if(is.null(mfrow)){
         mfrow <- c(round(sqrt(n.var)), ceiling(n.var/round(sqrt(n.var))))
     }
-    op <- par(mfrow = mfrow)
+    op <- graphics::par(mfrow = mfrow)
     sapply(1:n.var, function(row){
-        resid <- na.omit(M.res[,row])
+        resid <- stats::na.omit(M.res[,row])
         main <- name.vars[row]
         if(all(resid < 1e-5)){
-            plot(0,0, col = "white", axes = FALSE, xlab = "", ylab = "", main = main)
+            graphics::plot(0,0, col = "white", axes = FALSE, xlab = "", ylab = "", main = main)
             text(0,0,"all residuals < 1e-5")
         }else if(type == "qqtest"){
             qqtest::qqtest(resid, main = name.vars[row],
                            centralPercents = centralPercents,
                            ...)
         }else if(type == "qqnorm"){
-            qqnorm(M.res[,row], main = name.vars[row])
+            stats::qqnorm(M.res[,row], main = name.vars[row])
         }
     })
-    par(op)
+    graphics::par(op)
 
     return(invisible(M.res))
 }

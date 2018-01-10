@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan  9 2018 (18:11) 
+## Last-Updated: jan 10 2018 (16:12) 
 ##           By: Brice Ozenne
-##     Update #: 778
+##     Update #: 788
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,10 +27,9 @@
 #' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param as.clubSandwich method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
 #' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
-#' @param return.vcov.param should the variance covariance matrix of the parameters be returned?
+#' @param return.vcov.param Should the variance covariance matrix of the parameters be included in the output?
 #' @param return.prepareScore2 should the quantities that have been pre-computed be returned?
-#' 
-#' @param ... arguments to be passed to lower level methods.
+#' @param ... [internal] Only used by the generic method.
 #' 
 #' @examples
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
@@ -51,22 +50,22 @@ residuals2.lm <- function(object,
 ### ** Extract information
 
     ## *** parameters
-    p <- coef(object)
+    p <- stats::coef(object)
     n <- NROW(object$model)
     name.param <- names(p)
     n.param <- length(name.param)
     
     ## *** formula
-    formula.object <- formula(object)
+    formula.object <- stats::formula(object)
     
     ## *** data    
-    X <- model.matrix(object)
+    X <- stats::model.matrix(object)
     
-    name.Y <- all.vars(update(formula.object, ".~1"))
-    Y <- model.frame(object)[[name.Y]]
+    name.Y <- all.vars(stats::update(formula.object, ".~1"))
+    Y <- stats::model.frame(object)[[name.Y]]
 
 ### ** Compute observed residuals
-    epsilon <- residuals(object, type = "response")
+    epsilon <- stats::residuals(object, type = "response")
 
     ### ** Small sample adjustement
     iXX <- solve(t(X) %*% X)
@@ -98,7 +97,7 @@ residuals2.lm <- function(object,
     }
 
     if(return.vcov.param){
-        vcov.all <- as.matrix(bdiag(vcov.param, vcov.sigma2))
+        vcov.all <- as.matrix(Matrix::bdiag(vcov.param, vcov.sigma2))
         dimnames(vcov.all) <- list(c(name.param,"sigma2"),
                                    c(name.param,"sigma2"))
         attr(epsilon, "vcov.param") <- vcov.all
@@ -152,14 +151,14 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     
     ## *** data    
     if(is.null(data)){
-        data <- getData(object)
+        data <- nlme::getData(object)
     }
-    X <- model.matrix(formula.object, data)
+    X <- stats::model.matrix(formula.object, data)
     X <- X[,attr.param$mean.coef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)    
     attr(X,"assign") <- NULL
     attr(X,"contrasts") <- NULL
     
-    name.Y <- all.vars(update(formula.object, ".~1"))
+    name.Y <- all.vars(stats::update(formula.object, ".~1"))
     Y <- data[[name.Y]]
 
     ## *** group
@@ -197,7 +196,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                       dimnames = list(NULL, name.endogenous))
     epsilon[index.obs] <- Y - X %*% p[attr.param$mean.coef]
-    ## residuals(object)-as.vector(t(epsilon))
+    ## stats::residuals(object)-as.vector(t(epsilon))
 
     ### ** Reconstruct variance covariance matrix (residuals)
     resVcov <- .getVarCov2(object, param = p, attr.param = attr.param,
@@ -329,7 +328,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
 
     ## data
     if(is.null(data)){
-        data <- model.frame(object)
+        data <- stats::model.frame(object)
     }
     if(!is.matrix(data)){
         data <- as.matrix(data)
@@ -373,7 +372,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     
     ### ** Compute variance covariance matrix (parameters)
     if(null.p){
-        vcov.param <- vcov(object)
+        vcov.param <- stats::vcov(object)
         attr(vcov.param, "det") <- NULL
         attr(vcov.param, "pseudo") <- NULL
         attr(vcov.param, "minSV") <- NULL

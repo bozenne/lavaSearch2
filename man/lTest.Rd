@@ -25,6 +25,8 @@ lTest(object, ...)
 \arguments{
 \item{object}{a lvm object.}
 
+\item{...}{arguments to be passed to \code{\link{dVcov2}}.}
+
 \item{C}{[optional] a contrast matrix.}
 
 \item{adjust.residuals}{should a small-sample correction be used when computing the variance of the parameters and the degree of freedoms.}

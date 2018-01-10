@@ -17,6 +17,7 @@
 \alias{coefIndexModel.lvm}
 \alias{coefIndexModel.lvmfit}
 \alias{coefIndexModel.multigroup}
+\alias{coefIndexModel.multigroupfit}
 \alias{coefIntercept}
 \alias{coefIntercept.lvm}
 \alias{coefIntercept.lvmfit}
@@ -64,6 +65,8 @@ coefIndexModel(x, ...)
 \method{coefIndexModel}{lvmfit}(x, ...)
 
 \method{coefIndexModel}{multigroup}(x, ...)
+
+\method{coefIndexModel}{multigroupfit}(x, ...)
 
 coefIntercept(x, ...)
 
@@ -199,7 +202,6 @@ coefIntercept(m, value = TRUE)
 coefIntercept(e)
 
 coefReg(e, value = TRUE)
-coefReg(e, level = -1, value = TRUE)
 
 #### LVM with constrains ####
 m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
@@ -215,5 +217,7 @@ m <- lvm(Y~X1+X2)
 eG <- estimate(list(m,m), list(sim(m, 1e2),sim(m, 1e2)))
 coefType(eG)
 coef(eG)
+
+coefIndexModel(eG)
 
 }

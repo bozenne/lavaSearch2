@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: okt 10 2017 (11:17) 
+## last-updated: jan 10 2018 (17:15) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 45
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,12 +20,14 @@
 #' @export
 summary.modelsearch2 <- function(object, display = TRUE, ...){
 
+    convergence <- NULL ## [:for CRAN check] data.table
+    
     ## ** extract data from object
     xx <- copy(object$sequenceTest)
     dt.seqTest <- rbindlist(lapply(xx, function(step){
         if("convergence" %in% names(step)){
-            step[, c("noConvergence") := sum(.SD$convergence!=0)]
-            step[, c("convergence") := sum(.SD$convergence==0)]
+            step[, c("noConvergence") := sum(convergence!=0)]
+            step[, c("convergence") := sum(convergence==0)]
         }
         indexMax <- which.max(abs(step$statistic))
         return(step[indexMax])
@@ -44,7 +46,7 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
         dfModel <- rep(NA, n.step)
     }
     dt.seqTest[, c("df.residual") := dfModel]
-    dt.seqTest[, c("nTests.adj") := 0.05/(2*(1-pt(quantile,df = df.residual)))]
+    dt.seqTest[, c("nTests.adj") := 0.05/(2*(1-stats::pt(quantile,df = df.residual)))]
     
     ## ** output
     out <- list(output = list(), data = dt.seqTest)

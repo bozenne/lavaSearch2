@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan  8 2018 (15:37) 
+## last-updated: jan 10 2018 (17:19) 
 ##           By: Brice Ozenne
-##     Update #: 533
+##     Update #: 543
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,6 +38,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                            iid.previous = NULL, quantile.previous = NULL, 
                            export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
 
+    convergence <- link <- p.value <- NULL ## [:for CRAN check] data.table
+    
 ### ** initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
@@ -67,7 +69,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
             if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
 
                 ## extract coefficient
-                new.coef <- coef(newfit)
+                new.coef <- stats::coef(newfit)
                 if(link[iterI] %in% names(new.coef) == FALSE){
                     stop("Coefficient ",link[iterI]," not found \n",
                          "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
@@ -87,7 +89,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                     sd.coef <- e.df[1, "std"]
                 }else{
                     if(robust == FALSE){
-                        sd.coef <- sqrt(vcov(newfit)[link[iterI],link[iterI]])
+                        sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
                     }
                 }
                 
@@ -96,11 +98,11 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 if(robust == FALSE){                    
                     out$iid <- out$iid * sd.coef / sqrt(mean(out$iid^2, na.rm = TRUE))
                 }else{
-                    sd.coef <- sd(out$iid, na.rm = TRUE)
+                    sd.coef <- stats::sd(out$iid, na.rm = TRUE)
                 }
 
                 ## compute test statistic
-                out$dt[1, "statistic" := abs(.SD$coefBeta/sd.coef)]
+                out$dt[1, "statistic" := abs(.SD$coefBeta/sd.coef)] ## keep .SD for clarity
             }
         }
         return(out)
@@ -133,7 +135,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }
 
         vec.packages <- c("lavaSearch2", "data.table", packages)
-        i <- NULL # for CRAN check
+        i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link, .packages =  vec.packages,
                                              # .export = c("ls.LVMargs"),
@@ -166,20 +168,20 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     }
     
 ### ** p.value
-    indexCV <- dt.test[, .I[.SD$convergence==0]]
+    indexCV <- dt.test[, .I[convergence==0]]
 
     if(df){
-        dt.test[indexCV, "p.value" := 2*(1-pnorm(abs(.SD$statistic)))]
+        dt.test[indexCV, "p.value" := 2*(1-pnorm(abs(statistic)))]
     }else{
-        dt.test[indexCV, "p.value" := 2*(1-pt(abs(.SD$statistic), df = df))]
+        dt.test[indexCV, "p.value" := 2*(1-stats::pt(abs(.SD$statistic), df = df))] ## keep .SD for clarity
     }
 
     ### ** adjust p.value
     if(method.p.adjust == "max"){
-        nameN0 <- dt.test[indexCV, .SD$link]
+        nameN0 <- dt.test[indexCV, link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
         if(df){
-            dfN0 <- round(median(setNames(dt.test[convergence==0][["df"]],nameN0)))
+            dfN0 <- round(stats::median(stats::setNames(dt.test[convergence==0][["df"]],nameN0)))
         }else {
             dfN0 <- NULL
         }
@@ -204,8 +206,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         dt.test[indexCV,c("adjusted.p.value") := resQmax$p.adjust]
         dt.test[indexCV,c("quantile") := resQmax$z]
         Sigma <- resQmax$Sigma
-        rownames(Sigma) <- dt.test[indexCV,.SD$link]
-        colnames(Sigma) <- dt.test[indexCV,.SD$link]
+        rownames(Sigma) <- dt.test[indexCV, link]
+        colnames(Sigma) <- dt.test[indexCV, link]
         
         if(initCpus){
             parallel::stopCluster(cl)
@@ -213,7 +215,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         
     }else{
         dt.test[indexCV,c("corrected.level") := NA]
-        dt.test[dt.test$convergence==0, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
+        dt.test[dt.test$convergence==0,
+                c("adjusted.p.value") := stats::p.adjust(p.value, method = method.p.adjust)]
         dt.test[indexCV,c("quantile") := as.numeric(NA)]
         Sigma <- NULL        
     }    

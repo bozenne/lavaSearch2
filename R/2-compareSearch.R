@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: okt 16 2017 (11:40) 
+## last-updated: jan 10 2018 (15:16) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 219
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,7 +105,7 @@ compareSearch <- function(object, alpha = 0.05,
                 vec.tempo <- getStep(ls.search$Wald, step = currentStep, slot = "sequenceTest")
                 maxStep <- list(...)$nStep
                 vec.p.adjust <- sapply(setdiff(method.p.adjust,"max"), function(iAdj){
-                    min(p.adjust(vec.tempo$p.value, method = iAdj))
+                    min(stats::p.adjust(vec.tempo$p.value, method = iAdj))
                 })
                 if(is.null(maxStep)){maxStep <- Inf}
 
@@ -199,10 +199,10 @@ compareSearch <- function(object, alpha = 0.05,
     name.search <- names(ls.searchAll)
     table.alllinks <- matrix(NA, nrow = length(name.alllinks), ncol = length(ls.searchAll)+1,
                              dimnames = list(name.alllinks, c("base",name.search)))
-    table.alllinks[names(coef(object)),"base"] <- coef(object)
+    table.alllinks[names(stats::coef(object)),"base"] <- coef(object)
     for(iSearch in name.search){ # iSearch <- name.search[2]
         M.tempo <- getStep(ls.searchAll[[iSearch]], step = nStep(ls.searchAll[[iSearch]]), slot = "sequenceModel")
-        table.alllinks[names(coef(M.tempo)),iSearch] <- coef(M.tempo)
+        table.alllinks[names(stats::coef(M.tempo)),iSearch] <- coef(M.tempo)
     }
     
 ### ** export
@@ -220,7 +220,7 @@ compareSearch <- function(object, alpha = 0.05,
     ## ** adjust p.value
     seqP.value <- sapply(object$sequenceTest, function(x){        
         if(method.p.adjust!="max"){            
-            x[,c("adjusted.p.value") := p.adjust(x$p.value, method = method.p.adjust)]
+            x[,c("adjusted.p.value") := stats::p.adjust(x$p.value, method = method.p.adjust)]
         }
         return(min(x$adjusted.p.value))
     })
@@ -242,7 +242,7 @@ compareSearch <- function(object, alpha = 0.05,
     }
 
     ## ** update final model
-    index.finalModel <- tail(which(seqP.value<alpha),1)
+    index.finalModel <- utils::tail(which(seqP.value<alpha),1)
     if( length(index.finalModel) == 0 ){
         object$sequenceModel[[1]] <- model0
     }else{

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  9 2018 (18:22) 
+## Last-Updated: jan 10 2018 (16:46) 
 ##           By: Brice Ozenne
-##     Update #: 168
+##     Update #: 178
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,12 +42,12 @@ dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
 
   
     ## ** extract information
-    X <- model.matrix(object)
-    sigma2 <- mean(residuals(object)^2)
+    X <- stats::model.matrix(object)
+    sigma2 <- mean(stats::residuals(object)^2)
     
     res.tempo <- residuals2(object, adjust.residuals = adjust.residuals,
                             return.vcov.param = TRUE)
-    p <- c(coef(object), sigma2 = sigma2)
+    p <- c(stats::coef(object), sigma2 = sigma2)
     name.param <- names(p)
     n.param <- length(p)
     vcov.param <- attr(res.tempo, "vcov.param")
@@ -72,7 +72,7 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
                        adjust.residuals = FALSE, numericDerivative = FALSE, ...){
 
     p <- .coef2(object)
-    data <- getData(object)
+    data <- nlme::getData(object)
 
     n.param <- length(p)
     name.param <- names(p)
@@ -158,8 +158,10 @@ dVcov2.lme <- dVcov2.gls
 dVcov2.lvmfit <- function(object, vcov.param = NULL,
                           adjust.residuals = TRUE, numericDerivative = FALSE, ...){
 
-    p <- pars(object)
-    data <- model.frame(object)
+    detail <- lava <- originalLink <- NULL ## [:for CRAN check] data.table
+    
+    p <- lava::pars(object)
+    data <- stats::model.frame(object)
  
     n.param <- length(p)
     name.param <- names(p)
@@ -180,7 +182,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     ## ** param with non-zero third derivative
     keep.type <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
     tableType <- coefType(object, as.lava=FALSE)        
-    keep.param <- tableType[!is.na(lava) & detail%in%keep.type,originalLink]
+    keep.param <- tableType[!is.na(lava) & detail %in% keep.type, originalLink]
     
     ### ** Compute the gradient 
     if(numericDerivative){
