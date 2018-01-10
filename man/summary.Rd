@@ -7,13 +7,13 @@
 \alias{summary.lvmfit2}
 \title{Summary with small sample correction}
 \usage{
-\method{summary}{gls2}(object, digits = max(3, getOption("digit")),
+summary.gls2(object, digits = max(3, getOption("digit")),
   adjust.residuals = TRUE, ...)
 
-\method{summary}{lme2}(object, digits = max(3, getOption("digit")),
+summary.lme2(object, digits = max(3, getOption("digit")),
   adjust.residuals = TRUE, ...)
 
-\method{summary}{lvmfit2}(object, adjust.residuals = FALSE, ...)
+summary.lvmfit2(object, adjust.residuals = FALSE, ...)
 }
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}

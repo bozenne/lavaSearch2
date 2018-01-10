@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:42) 
 ## Version: 
-## last-updated: okt  3 2017 (19:20) 
+## last-updated: jan 10 2018 (14:27) 
 ##           By: Brice Ozenne
-##     Update #: 101
+##     Update #: 104
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,9 +15,10 @@
 ## 
 ### Code:
 
-
+## * Documentation - calcType1postSelection 
 ##' @title Compute the type 1 error after selection
 ##' @description Compute the type 1 error after selection
+##' @name calcType1postSelection
 ##' 
 ##' @param level expected coverage.
 ##' @param mu vector of means for the joint distribution of the test statistics
@@ -85,12 +86,15 @@
 ##'                         mu = mu, Sigma = Sigma, correct = FALSE)
 ##' }
 ##'
-##' 
+
+
+## * calcType1postSelection
+##' @rdname calcType1postSelection
 ##' @export
 calcType1postSelection <- function(level, mu, Sigma, quantile.previous, distribution, df,
                                     n = 10, correct = TRUE, ...){
 
-    # {{{ normalisation of the arguments
+    ## ** normalisation of the arguments
     p <- length(mu)
     if(p %% 2 == 0){
         stop("\'mu\' must have uneven length\n",
@@ -116,9 +120,8 @@ calcType1postSelection <- function(level, mu, Sigma, quantile.previous, distribu
                           sigma = Sigma[1:nTest,1:nTest,drop=FALSE],
                           tail = "both.tails")
     }    
-    # }}}
 
-    # {{{ wrapper
+    ## ** wrapper
     warper <- function(x){ # x <- 0.95## level
         # P[A|B] = 1-P[\bar{A}|B]  = 1-P[\bar{A},B]/P[B]
         ## Current quantile
@@ -136,9 +139,8 @@ calcType1postSelection <- function(level, mu, Sigma, quantile.previous, distribu
         out <- 1-num$value/denum$value
         return(out)
     }
-    # }}}
 
-    # {{{ compute type1 error
+    ## ** compute type1 error
     if(correct){
         out <- optim(par = level, fn = function(x){
             obj <- abs((1-level)-warper(x))
@@ -152,8 +154,6 @@ calcType1postSelection <- function(level, mu, Sigma, quantile.previous, distribu
     }else{
         out <- warper(level)
     }
-
-    # }}}
     
     return(out)
 }

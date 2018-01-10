@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan  9 2018 (17:43) 
+## last-updated: jan 10 2018 (14:37) 
 ##           By: Brice Ozenne
-##     Update #: 340
+##     Update #: 369
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,6 +59,7 @@
 #' or a named vector containing the type of the links.
 #' 
 #' @examples 
+#'
 #' #### regression ####
 #' m <- lvm(Y~X1+X2)
 #' e <- estimate(m, sim(m, 1e2))
@@ -109,13 +110,12 @@
 #' categorical(m, labels = as.character(1:3)) <- "X1"
 #' coefExtra(m)
 #' coefExtra(m, value = TRUE)
-#'
+#' 
 #' coefIntercept(m)
 #' coefIntercept(m, value = TRUE)
 #' coefIntercept(e)
 #'
 #' coefReg(e, value = TRUE)
-#' coefReg(e, level = -1, value = TRUE)
 #'
 #' #### LVM with constrains ####
 #' m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
@@ -132,6 +132,8 @@
 #' coefType(eG)
 #' coef(eG)
 #' 
+#' coefIndexModel(eG)
+#' 
 #' @export
 `coefType` <-
   function(x,...) UseMethod("coefType")
@@ -144,7 +146,6 @@
 coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){ 
 
     ## *** extract all coef
-
     index.all <- which(!is.na(x$M), arr.ind = FALSE)
     ls.name <- list()
     ls.X <- list()
@@ -192,7 +193,7 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
                                       )
         ls.marginal$regression <- rep(FALSE,n.regression)
     }
-    
+
     ## *** covariance
     M.cov <- x$cov
     M.cov[upper.tri(M.cov)] <- 0
@@ -237,14 +238,14 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
         ls.marginal$covariance <- rep(FALSE, n.covariance)
     }
     
-    ## *** external parameters    
+    ## *** external parameters
     n.external <- length(x$expar)
     if(n.external>0){
         ls.name$external <- names(x$expar)
         ls.type$external <- rep("external", n.external)
 
         ls.X$external <- rep(NA,n.external)
-        for(iX in names(x$attributes$ordinalparname)){
+        for(iX in names(x$attributes$ordinalparname)){ ## iX <- "X1"
             ls.X$external[ls.name$external %in% x$attributes$ordinalparname[[iX]]] <- iX
         }
         ls.Y$external <- rep(NA,n.external)
@@ -268,7 +269,6 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
                            marginal = unlist(ls.marginal))
 
     ## *** categorical variables
-
     if(!is.null(x$attributes$ordinalparname)){
         resCar <- defineCategoricalLink(x, link = dt.param$name, data = data)
 
@@ -302,8 +302,16 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
        
     ## *** export
     if(as.lava){
-        dt.param[!is.na(lava),lava.name := na.omit(c(externalLink,name))[1],by=name]
-        out <- dt.param[!is.na(lava), setNames(type,lava.name)]
+        ## add extra parameter as links
+        vec.extra <- unique(na.omit(dt.param[["externalLink"]]))
+        if(length(vec.extra)>0){
+            dt.extra <- data.table(name = vec.extra, type = "extra",
+                                   lava = names(coef(x))[match(vec.extra,coef.lava)])
+            dt.param <- rbind(dt.param[,.(name, type, lava)], dt.extra)
+        }
+        
+        ## 
+        out <- dt.param[!is.na(lava), setNames(type,name)]
         out <- out[!duplicated(names(out))]
         return(out[coef.lava])    
     }else{
@@ -315,7 +323,6 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 #' @rdname coefType
 #' @export
 coefType.lvmfit <- function(x, as.lava = TRUE, ...){ 
-
     
     ## *** find type of the coefficients in the original model
     dt.param <- coefType(x$model0, as.lava = FALSE)
@@ -392,8 +399,8 @@ coefCov.multigroup <- coefCov.lvm
 
 #' @rdname coefType
 #' @export
-coefExtra.lvm <- function(x, value = FALSE, ...){ 
-
+coefExtra.lvm <- function(x, value = FALSE, ...){
+    
     res <- retainType(type = coefType(x, ...),
                       validType = "extra",
                       value = value) 
@@ -452,9 +459,14 @@ coefIndexModel.multigroup <- function(x, ...){
     #### export
     return(index)
 }
-  
-# }}}
 
+#' @rdname coefType
+#' @export
+coefIndexModel.multigroupfit <- function(x, ...){
+    out <- coefIndexModel(x$model)
+    return(out[names(coef(x))])
+}
+  
 ## * method - coefIntercept
 
 #' @rdname coefType
@@ -497,8 +509,6 @@ coefRef.lvmfit <- function(x, value = FALSE, ...){
 
     return(res)    
 }
-
-# }}}
 
 #' @rdname coefType
 #' @export

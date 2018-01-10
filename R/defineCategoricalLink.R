@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (16:35) 
 ## Version: 
-## last-updated: jan  9 2018 (17:48) 
+## last-updated: jan 10 2018 (13:54) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 113
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -49,7 +49,7 @@
 #' @export
 defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
 
-### ** normalize arguments
+    ### ** normalize arguments
     if(is.null(link)){
         link <- coef(x)
     }
@@ -57,12 +57,12 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
         data <- sim(x, 1)
     }
     
-### ** identify the type of regression variable (continuous or categorical)
+    ### ** identify the type of regression variable (continuous or categorical)
     index.cat <- which(link %in% unlist(x$attributes$ordinalparname))
     index.Ncat <- setdiff(1:length(link), index.cat)
-    link.Ncat <- link[index.Ncat]
+    link.Ncat <- setdiff(link[index.Ncat], names(x$attributes$ordinalparname))
 
-### ** caracterize links involving categorical variables    
+    ### ** caracterize links involving categorical variables    
     if(length(index.cat)>0){
         link.cat <- link[index.cat]
         xCAT <- lava_categorical2dummy(x, data)$x
@@ -87,6 +87,7 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
 
         ## *** find endogenous variable
         M.link <- xCAT$M[paste0(X.name.allcat,X.level.cat),,drop = FALSE]
+        M.link <- cbind(M.link, as.numeric(rowSums(M.link)==0))
         indexLink <- which(M.link==1, arr.ind = TRUE)
         Y.name.allcat <- colnames(M.link)[indexLink[,"col"]]
             
@@ -95,8 +96,10 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
         X.level.allcat <- as.character(X.level.cat[indexLink[,"row"]])
         external.link.allcat <- link[index.cat[indexLink[,"row"]]]
         original.link.allcat <- paste0(Y.name.allcat, lava.options()$symbol[1], X.name.allcat)
+        original.link.allcat[Y.name.allcat == ""] <- gsub("~","",original.link.allcat[Y.name.allcat == ""])
         cat.link.allcat <- paste0(Y.name.allcat, lava.options()$symbol[1], Xcat.name.allcat)
-
+        cat.link.allcat[Y.name.allcat == ""] <- gsub("~","",cat.link.allcat[Y.name.allcat == ""])
+        
         dt.cat <- data.table::data.table(link = cat.link.allcat,
                                          endogenous = Y.name.allcat,
                                          exogenous = X.name.allcat,
@@ -131,7 +134,7 @@ defineCategoricalLink.lvm <- function(x, link = NULL, data = NULL){
     }
 
     
-### ** export
+    ### ** export
     out <- rbind(dt.Ncat,dt.cat)
     return(out)
 }

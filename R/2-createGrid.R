@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:40) 
 ## Version: 
-## last-updated: okt  3 2017 (19:01) 
+## last-updated: jan 10 2018 (14:29) 
 ##           By: Brice Ozenne
-##     Update #: 41
+##     Update #: 42
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,10 +16,11 @@
 ### Code:
 
 
-# {{{ createGrid
+## * Documentaiton - createGrid
 #' @title Create a mesh for the integration
 #' @description Create a mesh for the integration
-#'
+#' @name createGrid
+#' 
 #' @param n the number of points for the mesh in the x direction.
 #' @param xmin the minimal x value.
 #' @param xmax the maximal x value.
@@ -69,14 +70,18 @@
 #'                            d.z = 2, zmax = 2, fine = FALSE, double = FALSE)
 #' gridExtZ2_4d <- createGrid(5, d.y = 3, xmin = 0, xmax = 4, 
 #'                            d.z = 2, zmax = 2, fine = FALSE, double = TRUE)
-#' 
+#'
+
+
+## * createGrid
+#' @rdname createGrid
 createGrid <- function(n,
                        xmin, xmax, d.y, 
                        d.z, zmax,
                        fine, double){
 
 
-    ## find step along the x axis
+    ## ** find step along the x axis
     if(xmin[1]==0){
         by <- xmax/n
     }else{
@@ -86,7 +91,7 @@ createGrid <- function(n,
     seqPointsX <- seq(xmin,xmax, by = by)
     n.seqX <- length(seqPointsX)-1
 
-    ## name variables
+    ## ** name variables
     y.minNames <- paste0("y",1:d.y,".min")
     y.maxNames <- paste0("y",1:d.y,".max")
     all.Names <- c("x.min","x.max",y.minNames,y.maxNames,"weight","index")
@@ -94,7 +99,7 @@ createGrid <- function(n,
     seqNames.min <- c("x.min",y.minNames)
     seqNames.max <- c("x.max",y.maxNames)
     
-    # {{{ main grid
+    ## ** main grid
     grid.main <- NULL
     for(iX in 1:n.seqX){ #  iX <- 1
         grid.main <- rbind(grid.main,
@@ -109,9 +114,8 @@ createGrid <- function(n,
     ## gg.main <- gg.main + geom_rect()
     ## gg.main <- gg.main + geom_abline(slope = 1,color = "red") + geom_abline(slope = -1,color = "red")
     ## gg.main
-    # }}}
     
-    # {{{ fine grid
+    ## ** fine grid
     grid.fine <- NULL    
     if(fine){
 
@@ -148,14 +152,12 @@ createGrid <- function(n,
         ## gg.fine <- gg.fine + geom_abline(slope = 1,color = "red") + geom_abline(slope = -1,color = "red")
         ## gg.fine
     }
-    # }}}
 
-    # {{{ Merge grids and remove empty cells
+    ## ** Merge grids and remove empty cells
     grid.all <- rbind(grid.main, grid.fine)    
     grid.all <- grid.all[grid.all[, .I[.SD$y1.min!=.SD$y1.max]]] # remove empty rectangles
-    # }}}
     
-    # {{{ duplicate grid  (negative x  and positive x)
+    ## ** duplicate grid  (negative x  and positive x)
     grid.all <- grid.all[ ,"index" := .SD$index - min(.SD$index) + 1]
 
     grid.all2 <- copy(grid.all)    
@@ -164,9 +166,8 @@ createGrid <- function(n,
     grid.all2[, "index" := .SD$index + max(.SD$index)]
 
     grid <- rbind(grid.all,grid.all2)
-    # }}}
 
-    # {{{ add z coordinate
+    ## ** add z coordinate
     if(d.z>0){
         z.minNames <- paste0("z",1:d.z,".min")
         z.maxNames <- paste0("z",1:d.z,".max")
@@ -176,15 +177,13 @@ createGrid <- function(n,
         seqNames.min <- c(seqNames.min, z.minNames)
         seqNames.max <- c(seqNames.max, z.maxNames)
     }
-    # }}}
 
     return(list(grid = grid,
                 seqNames.min = seqNames.min,
                 seqNames.max = seqNames.max))
 }
-# }}}
 
-# {{{ createGrid2
+## * createGrid2
 #' @title Create a mesh for the integration
 #' @description Create a mesh for the integration
 #'
@@ -249,9 +248,8 @@ createGrid2 <- function(n, xmin, xmax, plot = FALSE){
 
     return(fullGrid)
 }
-# }}}
 
-# {{{ MCintGaus
+## * MCintGaus - commented
 #' 
 #' MCintGaus(c(0,0),diag(1,2),n=1e4)
 #' MCintGaus(c(0,0),diag(1,2),n=1e4, xmax = 10)
@@ -293,7 +291,6 @@ createGrid2 <- function(n, xmin, xmax, plot = FALSE){
 ##   names(y) <- make.names(seq_len(nrDim))
 ##   y
 ## }
-# }}}
 
 
 #----------------------------------------------------------------------

@@ -47,7 +47,7 @@ dVcov2(x, ...) <- value
 
 \item{...}{arguments to be passed to lower level methods.}
 
-\item{adjust.residuals}{If TRUE, a small sample correction is used.}
+\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
 \item{cluster}{the grouping variable relative to which the observations are iid.
 Only required for gls models with no correlation argument.}

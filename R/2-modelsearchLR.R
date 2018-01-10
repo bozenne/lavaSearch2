@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: okt  9 2017 (16:53) 
+## last-updated: jan 10 2018 (14:30) 
 ##           By: Brice Ozenne
-##     Update #: 69
+##     Update #: 71
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,20 +15,22 @@
 ## 
 ### Code:
 
+## * Documentation - modelsearchLR
 #' @title Model searching using a likelihood ratio test
 #' @description Model searching using a likelihood ratio test
-#' 
 #' @name modelsearchLR
 #' 
 #' @return a list
 #'
 #' @keywords internal
-#'
+
+## * modelsearchLR
+#' @rdname modelsearchLR
 modelsearchLR <- function (x, data, restricted, link, directive, 
                            update.FCT, update.args,
                            method.p.adjust, display.warnings, trace){
 
-    # {{{ initialisation
+    ## ** initialisation
     n.link <- length(link)
     dt.test <- data.table("link" = link,
                           "statistic" = as.numeric(rep(NA,n.link)),
@@ -42,9 +44,7 @@ modelsearchLR <- function (x, data, restricted, link, directive,
 
     best.test <- -Inf
     best.model <- NULL
-    
-    # }}}
-    
+        
     if(trace > 0){pb <- utils::txtProgressBar(max = n.link, style = 3) }
 
     for (iterI in 1:n.link) { # iterI <- 1
@@ -81,7 +81,7 @@ modelsearchLR <- function (x, data, restricted, link, directive,
     if(trace > 0){  close(pb) }
     dt.test[, c("adjusted.p.value") := p.adjust(.SD$p.value, method = method.p.adjust)]
     
-    #### export 
+    ## ** export 
     return(list(dt.test = dt.test,
                 best.test = best.test,
                 best.model = best.model))

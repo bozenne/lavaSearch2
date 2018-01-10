@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: okt  4 2017 (14:58) 
+## last-updated: jan 10 2018 (14:36) 
 ##           By: Brice Ozenne
-##     Update #: 451
+##     Update #: 453
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 
 
-# {{{ description
+## * Documentation - IntDensTri
 ##' @title Integrate a gaussian/student density over a triangle
 ##' @name IntDensTri
 ##' @description Consider a univariate random variable X,
@@ -102,9 +102,8 @@
 ##' 
 ##' @author Brice Ozenne
 ##'
-# }}}
 
-# {{{ IntDensTri
+## * IntDensTri
 ##' @rdname IntDensTri
 ##' @export 
 IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
@@ -112,7 +111,7 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
 
     interior <- NULL
     
-    # {{{ normalize arguments
+    ## ** normalize arguments
     type <- match.arg(type, c("raw","fine","double"))
     
     p <- length(mu)
@@ -139,9 +138,7 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
         names(ls.args) <- c("mean","sigma")
     }
 
-    # }}}
-    
-    # {{{ create the grid of points to integrate over
+    ## ** create the grid of points to integrate over
     resGrid <- createGrid(n,
                           xmin = x.min, xmax = coordX.max, d.y = d.y, 
                           d.z = d.z, zmax = z.max, 
@@ -160,9 +157,8 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
         grid <- rbind(cbind(grid,interior=TRUE),
                       cbind(grid.double,interior=FALSE))
     }
-    # }}}
 
-    # {{{ integration
+    ## ** integration
     total.area <- 0
     grid$area <- apply(grid, 1, function(x){
         do.call(distribution, args = c(lower = list(c(x[seqNames.min])),
@@ -178,7 +174,7 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
         total.area <- grid[,sum(.SD$area*.SD$weight)]
     }
 
-    # }}}
+    ## ** export
     out <- list()
     out$value <- total.area    
     out$prune <- prune
@@ -187,10 +183,8 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
     class(out) <- "IntDensTri"
     return(out)
 }
-# }}}
 
-# {{{ autoplot.IntDensTri
-
+## * autoplot.IntDensTri
 #' @title 2D-display of the domain used to compute the integral
 #' @description 2D-display of the domain used to compute the integral
 #'
@@ -241,10 +235,8 @@ autoplot.IntDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...
     return(invisible(gg.grid))
 }
 
-                                        # }}}
 
-# {{{ print.IntDensTri
-
+## * print.IntDensTri
 #' @method print IntDensTri
 #' @export
 print.IntDensTri <- function(x, ...){
@@ -264,6 +256,5 @@ print.IntDensTri <- function(x, ...){
 
     return(NULL)
 }
-# }}}
 #----------------------------------------------------------------------
 ### InTriGauss.R ends here

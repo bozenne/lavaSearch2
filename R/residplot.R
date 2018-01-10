@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
 ## Version: 
-## last-updated: okt  5 2017 (11:59) 
+## last-updated: jan 10 2018 (14:35) 
 ##           By: Brice Ozenne
-##     Update #: 110
+##     Update #: 111
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,8 +15,7 @@
 ## 
 ### Code:
 
-# {{{ documentation
-
+## * Documentation - residplot
 #' @title Plot the residuals of a lvm object
 #' @description Plot the residuals for each outcome of a lvm object
 #' 
@@ -62,8 +61,8 @@
 residplot <- function (object, ...) {
   UseMethod("residplot", object)
 }
-# }}}
 
+## * residplot.lvmfit
 #' @rdname residplot
 #' @export
 residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.variables = res.variables,
@@ -158,7 +157,8 @@ residplot.lvmfit <- function(object, res.variables = endogenous(object), obs.var
 
     
 }
-    
+
+## * smoothSD
 smoothSD <- function(Y, time, sd.kernel, kernel, plot.weights){
 
     n <- length(Y)    

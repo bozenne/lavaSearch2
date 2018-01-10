@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (09:26) 
 ## Version: 
-## last-updated: okt  5 2017 (11:34) 
+## last-updated: jan 10 2018 (14:34) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 7
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,8 +15,7 @@
 ## 
 ### Code:
 
-# {{{ documentation
-
+## * Documentation - qqplot2
 #' @title QQplot for the residuals of a lvm object
 #' @description QQplot for the residuals of a lvm object
 #' 
@@ -47,8 +46,8 @@
 qqplot2 <- function (object, ...) {
   UseMethod("qqplot2", object)
 }
-# }}}
 
+## * qqplot2.lvmfit
 #' @rdname qqplot2
 #' @export
 qqplot2.lvmfit <- function(object, variables = NULL, mfrow = NULL,

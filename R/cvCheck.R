@@ -1,5 +1,4 @@
-# {{{ cvCheck
-
+## * cvCheck
 #' @title Test the sensibility of the lvm estimate to the initialization points
 #' @description Test the sensibility of the lvm estimate to the initialization points
 #' @name cvCheck
@@ -38,6 +37,7 @@ cvCheck <- function (object, ...) {
   UseMethod("cvCheck", object)
 }
 
+## * cvCheck.lvm
 #' @rdname cvCheck
 #' @export
 cvCheck.lvm <- function(object,
@@ -56,7 +56,7 @@ cvCheck.lvm <- function(object,
         dots$control <- list()
     }
    
-    # {{{ automatic intialisation
+    ## ** automatic intialisation
     test.W <- 0
     
     if(trace){cat("* initialisation \n")}
@@ -81,10 +81,8 @@ cvCheck.lvm <- function(object,
                                         lower = c(rep(-Inf, length(mean.param)), rep(0, length = length(var.param))),
                                         algorithm = "gibbs"
                                         )
-
-    # }}}
     
-    # {{{ warper
+    ## ** warper
     warper <- function(x){
         dots$control$start <- sample.start[x,]
 
@@ -100,9 +98,8 @@ cvCheck.lvm <- function(object,
             return(rep(NA, n.coef+2))
         }
     }
-    # }}}
 
-    # {{{ parallel computations
+    ## ** parallel computations
     if(ncpus>1){
       cl <- parallel::makeCluster(ncpus)
       doSNOW::registerDoSNOW(cl)
@@ -137,25 +134,20 @@ cvCheck.lvm <- function(object,
       }
       Mres <- do.call("cbind",resLoop)
     }
-    # }}}
 
-    # {{{ postprocess and export
+    ## ** postprocess and export
     Mres <- cbind(Mres,
                   c(lvm.init$opt$convergence, as.numeric(logLik(lvm.init)), coef(lvm.init) ))  
     df.resCV <- setNames(as.data.frame(t(Mres)), c("cv", "logLik",names.coef))
     
-    ## export
+    ## ** export
     out <- list(estimates = df.resCV,
                 seeds = sample.start)
     class(out) <- c("cvlvm","data.frame")
     return(out)
-    # }}}
 }
 
-# }}}
-
-
-# {{{ summary.cvlvm
+## * summary.cvlvm
 #' @title Summary function associated with cvCheck
 #' @description Summary function associated with cvCheck
 #'
@@ -206,10 +198,9 @@ summary.cvlvm <- function(object, threshold = NULL, ...){
                         pc.cv = pc.cv,
                         n.clusters = n.clusters)))
 }
-# }}}
 
 
-
+## * optimx1
 optimx1 <- function(start,objective,gradient,hessian,...) {
   
   nlminbcontrols <- c("eval.max","iter.max","trace","abs.tol","rel.tol","x.tol","step.min","optim.method","optimx.method")

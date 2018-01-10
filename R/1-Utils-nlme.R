@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan  9 2018 (17:50) 
+## Last-Updated: jan 10 2018 (13:26) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 123
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -207,11 +207,12 @@
 #' @param ... arguments to be passed to lower level methods.
 #'  
 #' @details The marginal variance covariance matrix for gls model is of the form:
-#' \deqn{\Sigma = \begin{bmatrix}
-#' \sigma^2 & sigma^2 \sigma_2 \rho_{1,2} & sigma^2 \sigma_3 \rho_{1,3} \\
-#' & sigma^2 \sigma_2 & sigma^2 \sigma_3 \rho_{1,3} \\
-#' & & sigma^2 \sigma_3 \\
-#' \end{bmatrix}
+#' \deqn{
+#' \Sigma = \left[ \begin{array}{ccc}
+#' \sigma^2 & \sigma^2 \sigma_2 \rho_{1,2} & \sigma^2 \sigma_3 \rho_{1,3} \\
+#' & \sigma^2 \sigma_2^2 & \sigma^2 \sigma_3 \rho_{1,3} \\
+#' & & \sigma^2 \sigma_3^2 \\
+#' \end{array} \right]
 #' }
 #'
 #' The marginal variance covariance matrix for lme model is of the form:

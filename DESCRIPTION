@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for model specification in the latent variable framework
 Version: 0.1.2
-Date: 2018-01-09
+Date: 2018-01-10
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 Description: Tools for model specification in the latent variable framework
@@ -19,7 +19,6 @@ Imports:
     inline,
     MASS,
     methods,
-    multcomp,
     mvtnorm,
     nlme,
     numDeriv,
@@ -31,7 +30,8 @@ Imports:
     tmvtnorm,
     utils
 Suggests:
-    testthat,
+    multcomp,
+    pbapply,
     survival,
-    pbapply
+    testthat
 RoxygenNote: 6.0.1

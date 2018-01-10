@@ -1,6 +1,6 @@
-# {{{ initVar
+## * Documentation - initVarLink
 #' @title Normalize var1 and var2
-#' @name initVar
+#' @name initVarLink
 #' @description Convert var1 and var2 from formula or covariance to character
 #' 
 #' @param var1 a character indicating the endogeneous variable or a formula
@@ -34,7 +34,8 @@
 #' initVarLinks(c("y ~ x1","y~ x2"), format = "txt.formula")
 #' initVarLinks(c(y ~ x1,y ~ x2), format = "txt.formula")
 
-#' @rdname initVar
+## * initVarLink
+#' @rdname initVarLink
 #' @export
 initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
                          Slink = c(lava.options()$symbols[1],"~"),
@@ -98,10 +99,9 @@ initVarLink <- function(var1, var2, repVar1 = FALSE, format = "list",
   ## export 
   return(res)
 }
-# }}}
 
-# {{{ initVarLinks
-#' @rdname initVar
+## * initVarLinks
+#' @rdname initVarLink
 #' @export
 initVarLinks <- function(var1, format = "list",...){
         
@@ -124,10 +124,8 @@ initVarLinks <- function(var1, format = "list",...){
     return(res)
     
 }
-# }}}
 
-
-# {{{ selectResponse
+## * Documentation - selectResponse
 #' @title Response variable of a formula
 #' @description Return the reponse variable contained in the formula
 #' @name selectResponse
@@ -150,10 +148,12 @@ initVarLinks <- function(var1, format = "list",...){
 #' selectResponse(~X1+X2, type = "vars")
 #' }
 
+## * selectResponse (generic method)
 #' @rdname selectResponse
 #' @export
 `selectResponse` <-  function(x, ...) UseMethod("selectResponse")
 
+## * selectResponse.formula
 #' @rdname selectResponse
 #' @method selectResponse formula
 selectResponse.formula <- function(x, type = "call"){
@@ -171,9 +171,8 @@ selectResponse.formula <- function(x, type = "call"){
   
   return(res)
 }
-# }}}
 
-# {{{ selectRegressor
+## * Documentation - selectRegressor
 #' @title Regressor of a formula
 #' @description Return the regressor variables contained in the formula
 #' @name selectRegressor
@@ -195,11 +194,12 @@ selectResponse.formula <- function(x, type = "call"){
 #' selectRegressor(~X1+X2, type = "vars")
 #' }
 
-
+## * selectRegressor (generic method)
 #' @rdname selectRegressor
 #' @export
 `selectRegressor` <-  function(x, ...) UseMethod("selectRegressor")
 
+## * selectRegressor.formula
 #' @rdname selectRegressor
 #' @method selectRegressor formula
 selectRegressor.formula <- function(x, type = "call"){
@@ -220,6 +220,5 @@ selectRegressor.formula <- function(x, type = "call"){
   
   return(res)
 }
-# }}}
 
 

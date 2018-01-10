@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan  5 2018 (09:55) 
+## Last-Updated: jan 10 2018 (12:12) 
 ##           By: Brice Ozenne
-##     Update #: 41
+##     Update #: 43
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(nlme)
+library(lme4)
 
 context("dVcov2")
 n <- 5e1
