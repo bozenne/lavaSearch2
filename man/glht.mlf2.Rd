@@ -10,7 +10,9 @@
 \item{model}{a mmm2 object}
 
 \item{linfct}{a specification of the linear hypotheses to be tested.
-See the documentation of the glht function from the multcomp package.}
+See the documentation of the \code{glht} function from the multcomp package.}
+
+\item{...}{arguments passed to \code{glht}, \code{vcov}, and \code{lTest}.}
 }
 \description{
 General linear hypotheses and multiple outcomes for mmm2 objects.

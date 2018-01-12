@@ -80,7 +80,7 @@ eLM <- lm(Y~X1,data = d)
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
              statistic = "LR", method.p.adjust = "holm")
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "Wald", method.p.adjust = "holm")
+             statistic = "Wald", method.p.adjust = "holm", nStep = 1)
 \dontrun{
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"))
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
@@ -92,8 +92,14 @@ res$sequenceTest[[2]]
 library(survival)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
+\dontshow{
 res <- modelsearch2(m, link = c(status~epicel,status~sex),
-                    packages = "survival")
+                    packages = "survival", nStep = 1)
+}
+\dontrun{
+res <- modelsearch2(m, link = c(status~epicel,status~sex),
+                    packages = "survival", nStep = 1)
+}
 res
 
 #### LVM ####
@@ -113,18 +119,18 @@ addvar(m) <- ~x1+x2
 e <- estimate(m, df)
 
 e$model$index$P1
-## score
+
+\dontshow{
+links <- c(u~x1,u~x2C,y3~x2C)
+resScore <- modelsearch2(e, statistic = "score", link = links, method.p.adjust = "holm")
+resLR <- modelsearch2(e, statistic = "LR", link = links, method.p.adjust = "holm", nStep = 1)
+resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", link = links, nStep = 1)
+} 
 \dontrun{
 resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
 resLR <- modelsearch2(e, statistic = "LR", method.p.adjust = "holm")
 resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald")
-# resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", conditional = TRUE)
 }
-\dontshow{
-links <- c(u~x1,u~x2C,y3~x2C)
-resScore <- modelsearch2(e, statistic = "score", link = links, method.p.adjust = "holm")
-resLR <- modelsearch2(e, statistic = "LR", link = links, method.p.adjust = "holm")
-resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", link = links)
-}
+
 
 }
