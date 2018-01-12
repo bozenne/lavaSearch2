@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 10 2018 (17:17) 
+## last-updated: jan 11 2018 (12:05) 
 ##           By: Brice Ozenne
-##     Update #: 392
+##     Update #: 398
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -145,7 +145,7 @@
 #' @export
 coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 
-   endogenous <- exogenous <- externalLink <- factice <- level <- link <- originalLink <- type <- NULL ## [:for CRAN check] data.table
+   detail <- endogenous <- exogenous <- externalLink <- factice <- level <- link <- marginal <- name <- originalLink <- type <- . <- NULL ## [:for CRAN check] data.table
 
     ## *** extract all coef
     index.all <- which(!is.na(x$M), arr.ind = FALSE)
@@ -285,7 +285,8 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
                                   .(name = link, Y = endogenous, X = paste0(exogenous,level),
                                     data = exogenous, distribution = type,
                                     factice, level, originalLink, externalLink)]
-        resCar.external[,param := name]
+
+        resCar.external[, "param" := name]
         for(iCol in c("type","value","marginal")){ # iCol <- "Y"
             name2col <- stats::setNames(dt.param[[iCol]],dt.param$name)
             resCar.external[,c(iCol) := name2col[originalLink]]
@@ -353,7 +354,7 @@ coefType.lvmfit <- function(x, as.lava = TRUE, ...){
 #' @export
 coefType.multigroup <- function(x, as.lava = TRUE, ...){
 
-    lava <- name <- type <- NULL ## [:for CRAN check] data.table
+    lava <- model <- name <- type <- NULL ## [:for CRAN check] data.table
     
     n.model <- length(x$lvm)
     dt.param <- NULL

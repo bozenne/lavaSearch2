@@ -4,91 +4,74 @@
 \alias{modelsearch2}
 \alias{modelsearch2.lvmfit}
 \alias{modelsearch2.default}
-\alias{.modelsearch2}
-\title{Automatic extension of the lvm}
+\title{Data-driven extension of a latent variable model}
 \usage{
-modelsearch2(x, ...)
+modelsearch2(object, ...)
 
-\method{modelsearch2}{lvmfit}(x, data = NULL, link = NULL,
-  method.iid = "iid", exclude.var = NULL, rm.latent_latent = FALSE,
-  rm.endo_endo = FALSE, rm.latent_endo = FALSE, ...)
+\method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
+  statistic = "Wald", method.p.adjust = "max", typeSD = "information",
+  df = FALSE, adjust.residuals = FALSE, trace = TRUE, ...)
 
-\method{modelsearch2}{default}(x, link, data = NULL, method.iid = "iid",
-  statistic = "Wald", ...)
-
-.modelsearch2(x, link, restricted, directive, update.FCT, update.args, iid.FCT,
-  packages = NULL, statistic = "Wald", conditional = FALSE,
-  exposure = NULL, method.p.adjust = "max", nStep = NULL,
-  na.omit = TRUE, alpha = 0.05, method.max = "integration", ncpus = 1,
-  display.warnings = TRUE, trace = 1, export.iid = FALSE, ...)
+\method{modelsearch2}{default}(object, link, data = NULL,
+  statistic = "Wald", method.p.adjust = "max", typeSD = "information",
+  df = FALSE, adjust.residuals = FALSE, trace = TRUE, ...)
 }
 \arguments{
-\item{x}{a lvm model}
+\item{object}{a \code{lvmfit} object.}
 
-\item{...}{additional arguments to be passed to lower levels functions.}
+\item{...}{additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.}
 
-\item{data}{the dataset used to identify the model}
+\item{link}{the name of the additional relationships to consider when expanding the model. Should be a vector containing strings like "Y~X". Optional for \code{lvmfit} objects, see details.}
 
-\item{link}{the links to consider when expanding the model}
+\item{data}{[optional] the dataset used to identify the model}
 
-\item{method.iid}{the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).}
+\item{statistic}{statistic used to perform the test. Can the likelihood ratio test (\code{"LR"}), the score (\code{"score"}) or the max statistic (\code{"max"}).}
 
-\item{exclude.var}{see the documentation of \code{\link{findNewLink}}.}
+\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignored when using the max statistic. Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).}
 
-\item{rm.latent_latent}{see the documentation of \code{\link{findNewLink}}.}
+\item{typeSD}{[relevant when statistic is Wald] the type of standard error to be used to compute the Wald statistic.
+Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.}
 
-\item{rm.endo_endo}{see the documentation of \code{\link{findNewLink}}.}
+\item{df}{[relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.}
 
-\item{rm.latent_endo}{see the documentation of \code{\link{findNewLink}}.}
-
-\item{statistic}{test statistic used to perform the test. Can the likelihood ratio test (LR), the score (score) or the max statistic (max).}
-
-\item{restricted}{internal argument.}
-
-\item{directive}{internal argument.}
-
-\item{update.FCT}{internal argument.}
-
-\item{update.args}{internal argument.}
-
-\item{iid.FCT}{internal argument.}
-
-\item{packages}{name of the R packages to be exported to each CPU.}
-
-\item{conditional}{should the p.values be corrected for sequential testing. Experimental.}
-
-\item{exposure}{the links to be tested at the end of the variable selection process. Not functional for now.}
-
-\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
-
-\item{nStep}{the maximum number of links that can be added to the model.}
-
-\item{na.omit}{should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.}
-
-\item{alpha}{the significance threshold for retaining a new link.}
-
-\item{method.max}{the method used to compute the distribution of the max statistic \code{integration}.}
-
-\item{ncpus}{the number of cpus that can be used for the computations.}
-
-\item{display.warnings}{should warnings be display? May occur when dealing with categorical variables or when fitting an extended model.}
+\item{adjust.residuals}{[relevant when statistic is Wald] small sample correction: should the leverage-adjusted residuals be used to compute the influence function? Otherwise the raw residuals will be used.}
 
 \item{trace}{should the execution be traced?}
-
-\item{export.iid}{should the iid decomposition of the retained coefficient be export. Only relevant when statistic is set to max.}
 }
 \value{
 a latent variable model
 }
 \description{
-Add all relevant path between the variables present in a lvm.
+Procedure adding relationship between variables that are supported by the data.
+}
+\details{
+Argument \code{link}:
+\itemize{
+\item \code{lvmfit} object: when not specified all possible additional links are considered.
+\item other objects: this argument must be specified.
+}
+
+Argument \code{...} passed to \code{\link{findNewLink}}, see the documentation of this function:
+\itemize{
+\item exclude.var
+\item rm.latent_latent
+\item rm.endo_endo
+\item rm.latent_endo
+}
+
+Argument \code{...} passed to \code{\link{modelsearch2}}:
+\itemize{
+\item alpha: the significance threshold for retaining a new link.
+\item method.max: the method used to compute the distribution of the max statistic. See lava.options()$search.calcMaxDist.
+\item ncpus: the number of cpus that can be used for the computations.
+\item nStep: the maximum number of links that can be added to the model.
+\item na.omit: should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
+}
 }
 \examples{
 
-# to save computation time 
-method.iid <- "iid"
-
 #### linear regression ####
+set.seed(10)
 mSim <- lvm(Y~X1+X2+X3+X4)
 addvar(mSim) <- ~Z1+Z2
 d <- lava::sim(mSim,1e2)
@@ -97,14 +80,11 @@ eLM <- lm(Y~X1,data = d)
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
              statistic = "LR", method.p.adjust = "holm")
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "Wald", method.p.adjust = "holm",
-             method.iid = method.iid)
+             statistic = "Wald", method.p.adjust = "holm")
 \dontrun{
+res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"))
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-                    method.iid = method.iid)
-res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-                    nStep = 2, 
-                    method.iid = method.iid, conditional = TRUE)
+                    nStep = 2, conditional = TRUE)
 res$sequenceTest[[2]]
 }
 
@@ -113,7 +93,7 @@ library(survival)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 res <- modelsearch2(m, link = c(status~epicel,status~sex),
-             method.iid = method.iid, packages = "survival")
+                    packages = "survival")
 res
 
 #### LVM ####
@@ -137,16 +117,14 @@ e$model$index$P1
 \dontrun{
 resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
 resLR <- modelsearch2(e, statistic = "LR", method.p.adjust = "holm")
-resMax <- modelsearch2(e, rm.endo_endo = TRUE,
-                        method.iid = method.iid, statistic = "Wald")
-# resMax <- modelsearch2(e, rm.endo_endo = TRUE,
-#                        method.iid = method.iid, statistic = "Wald", conditional = TRUE)
+resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald")
+# resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", conditional = TRUE)
 }
 \dontshow{
 links <- c(u~x1,u~x2C,y3~x2C)
 resScore <- modelsearch2(e, statistic = "score", link = links, method.p.adjust = "holm")
 resLR <- modelsearch2(e, statistic = "LR", link = links, method.p.adjust = "holm")
-resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", method.iid = "iid", link = links)
+resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", link = links)
 }
 
 }

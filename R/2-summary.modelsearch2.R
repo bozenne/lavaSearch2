@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: jan 10 2018 (17:15) 
+## last-updated: jan 12 2018 (10:39) 
 ##           By: Brice Ozenne
-##     Update #: 45
+##     Update #: 53
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@
 #' @export
 summary.modelsearch2 <- function(object, display = TRUE, ...){
 
-    convergence <- NULL ## [:for CRAN check] data.table
+    convergence <- df <- NULL ## [:for CRAN check] data.table
     
     ## ** extract data from object
     xx <- copy(object$sequenceTest)
@@ -40,13 +40,11 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
         keep.cols <- c(keep.cols,"quantile")
     }
 
-    dfModel <- try(sapply(object$sequenceModel,df.residual, conservative = FALSE),
-                   silent = TRUE)
-    if("try-error" %in% class(dfModel)){
-        dfModel <- rep(NA, n.step)
+    if("df" %in% names(dt.seqTest)){
+        dt.seqTest[, "nTests.adj" := 0.05/(2*(1-stats::pt(quantile, df = df)))]
+    }else{
+        dt.seqTest[, "nTests.adj" := 0.05/(2*(1-stats::pnorm(quantile)))]
     }
-    dt.seqTest[, c("df.residual") := dfModel]
-    dt.seqTest[, c("nTests.adj") := 0.05/(2*(1-stats::pt(quantile,df = df.residual)))]
     
     ## ** output
     out <- list(output = list(), data = dt.seqTest)

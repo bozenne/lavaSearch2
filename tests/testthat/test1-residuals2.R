@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: jan  5 2018 (12:10) 
+## Last-Updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 29
+##     Update #: 35
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(nlme)
+lava.options(symbols = c("~","~~"))
 
 context("residuals2")
 
@@ -37,7 +38,7 @@ dL$Z1 <- rnorm(NROW(dL))
 m <- lvm(Y~X)
 d <- sim(m,1e2)
 
-test_that("residuals2 match residuals.lm", {
+test_that("residuals2 match residuals.lm (single lm)", {
     GS <- residuals(lm(Y~X, data = d))
     e <- estimate(lvm(Y~X), d)
     res <- residuals(e)
@@ -52,7 +53,7 @@ test_that("residuals2 match residuals.lm", {
 m <- lvm(Y~G+X,G~X)
 d <- sim(m,1e2)
 
-test_that("residuals2 match residuals.lm", {
+test_that("residuals2 match residuals.lm (multiple lm)", {
     GS <- cbind(residuals(lm(Y~1, data = d)),
                 residuals(lm(G~1, data = d)))
     e <- estimate(lvm(Y~1,G~1), d)
@@ -148,10 +149,6 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
     expect_equal(GS,test2)
 })
 
-
-
-
-
 ## * adjusted residuals
 
 ## ** univariate linear model
@@ -159,20 +156,17 @@ m <- lvm(Y~X)
 n <- 1e2
 d <- sim(m,n)
 
-test_that("residuals2 match residuals.lm", {
+test_that("residuals2 match residuals.lm (lm adjusted)", {
     e.lm <- lm(Y~X, data = d)
     epsilon.lm <- residuals(e.lm)
     X <- model.matrix(e.lm, d)
     iH <- diag(1,n,n) - X %*% solve(t(X) %*% X) %*% t(X)
     GS1 <- epsilon.lm/diag(iH)^(1/2)
-    GS2 <- epsilon.lm/diag(iH)
     
     e.lvm <- estimate(lvm(Y~X), d)
-    res1 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1/2)
-    res2 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1)
+    res2 <- residuals2(e.lvm, adjust.residuals = TRUE)
 
-    expect_equal(as.double(res1),as.double(GS1))
-    expect_equal(as.double(res2),as.double(GS2))
+    expect_equal(as.double(res2),as.double(GS1))
 })
 
 
@@ -183,29 +177,33 @@ n <- 1e2
 d <- sim(m,n)
 
 test_that("residuals2 match residuals.lm", {
+    ## first model
     e.lm1 <- lm(Y~G+X, data = d)
+    res1 <- residuals2(e.lm1, adjust.residuals = TRUE)
+
     epsilon.lm1 <- residuals(e.lm1)
     X1 <- model.matrix(e.lm1, d)
     iH1 <- diag(1,n,n) - X1 %*% solve(t(X1) %*% X1) %*% t(X1)
-    GS1.1 <- epsilon.lm1/diag(iH1)^(1/2)
-    GS1.2 <- epsilon.lm1/diag(iH1)
 
+    expect_equal(as.double(epsilon.lm1/diag(iH1)^(1/2)),
+                 as.double(res1))
+
+    ## second model
     e.lm2 <- lm(G~X, data = d)
+    res2 <- residuals2(e.lm2, adjust.residuals = TRUE)
     epsilon.lm2 <- residuals(e.lm2)
     X2 <- model.matrix(e.lm2, d)
     iH2 <- diag(1,n,n) - X2 %*% solve(t(X2) %*% X2) %*% t(X2)
-    GS2.1 <- epsilon.lm2/diag(iH2)^(1/2)
-    GS2.2 <- epsilon.lm2/diag(iH2)
+    
+    expect_equal(as.double(epsilon.lm2/diag(iH2)^(1/2)),
+                 as.double(res2))
 
-    e.lvm <- estimate(m, d)
-    res1 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1/2)
-    res2 <- residuals2(e.lvm, adjust.residuals = TRUE, power = 1)
+    ## global
+    e.lvm <- estimate(m, d)    
+    resTest <- residuals2(e.lvm, adjust.residuals = TRUE)
 
-    expect_equal(as.double(res1[,1]),as.double(GS1.1))
-    expect_equal(as.double(res2[,1]),as.double(GS1.2))
-
-    expect_equal(as.double(res1[,2]),as.double(GS2.1))
-    expect_equal(as.double(res2[,2]),as.double(GS2.2))
+    expect_equal(as.double(resTest[,1]),as.double(res1))
+    expect_equal(as.double(resTest[,2]),as.double(res2))   
 })
 
 ##----------------------------------------------------------------------

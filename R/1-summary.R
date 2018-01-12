@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 10 2018 (15:48) 
+## Last-Updated: jan 12 2018 (16:04) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 118
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,6 +35,7 @@
 #' summary(lm(Y~X1+X2, d))$coef
 #' 
 #' ## gls models
+#' library(nlme)
 #' e.gls <- gls(Y~X1+X2, data = d, method = "ML")
 #' summary(e.gls)$tTable
 #' dVcov2(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction

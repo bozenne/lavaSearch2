@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: jan 10 2018 (16:32) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 175
+##     Update #: 181
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(lava.tobit)
+lava.options(symbols = c("~","~~"))
 
 context("score2-lava")
 n <- 5e1
@@ -342,10 +343,16 @@ d <- sim(m.sim,n,latent=FALSE)
 e0 <- estimate(lvm(Y1~X1),d)
 s0 <- score2(e0, adjust.residuals = TRUE)
 
-e1 <- estimate(lvm(Y1~X1,Y2~X2+X3,Y3~1),d)
-s1 <- score2(e1, adjust.residuals = TRUE)
+test_that("score2.lvm vs score2.lm (adj)",{
+    sGS <- score2(lm(Y1~X1, data = d), adjust.residuals = TRUE)
+    expect_equal(unname(s0),unname(sGS))
+})
 
-test_that("compare score2.lm with score2.lvm",{
+## ** multiple linear regression
+e1 <- estimate(lvm(Y1~X1,Y2~X2+X3,Y3~1),d)
+
+test_that("score2.lvm(adj): univariate vs. multiple univariate",{
+    s1 <- score2(e1, adjust.residuals = TRUE)
     expect_equal(s1[,c("Y1","Y1~X1","Y1~~Y1")],
                  s0[,c("Y1","Y1~X1","Y1~~Y1")])
 })

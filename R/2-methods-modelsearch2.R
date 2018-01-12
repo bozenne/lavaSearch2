@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: okt 12 2017 (13:13) 
+## last-updated: jan 12 2018 (13:25) 
 ##           By: Brice Ozenne
-##     Update #: 112
+##     Update #: 117
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,7 @@
 #' 
 #' @param object a modelsearch2 object
 #' @examples
-#'  mSim <- lvm(Y~G+X1+X2)
+#' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
 #' dt <- as.data.table(lava::sim(mSim, 1e2))
 #'
@@ -64,7 +64,7 @@ nStep.modelsearch2 <- function(object){
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = dt)
-#' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
+#' res <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "holm")
 #' getStep(res)
 #' getStep(res, slot = "sequenceTest")
 #' getStep(res, slot = "sequenceQuantile")

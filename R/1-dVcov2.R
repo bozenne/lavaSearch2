@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 10 2018 (16:46) 
+## Last-Updated: jan 12 2018 (15:48) 
 ##           By: Brice Ozenne
-##     Update #: 178
+##     Update #: 216
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,7 @@
 #' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param value same as adjust.residuals.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
+#' @param return.score [for internal use] export the score.
 #' @param ... arguments to be passed to lower level methods.
 #' 
 #' @export
@@ -38,26 +39,39 @@
 ## * dVcov.lm
 #' @rdname dVcov2
 #' @export
-dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
+dVcov2.lm <- function(object, adjust.residuals = FALSE,
+                      return.score = FALSE, ...){
 
   
     ## ** extract information
     X <- stats::model.matrix(object)
-    sigma2 <- mean(stats::residuals(object)^2)
     
-    res.tempo <- residuals2(object, adjust.residuals = adjust.residuals,
+    
+    epsilonD2 <- residuals2(object, adjust.residuals = adjust.residuals,
                             return.vcov.param = TRUE)
-    p <- c(stats::coef(object), sigma2 = sigma2)
+    p <- c(stats::coef(object), sigma2 = mean(stats::residuals(object)^2))
     name.param <- names(p)
     n.param <- length(p)
-    vcov.param <- attr(res.tempo, "vcov.param")
-    sigma2.cor <- attr(res.tempo, "sigma2")
+    vcov.param <- attr(epsilonD2, "vcov.param")
+    sigma2.cor <- attr(epsilonD2, "sigma2")
 
     dVcov.dtheta <- array(0,dim = c(n.param, n.param, 1),
                           dimnames = list(name.param, name.param, "sigma2"))
 
     dVcov.dtheta[setdiff(name.param,"sigma2"),setdiff(name.param,"sigma2"),"sigma2"] <- solve(t(X) %*% X)
     dVcov.dtheta["sigma2","sigma2","sigma2"] <- 2*vcov.param["sigma2","sigma2"]/sigma2.cor
+
+    ## ** score
+    if(return.score){
+        attr(epsilonD2, "vcov.param") <- NULL
+        attr(epsilonD2, "sigma2") <- NULL
+        X <- stats::model.matrix(object)
+        out.score <- cbind(sweep(X, MARGIN = 1, FUN = "*",  STATS = epsilonD2) / sigma2.cor,
+                           -1/(2*sigma2.cor) + 1/(2*sigma2.cor^2) * epsilonD2^2)
+
+        attr(dVcov.dtheta, "score") <- out.score
+    }
+    
     
     ## ** export
     attr(dVcov.dtheta, "vcov.param") <- vcov.param
@@ -69,20 +83,29 @@ dVcov2.lm <- function(object, adjust.residuals = FALSE, ...){
 #' @rdname dVcov2
 #' @export
 dVcov2.gls <- function(object, cluster, vcov.param = NULL,
-                       adjust.residuals = FALSE, numericDerivative = FALSE, ...){
+                       adjust.residuals = FALSE, numericDerivative = FALSE,
+                       return.score = FALSE, ...){
 
     p <- .coef2(object)
-    data <- nlme::getData(object)
+    data <- extractData(object)
 
     n.param <- length(p)
     name.param <- names(p)
 
-    power <- 0.5
     as.clubSandwich <- 1
 
     ## ** param with non-zero third derivative
     keep.param <- setdiff(name.param, attr(.coef2(object),"mean.coef"))
 
+    ## ** pre-compute quantities
+    if(return.score || numericDerivative == FALSE){
+        epsilonD2 <- residuals2(object, p = p, data = data, cluster = cluster,
+                                adjust.residuals = adjust.residuals,
+                                as.clubSandwich = as.clubSandwich,
+                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
+        pS2  <- attr(epsilonD2, "prepareScore2")
+    }
+    
     ### ** Compute the gradient
     if(numericDerivative){
         
@@ -91,7 +114,7 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
             pp <- p
             pp[names(iParam)] <- iParam
             res.tempo <- residuals2(object, cluster = cluster, p = pp, data = data,
-                                          adjust.residuals = adjust.residuals, power = power,
+                                          adjust.residuals = adjust.residuals,
                                           as.clubSandwich = as.clubSandwich,
                                           return.vcov.param = TRUE, second.order = FALSE)
             vcov.tempo <- attr(res.tempo, "vcov.param")
@@ -111,14 +134,9 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
                               dim = c(n.param,n.param,length(jac.param)),
                               dimnames = list(name.param, name.param, keep.param))
 
-    }else{
-        res.tempo <- residuals2(object, p = p, data = data, cluster = cluster,
-                                adjust.residuals = adjust.residuals,
-                                power = power, as.clubSandwich = as.clubSandwich,
-                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
-        pS2  <- attr(res.tempo, "prepareScore2")
-        vcov.param  <- attr(res.tempo, "vcov.param")
-        attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
+    }else{        
+        vcov.param  <- attr(epsilonD2, "vcov.param")
+        attr(vcov.param, "warning")  <- attr(epsilonD2, "warning")
         
         dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dmu.dtheta,
                                        d2mu.dtheta2 = NULL,
@@ -139,7 +157,25 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
         }
         
     }
-   
+
+    ## ** score
+    if(return.score){
+        attr(epsilonD2, "prepareScore2") <- NULL
+        attr(epsilonD2, "vcov.param") <- NULL
+        
+        out.score <- .score2(dmu.dtheta = pS2$dmu.dtheta,
+                             dOmega.dtheta = pS2$dOmega.dtheta,
+                             epsilon = epsilonD2,
+                             Omega = pS2$Omega,                         
+                             ls.indexOmega = pS2$ls.indexOmega,
+                             indiv = TRUE,
+                             name.param = pS2$name.param,
+                             n.param = pS2$n.param,
+                             n.cluster = pS2$n.cluster)
+         
+        attr(dVcov.dtheta, "score") <- out.score        
+    }
+    
     ## ** export
     attr(dVcov.dtheta, "vcov.param") <- vcov.param
     attr(dVcov.dtheta, "param") <- p
@@ -156,7 +192,8 @@ dVcov2.lme <- dVcov2.gls
 #' @rdname dVcov2
 #' @export
 dVcov2.lvmfit <- function(object, vcov.param = NULL,
-                          adjust.residuals = TRUE, numericDerivative = FALSE, ...){
+                          adjust.residuals = TRUE, numericDerivative = FALSE,
+                          return.score = FALSE, ...){
 
     detail <- lava <- originalLink <- NULL ## [:for CRAN check] data.table
     
@@ -166,7 +203,6 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     n.param <- length(p)
     name.param <- names(p)
 
-    power <- 0.5
     as.clubSandwich <- 1
 
     ## ** Pre-compute quantities
@@ -177,6 +213,14 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
         object$prepareScore2 <- prepareScore2(object,
                                               second.order = TRUE,
                                               usefit = (numericDerivative==FALSE) )
+    }
+
+    if(return.score || numericDerivative == FALSE){
+        epsilonD2 <- residuals2(object, p = p, data = data,
+                                adjust.residuals = adjust.residuals,
+                                as.clubSandwich = as.clubSandwich,
+                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
+        pS2  <- attr(epsilonD2, "prepareScore2")
     }
         
     ## ** param with non-zero third derivative
@@ -201,8 +245,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                 pp <- p
                 pp[names(iParam)] <- iParam
                 res.tempo <- residuals2(object, p = pp, data = data,
-                                        adjust.residuals = adjust.residuals,
-                                        power = power,
+                                        adjust.residuals = adjust.residuals,                                        
                                         as.clubSandwich = as.clubSandwich,
                                         return.vcov.param = TRUE)
                 vcov.tempo <- attr(res.tempo, "vcov.param")
@@ -225,14 +268,9 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                               dimnames = list(name.param, name.param, keep.param))
         
     }else{
-        res.tempo <- residuals2(object, p = p, data = data,
-                                adjust.residuals = adjust.residuals,
-                                power = power, as.clubSandwich = as.clubSandwich,
-                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
-        pS2  <- attr(res.tempo, "prepareScore2")
-        vcov.param  <- attr(res.tempo, "vcov.param")
-        attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
-
+        vcov.param  <- attr(epsilonD2, "vcov.param")
+        attr(vcov.param, "warning")  <- attr(epsilonD2, "warning")
+ 
         dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dtheta$dmu.dtheta,
                                        d2mu.dtheta2 = pS2$dtheta2$d2mu.dtheta2,
                                        dOmega.dtheta = pS2$dtheta$dOmega.dtheta,
@@ -254,6 +292,22 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
 
     }
 
+    ## ** score
+    if(return.score){
+        attr(epsilonD2, "prepareScore2") <- NULL
+        attr(epsilonD2, "vcov.param") <- NULL
+        out.score <- .score2(dmu.dtheta = pS2$dtheta$dmu.dtheta,
+                             dOmega.dtheta = pS2$dtheta$dOmega.dtheta,
+                             epsilon = epsilonD2,
+                             Omega = pS2$Omega,
+                             ls.indexOmega = NULL,
+                             indiv = TRUE,                         
+                             name.param = pS2$name.param,
+                             n.param = pS2$n.param,
+                             n.cluster = pS2$n.cluster)
+        attr(dVcov.dtheta, "score") <- out.score
+    }
+  
     ## ** export
     attr(dVcov.dtheta, "vcov.param") <- vcov.param
     attr(dVcov.dtheta, "param") <- p
@@ -422,8 +476,6 @@ dVcov2.lvmfit2 <- function(object, ...){
 
                         ## small sample correction  
                         iW.cluster <- 1 -  diag(hat[[iC]])
-
-                        ## if(iNameD=="Y2"&& iName1 == "Y2" && iName2 == "Y2"){browser()}
                         
                         ## compute
                         if(test.Omega1){                            

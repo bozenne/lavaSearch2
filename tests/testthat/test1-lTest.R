@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan  8 2018 (18:21) 
+## last-updated: jan 12 2018 (12:20) 
 ##           By: Brice Ozenne
-##     Update #: 121
+##     Update #: 130
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,12 +15,13 @@
 ## 
 ### Code:
 
-library(tesstthat)
+library(testthat)
 library(clubSandwich)
 library(nlme)
 library(lme4)
 library(lmerTest)
 library(pbkrtest)
+lava.options(symbols = c("~","~~"))
 
 context("lTest")
 n <- 5e1
@@ -126,12 +127,14 @@ coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
 test_that("mixed model: df",{
-    GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
-    
+    ## does not work when running test
+    ## GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
+    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")$df
+
     df1.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                          numericDerivative = FALSE)
+                     numericDerivative = FALSE)
     df2.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                          numericDerivative = TRUE)
+                     numericDerivative = TRUE)
     expect_equal(df1.lvm,df2.lvm)
     expect_equal(as.double(GS),
                  as.double(df1.lvm[1:5,"df"]))
@@ -141,19 +144,22 @@ test_that("mixed model: df",{
     df2.lme <- lTest(e.lme, adjust.residuals = FALSE,
                           numericDerivative = TRUE)
     expect_equal(df1.lme, df2.lme)
-    expect_equal(unname(GS), df1.lme[names(GS),"df"])
+    expect_equal(unname(GS), df1.lme[1:5,"df"])
 
     df1.gls <- lTest(e.gls, adjust.residuals = FALSE,
                           numericDerivative = FALSE)
     df2.gls <- lTest(e.gls, adjust.residuals = FALSE,
                           numericDerivative = TRUE)
     expect_equal(df1.gls, df2.gls) 
-    expect_equal(unname(GS), df1.gls[names(GS),"df"], tol = 1e-4)
+    expect_equal(unname(GS), df1.gls[1:5,"df"], tol = 1e-4)
 
 })
 
 test_that("mixed model: df adjusted",{
-    GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
+    ## does not work when running test
+    ## GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
+    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Kenward-Roger")$df
+
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
     

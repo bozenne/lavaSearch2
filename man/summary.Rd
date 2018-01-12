@@ -7,10 +7,10 @@
 \alias{summary.lvmfit2}
 \title{Summary with small sample correction}
 \usage{
-\method{summary}{gls2}(object, digits = max(3, getOption("digit")),
+\method{summary}{gls2}(object, digit = max(3, getOption("digit")),
   adjust.residuals = TRUE, ...)
 
-\method{summary}{lme2}(object, digits = max(3, getOption("digit")),
+\method{summary}{lme2}(object, digit = max(3, getOption("digit")),
   adjust.residuals = TRUE, ...)
 
 \method{summary}{lvmfit2}(object, adjust.residuals = FALSE, ...)
@@ -18,7 +18,7 @@
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}
 
-\item{digits}{the number of digit to keep when diplaying the summary.}
+\item{digit}{the number of digit to keep when diplaying the summary.}
 
 \item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
@@ -36,6 +36,7 @@ d <- sim(m, 2e1)
 summary(lm(Y~X1+X2, d))$coef
 
 ## gls models
+library(nlme)
 e.gls <- gls(Y~X1+X2, data = d, method = "ML")
 summary(e.gls)$tTable
 dVcov2(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 24 2017 (09:21) 
 ## Version: 
-## last-updated: okt 24 2017 (09:24) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 6
+##     Update #: 7
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,6 +16,7 @@
 ### Code:
 
 library(testthat)
+lava.options(symbols = c("~","~~"))
 
 context("matrixPower")
 

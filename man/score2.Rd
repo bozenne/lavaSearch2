@@ -2,12 +2,15 @@
 % Please edit documentation in R/1-score2.R
 \name{score2}
 \alias{score2}
+\alias{score2.lm}
 \alias{score2.gls}
 \alias{score2.lme}
 \alias{score2.lvmfit}
 \title{Compute the score directly from the gaussian density}
 \usage{
 score2(object, ...)
+
+\method{score2}{lm}(object, indiv = TRUE, return.vcov.param = FALSE, ...)
 
 \method{score2}{gls}(object, cluster, p = NULL, data = NULL, indiv = TRUE,
   return.vcov.param = FALSE, ...)
@@ -23,15 +26,15 @@ score2(object, ...)
 
 \item{...}{Arguments to be passed to \code{\link{residuals2}}}
 
+\item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
+
+\item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
+
 \item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
 
 \item{p}{[optional] vector of parameters at which to evaluate the score.}
 
 \item{data}{[optional] data set.}
-
-\item{indiv}{Should the score relative to each observation be exported? Otherwise the total score (i.e. sum over all observations) will be exported.}
-
-\item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
 }
 \value{
 A matrix.

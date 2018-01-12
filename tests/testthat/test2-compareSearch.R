@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (09:25) 
 ## Version: 
-## last-updated: okt 16 2017 (11:45) 
+## last-updated: jan 12 2018 (12:10) 
 ##           By: Brice Ozenne
-##     Update #: 9
+##     Update #: 12
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,7 @@
 library(testthat)
 library(data.table)
 library(mvtnorm)
+lava.options(symbols = c("~","~~"))
 
 context("compareSearch")
 
@@ -31,13 +32,15 @@ dt.sim <- as.data.table(sim(m.sim, n=100, latent = FALSE))
 e.base <- estimate(m.base, data = dt.sim)
 
 resCompare <- compareSearch(e.base, 
-                            method.iid = "iid",
                             method.p.adjust = c("none","bonferroni","fdr","max"),
                             statistic = c("score","Wald"),trace = 5)
 
-## * example with error
+resCompare <- compareSearch(e.base, link = c("Y~X1","Y~X3","Y~Z1"),
+                            method.p.adjust = c("none","bonferroni","fdr"),
+                            statistic = c("score"))
+
+## * example with error (wrong link)
 resCompare <- compareSearch(e.base, link = c("Y~G","Y~A"),
-                            method.iid = "iid",
                             method.p.adjust = c("none","bonferroni","fdr","max"),
                             statistic = c("score","Wald"),trace = 5)
 ##----------------------------------------------------------------------

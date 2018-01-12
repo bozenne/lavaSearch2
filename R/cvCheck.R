@@ -77,11 +77,12 @@ cvCheck.lvm <- function(object,
         VCOV <- matrix(0, nrow = NROW(lvm.vcov), ncol = NCOL(lvm.vcov))        
     }
     diag(VCOV) <-  diag(lvm.vcov)*factor.vcov
-    
-    sample.start <- tmvtnorm::rtmvnorm(n = n.init, mean = name.coef, sigma = VCOV,
-                                        lower = c(rep(-Inf, length(mean.param)), rep(0, length = length(var.param))),
-                                        algorithm = "gibbs"
-                                        )
+
+    sample.start <- tmvtnorm::rtmvnorm(n = n.init, mean = e.coef, sigma = VCOV,
+                                       lower = c(rep(-Inf, length(mean.param)),
+                                                 rep(0, length = length(var.param))),
+                                       algorithm = "gibbs"
+                                       )
     
     ## ** warper
     warper <- function(x){

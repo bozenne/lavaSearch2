@@ -5,11 +5,9 @@
 \title{Model searching using the max statistic}
 \usage{
 modelsearchMax(x, restricted, link, directive, packages, update.FCT,
-  update.args, iid.FCT, robust = FALSE, df = TRUE,
-  adjust.residuals = TRUE, method.p.adjust, method.max = "integration",
-  n.sim = 1000, alpha = 0.05, iid.previous = NULL,
-  quantile.previous = NULL, export.iid = 1, trace = 1, ncpus = 1,
-  initCpus = TRUE)
+  update.args, iid.FCT, alpha, method.p.adjust, method.max, n.sim = 1000,
+  iid.previous = NULL, quantile.previous = NULL, export.iid, trace, ncpus,
+  initCpus)
 }
 \value{
 an object of class lvmfit

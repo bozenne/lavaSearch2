@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 13 2017 (15:52) 
 ## Version: 
-## Last-Updated: dec 13 2017 (16:19) 
+## Last-Updated: jan 12 2018 (11:28) 
 ##           By: Brice Ozenne
-##     Update #: 4
+##     Update #: 5
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(nlme)
+lava.options(symbols = c("~","~~"))
 
 context("score2")
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 10 2018 (15:38) 
+## last-updated: jan 12 2018 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 2168
+##     Update #: 2189
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,6 +65,37 @@
 #' @export
 `score2` <-
   function(object, ...) UseMethod("score2")
+
+
+## * score2.lm
+#' @rdname score2
+#' @export
+score2.lm <- function(object,
+                      indiv = TRUE, return.vcov.param = FALSE,
+                      ...){
+  
+    epsilon <- residuals2(object, return.vcov.param = TRUE, ...)
+    vcov.param <- attr(epsilon, "vcov.param")
+    sigma2 <- attr(epsilon, "sigma2") 
+    attr(epsilon, "vcov.param") <- NULL
+    attr(epsilon, "sigma2") <- NULL
+
+    ## ** compute score
+    X <- stats::model.matrix(object)
+    out.score <- cbind(sweep(X, MARGIN = 1, FUN = "*",  STATS = epsilon) / sigma2,
+                       sigma2 = -1/(2*sigma2) + 1/(2*sigma2^2) * epsilon^2)
+
+    if(indiv == FALSE){
+        out.score <- colSums(out.score)
+    }
+
+    if(return.vcov.param){
+        attr(out.score,"vcov.param") <- vcov.param
+    }
+    return(out.score)
+
+}
+
 
 ## * score2.gls
 #' @rdname score2
@@ -179,11 +210,11 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
         }
     }
             
-### ** Same for all individuals
+    ### ** Same for all individuals
     if(clusterSpecific == FALSE){
-        epsilon.iOmega <- epsilon %*% chol2inv(chol(Omega))
         iOmega <- chol2inv(chol(Omega))
-        
+        epsilon.iOmega <- epsilon %*% iOmega
+
         ## *** Compute score relative to the mean parameters
         for(iP in name.meanparam){ # iP <- 1
             out.score[,iP] <- out.score[,iP] + rowSums(dmu.dtheta[[iP]] * epsilon.iOmega)            

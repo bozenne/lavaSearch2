@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 10 2018 (16:12) 
+## Last-Updated: jan 12 2018 (11:09) 
 ##           By: Brice Ozenne
-##     Update #: 788
+##     Update #: 795
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,7 +88,7 @@ residuals2.lm <- function(object,
             ## vcov.param / vcov(object)
             vcov.sigma2 <- 2*sigma2^2/(n-sum(leverage))
         }
-        epsilon <- epsilon/sqrt(leverage)
+        epsilon <- epsilon/sqrt(1-leverage)
         
     }else if(return.vcov.param){
         sigma2 <- mean(epsilon^2)
@@ -151,7 +151,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     
     ## *** data    
     if(is.null(data)){
-        data <- nlme::getData(object)
+        data <- extractData(object)
     }
     X <- stats::model.matrix(formula.object, data)
     X <- X[,attr.param$mean.coef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)    

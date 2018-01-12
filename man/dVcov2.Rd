@@ -17,16 +17,19 @@
 \usage{
 dVcov2(object, ...)
 
-\method{dVcov2}{lm}(object, adjust.residuals = FALSE, ...)
+\method{dVcov2}{lm}(object, adjust.residuals = FALSE, return.score = FALSE,
+  ...)
 
 \method{dVcov2}{gls}(object, cluster, vcov.param = NULL,
-  adjust.residuals = FALSE, numericDerivative = FALSE, ...)
+  adjust.residuals = FALSE, numericDerivative = FALSE,
+  return.score = FALSE, ...)
 
 \method{dVcov2}{lme}(object, cluster, vcov.param = NULL,
-  adjust.residuals = FALSE, numericDerivative = FALSE, ...)
+  adjust.residuals = FALSE, numericDerivative = FALSE,
+  return.score = FALSE, ...)
 
 \method{dVcov2}{lvmfit}(object, vcov.param = NULL, adjust.residuals = TRUE,
-  numericDerivative = FALSE, ...)
+  numericDerivative = FALSE, return.score = FALSE, ...)
 
 \method{dVcov2}{lvmfit2}(object, ...)
 
@@ -48,6 +51,8 @@ dVcov2(x, ...) <- value
 \item{...}{arguments to be passed to lower level methods.}
 
 \item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+
+\item{return.score}{[for internal use] export the score.}
 
 \item{cluster}{the grouping variable relative to which the observations are iid.
 Only required for gls models with no correlation argument.}

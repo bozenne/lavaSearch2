@@ -16,21 +16,21 @@
 #' Y1 <- rnorm(n, mean = 0)
 #' Y2 <- rnorm(n, mean = 0.3)
 #' Id <- findInterval(runif(n), seq(0.1,1,0.1))
-#' df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
+#' data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
 #'            data.frame(Y=Y2,G="2",Id = Id)
 #'            )
-#' m.lm <- lm(Y ~ G, data = df)
+#' m.lm <- lm(Y ~ G, data = data.df)
 #' extractData(m.lm, model.frame = TRUE)
 #' extractData(m.lm, model.frame = FALSE)
 #' 
 #' library(nlme)
-#' m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = df)
+#' m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = data.df)
 #' extractData(m.gls)
-#' m.lme <- lme(Y ~ G, random = ~ 1|Id, data = df)
+#' m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
 #' extractData(m.lme)
 #' 
 #' library(lava)
-#' e <- estimate(lvm(Y ~ G), data = df)
+#' e <- estimate(lvm(Y ~ G), data = data.df)
 #' extractData(e)
 #' extractData(e, model.frame = TRUE)
 #' 

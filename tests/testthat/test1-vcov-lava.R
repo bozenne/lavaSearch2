@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: jan  5 2018 (12:03) 
+## last-updated: jan 12 2018 (11:27) 
 ##           By: Brice Ozenne
-##     Update #: 41
+##     Update #: 44
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,8 +18,9 @@
 library(testthat)
 library(lme4)
 library(pbkrtest)
+lava.options(symbols = c("~","~~"))
 
-context("score2")
+context("vcov")
 n <- 5e1
 
 ## * Model vcov

@@ -77,26 +77,28 @@ m <- lvm(Y1~X1+X2+eta,Y2~X3+eta,Y3~eta)
 latent(m) <- ~eta
 
 e <- estimate(m,sim(m,1e2))
-skeleton(e, as.lava = TRUE,
+M.data <- as.matrix(model.frame(e))
+
+skeleton(e$model, as.lava = TRUE,
          name.endogenous = endogenous(e), n.endogenous = 3,
          name.latent = latent(e), 
          update.value = FALSE)
-skeleton(e, as.lava = TRUE,
+skeleton(e, data = M.data, p = pars(e), as.lava = TRUE,
          name.endogenous = endogenous(e), n.endogenous = 3,
          name.latent = latent(e), 
-         update.value = TRUE,
-         data = as.matrix(e$data$model.frame), p = pars(e))$value
+         update.value = TRUE)
 
 ## with constrains
 m <- lvm(Y[mu:sigma] ~ beta*X1+X2)
 e <- estimate(m, sim(m,1e2))
+M.data <- as.matrix(model.frame(e))
 
-skeleton(e, as.lava = TRUE,
+skeleton(e$model, as.lava = TRUE,
          name.endogenous = "Y", n.endogenous = 1,
          name.latent = NULL, 
          update.value = FALSE)$skeleton
 
-skeleton(e, as.lava = FALSE,
+skeleton(e, data = M.data, p = pars(e), as.lava = FALSE,
          name.endogenous = "Y", n.endogenous = 1,
          name.latent = NULL, 
          update.value = FALSE)$skeleton

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 10 2018 (16:11) 
+## Last-Updated: jan 12 2018 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 52
+##     Update #: 63
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,10 +28,20 @@ mlf2 <- function(...) {
      ret <- list(...)
      class(ret) <- "mlf2"
      ret
+
 }
 
 ## * glht.mlf2
-## copy of multcomp:::glht.mlf, allowing mmm2 objects
+#' @title General linear hypothesis
+#' @description General linear hypotheses and multiple outcomes for mmm2 objects.
+#'
+#' @param model a mmm2 object
+#' @param linfct a specification of the linear hypotheses to be tested.
+#' See the documentation of the \code{glht} function from the multcomp package.
+#' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{lTest}.
+#' 
+#' @method glht mlf2
+#' @export 
 glht.mlf2 <- function(model, linfct, ...) {
 
     ## ** check

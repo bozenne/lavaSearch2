@@ -14,6 +14,7 @@
 Form all unique combinations between two vectors (removing symmetric combinations).
 }
 \examples{
+.combination <- lavaSearch2:::.combination
 .combination(1,1)
 .combination(1:2,1:2)
 .combination(c(1:2,1:2),1:2)

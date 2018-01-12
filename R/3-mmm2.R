@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 10 2018 (14:52) 
+## Last-Updated: jan 12 2018 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 56
+##     Update #: 85
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,13 +27,47 @@ mmm2 <- function(...) {
 }
 
 
-### extract coefs
+## * coef
+#' @title Model Coefficients
+#' @description Returns the model coefficients of a \code{mmm2} or \code{ls.lvmfit} object.
+#' For internal use.
+#' @name coef-multcomp
+#'
+#' @param object a \code{mmm2} or \code{ls.lvmfit} object.
+#' @param ... Not used. Only for compatibility with the generic method.
+#' 
+#' @keywords internal
+
+## * coef.mmm2
+#' @rdname coef-multcomp
+#' @method coef mmm2
+#' @export
 coef.mmm2 <- multcomp:::coef.mmm
 
-## ### extract estimating functions
-## estfun.mmm2 <- multcomp:::estfun.mmm
+## * coef.ls.lvmfit
+#' @rdname coef-multcomp
+#' @method coef ls.lvmfit
+#' @export
+coef.ls.lvmfit <- multcomp:::coef.mmm
 
-### set-up total covariance matrix
+## * vcov
+#' @title Variance-Covariance Matrix for a fitted object
+#' @description Returns the variance-covariance matrix of a fitted object.
+#' For internal use.
+#' @rdname vcov-multcomp
+#' 
+#' @param object a \code{mmm2} or \code{ls.lvmfit object}.
+#' @param return.null if TRUE return a matrix filled with NA.
+#' @param adjust.residuals small sample adjustement.
+#' @param robust should robust standard error be used? Otherwise rescale the influence function with the standard error obtained from the information matrix.
+#' @param ... Not used. Only for compatibility with the generic method.
+#' @keywords internal
+
+
+## * vcov.mm2
+#' @rdname vcov-multcomp
+#' @method vcov mmm2
+#' @export
 vcov.mmm2 <- function(object, return.null = TRUE,
                       adjust.residuals = TRUE, robust = TRUE,
                       ...) {
@@ -46,7 +80,7 @@ vcov.mmm2 <- function(object, return.null = TRUE,
     }
 
     ## ** Extract influence functions from all models    
-    ls.iid <- lapply(object, function(x){
+    ls.iid <- lapply(object, function(x){ ## x <- object[[1]]
         iIID <- iid2(x, adjust.residuals = adjust.residuals, power = 1/2)
         if(identical(class(x),"lm")){
             iIID <- iIID[,colnames(iIID)!="sigma2",drop=FALSE]                
@@ -56,7 +90,7 @@ vcov.mmm2 <- function(object, return.null = TRUE,
     M.iid <- do.call(cbind, ls.iid)
 
     ## ** Rescale iid with sd/sd.robust 
-    if(robust){
+    if(robust == FALSE){        
         ls.sd <- lapply(object, function(x){
             iVcov <- attr(residuals2(x, adjust.residuals = adjust.residuals,
                                      power = 1/2, return.vcov.param = TRUE), "vcov.param")
@@ -79,10 +113,12 @@ vcov.mmm2 <- function(object, return.null = TRUE,
     return(robust.vcov)
 }
 
-## * ls.lvmfit
+## * vcov.ls.lvmfit
+#' @rdname vcov-multcomp
+#' @method vcov ls.lvmfit
+#' @export
 vcov.ls.lvmfit <- vcov.mmm2
 
-coef.ls.lvmfit <- coef.mmm2
 
 ##----------------------------------------------------------------------
 ### mmm2.R ends here

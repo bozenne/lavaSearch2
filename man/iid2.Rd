@@ -10,32 +10,25 @@
 \usage{
 iid2(x, ...)
 
-\method{iid2}{lm}(x, data = NULL, adjust.residuals = TRUE, power = 1/2,
-  ...)
+\method{iid2}{lm}(x, p = NULL, data = NULL, adjust.residuals = TRUE, ...)
 
-\method{iid2}{gls}(x, p = NULL, data = NULL, adjust.residuals = TRUE,
-  power = 1/2, ...)
+\method{iid2}{gls}(x, p = NULL, data = NULL, adjust.residuals = TRUE, ...)
 
-\method{iid2}{lme}(x, p = NULL, data = NULL, adjust.residuals = TRUE,
-  power = 1/2, ...)
+\method{iid2}{lme}(x, p = NULL, data = NULL, adjust.residuals = TRUE, ...)
 
 \method{iid2}{lvmfit}(x, p = NULL, data = NULL, adjust.residuals = TRUE,
-  power = 1/2, as.clubSandwich = TRUE, ...)
+  ...)
 }
 \arguments{
 \item{x}{a linear model or a latent variable model}
 
 \item{...}{arguments to be passed to \code{score2}.}
 
-\item{data}{[optional] the data set.}
-
-\item{adjust.residuals}{Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.#'}
-
-\item{power}{the exponent used for computing the leverage-adjusted residuals. See the details section.}
-
 \item{p}{[optional] the fitted parameters.}
 
-\item{as.clubSandwich}{see the documentation of \code{\link{residuals2}}.}
+\item{data}{[optional] the data set.}
+
+\item{adjust.residuals}{Should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 }
 \value{
 A matrix.
@@ -46,17 +39,7 @@ Extract i.i.d. decomposition from linear and latent variable models using levera
 \details{
 Leverage-adjusted residuals have been shown to improve the coverage of robust standard errors in small samples.
 They are computed according to the formula:
-\eqn{e_adj = \frac{e}{(1-h_{ii})^\alpha}}
-
-\code{power = 0} (i.e. code{adjust.residuals = FALSE}) corresponds to the use of the raw residuals.
-It can be shown that the variance-covariance estimator is biased downward for the mean parameters in LVM.
-
-\code{power=0.5} corrects for the bias of the variance-covariance estimator,
-at least for the mean parameters (Kauermann and Carroll, 2001)..
-This corresponds to the correction "CR2" in the clubSandwich package.
-
-\code{power=1} approximates the variance-covariance jackknife estimator (Bell and McCaffrey, 2002).
-This corresponds to the correction "CR3" in the clubSandwich package.
+\eqn{e_adj = \frac{e}{(1-h_{ii})^(1/2)}}
 }
 \examples{
 n <- 5e1
@@ -70,18 +53,16 @@ distribution(m,~Id) <- sequence.lvm(0)
 set.seed(10)
 d <- sim(m,n)
 
+## linear model
 e.lm <- lm(formula.lvm,data=d)
-iid2(e.lm)
-iid2(e.lm,corrected=FALSE)-iid(e.lm)
+iid.tempo <- iid2(e.lm, adjust.residuals = FALSE)
+range(iid.tempo[,1:4]-iid(e.lm))
 
+## latent variable model
 e.lvm <- estimate(lvm(formula.lvm),data=d)
-score(e.lvm)
-range(iid2(e.lvm, adjust.residuals = FALSE)-iid(e.lvm))
-
-#### multiple regression
-m <- lvm(c(Y1~X1,Y2~X2,Y3~X3))
-e.lvm <- estimate(m,data=sim(m,1e2))
-iid2(e.lvm)
+iid.tempo <- iid2(e.lvm, adjust.residuals = FALSE)
+range(iid.tempo-iid(e.lvm))
+## difference due to the use of the observed info matrix vs. the expected one.
 
 }
 \references{

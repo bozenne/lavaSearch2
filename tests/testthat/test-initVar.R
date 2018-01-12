@@ -1,5 +1,6 @@
 library(testthat)
 # library(lava)
+lava.options(symbols = c("~","~~"))
 
 context("#### initVar #### \n")
 

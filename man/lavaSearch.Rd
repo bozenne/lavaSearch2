@@ -15,9 +15,7 @@ as a measurement model:
 and a structural model:
 \deqn{\eta_i = \alpha + \eta_i B + X_i \Gamma + \zeta_i}
 where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
-and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
-
-\cr
+and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr \cr
 
 The corresponding conditional mean is:
 \deqn{

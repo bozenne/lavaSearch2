@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: nov 20 2017 (16:40) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 66
+##     Update #: 72
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,7 @@
 
 library(testthat)
 library(nlme)
+lava.options(symbols = c("~","~~"))
 
 context("iid2-nlme")
 
@@ -75,14 +76,12 @@ test_that("score2.gls equivalent to score.lvm", {
 })
 
 test_that("score2.gls equivalent to score.lvm (adjust residuals)", {
-    for(iPower in c(1,0.5)){ # iPower <- 1
-        score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, power = iPower, indiv = TRUE)
-        score.gls.p <- score2(e.gls, p = allCoef.gls, cluster = "Id", adjust.residuals = TRUE, power = iPower, indiv = TRUE)
-        score.lvm <- score2(e.lvm, adjust.residuals = TRUE, power = iPower, indiv = TRUE)
+        score.gls <- score2(e.gls, cluster = "Id", adjust.residuals = TRUE, indiv = TRUE)
+        score.gls.p <- score2(e.gls, p = allCoef.gls, cluster = "Id", adjust.residuals = TRUE, indiv = TRUE)
+        score.lvm <- score2(e.lvm, adjust.residuals = TRUE,, indiv = TRUE)
 
         expect_equal(unname(score.gls[,1:6]),unname(score.lvm[,1:6]))
         expect_equal(score.gls,score.gls.p)
-    }
 })
 
 ## ** Compound symmetry (lme/gls)
@@ -124,18 +123,16 @@ test_that("score2.lme/gls equivalent to score2.lvm - no adjustment", {
 })
 
 test_that("score2.lme/gls equivalent to score2.lvm - adjustment", {
-    for(iPower in c(1,0.5)){
-        score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
-        score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
+        score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE)
+        score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE)
         expect_equal(score.lme,score.lme.p)
     
-        score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
+        score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE)
         expect_equal(score.lme[,attr(allCoef.lme,"mean.coef")],
                      score.gls[,attr(allCoef.lme,"mean.coef")], tol = 1e-7)
 
-        score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
-        expect_equal(unname(score.lme),unname(score.lvm))
-    }
+        score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE)
+        expect_equal(unname(score.lme),unname(score.lvm))    
 })
 
 ## ** Compound symmetry with weight (lme/gls)
@@ -188,17 +185,15 @@ test_that("score2.lme/gls equivalent to score2.lvm - no adjustment", {
 })
 
 test_that("score2.lme/gls equivalent to score2.lvm - adjustment", {
-    for(iPower in c(1,0.5)){
-        score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
-        score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
+        score.lme <- score2(e.lme, adjust.residuals = TRUE, indiv = TRUE)
+        score.lme.p <- score2(e.lme, p = allCoef.lme, adjust.residuals = TRUE, indiv = TRUE)
         expect_equal(score.lme,score.lme.p)
 
-        score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
+        score.gls <- score2(e.gls, adjust.residuals = TRUE, indiv = TRUE)
 
-        score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE, power = iPower)
+        score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE)
         expect_equal(unname(score.lme)[,1:4],unname(score.lvm[,1:4]), tol = 1e-5)
-        expect_equal(unname(score.lme)[,8],unname(score.lvm[,6]), tol = 1e-5)
-    }
+        expect_equal(unname(score.lme)[,8],unname(score.lvm[,6]), tol = 1e-5)    
 })
 
 ## ** Unstructured (lme/gls)

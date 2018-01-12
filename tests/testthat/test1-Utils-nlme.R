@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: nov 17 2017 (11:28) 
+## Last-Updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 19
+##     Update #: 20
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 library(testthat)
 library(nlme)
-
+lava.options(symbols = c("~","~~"))
 
 context("Utils-nlme")
 n <- 5e1

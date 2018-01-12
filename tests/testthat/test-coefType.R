@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:52) 
 ## Version: 
-## last-updated: nov  9 2017 (16:32) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 56
+##     Update #: 57
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,10 +16,9 @@
 ### Code:
 
 library(testthat)
+lava.options(symbols = c("~","~~"))
 
 context("coefType")
-
-lava.options(symbols = c("~","~~"))
 
 ## * linear regression
 ## ** only continous variables

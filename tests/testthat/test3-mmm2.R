@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan  8 2018 (11:08) 
+## Last-Updated: jan 12 2018 (13:20) 
 ##           By: Brice Ozenne
-##     Update #: 17
+##     Update #: 23
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,8 +17,10 @@
 
 library(testthat)
 library(multcomp)
+library(sandwich)
 library(lava)
 library(data.table)
+lava.options(symbols = c("~","~~"))
 
 context("multcomp - mmm")
 
@@ -44,7 +46,7 @@ test_that("mmm2 vs mmm", {
     e.glht <- glht(ls.lm, mlf("E = 0"))
     
     class(ls.lm) <- "mmm2"
-    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = TRUE)
+    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = FALSE)
 
     expect_equal(e.glht$vcov, n/(n-2)*e.glht2$vcov)
     e.glht$vcov <- NULL
@@ -60,7 +62,7 @@ test_that("mmm2 vs mmm", {
     e.glht <- glht(ls.lm, mlf("E = 0"), vcov = sandwich)
     
     class(ls.lm) <- "mmm2"    
-    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = FALSE)
+    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = TRUE)
     
     e.glht2$df <- 0
     e.glht2$model <- NULL
@@ -127,8 +129,8 @@ test_that("ls.lvmfit vs mmm", {
     diag(lvm.C[target.coef,target.coef]) <- 1
 
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
-    lvm.glht$vcov <- vcov(ls.lvm, return.null = FALSE,
-                          adjust.residuals = FALSE, robust = FALSE)
+    lvm.glht$vcov <- lavaSearch2:::vcov.ls.lvmfit(ls.lvm, return.null = FALSE,
+                          adjust.residuals = FALSE, robust = TRUE)
     lvm.sglht <- summary(lvm.glht)    
 
     ## mmm

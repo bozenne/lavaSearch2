@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: jan 10 2018 (15:16) 
+## last-updated: jan 12 2018 (12:28) 
 ##           By: Brice Ozenne
-##     Update #: 219
+##     Update #: 239
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,8 @@
 #' @description Compare methods to identify missing local dependencies in a LVM
 #' @name compareSearch
 #' 
-#' @param object a lvm model
+#' @param object a lvm model.
+#' @param alpha the significance level.
 #' @inherit modelsearch2
 #' 
 #' @examples
@@ -32,21 +33,18 @@
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = dt)
 #'
-#' res <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "none")
-#' res$sequenceTest
 #' \dontrun{
 #' res <- compareSearch(e.lvm, statistic = c("score","Wald"),
-#'                      method.iid = "iid",
 #'                      method.p.adjust = c("holm","fdr","max"))
-#' }
 #' res
+#' }
 #' 
 
 ## * function - compareSearch
 #' @rdname compareSearch
 #' @export
 compareSearch <- function(object, alpha = 0.05,
-                          method.iid, method.p.adjust, statistic,
+                          method.p.adjust, statistic,
                           trace = 1, ...){
 
     p.value <- link <- NULL
@@ -54,9 +52,6 @@ compareSearch <- function(object, alpha = 0.05,
 ### ** normalize arguments
     method.p.adjust <- sapply(method.p.adjust, match.arg, choices = lava.options()$search.p.adjust, several.ok = TRUE)
     statistic <-  sapply(statistic, match.arg, choices = lava.options()$search.statistic, several.ok = TRUE)
-    if("Wald" %in% method.p.adjust){
-        method.iid <- match.arg(method.iid, lava.options()$search.iid, several.ok = FALSE)
-    }
 
 ### ** fit all models using unadjusted p.values
     ls.search <- list()
@@ -64,9 +59,9 @@ compareSearch <- function(object, alpha = 0.05,
         if(trace){
             cat("modelsearch with the score statistic")
         }
-        ls.search$score <- try(modelsearch2(object, statistic = "score", method.p.adjust = "none", method.iid = "iid",
+        ls.search$score <- try(modelsearch2(object, statistic = "score", method.p.adjust = "none",
                                             trace = trace-1, ...), silent = TRUE)
-        
+
         if("try-error" %in% class(ls.search$score)){
             statistic <- setdiff(statistic,"score")
             if(trace){
@@ -80,7 +75,7 @@ compareSearch <- function(object, alpha = 0.05,
         if(trace){
             cat("modelsearch with the log likelihood ratio statistic")
         }
-        ls.search$LR <- try(modelsearch2(object, statistic = "LR", method.p.adjust = "none", method.iid = "iid",
+        ls.search$LR <- try(modelsearch2(object, statistic = "LR", method.p.adjust = "none",
                                          trace = trace-1, ...), silent = TRUE)
         if("try-error" %in% class(ls.search$LR)){
             statistic <- setdiff(statistic,"LR")
@@ -96,7 +91,7 @@ compareSearch <- function(object, alpha = 0.05,
             cat("modelsearch with the robust Wald statistic")
         }
         if("max" %in% method.p.adjust){
-            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "max", method.iid = method.iid,
+            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "max",
                                                trace = trace-1, ...), silent = TRUE)
 
             ## *** check whether further steps are needed for other type 1 error adjustment
@@ -139,7 +134,6 @@ compareSearch <- function(object, alpha = 0.05,
                     otherSearch <- try(do.call("modelsearch2", c(list(x = model.tempo2,
                                                                       statistic = "Wald",
                                                                       method.p.adjust = "none",
-                                                                      method.iid = method.iid,
                                                                       trace = trace-1), dots)
                                                ), silent = TRUE)
 
@@ -150,7 +144,7 @@ compareSearch <- function(object, alpha = 0.05,
              }
             
         }else{            
-            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "none", method.iid = method.iid,
+            ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "none", 
                                                trace = FALSE, ...), silent = TRUE)            
         }
         if("try-error" %in% class(ls.search$Wald)){

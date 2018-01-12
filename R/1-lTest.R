@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan 10 2018 (15:24) 
+## last-updated: jan 12 2018 (13:17) 
 ##           By: Brice Ozenne
-##     Update #: 615
+##     Update #: 621
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,6 +43,7 @@
 #' lTest(e.lm)
 #' 
 #' ## gls model
+#' library(nlme)
 #' e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
 #' e.gls$dVcov <- dVcov2(e.gls, cluster = df.data$Id)
 #' 

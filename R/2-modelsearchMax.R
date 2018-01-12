@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 10 2018 (17:19) 
+## last-updated: jan 12 2018 (12:08) 
 ##           By: Brice Ozenne
-##     Update #: 543
+##     Update #: 608
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,15 +32,15 @@
 ## * Function - modelsearchMax
 ## ' @rdname modelsearchMax
 modelsearchMax <- function(x, restricted, link, directive, packages,
-                           update.FCT, update.args, iid.FCT,
-                           robust = FALSE, df = TRUE, adjust.residuals = TRUE,
-                           method.p.adjust, method.max = "integration", n.sim = 1e3, alpha = 0.05,  
+                           update.FCT, update.args, iid.FCT,                           
+                           alpha, method.p.adjust, method.max, n.sim = 1e3, 
                            iid.previous = NULL, quantile.previous = NULL, 
-                           export.iid = 1, trace = 1, ncpus = 1, initCpus = TRUE){
+                           export.iid, trace, ncpus, initCpus){
 
-    convergence <- link <- p.value <- NULL ## [:for CRAN check] data.table
-    
-### ** initialisation
+    ## WARNING: do not put link as NULL for data.table since it is used as an argument by the function
+    convergence <- p.value <- statistic <- NULL ## [:for CRAN check] data.table
+
+    ### ** initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
@@ -50,8 +50,14 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     iid.link <- NULL
     convergence <- rep(NA,n.link)
 
-### ** wraper
+    typeSD <- attr(iid.FCT, "typeSD")
+    df <- attr(iid.FCT, "df")
+    adjust.residuals <- attr(iid.FCT, "adjust.residuals")
+    prepareScore <- df
+    
+    ### ** wraper
     warper <- function(iterI){ # iterI <- 2
+
         out <- list(dt = data.table(statistic = as.numeric(NA),
                                     df = as.numeric(NA),
                                     p.value = as.numeric(NA),
@@ -63,7 +69,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         newfit <- update.FCT(x, args = update.args,
                              restricted = restricted[iterI,], directive = directive[iterI])
         out$dt[1, c("convergence") := newfit$opt$convergence]
-
+        
         ## *** extract influence function        
         if(class(newfit) != "try-error"){ # test whether the model was estimated
             if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
@@ -75,32 +81,42 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                          "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
                 }
                 out$dt[1, "coefBeta" := new.coef[link[iterI]]]
-
+                
                 ## extract degree of freedom and standard error
                 if(df){
+                    dVcov2(newfit, return.score = TRUE) <- adjust.residuals
+                    out$iid <- (attr(newfit$dVcov, "score") %*% attr(newfit$dVcov, "vcov.param")[,link[iterI],drop=FALSE])
+                    
                     C <- matrix(0,
                                 nrow = 1,
                                 ncol = length(new.coef),
                                 dimnames = list(NULL, names(new.coef)))
                     C[1,link[iterI]] <- 1
-                    e.df <- lTest(newfit, C = C, adjust.residuals = adjust.residuals, Ftest = FALSE)
+                    
+                    e.df <- lTest(newfit, C = C, adjust.residuals = adjust.residuals,
+                                  Ftest = FALSE)
+                    
                     out$dt[1, "df" := e.df[1, "df"]]
 
-                    sd.coef <- e.df[1, "std"]
-                }else{
-                    if(robust == FALSE){
-                        sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
+                    if(typeSD == "information"){
+                        sd.coef <- e.df[1, "std"]
+                        out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
+                    }else{
+                        sd.coef <- stats::sd(out$iid, na.rm = TRUE)
                     }
-                }
-                
-                ## extract iid
-                out$iid <- sqrt(nObs)*iid.FCT(newfit, adjust.residuals = adjust.residuals)[,link[iterI],drop=FALSE]
-                if(robust == FALSE){                    
-                    out$iid <- out$iid * sd.coef / sqrt(mean(out$iid^2, na.rm = TRUE))
+                    
                 }else{
-                    sd.coef <- stats::sd(out$iid, na.rm = TRUE)
-                }
 
+                    out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
+                    if(typeSD == "information"){
+                        ## NOTE: it assumes that whenever df is FALSE then adjust.residuals is FALSE
+                        sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
+                        out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
+                    }else{
+                        sd.coef <- stats::sd(out$iid, na.rm = TRUE)
+                    }
+                        
+                }
                 ## compute test statistic
                 out$dt[1, "statistic" := abs(.SD$coefBeta/sd.coef)] ## keep .SD for clarity
             }
@@ -148,7 +164,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         if(trace > 0){  close(pb) }
         
     }else{
-        
+
         if(trace>0){
             requireNamespace("pbapply")
             resApply <- pbapply::pblapply(1:n.link, warper)
@@ -171,12 +187,24 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     indexCV <- dt.test[, .I[convergence==0]]
 
     if(df){
-        dt.test[indexCV, "p.value" := 2*(1-pnorm(abs(statistic)))]
-    }else{
         dt.test[indexCV, "p.value" := 2*(1-stats::pt(abs(.SD$statistic), df = df))] ## keep .SD for clarity
+    }else{
+        dt.test[indexCV, "p.value" := 2*(1-pnorm(abs(statistic)))]
     }
 
     ### ** adjust p.value
+    if(method.p.adjust == "fastmax"){
+
+        adj.tempo <- stats::p.adjust(dt.test$p.value, method = "bonferroni")
+        if(any(adj.tempo<0.05)){
+            dt.test[, p.value := as.numeric(p.value != min(p.value))]
+            method.p.adjust <- "bonferroni"
+        }else{
+            method.p.adjust <- "max"
+        }
+        
+    }
+    
     if(method.p.adjust == "max"){
         nameN0 <- dt.test[indexCV, link]
         statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
@@ -185,7 +213,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }else {
             dfN0 <- NULL
         }
-        
+
         if(method.max=="integration"){
             resQmax <- calcDistMaxIntegral(statistic = statisticN0, iid = iid.link, df = dfN0,
                                            iid.previous = iid.previous, quantile.previous = quantile.previous, 
@@ -220,8 +248,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         dt.test[indexCV,c("quantile") := as.numeric(NA)]
         Sigma <- NULL        
     }    
-    
-### ** export
+
+    ### ** export
     out <- list(dt.test = dt.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)

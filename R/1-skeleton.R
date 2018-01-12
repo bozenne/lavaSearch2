@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 10 2018 (16:43) 
+## Last-Updated: jan 12 2018 (13:31) 
 ##           By: Brice Ozenne
-##     Update #: 521
+##     Update #: 542
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,26 +45,28 @@
 #' latent(m) <- ~eta
 #' 
 #' e <- estimate(m,sim(m,1e2))
-#' skeleton(e, as.lava = TRUE,
+#' M.data <- as.matrix(model.frame(e))
+#'
+#' skeleton(e$model, as.lava = TRUE,
 #'          name.endogenous = endogenous(e), n.endogenous = 3,
 #'          name.latent = latent(e), 
 #'          update.value = FALSE)
-#' skeleton(e, as.lava = TRUE,
+#' skeleton(e, data = M.data, p = pars(e), as.lava = TRUE,
 #'          name.endogenous = endogenous(e), n.endogenous = 3,
 #'          name.latent = latent(e), 
-#'          update.value = TRUE,
-#'          data = as.matrix(e$data$model.frame), p = pars(e))$value
+#'          update.value = TRUE)
 #'
 #' ## with constrains
 #' m <- lvm(Y[mu:sigma] ~ beta*X1+X2)
 #' e <- estimate(m, sim(m,1e2))
+#' M.data <- as.matrix(model.frame(e))
 #'
-#' skeleton(e, as.lava = TRUE,
+#' skeleton(e$model, as.lava = TRUE,
 #'          name.endogenous = "Y", n.endogenous = 1,
 #'          name.latent = NULL, 
 #'          update.value = FALSE)$skeleton
 #' 
-#' skeleton(e, as.lava = FALSE,
+#' skeleton(e, data = M.data, p = pars(e), as.lava = FALSE,
 #'          name.endogenous = "Y", n.endogenous = 1,
 #'          name.latent = NULL, 
 #'          update.value = FALSE)$skeleton
@@ -236,8 +238,8 @@ skeleton.lvmfit <- function(object, as.lava,
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
     n.data <- NROW(data)
-
-### ** Compute skeleton
+    
+    ### ** Compute skeleton
     if(is.null(object$prepareScore2$skeleton)){
         OS <- skeleton(lava::Model(object), as.lava = as.lava,
                        name.endogenous = name.endogenous, name.latent = name.latent)
@@ -245,7 +247,7 @@ skeleton.lvmfit <- function(object, as.lava,
         OS <- object$prepareScore2$skeleton
     }
 
-### ** Update skeleton with the current values
+    ### ** Update skeleton with the current values
 
     ## *** nu
     index.update <- which(!is.na(OS$skeleton$nu))
@@ -567,12 +569,12 @@ skeletonDtheta.lvmfit <- function(object, data,
 skeletonDtheta2.lvm <- function(object, data, dt.param.all,
                                 param2originalLink, name.latent, ...){
 
-    detail <- factice <- marginal <- NULL ## [:for CRAN check] data.table
+    detail <- factice <- marginal <- name <- param <- value <- X <- Y <- NULL ## [:for CRAN check] data.table
 
     dt.param <- dt.param.all[is.na(value) & marginal == FALSE & factice == FALSE]
     n.latent <- length(name.latent)
     n.data <- NROW(data)
-    
+
     ### ** identify all combinations of parameters with second derivative
     grid.mean <- list()
     grid.mean$alpha.B <- .combination(alpha = dt.param[detail=="alpha",name],
@@ -708,6 +710,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
                                    B, Lambda, Psi,
                                    ...){
 
+    
     n.endogenous <- length(name.endogenous)
     n.data <- NROW(data)
     
@@ -853,6 +856,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
 #' @param ... vectors
 #' 
 #' @examples
+#' .combination <- lavaSearch2:::.combination
 #' .combination(1,1)
 #' .combination(1:2,1:2)
 #' .combination(c(1:2,1:2),1:2)

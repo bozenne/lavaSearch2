@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (12:57) 
 ## Version: 
-## last-updated: dec  7 2017 (17:30) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 71
+##     Update #: 80
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,7 @@
 library(testthat)
 library(clubSandwich)
 library(nlme)
+lava.options(symbols = c("~","~~"))
 
 context("iid2-nlme")
 
@@ -67,23 +68,11 @@ test_that("gls: HC0/HC1", {
     expect_equal(as.double(GS),as.double(VsandwichHC1.gls), tolerance = 1e-10)
 })
 
-test_that("gls: HC3", {
-    iid2HC3.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 1, cluster = dL$Id, as.clubSandwich = 2)
-    iid2HC3.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, cluster = dL$I, as.clubSandwich = 2)
-    expect_equal(unname(iid2HC3.gls[,index.coef]),unname(iid2HC3.lvm[,index.coef]))
-  
-    VsandwichHC3.gls <- crossprod(iid2HC3.gls)[index.coef,index.coef]
-    VsandwichHC3.lvm <- crossprod(iid2HC3.lvm)[index.coef,index.coef]    
-    expect_equal(unname(VsandwichHC3.gls), unname(VsandwichHC3.lvm), tolerance = 1e-10)    
-    GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id) * factor^2    
-    expect_equal(as.double(GS),as.double(VsandwichHC3.gls), tolerance = 1e-10) 
-})
-
 test_that("gls: HC2", {
-    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 0.5, cluster = dL$Id, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, cluster = dL$Id, as.clubSandwich = 2)
+    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, cluster = dL$Id, as.clubSandwich = 2)
+    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, cluster = dL$I, as.clubSandwich = 2)
     expect_equal(unname(iid2HC2.gls[,index.coef]),unname(iid2HC2.lvm[,index.coef]))
- 
+  
     VsandwichHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
     VsandwichHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]    
     expect_equal(unname(VsandwichHC2.gls), unname(VsandwichHC2.lvm), tolerance = 1e-10)    
@@ -130,26 +119,10 @@ test_that("lme: HC0/HC1", {
     expect_equal(as.double(GS),as.double(VsandwichHC1.lme))    
 })
 
-test_that("lme: HC3", {
-    iid2HC3.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    iid2HC3.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    iid2HC3.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)    
-    expect_equal(unname(iid2HC3.lme),unname(iid2HC3.lvm))
-    expect_equal(unname(iid2HC3.gls[,index.coef]),unname(iid2HC3.lvm[,index.coef]))
-
-    VsandwichHC3.lme <- crossprod(iid2HC3.lme)[index.coef,index.coef]
-    VsandwichHC3.gls <- crossprod(iid2HC3.gls)[index.coef,index.coef]
-    VsandwichHC3.lvm <- crossprod(iid2HC3.lvm)[index.coef,index.coef]
-    expect_equal(as.double(VsandwichHC3.lme), as.double(VsandwichHC3.gls))
-    expect_equal(as.double(VsandwichHC3.lvm), as.double(VsandwichHC3.gls))
-    GS <- vcovCR(e.lme, type = "CR3", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC3.lme))
-})
-
 test_that("lme: HC2", {
-    iid2HC2.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)    
+    iid2HC2.lme <- iid2(e.lme, adjust.residuals = TRUE, as.clubSandwich = 2)
+    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, as.clubSandwich = 2)
+    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, as.clubSandwich = 2)    
     expect_equal(unname(iid2HC2.lme),unname(iid2HC2.lvm))
     expect_equal(unname(iid2HC2.gls[,index.coef]),unname(iid2HC2.lvm[,index.coef]))
 
@@ -161,7 +134,6 @@ test_that("lme: HC2", {
     GS <- vcovCR(e.lme, type = "CR2", cluster = dL$Id)
     expect_equal(as.double(GS),as.double(VsandwichHC2.lme))
 })
-
 
 ## * lme/lvm - CS with weights
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,Y4~1*eta,eta~G))
@@ -195,21 +167,9 @@ test_that("lme/gls/lvm: HC0/HC1", {
     expect_equal(as.double(GS),as.double(VsandwichHC1.lme))    
 })
 
-test_that("lme/gls/lvm: HC3", {
-    iid2HC3.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    iid2HC3.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)    
-    expect_equal(unname(iid2HC3.lme[,index.coef]),unname(iid2HC3.lvm[,index.coef]), tol = 1e-6)
-
-    VsandwichHC3.lme <- crossprod(iid2HC3.lme)[index.coef,index.coef]
-    VsandwichHC3.lvm <- crossprod(iid2HC3.lvm)[index.coef,index.coef]
-    expect_equal(as.double(VsandwichHC3.lme), as.double(VsandwichHC3.lvm), tol = 1e-7)
-    GS <- vcovCR(e.lme, type = "CR3", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC3.lme))
-})
-
 test_that("lme/gls/lvm: HC2", {
-    iid2HC2.lme <- iid2(e.lme, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)    
+    iid2HC2.lme <- iid2(e.lme, adjust.residuals = TRUE, as.clubSandwich = 2)
+    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, as.clubSandwich = 2)    
     expect_equal(unname(iid2HC2.lme[,index.coef]),unname(iid2HC2.lvm[,index.coef]), tol = 1e-6)
 
     VsandwichHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
@@ -218,7 +178,6 @@ test_that("lme/gls/lvm: HC2", {
     GS <- vcovCR(e.lme, type = "CR2", cluster = dL$Id)
     expect_equal(as.double(GS),as.double(VsandwichHC2.lme))
 })
-
 
 ## * gls - Unstructured
 m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~1))
@@ -267,22 +226,9 @@ test_that("gls/lvm: HC0/HC1", {
 
 })
 
-test_that("lme: HC3", {
-    iid2HC3.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    iid2HC3.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)    
-
-    VsandwichHC3.gls <- crossprod(iid2HC3.gls)[index.coef,index.coef]
-    VsandwichHC3.lvm <- crossprod(iid2HC3.lvm)[index.coef,index.coef]    
-    expect_equal(as.double(VsandwichHC3.gls), as.double(VsandwichHC3.lvm), tol = 1e-7)
-
-    ## VsandwichHC3.gls <- crossprod(iid2HC3.gls)[index.coef,index.coef]
-    ## GS <- vcovCR(e.gls, type = "CR3", cluster = dL$Id)
-    ## expect_equal(as.double(GS),as.double(VsandwichHC3.gls))
-})
-
 test_that("lme: HC2", {
-    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)    
+    iid2HC2.gls <- iid2(e.gls, adjust.residuals = TRUE, as.clubSandwich = 2)
+    iid2HC2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, as.clubSandwich = 2)    
 
     VsandwichHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
     VsandwichHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]    
@@ -292,6 +238,7 @@ test_that("lme: HC2", {
     ## GS <- vcovCR(e.gls, type = "CR2", cluster = dL$Id)
     ## expect_equal(as.double(GS),as.double(VsandwichHC2.gls))
 })
+
 
 #----------------------------------------------------------------------
 ### test-iid2-nlme.R ends here

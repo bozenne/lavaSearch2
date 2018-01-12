@@ -17,12 +17,11 @@ Reconstruct the marginal variance covariance matrix from a nlme model
 }
 \details{
 The marginal variance covariance matrix for gls model is of the form:
-\deqn{
-\Sigma = \left[ \begin{array}{ccc}
-\sigma^2 & \sigma^2 \sigma_2 \rho_{1,2} & \sigma^2 \sigma_3 \rho_{1,3} \\
-& \sigma^2 \sigma_2^2 & \sigma^2 \sigma_3 \rho_{1,3} \\
-& & \sigma^2 \sigma_3^2 \\
-\end{array} \right]
+
+\tabular{cccc}{
+\eqn{\Sigma =} \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \sigma_2 \rho_{1,2}} \tab \eqn{\sigma^2 \sigma_3 \rho_{1,3}} \cr
+\tab . \tab \eqn{\sigma^2 \sigma_2^2} \tab \eqn{\sigma^2 \sigma_3 \rho_{1,3}} \cr
+\tab . \tab . \tab \eqn{\sigma^2 \sigma_3^2}
 }
 
 The marginal variance covariance matrix for lme model is of the form:

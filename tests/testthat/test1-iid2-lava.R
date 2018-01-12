@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: nov 20 2017 (16:59) 
+## last-updated: jan 12 2018 (11:27) 
 ##           By: Brice Ozenne
-##     Update #: 119
+##     Update #: 128
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(clubSandwich)
+lava.options(symbols = c("~","~~"))
 
 context("iid2-lava")
 
@@ -36,53 +37,54 @@ d <- sim(m,n)
 
 e.lm <- lm(formula.lvm,data=d)
 e.lvm <- estimate(lvm(formula.lvm),data=d)
+name.coef <- names(coef(e.lm))
 
 ## ** iid2 matches iid
 test_that("iid2 matches iid", {
-    e.iid2.lm <- iid2(e.lm, adjust.residuals = FALSE)
-    GS1 <- iid(e.lm)
+    e.iid2.lm <- iid2(e.lm, adjust.residuals = FALSE) ## dim(e.iid2.lm)
+    GS1 <- iid(e.lm) ## dim(GS1) ## head(GS1)
     attr(GS1, "bread") <- NULL
-    expect_equal(e.iid2.lm, GS1)
+    expect_equal(e.iid2.lm[,name.coef], GS1)
 
     e1.iid2.lvm <- iid2(e.lvm, adjust.residuals = FALSE)
-    expect_equal(unname(e1.iid2.lvm[,1:4]), unname(GS1))
+    expect_equal(unname(e1.iid2.lvm), unname(e.iid2.lm))
+    e.GS <- iid(e.lvm)
+    attr(e.GS, "bread") <- NULL
+
+    ## NOTE: iid in lava uses numerical derivative to compute the information matrix
+    ## this is why there is not a perfect matching between iid2.lvm and iid.lvm
+    I <- numDeriv::jacobian(function(p){
+        score(e.lvm, p = p, indiv = FALSE)
+    }, pars(e.lvm), method = lava.options()$Dmethod)
+    score.GS <- score(e.lvm, indiv = TRUE)
+
+    expect_equivalent(e1.iid2.lvm, score.GS %*% vcov(e.lvm))
+    expect_equivalent(e.GS, - score.GS %*% solve(I))
 })
 
 
 ## ** iid2 lvm matches iid2 lm
 test_that("iid2 lvm matches iid2 lm", {
     for(iAdj in c(FALSE,TRUE)){ # iAdj <- 1
-        for(iPower in c(0.5,1)){ # iPower <- 1
-            e.iid2.lm <- iid2(e.lm, adjust.residuals = iAdj, power = iPower)
-            e0.iid2.lvm <- iid2(e.lvm, adjust.residuals = iAdj, power = iPower, as.clubSandwich = 2)
-            expect_equal(unname(e.iid2.lm), unname(e0.iid2.lvm[,1:4]), tolerance = 1e-10)
-        }
+        e.iid2.lm <- iid2(e.lm, adjust.residuals = iAdj)
+        e0.iid2.lvm <- iid2(e.lvm, adjust.residuals = iAdj)
+        
+        expect_equivalent(e.iid2.lm, e0.iid2.lvm)       
     }
 })
 
 ## ** iid2 matches clubSandwich
-test_that("iid2.lm matches clubSandwich", {
-    eHC2.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    VsandwichHC2.lm <- crossprod(eHC2.iid2)
-    expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
-                 as.double(VsandwichHC2.lm))
+test_that("iid2.lm/iid2.lvm matches clubSandwich", {
+    eHC2.iid2.lm <- iid2(e.lm, adjust.residuals = TRUE, as.clubSandwich = 2)
+    ## Aleardy checked before
+    ## eHC2.iid2.lvm <- iid2(e.lvm, adjust.residuals = TRUE, as.clubSandwich = 2)
+    ## expect_equal(unname(eHC2.iid2.lm),
+    ##              unname(eHC2.iid2.lvm))
 
-    eHC3.iid2 <- iid2(e.lm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    VsandwichHC3.lm <- crossprod(eHC3.iid2)
-    expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
-                 as.double(VsandwichHC3.lm))
-})
+    VsandwichHC2.lm <- crossprod(eHC2.iid2.lm)
 
-test_that("iid2.lvm matches clubSandwich", {
-    eHC2.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 0.5, as.clubSandwich = 2)
-    VsandwichHC2.lvm <- crossprod(eHC2.iid2)[1:4,1:4]
-    expect_equal(as.double(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
-                 as.double(VsandwichHC2.lvm))
-
-    eHC3.iid2 <- iid2(e.lvm, adjust.residuals = TRUE, power = 1, as.clubSandwich = 2)
-    VsandwichHC3.lvm <- crossprod(eHC3.iid2)[1:4,1:4]
-    expect_equal(as.double(vcovCR(e.lm, type = "CR3", cluster = d$Id)),
-                 as.double(VsandwichHC3.lvm))
+    expect_equal(as.matrix(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
+                 VsandwichHC2.lm[name.coef,name.coef])
 })
 
 

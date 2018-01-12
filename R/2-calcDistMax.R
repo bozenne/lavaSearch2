@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: jan 10 2018 (16:44) 
+## last-updated: jan 11 2018 (14:50) 
 ##           By: Brice Ozenne
-##     Update #: 383
+##     Update #: 394
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -133,7 +133,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     iid.statistic <- scale(iid.all, center = TRUE, scale = TRUE)
     Sigma.statistic <- stats::cov(iid.statistic, use = "pairwise.complete.obs")
     out <- list(p.adjust = NULL, z = NULL, Sigma = Sigma.statistic[index.new,index.new,drop=FALSE])
-    
+
     ## ** Definition of the functions used to compute the quantiles
     warperQ <- function(alpha){
         .calcQmaxIntegration(alpha = alpha, p = p.iid,
@@ -158,7 +158,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     }
 
     ## ** Computation
-    if(quantile.compute){
+    if(quantile.compute){       
         out$z <- warperQ(alpha)
     }else{
         out$z <- NA
@@ -299,16 +299,24 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
 .calcQmaxIntegration <- function(alpha, p, Sigma, df, distribution){
 
     if(distribution == "gaussian"){
-        q.alpha <- mvtnorm::qmvnorm(1-alpha,
-                                    mean = rep(0,p),
-                                    corr = Sigma,
-                                    tail = "both.tails")$quantile
+        if(p==1){
+            q.alpha <- stats::qnorm(1-alpha, mean = 0, sd = 1)
+        }else{
+            q.alpha <- mvtnorm::qmvnorm(1-alpha,
+                                        mean = rep(0,p),
+                                        corr = Sigma,
+                                        tail = "both.tails")$quantile
+        }
     }else if(distribution == "student"){
-        q.alpha <- mvtnorm::qmvt(1-alpha,
-                                 delta = rep(0,p),
-                                 corr = Sigma,
-                                 df = df,
-                                 tail = "both.tails")$quantile
+        if(p==1){
+            q.alpha <- stats::qt(1-alpha, df = df)
+        }else{
+            q.alpha <- mvtnorm::qmvt(1-alpha,
+                                     delta = rep(0,p),
+                                     corr = Sigma,
+                                     df = df,
+                                     tail = "both.tails")$quantile
+        }
     }
 
     return(q.alpha)
@@ -319,11 +327,19 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     value <- abs(statistic)
     if(!is.na(value)){
         if(distribution == "gaussian"){
-            p <- mvtnorm::pmvnorm(lower = -value, upper = value,
-                                  mean = rep(0, p), corr = Sigma)
+            if(p==1){
+                p <- stats::pnorm(value, mean = 0, sd = Sigma)
+            }else{
+                p <- mvtnorm::pmvnorm(lower = -value, upper = value,
+                                      mean = rep(0, p), corr = Sigma)
+            }
         }else if(distribution == "student"){
-            p <- mvtnorm::pmvt(lower = -value, upper = value,
-                               delta = rep(0, p), corr = Sigma, df = df)
+            if(p==1){
+                p <- stats::pt(value, df = df)
+            }else{
+                p <- mvtnorm::pmvt(lower = -value, upper = value,
+                                   delta = rep(0, p), corr = Sigma, df = df)
+            }
         }
         return(1-p)
     }else{

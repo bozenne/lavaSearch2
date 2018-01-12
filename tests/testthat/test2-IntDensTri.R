@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:32) 
 ## Version: 
-## last-updated: jan 10 2018 (17:07) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 8
+##     Update #: 9
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,6 +17,7 @@
 
 library(testthat)
 library(mvtnorm)
+lava.options(symbols = c("~","~~"))
 
 context("IntDensTri")
 # {{{ around 0

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan 10 2018 (12:12) 
+## Last-Updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 45
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,7 @@
 library(testthat)
 library(nlme)
 library(lme4)
+lava.options(symbols = c("~","~~"))
 
 context("dVcov2")
 n <- 5e1

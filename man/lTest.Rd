@@ -54,6 +54,7 @@ anova(e.lm)
 lTest(e.lm)
 
 ## gls model
+library(nlme)
 e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
 e.gls$dVcov <- dVcov2(e.gls, cluster = df.data$Id)
 

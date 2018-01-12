@@ -4,29 +4,51 @@
 \alias{compareSearch}
 \title{Compare methods to identify missing local dependencies in a LVM}
 \usage{
-compareSearch(object, alpha = 0.05, method.iid, method.p.adjust, statistic,
-  trace = 1, ...)
+compareSearch(object, alpha = 0.05, method.p.adjust, statistic, trace = 1,
+  ...)
 }
 \arguments{
-\item{object}{a lvm model}
+\item{object}{a lvm model.}
 
-\item{alpha}{the significance threshold for retaining a new link.}
+\item{alpha}{the significance level.}
 
-\item{method.iid}{the method used to compute the influence function. Can be \code{"iid"} (first order approximation) or \code{"iidJack"} (jacknife estimate).}
+\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignored when using the max statistic. Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).}
 
-\item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignore when using the max statistic.}
-
-\item{statistic}{test statistic used to perform the test. Can the likelihood ratio test (LR), the score (score) or the max statistic (max).}
+\item{statistic}{statistic used to perform the test. Can the likelihood ratio test (\code{"LR"}), the score (\code{"score"}) or the max statistic (\code{"max"}).}
 
 \item{trace}{should the execution be traced?}
 
-\item{...}{additional arguments to be passed to lower levels functions.}
+\item{...}{additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.}
 }
 \value{
 a latent variable model
 }
 \description{
 Compare methods to identify missing local dependencies in a LVM
+}
+\details{
+Argument \code{link}:
+\itemize{
+\item \code{lvmfit} object: when not specified all possible additional links are considered.
+\item other objects: this argument must be specified.
+}
+
+Argument \code{...} passed to \code{\link{findNewLink}}, see the documentation of this function:
+\itemize{
+\item exclude.var
+\item rm.latent_latent
+\item rm.endo_endo
+\item rm.latent_endo
+}
+
+Argument \code{...} passed to \code{\link{modelsearch2}}:
+\itemize{
+\item alpha: the significance threshold for retaining a new link.
+\item method.max: the method used to compute the distribution of the max statistic. See lava.options()$search.calcMaxDist.
+\item ncpus: the number of cpus that can be used for the computations.
+\item nStep: the maximum number of links that can be added to the model.
+\item na.omit: should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
+}
 }
 \examples{
 mSim <- lvm(Y~G+X1+X2)
@@ -37,13 +59,10 @@ mBase <- lvm(Y~G)
 addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 e.lvm <- estimate(mBase, data = dt)
 
-res <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "none")
-res$sequenceTest
 \dontrun{
 res <- compareSearch(e.lvm, statistic = c("score","Wald"),
-                     method.iid = "iid",
                      method.p.adjust = c("holm","fdr","max"))
-}
 res
+}
 
 }

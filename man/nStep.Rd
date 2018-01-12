@@ -16,7 +16,7 @@ nStep(object)
 Find the number of steps performed during the sequential testing
 }
 \examples{
- mSim <- lvm(Y~G+X1+X2)
+mSim <- lvm(Y~G+X1+X2)
 addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
 dt <- as.data.table(lava::sim(mSim, 1e2))
 

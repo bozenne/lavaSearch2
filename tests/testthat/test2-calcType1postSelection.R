@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 26 2017 (16:54) 
 ## Version: 
-## last-updated: okt  3 2017 (18:48) 
+## last-updated: jan 12 2018 (11:29) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 15
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,7 @@
 
 library(testthat)
 library(mvtnorm)
+lava.options(symbols = c("~","~~"))
 
 context("calcType1postSelection")
 
