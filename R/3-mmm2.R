@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 12 2018 (16:43) 
+## Last-Updated: jan 12 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 85
+##     Update #: 86
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,6 +67,7 @@ coef.ls.lvmfit <- multcomp:::coef.mmm
 ## * vcov.mm2
 #' @rdname vcov-multcomp
 #' @method vcov mmm2
+#' 
 #' @export
 vcov.mmm2 <- function(object, return.null = TRUE,
                       adjust.residuals = TRUE, robust = TRUE,

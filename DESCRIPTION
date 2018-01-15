@@ -2,12 +2,15 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for model specification in the latent variable framework
 Version: 0.1.2
-Date: 2018-01-12
+Date: 2018-01-15
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 URL: https://github.com/bozenne/lavaSearch2
 Description: Tools for model specification in the latent variable framework
-    (add-on to the lava package).
+    (add-on to the lava package). The package contains three main functionnalites:
+    Wald tests/F-tests with improved control of the type 1 error in small samples,
+    adjustment for multiple comparisons when searching for local depencies,
+    and adjustment for multiple comparisons when doing inference for multiple latent variable models. 
 License: GPL-3
 Depends:
     R (>= 2.10),

@@ -4,3 +4,8 @@
 
 * lavaSeach2
 
+*lavaSearch2* provides additional functionnalities for the *lava*
+ package, an software package that enables to estimate latent variable
+ models (LVM) and simulate data using a LVM as a generative model.
+
+
