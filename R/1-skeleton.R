@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:31) 
+## Last-Updated: jan 15 2018 (13:38) 
 ##           By: Brice Ozenne
-##     Update #: 544
+##     Update #: 546
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -119,7 +119,7 @@ skeleton.lvm <- function(object, as.lava,
         }), name.endogenous)
     
         skeleton$XK <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){
-            dt.param.K[dt.param.K$Y == name.endogenous[iEndogenous], X]
+            dt.param.K[Y == name.endogenous[iEndogenous], X]
         }), name.endogenous)
     }
     

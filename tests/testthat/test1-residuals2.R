@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: jan 12 2018 (11:29) 
+## Last-Updated: jan 15 2018 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 38
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,12 +15,21 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(nlme)
 lava.options(symbols = c("~","~~"))
 
 context("residuals2")
 
+## * Simulation
 n <- 5e1
 
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (09:25) 
 ## Version: 
-## last-updated: jan 12 2018 (12:10) 
+## last-updated: jan 15 2018 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 14
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,8 +15,15 @@
 ## 
 ### Code:
 
-library(testthat)
-library(data.table)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(mvtnorm)
 lava.options(symbols = c("~","~~"))
 
@@ -33,15 +40,15 @@ e.base <- estimate(m.base, data = dt.sim)
 
 resCompare <- compareSearch(e.base, 
                             method.p.adjust = c("none","bonferroni","fdr","max"),
-                            statistic = c("score","Wald"),trace = 5)
+                            statistic = c("score","Wald"),trace = 0)
 
 resCompare <- compareSearch(e.base, link = c("Y~X1","Y~X3","Y~Z1"),
                             method.p.adjust = c("none","bonferroni","fdr"),
-                            statistic = c("score"))
+                            statistic = c("score"),trace = 0)
 
 ## * example with error (wrong link)
 resCompare <- compareSearch(e.base, link = c("Y~G","Y~A"),
                             method.p.adjust = c("none","bonferroni","fdr","max"),
-                            statistic = c("score","Wald"),trace = 5)
+                            statistic = c("score","Wald"),trace = 0)
 ##----------------------------------------------------------------------
 ### test-compareSearch.R ends here

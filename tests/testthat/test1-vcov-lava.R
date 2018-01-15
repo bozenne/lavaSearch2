@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: jan 12 2018 (11:27) 
+## last-updated: jan 15 2018 (16:07) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 50
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,15 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(lme4)
 library(pbkrtest)
 lava.options(symbols = c("~","~~"))
@@ -384,6 +392,7 @@ dW <- as.data.table(sim(mSim,n,latent = FALSE))
 setkey(dW, "Id")
 dL <- melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
 setkey(dL, "Id")
+df.dL <- as.data.table(dL)
 
 ## *** model fit
 m <- lvm(c(Y1[mu1:sigma]~1*eta,
@@ -394,7 +403,7 @@ e.lvm <- estimate(m, dW)
 
 
 e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
-               data = dL, REML = FALSE)
+               data = df.dL, REML = FALSE)
 
 
 ## *** tests

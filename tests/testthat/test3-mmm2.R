@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 12 2018 (13:20) 
+## Last-Updated: jan 15 2018 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 26
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,11 +15,17 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(multcomp)
 library(sandwich)
-library(lava)
-library(data.table)
 lava.options(symbols = c("~","~~"))
 
 context("multcomp - mmm")
@@ -130,7 +136,7 @@ test_that("ls.lvmfit vs mmm", {
 
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
     lvm.glht$vcov <- lavaSearch2:::vcov.ls.lvmfit(ls.lvm, return.null = FALSE,
-                          adjust.residuals = FALSE, robust = TRUE)
+                                                  adjust.residuals = FALSE, robust = TRUE)
     lvm.sglht <- summary(lvm.glht)    
 
     ## mmm

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 181
+##     Update #: 183
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,15 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(lava.tobit)
 lava.options(symbols = c("~","~~"))
 

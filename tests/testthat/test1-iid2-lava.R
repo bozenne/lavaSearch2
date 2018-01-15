@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: jan 12 2018 (11:27) 
+## last-updated: jan 15 2018 (16:10) 
 ##           By: Brice Ozenne
-##     Update #: 128
+##     Update #: 134
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,8 +14,17 @@
 #----------------------------------------------------------------------
 ## 
 ### Code:
+## source("c:/Users/hpl802/Documents/GitHub/lavaSearch2/tests/testthat/test1-iid2-lava.R")
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(clubSandwich)
 lava.options(symbols = c("~","~~"))
 

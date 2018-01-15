@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:39) 
+## Last-Updated: jan 15 2018 (13:24) 
 ##           By: Brice Ozenne
-##     Update #: 87
+##     Update #: 88
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -94,7 +94,7 @@ vcov.mmm2 <- function(object, return.null = TRUE,
     if(robust == FALSE){        
         ls.sd <- lapply(object, function(x){
             iVcov <- attr(residuals2(x, adjust.residuals = adjust.residuals,
-                                     power = 1/2, return.vcov.param = TRUE), "vcov.param")
+                                     return.vcov.param = TRUE), "vcov.param")
             iSd <- sqrt(diag(iVcov))
             if(identical(class(x),"lm")){
                 iSd <- iSd[names(iSd)!="sigma2"]                

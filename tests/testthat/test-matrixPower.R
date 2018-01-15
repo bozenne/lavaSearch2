@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 24 2017 (09:21) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (16:09) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 8
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,11 +15,19 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
 lava.options(symbols = c("~","~~"))
 
 context("matrixPower")
 
+## * tests
 M <- matrix(rnorm(2e2),20,10)
 Sigma <- var(M)
 

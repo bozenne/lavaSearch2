@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 26 2017 (16:54) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 17
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,6 +15,14 @@
 ##
 ##
 ### Code:
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
 
 library(testthat)
 library(mvtnorm)
@@ -22,6 +30,7 @@ lava.options(symbols = c("~","~~"))
 
 context("calcType1postSelection")
 
+## * tests
 n <- 350
 
 test_that("check type 1 error - unrealistic case with independent statistics", {

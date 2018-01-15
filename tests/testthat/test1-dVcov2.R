@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan 12 2018 (11:29) 
+## Last-Updated: jan 15 2018 (16:05) 
 ##           By: Brice Ozenne
-##     Update #: 45
+##     Update #: 54
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,14 +15,23 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(nlme)
 library(lme4)
 lava.options(symbols = c("~","~~"))
 
 context("dVcov2")
-n <- 5e1
 
+## * Simulation
+n <- 5e1
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G+Gender,X1~1,X2~1))
 latent(mSim) <- ~eta
 categorical(mSim, labels = c("M","F")) <- ~Gender
@@ -32,6 +41,7 @@ dW <- as.data.table(sim(mSim,n,latent = FALSE))
 setkey(dW, "Id")
 dL <- melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
 setkey(dL, "Id")
+df.dL <- as.data.table(dL)
 
 ## * linear regression
 
@@ -67,7 +77,7 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
 e.lvm <- estimate(m, dW)
 
 e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
-               data = dL, REML = FALSE)
+               data = df.dL, REML = FALSE)
 
 e.lme <- lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
 e.gls <- gls(value ~ time + G + Gender,

@@ -1,10 +1,19 @@
-library(testthat)
-# library(lava)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 lava.options(symbols = c("~","~~"))
+
+initVarLink <-  lavaSearch2:::initVarLink
 
 context("#### initVar #### \n")
 
-initVarLink <-  lavaSearch2:::initVarLink
+## * tests
 
 lava.options(symbols = c("~","~~"))
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:52) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 57
+##     Update #: 58
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,15 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 lava.options(symbols = c("~","~~"))
 
 context("coefType")

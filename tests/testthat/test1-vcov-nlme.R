@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 13 2017 (15:52) 
 ## Version: 
-## Last-Updated: jan 12 2018 (11:28) 
+## Last-Updated: jan 15 2018 (16:07) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 8
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,15 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
+
 library(nlme)
 lava.options(symbols = c("~","~~"))
 
@@ -31,9 +39,14 @@ d <- sim(m,n)
 
 e.gls <- gls(Y~X1+X2+X3, data = d, method = "ML")
 e.lm <- lm(Y~X1+X2+X3, data = d)
-Sigma.gls <- attr(residuals2(e.gls, cluster = 1:n, return.vcov.param = TRUE), "vcov.param")
-Sigma.lm <- attr(residuals2(e.lm, return.vcov.param = TRUE), "vcov.param")
 
+Sigma.gls <- attr(residuals2(e.gls, data = d, cluster = 1:n, 
+                             return.vcov.param = TRUE), "vcov.param")
+
+Sigma.lm <- attr(residuals2(e.lm, data = d, 
+                            return.vcov.param = TRUE), "vcov.param")
+## Note: add data = d in the call even though it should not be necessary
+##       however in some cases the function cannot identify the dataset in the correct environment
 
 test_that("Corrected vcov - linear model",{
     expect_equal(unname(Sigma.gls), unname(Sigma.lm))

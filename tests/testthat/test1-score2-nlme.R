@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: jan 15 2018 (12:25) 
+## last-updated: jan 15 2018 (16:07) 
 ##           By: Brice Ozenne
-##     Update #: 78
+##     Update #: 90
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,15 +15,26 @@
 ## 
 ### Code:
 
+## * header
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R
+    library(testthat)
+    library(lava)
+    library(data.table)
+    library(lavaSearch2)
+}
 
-library(testthat)
 library(nlme)
 lava.options(symbols = c("~","~~"))
 
 context("iid2-nlme")
 
-n <- 5e1
+.coef2 <- lavaSearch2:::.coef2
+.coef2.gls <- lavaSearch2:::.coef2.gls
+.coef2.lme <- lavaSearch2:::.coef2.lme
 
+## * Simulation
+n <- 5e1
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
@@ -34,6 +45,7 @@ dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
 setkey(dL, "Id")
 dL$Z1 <- rnorm(NROW(dL))
 
+## * Linear model
 ## ** Homoschedasticity (gls)
 m <- lvm(c(Y1~G))
 e.lvm <- estimate(m, dW)
@@ -84,6 +96,7 @@ test_that("score2.gls equivalent to score.lvm (adjust residuals)", {
         expect_equal(score.gls,score.gls.p)
 })
 
+## * Mixed model
 ## ** Compound symmetry (lme/gls)
 m <- lvm(c(Y1[mu1:sigma2]~1*eta,
            Y2[mu2:sigma2]~1*eta,
