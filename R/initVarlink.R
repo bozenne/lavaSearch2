@@ -1,7 +1,7 @@
 ## * Documentation - initVarLink
 #' @title Normalize var1 and var2
 #' @name initVarLink
-#' @description Convert var1 and var2 from formula or covariance to character
+#' @description Convert var1 and var2 from formula or covariance to character.
 #' 
 #' @param var1 a character indicating the endogeneous variable or a formula
 #' @param var2 an optional character indicating the exogeneous variable
@@ -126,8 +126,8 @@ initVarLinks <- function(var1, format = "list",...){
 }
 
 ## * Documentation - selectResponse
-#' @title Response variable of a formula
-#' @description Return the reponse variable contained in the formula
+#' @title Response Variable of a Formula
+#' @description Return the reponse variable contained in the formula.
 #' @name selectResponse
 #' 
 #' @param x a formula
@@ -173,7 +173,7 @@ selectResponse.formula <- function(x, type = "call"){
 }
 
 ## * Documentation - selectRegressor
-#' @title Regressor of a formula
+#' @title Regressor of a Formula.
 #' @description Return the regressor variables contained in the formula
 #' @name selectRegressor
 #' 

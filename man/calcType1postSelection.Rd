@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-calcType1postSelection.R
 \name{calcType1postSelection}
 \alias{calcType1postSelection}
-\title{Compute the type 1 error after selection}
+\title{Compute the Type 1 Error After Selection}
 \usage{
 calcType1postSelection(level, mu, Sigma, quantile.previous, distribution, df,
   n = 10, correct = TRUE, ...)
@@ -32,7 +32,7 @@ to obtain the expected coverage.}
 type 1 error (numeric)
 }
 \description{
-Compute the type 1 error after selection
+Compute the type 1 error after selection.
 }
 \details{
 The number of tests at the current step (i.e. after selection) is assumed to be

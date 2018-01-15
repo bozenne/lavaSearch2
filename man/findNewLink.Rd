@@ -3,7 +3,7 @@
 \name{findNewLink}
 \alias{findNewLink}
 \alias{findNewLink.lvm}
-\title{Find the new possible links between variables (copied from lava::modelsearch)}
+\title{Find all New Links Between Variables}
 \usage{
 findNewLink(x, ...)
 
@@ -32,7 +32,7 @@ findNewLink(x, ...)
 A list
 }
 \description{
-Find the new possible links between variables (copied from lava::modelsearch)
+Find all new links between variables (copied from lava::modelsearch).
 }
 \examples{
 \dontrun{

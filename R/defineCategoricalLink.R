@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (16:35) 
 ## Version: 
-## last-updated: jan 10 2018 (15:20) 
+## last-updated: jan 15 2018 (11:41) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 119
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * documentation - defineCategoricalLink
-#' @title Identify categorical links in lvm
-#' @description Identify categorical links in lvm
+#' @title Identify Categorical Links in LVM
+#' @description Identify categorical links in latent variable models.
 #' @name defineCategoricalLink
 #' 
 #' @param object a lvm model.

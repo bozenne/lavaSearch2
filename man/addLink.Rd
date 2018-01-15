@@ -4,7 +4,7 @@
 \alias{addLink}
 \alias{addLink.lvm}
 \alias{addLink.lvm.reduced}
-\title{Add a new link between two variables in a lvm}
+\title{Add a Aew Link Between Two Variables in a LVM}
 \usage{
 addLink(x, ...)
 
@@ -29,7 +29,7 @@ addLink(x, ...)
 \item{warnings}{should a warning be displayed when no link is added}
 }
 \description{
-Generic interface to add links to a lvm.
+Generic interface to add links to lvm objects.
 }
 \details{
 The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(x)} does not return all variables. The command \code{vars(x, xlp = TRUE)} must be used instead.

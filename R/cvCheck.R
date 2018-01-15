@@ -1,6 +1,6 @@
 ## * cvCheck
-#' @title Test the sensibility of the lvm estimate to the initialization points
-#' @description Test the sensibility of the lvm estimate to the initialization points
+#' @title Test the Sensitivity of the LVM Estimate to the Initialization Points
+#' @description Test the sensitivity of the estimates from the latent variable model to the initialization points.
 #' @name cvCheck
 #'
 #' @param object a lvm model
@@ -106,37 +106,38 @@ cvCheck.lvm <- function(object,
     ## ** parallel computations
     if(ncpus>1){
       cl <- parallel::makeCluster(ncpus)
-      doSNOW::registerDoSNOW(cl)
-      
+      doParallel::registerDoParallel(cl)
+
       if(trace > 0){
-        pb <- utils::txtProgressBar(max = n.init, style = 3)
-        progress <- function(n) setTxtProgressBar(pb, n)
-        opts <- list(progress = progress)
-      }else{
-        opts <- NULL
+          parallel::clusterExport(cl, varlist = "trace")
       }
       
       i <- NULL # [:for CRAN check] (foreach)
       Mres <- foreach::`%dopar%`(
-        foreach::foreach(i = 1:n.init,
-                         .packages =  "lava",
-                         .export = "dots",
-                         .combine = "cbind",
-                         .options.snow = opts),
-        {                                
-          return(warper(i))
-        })
+                           foreach::foreach(i = 1:n.init,
+                                            .packages =  "lava",
+                                            .export = "dots",
+                                            .combine = "cbind"),
+                           {
+                               if(trace){
+                                   if(!exists("pb")){
+                                       pb <- tcltk::tkProgressBar("cvCheck:", min=1, max=n.init)
+                                   }
+                                   tcltk::setTkProgressBar(pb, i)
+                               }
+                               return(warper(i))
+                           })
       
-      if(trace > 0){  close(pb) }
       parallel::stopCluster(cl)
+      
     }else{
-      if(trace>0){
-        requireNamespace("pbapply")
-        resLoop <- pbapply::pblapply(1:n.init, warper)
-      }else{
-        resLoop <- lapply(1:n.init, warper)
-      }
-      Mres <- do.call("cbind",resLoop)
+        if(trace>0){
+            requireNamespace("pbapply")
+            resLoop <- pbapply::pblapply(1:n.init, warper)
+        }else{
+            resLoop <- lapply(1:n.init, warper)
+        }
+        Mres <- do.call("cbind",resLoop)
     }
 
     ## ** postprocess and export
@@ -154,8 +155,8 @@ cvCheck.lvm <- function(object,
 }
 
 ## * summary.cvlvm
-#' @title Summary function associated with cvCheck
-#' @description Summary function associated with cvCheck
+#' @title Summary Function Associated with cvCheck Objects
+#' @description Summary function associated with cvCheck objects.
 #'
 #' @param object the output of cvCheck
 #' @param threshold threshold used to cluster the convergence points (height in hclust)

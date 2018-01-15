@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 10 2018 (15:34) 
+## last-updated: jan 15 2018 (11:30) 
 ##           By: Brice Ozenne
-##     Update #: 725
+##     Update #: 726
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * prepareScore2 - documentation
-#' @title Prepare the computation of score2.
+#' @title Prepare the Computation of score2
 #' @description Compute partial derivatives regarding to the mean and the variance, and compute the design matrices.
 #' @name prepareScore2
 #' 

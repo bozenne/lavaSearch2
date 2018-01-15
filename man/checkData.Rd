@@ -3,7 +3,7 @@
 \name{checkData}
 \alias{checkData}
 \alias{checkData.lvm}
-\title{Check that validity of the dataset}
+\title{Check that Validity of the Dataset}
 \usage{
 checkData(x, data)
 

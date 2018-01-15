@@ -3,7 +3,7 @@
 \name{iidJack}
 \alias{iidJack}
 \alias{iidJack.default}
-\title{Jacknife i.i.d. decomposition (influence function) from model object}
+\title{Jacknife iid Decomposition from Model Object}
 \usage{
 iidJack(x, ...)
 
@@ -31,7 +31,7 @@ iidJack(x, ...)
 \item{trace}{should a progress bar be used to trace the execution of the function}
 }
 \description{
-Extract i.i.d. decomposition (influence function) from model object
+Extract iid decomposition (i.e. influence function) from model object.
 }
 \examples{
 n <- 20
@@ -50,12 +50,14 @@ colSums(iid2^2)
 colSums(iid1^2)
 
 #### Cox model ####
-library(survival)
-library(riskRegression)
+library(survival)#' 
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 
 \dontrun{
+## require riskRegression > 1.4.3
+if(utils::packageVersion("riskRegression") > "1.4.3"){
+library(riskRegression)
 iid1 <- iidJack(m)
 iid2 <- iidCox(m)$IFbeta
 
@@ -64,6 +66,7 @@ apply(iid1,2,sd)
 print(iid2)
 
 apply(iid2,2,sd)
+  }
 }
 
 #### LVM ####

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:42) 
 ## Version: 
-## Last-Updated: jan  9 2018 (17:58) 
+## Last-Updated: jan 15 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 11
+##     Update #: 12
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-#' @title Symmetrize a matrix
+#' @title Symmetrize a Matrix
 #' @description Complete the upper (or lower) extra-diagonal terms  in order to obtain a symmetric matrix.
 #' @param M a matrix
 #' @param update.upper should the upper extra diagonal terms be updated using the lower extra diagonal terms?

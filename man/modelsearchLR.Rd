@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-modelsearchLR.R
 \name{modelsearchLR}
 \alias{modelsearchLR}
-\title{Model searching using a likelihood ratio test}
+\title{Testing the Relevance of Additional Links Using a Likelihood Ratio Test}
 \usage{
 modelsearchLR(x, data, restricted, link, directive, update.FCT, update.args,
   method.p.adjust, display.warnings, trace)
@@ -11,6 +11,6 @@ modelsearchLR(x, data, restricted, link, directive, update.FCT, update.args,
 a list
 }
 \description{
-Model searching using a likelihood ratio test
+Testing the Relevance of Additional Links Using a Likelihood Ratio Test.
 }
 \keyword{internal}

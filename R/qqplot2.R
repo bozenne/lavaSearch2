@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (09:26) 
 ## Version: 
-## last-updated: jan 10 2018 (15:13) 
+## last-updated: jan 15 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 13
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - qqplot2
-#' @title QQplot for the residuals of a lvm object
-#' @description QQplot for the residuals of a lvm object
+#' @title QQplot for the Residuals of a LVM Object
+#' @description QQplot for the residuals of a lvm object.
 #' 
 #' @name qqplot2
 #'

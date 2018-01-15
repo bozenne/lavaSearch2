@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 11 2018 (12:05) 
+## last-updated: jan 15 2018 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 398
+##     Update #: 400
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * documentation - coefType
-#' @title Extract the specific coefficient names or positions in a LVM
-#' @description Extract the specific coefficient names or positions in a LVM
+#' @title Extract the Specific Coefficient Bames or Positions in a LVM
+#' @description Extract the specific coefficient names or positions in a latent varable model.
 #' 
 #' @name coefType
 #' 

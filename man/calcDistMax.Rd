@@ -4,7 +4,7 @@
 \alias{calcDistMax}
 \alias{calcDistMaxIntegral}
 \alias{calcDistMaxBootstrap}
-\title{Adjust the p.values using the quantiles of the max statistic}
+\title{Adjust the p.values Using the Quantiles of the Max Statistic}
 \usage{
 calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
   quantile.previous = NULL,
@@ -63,7 +63,7 @@ statistic <- setNames(1:p,link)
 
 
 r1 <- calcDistMaxIntegral(statistic = statistic, iid = X.iid, 
-            trace = FALSE, alpha = 0.05, df = 1e6)
+            trace = FALSE, alpha = 0.05, df = 1e6) 
 
 r2 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
             method = "naive",

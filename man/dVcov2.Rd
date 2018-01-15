@@ -13,7 +13,7 @@
 \alias{dVcov2<-.lme}
 \alias{dVcov2<-.lvmfit}
 \alias{dVcov2<-.lvmfit2}
-\title{Compute the derivative of the information matrix}
+\title{Compute the Derivative of the Information Matrix}
 \usage{
 dVcov2(object, ...)
 

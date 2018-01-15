@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-compareSearch.R
 \name{compareSearch}
 \alias{compareSearch}
-\title{Compare methods to identify missing local dependencies in a LVM}
+\title{Compare Methods to Identify Missing Local Dependencies in a LVM}
 \usage{
 compareSearch(object, alpha = 0.05, method.p.adjust, statistic, trace = 1,
   ...)

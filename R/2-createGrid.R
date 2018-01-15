@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:40) 
 ## Version: 
-## last-updated: jan 10 2018 (17:08) 
+## last-updated: jan 15 2018 (11:33) 
 ##           By: Brice Ozenne
-##     Update #: 60
+##     Update #: 61
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 
 ## * Documentaiton - createGrid
-#' @title Create a mesh for the integration
+#' @title Create a Mesh for the Integration
 #' @description Create a mesh for the integration
 #' @name createGrid
 #' 

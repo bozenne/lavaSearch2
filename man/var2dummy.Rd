@@ -4,7 +4,7 @@
 \alias{var2dummy}
 \alias{var2dummy.list}
 \alias{var2dummy.lvm}
-\title{Convert variable names to dummy variables names}
+\title{Convert Variable Names to Dummy Variables Names.}
 \usage{
 var2dummy(x, ...)
 

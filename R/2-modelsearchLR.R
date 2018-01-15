@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: jan 10 2018 (17:17) 
+## last-updated: jan 15 2018 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 76
+##     Update #: 78
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - modelsearchLR
-#' @title Model searching using a likelihood ratio test
-#' @description Model searching using a likelihood ratio test
+#' @title Testing the Relevance of Additional Links Using a Likelihood Ratio Test
+#' @description Testing the Relevance of Additional Links Using a Likelihood Ratio Test.
 #' @name modelsearchLR
 #' 
 #' @return a list

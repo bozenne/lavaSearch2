@@ -6,7 +6,7 @@
 \alias{lTest.gls}
 \alias{lTest.lme}
 \alias{lTest.lvmfit}
-\title{Compute the degree of freedom of the variance parameters}
+\title{Compute the Degree of Freedom of the Variance Parameters}
 \usage{
 lTest(object, ...)
 
@@ -34,7 +34,7 @@ lTest(object, ...)
 \item{Ftest}{should a join test be computed.}
 }
 \description{
-Compute the degree of freedom of the variance parameters
+Compute the degree of freedom of the variance parameters.
 }
 \details{
 In the case of a \code{lm} object, the contrast matrix need not to contain

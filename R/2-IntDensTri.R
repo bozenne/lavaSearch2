@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: jan 10 2018 (16:47) 
+## last-updated: jan 15 2018 (11:32) 
 ##           By: Brice Ozenne
-##     Update #: 456
+##     Update #: 458
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 
 
 ## * Documentation - IntDensTri
-##' @title Integrate a gaussian/student density over a triangle
+##' @title Integrate a Gaussian/Student Density over a Triangle
 ##' @name IntDensTri
 ##' @description Consider a univariate random variable X,
 ##' two multivariate random variables Y and Z,
@@ -185,8 +185,8 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
 }
 
 ## * autoplot.IntDensTri
-#' @title 2D-display of the domain used to compute the integral
-#' @description 2D-display of the domain used to compute the integral
+#' @title 2D-display of the Domain Used to Compute the Integral
+#' @description 2D-display of the domain used to compute the integral.
 #'
 #' @param object output of the function \code{IntDensTri}.
 #' @param coord.plot the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{IntDensTri}.

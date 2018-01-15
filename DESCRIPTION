@@ -1,15 +1,15 @@
 Package: lavaSearch2
 Type: Package
-Title: Tools for model specification in the latent variable framework
-Version: 0.1.2
+Title: Tools for Model Specification in the Latent Variable Framework
+Version: 1.0.0
 Date: 2018-01-15
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 URL: https://github.com/bozenne/lavaSearch2
 Description: Tools for model specification in the latent variable framework
-    (add-on to the lava package). The package contains three main functionnalites:
+    (add-on to the lava package). The package contains three main functionalities:
     Wald tests/F-tests with improved control of the type 1 error in small samples,
-    adjustment for multiple comparisons when searching for local depencies,
+    adjustment for multiple comparisons when searching for local dependencies,
     and adjustment for multiple comparisons when doing inference for multiple latent variable models. 
 License: GPL-3
 Depends:
@@ -17,7 +17,7 @@ Depends:
     lava,
     data.table
 Imports:
-    doSNOW,
+    doParallel,
     foreach,
     ggplot2,
     inline,
@@ -30,9 +30,9 @@ Imports:
     numDeriv,
     optimx,
     parallel,
-    qqtest,
-    riskRegression,
+    qqtest,    
     stats,
+    tcltk,
     tmvtnorm,
     utils
 Suggests:
@@ -42,6 +42,7 @@ Suggests:
     lmerTest,
     pbapply,
     pbkrtest,
+    riskRegression,
     sandwich,
     survival,
     testthat,

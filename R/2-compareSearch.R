@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: jan 12 2018 (12:28) 
+## last-updated: jan 15 2018 (11:33) 
 ##           By: Brice Ozenne
-##     Update #: 239
+##     Update #: 240
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * documentation - compareSearch
-#' @title Compare methods to identify missing local dependencies in a LVM
+#' @title Compare Methods to Identify Missing Local Dependencies in a LVM
 #' @description Compare methods to identify missing local dependencies in a LVM
 #' @name compareSearch
 #' 

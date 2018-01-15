@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-createGrid.R
 \name{createGrid}
 \alias{createGrid}
-\title{Create a mesh for the integration}
+\title{Create a Mesh for the Integration}
 \usage{
 createGrid(n, xmin, xmax, d.y, d.z, zmax, fine, double)
 }

@@ -3,7 +3,7 @@
 \name{setLink}
 \alias{setLink}
 \alias{setLink.lvm}
-\title{Affect a given value to a link between two variables in a lvm}
+\title{Set a Link to a Value}
 \usage{
 setLink(x, ...)
 
@@ -23,7 +23,7 @@ setLink(x, ...)
 \item{warnings}{should a warning be displayed when the link is not found in the lvm.}
 }
 \description{
-Generic interface to set a value to a link in a lvm.
+Generic interface to set a value to a link in a lvm object.
 }
 \examples{
 \dontrun{

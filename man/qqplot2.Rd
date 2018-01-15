@@ -3,7 +3,7 @@
 \name{qqplot2}
 \alias{qqplot2}
 \alias{qqplot2.lvmfit}
-\title{QQplot for the residuals of a lvm object}
+\title{QQplot for the Residuals of a LVM Object}
 \usage{
 qqplot2(object, ...)
 
@@ -27,7 +27,7 @@ qqplot2(object, ...)
 a data frame/cvlvm object containing the convergence status (by default 0 indicates successful convergence, see ?optim), the value of the log-likelihood and the estimated parameters (in columns) for each initialization (in rows)
 }
 \description{
-QQplot for the residuals of a lvm object
+QQplot for the residuals of a lvm object.
 }
 \details{
 Simulation is based on a multivariate truncated normal law (even though it is not satifying for the variance components)

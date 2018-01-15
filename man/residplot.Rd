@@ -3,7 +3,7 @@
 \name{residplot}
 \alias{residplot}
 \alias{residplot.lvmfit}
-\title{Plot the residuals of a lvm object}
+\title{Plot the Residuals of a LVM Object}
 \usage{
 residplot(object, ...)
 
@@ -43,7 +43,7 @@ a list containing:
 }
 }
 \description{
-Plot the residuals for each outcome of a lvm object
+Plot the residuals for each outcome of a lvm object.
 }
 \examples{
 m <- lvm(y1~eta+x1,y2~eta,y3~eta+x3)

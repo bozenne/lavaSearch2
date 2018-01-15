@@ -1,4 +1,4 @@
-#' @title Extract data from a model
+#' @title Extract Data From a Model
 #' 
 #' @description Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
 #' If it fails it will try to extract it by its name according to \code{model$call$data}.
@@ -34,15 +34,18 @@
 #' extractData(e)
 #' extractData(e, model.frame = TRUE)
 #' 
-#' #### survival ####
-#' library(riskRegression)
+#' #### survival #####' 
 #' library(survival)
-#' dt.surv <- sampleData(n, outcome = "survival")
-#' m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-#' extractData(m.cox, model.frame = FALSE)
-#' extractData(m.cox, model.frame = TRUE)
-#' m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-#' extractData(m.cox, model.frame = TRUE)
+#'
+#' \dontrun{
+#'   library(riskRegression) ## needs version >=1.4.3
+#'   dt.surv <- sampleData(n, outcome = "survival")
+#'   m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
+#'   extractData(m.cox, model.frame = FALSE)
+#'   extractData(m.cox, model.frame = TRUE)
+#'   m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
+#'   extractData(m.cox, model.frame = TRUE)
+#' }
 #' 
 #' #### nested fuuctions ####
 #' fct1 <- function(m){
@@ -71,13 +74,25 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
       
       data <- try(nlme::getData(object), silent = TRUE)
       
-    }else if(any(class(object) %in% c("coxph","cph"))){
-      
-      requireNamespace("riskRegression")
-      data <- try(riskRegression::coxDesign(object), silent = TRUE)
-      strataVar <- riskRegression::coxVariableName(object)$stratavars.original
-      
-      if(length(strataVar)>0){ 
+        }else if(any(class(object) %in% c("coxph","cph"))){            
+            tryPkg <- requireNamespace("riskRegression")
+            if("try-error" %in% class(tryPkg)){
+                stop(tryPkg)
+            }else if(utils::packageVersion("riskRegression")<="1.4.3"){
+                stop("riskRegression version must be > 1.4.3 \n",
+                     "latest version available on Github at tagteam/riskRegression \n")
+            }else{
+                #### [:toUpdate]
+                ##  data <- try(riskRegression::coxDesign(object), silent = TRUE)
+                ##  strataVar <- riskRegression::coxVariableName(object)$stratavars.original
+
+                ## this is a temporary modification waiting for the update of riskRegression on CRAN
+                coxDesign.rr <- get("coxDesign", envir = asNamespace("riskRegression"), inherits = FALSE)
+                coxVariableName.rr <- get("coxVariableName", envir = asNamespace("riskRegression"), inherits = FALSE)
+                data <- try(coxDesign.rr(object), silent = TRUE)
+                strataVar <- coxVariableName.rr(object)$stratavars.original
+            }      
+            if(length(strataVar)>0){ 
         
         data2 <- evalInParentEnv(object$call$data, environment())
         

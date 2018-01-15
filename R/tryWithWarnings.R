@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (09:52) 
 ## Version: 
-## last-updated: sep 13 2017 (17:43) 
+## last-updated: jan 15 2018 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 16
+##     Update #: 18
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 
-##' @title Run an expression and catch warnings and errors
+##' @title Run an Expression and Catch Warnings and Errors
 ##' @description Similar to \code{try} but also returns warnings.
 ##' 
 ##' @param expr the line of code to be evaluated

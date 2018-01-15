@@ -2,7 +2,7 @@
 % Please edit documentation in R/package-butils-evalInParentEnv.R
 \name{evalInParentEnv}
 \alias{evalInParentEnv}
-\title{Find object in the parent environments}
+\title{Find Object in the Parent Environments}
 \usage{
 evalInParentEnv(name, envir)
 }
@@ -12,5 +12,6 @@ evalInParentEnv(name, envir)
 \item{envir}{the environment from which to look for the object.}
 }
 \description{
-Internal function
+Search an object in the parent environments. For internal use.
 }
+\keyword{internal}

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (14:25) 
 ## Version: 
-## last-updated: okt 26 2017 (16:34) 
+## last-updated: jan 15 2018 (11:39) 
 ##           By: Brice Ozenne
-##     Update #: 6
+##     Update #: 7
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * documentation - checkData
-#' @title Check that validity of the dataset
+#' @title Check that Validity of the Dataset
 #' @description Check the validity of the dataset used to estimate a lvm.
 #' 
 #' @name checkData

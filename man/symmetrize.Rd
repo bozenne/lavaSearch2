@@ -2,7 +2,7 @@
 % Please edit documentation in R/symmetrize.R
 \name{symmetrize}
 \alias{symmetrize}
-\title{Symmetrize a matrix}
+\title{Symmetrize a Matrix}
 \usage{
 symmetrize(M, update.upper = TRUE)
 }

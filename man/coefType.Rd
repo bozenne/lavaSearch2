@@ -32,7 +32,7 @@
 \alias{coefVar.lvm}
 \alias{coefVar.lvmfit}
 \alias{coefVar.multigroup}
-\title{Extract the specific coefficient names or positions in a LVM}
+\title{Extract the Specific Coefficient Bames or Positions in a LVM}
 \usage{
 coefType(x, ...)
 
@@ -125,7 +125,7 @@ coefVar(x, ...)
 or a named vector containing the type of the links.
 }
 \description{
-Extract the specific coefficient names or positions in a LVM
+Extract the specific coefficient names or positions in a latent varable model.
 }
 \details{
 A lvm can be written as a measurement model:

@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-modelsearchMax.R
 \name{modelsearchMax}
 \alias{modelsearchMax}
-\title{Model searching using the max statistic}
+\title{Testing the Relevance of Additional Links Using the Max Statistic}
 \usage{
 modelsearchMax(x, restricted, link, directive, packages, update.FCT,
   update.args, iid.FCT, alpha, method.p.adjust, method.max, n.sim = 1000,
@@ -13,7 +13,7 @@ modelsearchMax(x, restricted, link, directive, packages, update.FCT,
 an object of class lvmfit
 }
 \description{
-Model searching using the max statistic to retain or not a link
+Testing the Relevance of Additional Links Using the Max Statistic.
 }
 \seealso{
 \code{link{modelsearch2}}

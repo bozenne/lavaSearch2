@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: jan 11 2018 (14:50) 
+## last-updated: jan 15 2018 (11:32) 
 ##           By: Brice Ozenne
-##     Update #: 394
+##     Update #: 406
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * documentation
-#' @title Adjust the p.values using the quantiles of the max statistic
+#' @title Adjust the p.values Using the Quantiles of the Max Statistic
 #' @description Adjust the p.values using the quantiles of the max statistic.
 #' @name calcDistMax
 #'
@@ -52,7 +52,7 @@
 #'
 #' 
 #' r1 <- calcDistMaxIntegral(statistic = statistic, iid = X.iid, 
-#'             trace = FALSE, alpha = 0.05, df = 1e6)
+#'             trace = FALSE, alpha = 0.05, df = 1e6) 
 #' 
 #' r2 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
 #'             method = "naive",
@@ -169,15 +169,12 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         ## *** parallel computations
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
-            doSNOW::registerDoSNOW(cl)
+            doParallel::registerDoParallel(cl)
         }
 
         if(trace > 0){
-            pb <- utils::txtProgressBar(max = length(index.new), style = 3)
-            progress <- function(n) setTxtProgressBar(pb, n)
-            opts <- list(progress = progress)
-        }else{
-            opts <- NULL
+            pb.max <- length(index.new)
+            parallel::clusterExport(cl, "trace")
         }
 
         value <- NULL # [:for CRAN check] foreach
@@ -185,10 +182,15 @@ calcDistMaxIntegral <- function(statistic, iid, df,
                                      foreach::foreach(value = index.new,
                                                       .packages = c("tmvtnorm","mvtnorm"),
                                                       .export = c(".calcPmaxIntegration"),
-                                                      .combine = "c",
-                                                      .options.snow = opts),
+                                                      .combine = "c"),
                                      {
-                                         warperP(value)
+                                         if(trace){
+                                             if(!exists("pb")){
+                                                 pb <- tcltk::tkProgressBar("calcDistMaxIntegral:", min=1, max=pb.max)
+                                             }
+                                             tcltk::setTkProgressBar(pb, value)
+                                         }
+                                         return(warperP(value))
                                      })
 
         if(initCpus){
@@ -247,9 +249,9 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
         n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
 
         if(initCpus){
-          cl <- parallel::makeCluster(ncpus)
-          doSNOW::registerDoSNOW(cl)
-      }
+            cl <- parallel::makeCluster(ncpus)
+            doParallel::registerDoParallel(cl)
+        }
   
         i <- NULL # [:for CRAN check] foreach
         distMax <- foreach::`%dopar%`(

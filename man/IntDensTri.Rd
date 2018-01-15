@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-IntDensTri.R
 \name{IntDensTri}
 \alias{IntDensTri}
-\title{Integrate a gaussian/student density over a triangle}
+\title{Integrate a Gaussian/Student Density over a Triangle}
 \usage{
 IntDensTri(mu, Sigma, df, n, x.min, z.max = NULL, type = "double",
   proba.min = 1e-06, prune = NULL, distribution = "pmvnorm")

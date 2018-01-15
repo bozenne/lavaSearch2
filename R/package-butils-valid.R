@@ -6,9 +6,9 @@
 #' @aliases validNames
 #' @aliases validNumeric
 #' @aliases validPath
-#' @title Check argument in functions
+#' @title Check Arguments of a function.
 #' 
-#' @description Check the validity of the arguments in functions
+#' @description Check the validity of the arguments in functions.
 #' 
 #' @param value1 the value of the (first) argument to be checked
 #' @param value2 the second value of a second argument whose dimensions should be consistent with the first one

@@ -3,7 +3,7 @@
 \name{merge}
 \alias{merge}
 \alias{merge.modelsearch2}
-\title{Merge two modelsearch objects}
+\title{Merge two modelsearch Objects}
 \usage{
 \method{merge}{modelsearch2}(x, y, ...)
 }

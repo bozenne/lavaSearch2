@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 12 2018 (12:08) 
+## last-updated: jan 15 2018 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 608
+##     Update #: 613
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - modelsearchMax
-#' @title Model searching using the max statistic
-#' @description Model searching using the max statistic to retain or not a link
+#' @title Testing the Relevance of Additional Links Using the Max Statistic
+#' @description Testing the Relevance of Additional Links Using the Max Statistic.
 #' 
 #' @name modelsearchMax
 #'
@@ -139,15 +139,11 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
 
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
-            doSNOW::registerDoSNOW(cl)
+            doParallel::registerDoParallel(cl)
         }
     
         if(trace > 0){
-            pb <- utils::txtProgressBar(max = n.link, style = 3)
-            progress <- function(n) setTxtProgressBar(pb, n)
-            opts <- list(progress = progress)
-        }else{
-            opts <- NULL
+            parallel::clusterExport(cl, varlist = "trace")
         }
 
         vec.packages <- c("lavaSearch2", "data.table", packages)
@@ -155,13 +151,20 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link, .packages =  vec.packages,
                                              # .export = c("ls.LVMargs"),
-                                             .combine = FCTcombine,
-                                             .options.snow = opts),
+                                             .combine = FCTcombine),
                             {
+                                if(trace){
+                                    if(!exists("pb")){
+                                        pb <- tcltk::tkProgressBar("modelsearchMax:", min=1, max=n.link)
+                                    }
+                                    tcltk::setTkProgressBar(pb, i)
+                                }
                                 return(warper(i))
                             })
-   
-        if(trace > 0){  close(pb) }
+
+        if(initCpus){
+            parallel::stopCluster(cl)
+        }
         
     }else{
 

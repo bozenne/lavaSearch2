@@ -3,7 +3,7 @@
 \name{combination}
 \alias{combination}
 \alias{.combination}
-\title{Form all unique combinations between two vectors}
+\title{Form all Unique Combinations Between two Vectors}
 \usage{
 .combination(...)
 }

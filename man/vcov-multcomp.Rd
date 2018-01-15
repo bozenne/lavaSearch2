@@ -3,7 +3,7 @@
 \name{vcov.mmm2}
 \alias{vcov.mmm2}
 \alias{vcov.ls.lvmfit}
-\title{Variance-Covariance Matrix for a fitted object}
+\title{Variance-Covariance Matrix for a Fitted Object}
 \usage{
 \method{vcov}{mmm2}(object, return.null = TRUE, adjust.residuals = TRUE,
   robust = TRUE, ...)

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 12 2018 (15:48) 
+## Last-Updated: jan 15 2018 (11:26) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 217
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * Documentation - dVcov2
-#' @title  Compute the derivative of the information matrix
+#' @title  Compute the Derivative of the Information Matrix
 #' @description Compute the derivative of the information matrix.
 #' @name dVcov2
 #'

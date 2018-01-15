@@ -3,7 +3,7 @@
 \name{defineCategoricalLink}
 \alias{defineCategoricalLink}
 \alias{defineCategoricalLink.lvm}
-\title{Identify categorical links in lvm}
+\title{Identify Categorical Links in LVM}
 \usage{
 defineCategoricalLink(object, link, data)
 
@@ -17,7 +17,7 @@ defineCategoricalLink(object, link, data)
 \item{data}{the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.}
 }
 \description{
-Identify categorical links in lvm
+Identify categorical links in latent variable models.
 }
 \examples{
  

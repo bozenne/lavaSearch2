@@ -27,7 +27,7 @@ initVarLinks(var1, format = "list", ...)
 \item{...}{argument to be passed to lower level functions}
 }
 \description{
-Convert var1 and var2 from formula or covariance to character
+Convert var1 and var2 from formula or covariance to character.
 }
 \details{
 See test file test/testthat/test-Reduce.R for examples

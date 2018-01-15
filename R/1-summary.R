@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 12 2018 (16:04) 
+## Last-Updated: jan 15 2018 (11:32) 
 ##           By: Brice Ozenne
-##     Update #: 118
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - summary
-#' @title  Summary with small sample correction
-#' @description Summary with small sample correction
+#' @title  Summary with Small Sample Correction
+#' @description Summary with small sample correction.
 #' @name summary
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.

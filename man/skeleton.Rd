@@ -10,7 +10,7 @@
 \alias{skeletonDtheta2}
 \alias{skeletonDtheta2.lvm}
 \alias{skeletonDtheta2.lvmfit}
-\title{Pre-computation for the score}
+\title{Pre-computation for the Score}
 \usage{
 skeleton(object, ...)
 

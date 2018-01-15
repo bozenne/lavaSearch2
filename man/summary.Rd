@@ -5,7 +5,7 @@
 \alias{summary.gls2}
 \alias{summary.lme2}
 \alias{summary.lvmfit2}
-\title{Summary with small sample correction}
+\title{Summary with Small Sample Correction}
 \usage{
 \method{summary}{gls2}(object, digit = max(3, getOption("digit")),
   adjust.residuals = TRUE, ...)
@@ -25,7 +25,7 @@
 \item{...}{arguments passed to lower level methods.}
 }
 \description{
-Summary with small sample correction
+Summary with small sample correction.
 }
 \examples{
 m <- lvm(Y~X1+X2)

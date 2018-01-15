@@ -3,7 +3,7 @@
 \name{contrast2name}
 \alias{contrast2name}
 \alias{.contrast2name}
-\title{Create rownames for a contrast matrix}
+\title{Create Rownames for a Contrast Matrix}
 \usage{
 .contrast2name(C)
 }
@@ -11,6 +11,6 @@
 \item{C}{a constrast matrix.}
 }
 \description{
-Create rownames for a contrast matrix
+Create rownames for a contrast matrix.
 using the coefficients and the names of the parameters
 }

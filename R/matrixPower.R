@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 23 2017 (16:52) 
 ## Version: 
-## last-updated: okt 24 2017 (10:03) 
+## last-updated: jan 15 2018 (11:44) 
 ##           By: Brice Ozenne
-##     Update #: 24
+##     Update #: 26
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,8 +15,8 @@
 ## 
 ### Code:
 
-##' @title Power of a matrix
-##' @description Compute the power of a matrix
+##' @title Power of a Matrix
+##' @description Compute the power of a matrix.
 ##' 
 ##' @param x a matrix.
 ##' @param power power to be applied to the matrix.

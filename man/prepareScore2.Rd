@@ -10,7 +10,7 @@
 \alias{prepareScore2.lvmfit}
 \alias{prepareScore2<-}
 \alias{prepareScore2<-.lvmfit}
-\title{Prepare the computation of score2.}
+\title{Prepare the Computation of score2}
 \usage{
 prepareScore2(object, ...)
 

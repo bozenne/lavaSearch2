@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: jan 10 2018 (16:44) 
+## last-updated: jan 15 2018 (11:35) 
 ##           By: Brice Ozenne
-##     Update #: 250
+##     Update #: 259
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * documentation - iidJack
-#' @title Jacknife i.i.d. decomposition (influence function) from model object
-#' @description Extract i.i.d. decomposition (influence function) from model object
+#' @title Jacknife iid Decomposition from Model Object
+#' @description Extract iid decomposition (i.e. influence function) from model object.
 #'
 #' @name iidJack
 #' 
@@ -47,12 +47,14 @@
 #' colSums(iid1^2)
 #' 
 #' #### Cox model ####
-#' library(survival)
-#' library(riskRegression)
+#' library(survival)#' 
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 #' 
 #' \dontrun{
+#' ## require riskRegression > 1.4.3
+#' if(utils::packageVersion("riskRegression") > "1.4.3"){
+#' library(riskRegression)
 #' iid1 <- iidJack(m)
 #' iid2 <- iidCox(m)$IFbeta
 #'
@@ -61,6 +63,7 @@
 #' print(iid2)
 #' 
 #' apply(iid2,2,sd)
+#'   }
 #' }
 #' 
 #' #### LVM ####
@@ -170,18 +173,12 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     if(ncpus>1){
         if(initCpus){
             cl <- parallel::makeCluster(ncpus)
-            doSNOW::registerDoSNOW(cl)
+            doParallel::registerDoParallel(cl)
         }
  
         if(trace > 0){
-            cat("jacknife \n")
-            pb <- utils::txtProgressBar(max = n.group, style = 3)
-            progress <- function(n) setTxtProgressBar(pb, n)
-            opts <- list(progress = progress)
-        }else{
-            opts <- NULL
+            parallel::clusterExport(cl, varlist = "trace")
         }
-
 
         estimator <- as.character(x$call[[1]]) 
 
@@ -217,15 +214,19 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
         i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(
                                 foreach::foreach(i = 1:n.group, .packages =  vec.packages,
-                                                 .export = toExport,
-                                                 .options.snow = opts),{                                                      
+                                                 .export = toExport),{                                                      
+                                                     if(trace){
+                                                         if(!exists("pb")){
+                                                             pb <- tcltk::tkProgressBar("iidJack:", min=1, max=n.group)
+                                                         }
+                                                         tcltk::setTkProgressBar(pb, i)
+                                                     }
                                                      warper(Ugrouping[i])
                                                  })
     
         if(initCpus){
             parallel::stopCluster(cl)
         }
-        if(trace > 0){ close(pb) }                                           
 
     }else{
         

@@ -2,7 +2,7 @@
 % Please edit documentation in R/2-IntDensTri.R
 \name{autoplot.IntDensTri}
 \alias{autoplot.IntDensTri}
-\title{2D-display of the domain used to compute the integral}
+\title{2D-display of the Domain Used to Compute the Integral}
 \usage{
 \method{autoplot}{IntDensTri}(object, coord.plot = c("x", "y1"),
   plot = TRUE, ...)
@@ -17,5 +17,5 @@
 \item{...}{additional argument that are ignored.}
 }
 \description{
-2D-display of the domain used to compute the integral
+2D-display of the domain used to compute the integral.
 }

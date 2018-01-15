@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: jan 12 2018 (13:25) 
+## last-updated: jan 15 2018 (11:36) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 122
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * nStep
 ## ** documentation - nStep
-#' @title Find the number of steps performed during the sequential testing
+#' @title Find the Number of Steps Performed During the Sequential Testing
 #' @description Find the number of steps performed during the sequential testing
 #' @name nStep
 #' 
@@ -48,8 +48,8 @@ nStep.modelsearch2 <- function(object){
 
 ## * getStep
 ## ** documentation - getStep
-#' @title Extract one step from the sequential procedure
-#' @description Extract one step from the sequential procedure
+#' @title Extract one Step From the Sequential Procedure
+#' @description Extract one step from the sequential procedure.
 #' @name getStep
 #' 
 #' @param object a modelsearch2 object
@@ -112,7 +112,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 
 ## * getNewLink
 ## ** documentation - getNewLink
-#' @title Find the links that should be added accroding to the sequential testing
+#' @title Find the Links that Should be Added Accroding to the Sequential Testing
 #' @description Find the links that should be added accroding to the sequential testing
 #' @name getNewLink
 #' 
@@ -158,7 +158,7 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
 
 ## * merge
 ## ** documentation - merge
-#' @title Merge two modelsearch objects
+#' @title Merge two modelsearch Objects
 #' @description Merge two modelsearch objects. Does not check for meaningful result.
 #' @name merge
 #' 

@@ -4,9 +4,13 @@
 \name{lavaSearch}
 \alias{lavaSearch}
 \alias{lavaSearch-package}
-\title{Tools for model specification in the latent variable framework}
+\title{Tools for Model Specification in the Latent Variable Framework}
 \description{
-Tools for model specification in the latent variable framework (add-on for the lava package).
+Tools for model specification in the latent variable framework
+(add-on to the lava package). The package contains three main functionalites:
+Wald tests/F-tests with improved control of the type 1 error in small samples,
+adjustment for multiple comparisons when searching for local dependencies,
+and adjustment for multiple comparisons when doing inference for multiple latent variable models.
 }
 \details{
 The latent variable models (lvm) considered in this package can be written \cr

@@ -1,5 +1,5 @@
 ## * Documentation - modelsearch2
-#' @title Data-driven extension of a latent variable model
+#' @title Data-driven Extension of a Latent Variable Model
 #' @description Procedure adding relationship between variables that are supported by the data.
 #' @name modelsearch2
 #' 
@@ -66,10 +66,6 @@
 #' library(survival)
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
-#' \dontshow{
-#' res <- modelsearch2(m, link = c(status~epicel,status~sex),
-#'                     packages = "survival", nStep = 1)
-#' }
 #' \dontrun{
 #' res <- modelsearch2(m, link = c(status~epicel,status~sex),
 #'                     packages = "survival", nStep = 1)
@@ -302,33 +298,31 @@ modelsearch2.default <- function(object, link, data = NULL,
             }
             attr(iid.FCT, "method.iid") <- "iidJack"        
         }else{
-            iid.FCT <- function(x){
-                riskRegression::iidCox(x, tau.hazard = 0)$IFbeta
+            tryPkg <- requireNamespace("riskRegression")
+            if("try-error" %in% class(tryPkg)){
+                stop(tryPkg)
+            }else if(utils::packageVersion("riskRegression")<="1.4.3"){
+                stop("riskRegression version must be > 1.4.3 \n",
+                     "latest version available on Github at tagteam/riskRegression \n")
+            }else{
+                iid.FCT <- function(x){
+                    riskRegression::iidCox(x, tau.hazard = 0)$IFbeta
+                }
+                attr(iid.FCT, "method.iid") <- "iid"
             }
-            attr(iid.FCT, "method.iid") <- "iid"
         }
-        
+    }else if(adjust.residuals == FALSE){
+        iid.FCT <- function(x){
+            res <- lava::iid(x)
+            attr(res, "bread") <- NULL
+            return(res)
+        }
+        attr(iid.FCT, "method.iid") <- "iid"
     }else{
-
-        if(typeSD == "jackknife"){
-            iid.FCT <- function(x){
-                iidJack(x, keep.warnings = FALSE, keep.error = FALSE, trace = FALSE)
-            }
-            attr(iid.FCT, "method.iid") <- "iidJack"
-        }else if(adjust.residuals == FALSE){
-            iid.FCT <- function(x){
-                res <- lava::iid(x)
-                attr(res, "bread") <- NULL
-                return(res)
-            }
-            attr(iid.FCT, "method.iid") <- "iid"
-        }else{
-            iid.FCT <- function(x){
-                iid2(x, adjust.residuals = TRUE)
-            }
-            attr(iid.FCT,"method.iid") <- "iid2"        
+        iid.FCT <- function(x){
+            iid2(x, adjust.residuals = TRUE)
         }
-
+        attr(iid.FCT,"method.iid") <- "iid2"        
     }
 
     attr(iid.FCT,"typeSD") <- typeSD
@@ -403,7 +397,7 @@ modelsearch2.default <- function(object, link, data = NULL,
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     if(ncpus>1){
         cl <- parallel::makeCluster(ncpus)
-        doSNOW::registerDoSNOW(cl)
+        doParallel::registerDoParallel(cl)
     }
     
     ## ** display a summary of the call

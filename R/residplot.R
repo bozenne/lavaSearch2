@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 29 2017 (11:52) 
 ## Version: 
-## last-updated: jan 10 2018 (17:11) 
+## last-updated: jan 15 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 118
+##     Update #: 119
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - residplot
-#' @title Plot the residuals of a lvm object
-#' @description Plot the residuals for each outcome of a lvm object
+#' @title Plot the Residuals of a LVM Object
+#' @description Plot the residuals for each outcome of a lvm object.
 #' 
 #' @name residplot
 #'

@@ -3,7 +3,7 @@
 \name{getVarCov2}
 \alias{getVarCov2}
 \alias{.getVarCov2}
-\title{Reconstruct the marginal variance covariance matrix from a nlme model}
+\title{Reconstruct the Marginal Variance Covariance Matrix from a nlme Model}
 \usage{
 .getVarCov2(object, ...)
 }
@@ -13,7 +13,7 @@
 \item{...}{arguments to be passed to lower level methods.}
 }
 \description{
-Reconstruct the marginal variance covariance matrix from a nlme model
+Reconstruct the marginal variance covariance matrix from a nlme model.
 }
 \details{
 The marginal variance covariance matrix for gls model is of the form:

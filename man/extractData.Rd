@@ -2,7 +2,7 @@
 % Please edit documentation in R/package-butils-extractData.R
 \name{extractData}
 \alias{extractData}
-\title{Extract data from a model}
+\title{Extract Data From a Model}
 \usage{
 extractData(object, model.frame = FALSE, convert2dt = TRUE)
 }
@@ -44,15 +44,18 @@ e <- estimate(lvm(Y ~ G), data = data.df)
 extractData(e)
 extractData(e, model.frame = TRUE)
 
-#### survival ####
-library(riskRegression)
+#### survival #####' 
 library(survival)
-dt.surv <- sampleData(n, outcome = "survival")
-m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-extractData(m.cox, model.frame = FALSE)
-extractData(m.cox, model.frame = TRUE)
-m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-extractData(m.cox, model.frame = TRUE)
+
+\dontrun{
+  library(riskRegression) ## needs version >=1.4.3
+  dt.surv <- sampleData(n, outcome = "survival")
+  m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
+  extractData(m.cox, model.frame = FALSE)
+  extractData(m.cox, model.frame = TRUE)
+  m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
+  extractData(m.cox, model.frame = TRUE)
+}
 
 #### nested fuuctions ####
 fct1 <- function(m){

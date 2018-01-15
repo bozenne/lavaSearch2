@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 12 2018 (13:31) 
+## Last-Updated: jan 15 2018 (11:31) 
 ##           By: Brice Ozenne
-##     Update #: 542
+##     Update #: 544
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * Documentation - skeleton
-#' @title Pre-computation for the score
+#' @title Pre-computation for the Score
 #' @description Pre-compute quantities that are necessary to compute the score of a lvm model.
 #' @name skeleton
 #' 
@@ -849,7 +849,7 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
 }
 
 ## * .combination
-#' @title Form all unique combinations between two vectors
+#' @title Form all Unique Combinations Between two Vectors
 #' @description Form all unique combinations between two vectors (removing symmetric combinations).
 #' @name combination
 #'

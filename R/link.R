@@ -1,7 +1,7 @@
 ## * findNewLink
 ## ** doc findNewLink
-#' @title Find the new possible links between variables (copied from lava::modelsearch)
-#' @description Find the new possible links between variables (copied from lava::modelsearch)
+#' @title Find all New Links Between Variables
+#' @description Find all new links between variables (copied from lava::modelsearch).
 #' 
 #' @name findNewLink
 #' 
@@ -124,9 +124,9 @@ findNewLink.lvm <- function(x, data = NULL,
 
 ## * addLink
 ## ** doc addLink
-#' @title Add a new link between two variables in a lvm
+#' @title Add a Aew Link Between Two Variables in a LVM
 #' @rdname addLink
-#' @description Generic interface to add links to a lvm.
+#' @description Generic interface to add links to lvm objects.
 #' 
 #' @param x a lvm model
 #' @param var1 the first variable (character) or a formula describing the link to be added to the lvm
@@ -243,9 +243,9 @@ addLink.lvm.reduced <- function(x, ...){
 
 ## * setLink
 ## ** doc setLink
-#' @title Affect a given value to a link between two variables in a lvm
+#' @title Set a Link to a Value
 #' @name setLink
-#' @description Generic interface to set a value to a link in a lvm.
+#' @description Generic interface to set a value to a link in a lvm object.
 #' 
 #' @param x a lvm model
 #' @param var1 the first variable (character) or a formula describing the link

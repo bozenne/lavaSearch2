@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (10:48) 
 ## Version: 
-## last-updated: okt 10 2017 (13:46) 
+## last-updated: jan 15 2018 (11:45) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 8
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,13 +15,14 @@
 ## 
 ### Code:
 
-#' @title Find object in the parent environments
+#' @title Find Object in the Parent Environments
 #' 
-#' @description Internal function
+#' @description Search an object in the parent environments. For internal use.
 #' 
 #' @param name character string containing the name of the object to get.
 #' @param envir the environment from which to look for the object.
-#' 
+#'
+#' @keywords internal
 evalInParentEnv <- function(name, envir){
   
   ### ** find parent environments

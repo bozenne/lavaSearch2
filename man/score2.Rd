@@ -6,7 +6,7 @@
 \alias{score2.gls}
 \alias{score2.lme}
 \alias{score2.lvmfit}
-\title{Compute the score directly from the gaussian density}
+\title{Compute the Score Directly from the Gaussian Density}
 \usage{
 score2(object, ...)
 
@@ -40,7 +40,7 @@ score2(object, ...)
 A matrix.
 }
 \description{
-Compute the score directly from the gaussian density
+Compute the score directly from the gaussian density.
 }
 \details{
 The log-likelihood of a lvm can written:

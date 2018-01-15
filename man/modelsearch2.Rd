@@ -4,7 +4,7 @@
 \alias{modelsearch2}
 \alias{modelsearch2.lvmfit}
 \alias{modelsearch2.default}
-\title{Data-driven extension of a latent variable model}
+\title{Data-driven Extension of a Latent Variable Model}
 \usage{
 modelsearch2(object, ...)
 
@@ -92,10 +92,6 @@ res$sequenceTest[[2]]
 library(survival)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
-\dontshow{
-res <- modelsearch2(m, link = c(status~epicel,status~sex),
-                    packages = "survival", nStep = 1)
-}
 \dontrun{
 res <- modelsearch2(m, link = c(status~epicel,status~sex),
                     packages = "survival", nStep = 1)

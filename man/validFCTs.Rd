@@ -11,7 +11,7 @@
 \alias{validNames}
 \alias{validNumeric}
 \alias{validPath}
-\title{Check argument in functions}
+\title{Check Arguments of a function.}
 \usage{
 validCharacter(value1, name1 = as.character(substitute(value1)), valid.length,
   valid.values = "character", refuse.NULL = TRUE,
@@ -93,7 +93,7 @@ validPath(value1, name1 = as.character(substitute(value1)), type,
 An invisible \code{TRUE} or an error message.
 }
 \description{
-Check the validity of the arguments in functions
+Check the validity of the arguments in functions.
 }
 \keyword{check}
 \keyword{function}

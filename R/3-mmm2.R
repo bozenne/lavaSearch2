@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 12 2018 (17:51) 
+## Last-Updated: jan 15 2018 (11:39) 
 ##           By: Brice Ozenne
-##     Update #: 86
+##     Update #: 87
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -51,7 +51,7 @@ coef.mmm2 <- multcomp:::coef.mmm
 coef.ls.lvmfit <- multcomp:::coef.mmm
 
 ## * vcov
-#' @title Variance-Covariance Matrix for a fitted object
+#' @title Variance-Covariance Matrix for a Fitted Object
 #' @description Returns the variance-covariance matrix of a fitted object.
 #' For internal use.
 #' @rdname vcov-multcomp

@@ -3,7 +3,7 @@
 \name{getNewLink}
 \alias{getNewLink}
 \alias{getNewLink.modelsearch2}
-\title{Find the links that should be added accroding to the sequential testing}
+\title{Find the Links that Should be Added Accroding to the Sequential Testing}
 \usage{
 getNewLink(object, ...)
 

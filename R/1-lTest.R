@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan 12 2018 (13:17) 
+## last-updated: jan 15 2018 (11:30) 
 ##           By: Brice Ozenne
-##     Update #: 621
+##     Update #: 624
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - lTest
-#' @title  Compute the degree of freedom of the variance parameters
-#' @description Compute the degree of freedom of the variance parameters
+#' @title  Compute the Degree of Freedom of the Variance Parameters
+#' @description Compute the degree of freedom of the variance parameters.
 #' @name lTest
 #'
 #' @param object a lvm object.
@@ -209,8 +209,8 @@ lTest.lme <- lTest.lm
 lTest.lvmfit <- lTest.lm
 
 ## * .contrast2name
-#' @title Create rownames for a contrast matrix
-#' @description Create rownames for a contrast matrix
+#' @title Create Rownames for a Contrast Matrix
+#' @description Create rownames for a contrast matrix.
 #' using the coefficients and the names of the parameters
 #' @name contrast2name
 #'

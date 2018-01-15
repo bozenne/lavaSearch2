@@ -3,7 +3,7 @@
 \name{cvCheck}
 \alias{cvCheck}
 \alias{cvCheck.lvm}
-\title{Test the sensibility of the lvm estimate to the initialization points}
+\title{Test the Sensitivity of the LVM Estimate to the Initialization Points}
 \usage{
 cvCheck(object, ...)
 
@@ -31,7 +31,7 @@ cvCheck(object, ...)
 a data frame/cvlvm object containing the convergence status (by default 0 indicates successful convergence, see ?optim), the value of the log-likelihood and the estimated parameters (in columns) for each initialization (in rows)
 }
 \description{
-Test the sensibility of the lvm estimate to the initialization points
+Test the sensitivity of the estimates from the latent variable model to the initialization points.
 }
 \details{
 Simulation is based on a multivariate truncated normal law (even though it is not satifying for the variance components)

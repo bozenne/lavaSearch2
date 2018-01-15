@@ -2,7 +2,7 @@
 % Please edit documentation in R/3-mlf2.R
 \name{glht.mlf2}
 \alias{glht.mlf2}
-\title{General linear hypothesis}
+\title{General Linear Hypothesis}
 \usage{
 \method{glht}{mlf2}(model, linfct, ...)
 }

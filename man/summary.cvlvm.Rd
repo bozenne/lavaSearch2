@@ -2,7 +2,7 @@
 % Please edit documentation in R/cvCheck.R
 \name{summary.cvlvm}
 \alias{summary.cvlvm}
-\title{Summary function associated with cvCheck}
+\title{Summary Function Associated with cvCheck Objects}
 \usage{
 \method{summary}{cvlvm}(object, threshold = NULL, ...)
 }
@@ -14,5 +14,5 @@
 \item{...}{for compatibility only}
 }
 \description{
-Summary function associated with cvCheck
+Summary function associated with cvCheck objects.
 }

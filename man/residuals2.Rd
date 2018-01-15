@@ -5,7 +5,7 @@
 \alias{residuals2.gls}
 \alias{residuals2.lme}
 \alias{residuals2.lvmfit}
-\title{Compute the residuals from a lvmfit objects}
+\title{Compute the Residuals from a lvmfit Object}
 \usage{
 residuals2(object, ...)
 
@@ -43,7 +43,7 @@ residuals2(object, ...)
 \item{return.prepareScore2}{should the quantities that have been pre-computed be returned?}
 }
 \description{
-Compute the residuals from a lvmfit objects
+Compute the residuals from a lvmfit object.
 }
 \examples{
 m <- lvm(Y1~eta,Y2~eta,Y3~eta)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: jan 10 2018 (15:16) 
+## last-updated: jan 15 2018 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 15
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-#' @title Convert variable names to dummy variables names
+#' @title Convert Variable Names to Dummy Variables Names.
 #' @description When dealing with categorical variables, the \code{estimate} function convert the categorical variables into dummy variables.
 #' This function convert a set of variable names to their corresponding name in the model with dummy variables
 #' @name var2dummy

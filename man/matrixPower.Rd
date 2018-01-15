@@ -2,7 +2,7 @@
 % Please edit documentation in R/matrixPower.R
 \name{matrixPower}
 \alias{matrixPower}
-\title{Power of a matrix}
+\title{Power of a Matrix}
 \usage{
 matrixPower(x, power, symmetric, tol = 1e-12)
 }
@@ -19,7 +19,7 @@ matrixPower(x, power, symmetric, tol = 1e-12)
 a matrix.
 }
 \description{
-Compute the power of a matrix
+Compute the power of a matrix.
 }
 \examples{
 M <- matrix(rnorm(2e2),20,10)

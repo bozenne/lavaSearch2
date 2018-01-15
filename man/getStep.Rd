@@ -3,7 +3,7 @@
 \name{getStep}
 \alias{getStep}
 \alias{getStep.modelsearch2}
-\title{Extract one step from the sequential procedure}
+\title{Extract one Step From the Sequential Procedure}
 \usage{
 getStep(object, ...)
 
@@ -20,7 +20,7 @@ getStep(object, ...)
 \item{slot}{the element from the modelsearch2 object that should be extracted.}
 }
 \description{
-Extract one step from the sequential procedure
+Extract one step from the sequential procedure.
 }
 \examples{
 mSim <- lvm(Y~G+X1+X2)

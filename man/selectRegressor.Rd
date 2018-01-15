@@ -3,7 +3,7 @@
 \name{selectRegressor}
 \alias{selectRegressor}
 \alias{selectRegressor.formula}
-\title{Regressor of a formula}
+\title{Regressor of a Formula.}
 \usage{
 selectRegressor(x, ...)
 

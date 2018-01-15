@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 12 2018 (11:47) 
+## last-updated: jan 15 2018 (11:41) 
 ##           By: Brice Ozenne
-##     Update #: 2189
+##     Update #: 2190
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * documentation - score2
-#' @title Compute the score directly from the gaussian density
-#' @description Compute the score directly from the gaussian density
+#' @title Compute the Score Directly from the Gaussian Density
+#' @description Compute the score directly from the gaussian density.
 #' @name score2
 #' 
 #' @param object a linear model or a latent variable model.

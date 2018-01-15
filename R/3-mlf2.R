@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 12 2018 (16:48) 
+## Last-Updated: jan 15 2018 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 63
+##     Update #: 64
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,7 @@ mlf2 <- function(...) {
 }
 
 ## * glht.mlf2
-#' @title General linear hypothesis
+#' @title General Linear Hypothesis
 #' @description General linear hypotheses and multiple outcomes for mmm2 objects.
 #'
 #' @param model a mmm2 object

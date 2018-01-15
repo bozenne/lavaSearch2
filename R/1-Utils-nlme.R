@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan 12 2018 (11:02) 
+## Last-Updated: jan 15 2018 (11:27) 
 ##           By: Brice Ozenne
-##     Update #: 133
+##     Update #: 135
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -201,8 +201,8 @@
 }
 
 ## * .getVarCov2
-#' @title Reconstruct the marginal variance covariance matrix from a nlme model
-#' @description Reconstruct the marginal variance covariance matrix from a nlme model
+#' @title Reconstruct the Marginal Variance Covariance Matrix from a nlme Model
+#' @description Reconstruct the marginal variance covariance matrix from a nlme model.
 #' @name getVarCov2
 #'
 #' @param object a gls or lme object

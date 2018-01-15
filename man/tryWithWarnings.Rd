@@ -2,7 +2,7 @@
 % Please edit documentation in R/tryWithWarnings.R
 \name{tryWithWarnings}
 \alias{tryWithWarnings}
-\title{Run an expression and catch warnings and errors}
+\title{Run an Expression and Catch Warnings and Errors}
 \usage{
 tryWithWarnings(expr)
 }

@@ -3,7 +3,7 @@
 \name{selectResponse}
 \alias{selectResponse}
 \alias{selectResponse.formula}
-\title{Response variable of a formula}
+\title{Response Variable of a Formula}
 \usage{
 selectResponse(x, ...)
 
@@ -17,7 +17,7 @@ selectResponse(x, ...)
 \item{type}{either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})}
 }
 \description{
-Return the reponse variable contained in the formula
+Return the reponse variable contained in the formula.
 }
 \examples{
 \dontrun{

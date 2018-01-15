@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 12 2018 (11:09) 
+## Last-Updated: jan 15 2018 (11:31) 
 ##           By: Brice Ozenne
-##     Update #: 795
+##     Update #: 796
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * documentation - residuals2
-#' @title Compute the residuals from a lvmfit objects
-#' @description Compute the residuals from a lvmfit objects
+#' @title Compute the Residuals from a lvmfit Object
+#' @description Compute the residuals from a lvmfit object.
 #' @name residuals2
 #' 
 #' @param object a fitted latent variable model.

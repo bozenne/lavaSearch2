@@ -3,7 +3,7 @@
 \name{nStep}
 \alias{nStep}
 \alias{nStep.modelsearch2}
-\title{Find the number of steps performed during the sequential testing}
+\title{Find the Number of Steps Performed During the Sequential Testing}
 \usage{
 nStep(object)
 
