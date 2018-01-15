@@ -11,6 +11,14 @@ before_install:
  - sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-6  90
  - sudo update-alternatives --install /usr/bin/gcc  gcc  /usr/bin/gcc-6  90 
  - sudo update-alternatives --install /usr/bin/gfortran gfortran /usr/bin/gfortran-6 90
+ - export DISPLAY=:99.0
+ - sh -e /etc/init.d/xvfb start
+ 
+addons:
+  apt:
+    packages:
+      - tcl8.5-dev
+      - tk8.5-dev
 
 r_github_packages:
 - kkholst/lava@fixNR
