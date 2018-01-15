@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: jan 15 2018 (18:55) 
+## Last-Updated: jan 15 2018 (21:59) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 59
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,14 +16,8 @@
 ### Code:
 
 ## * header
-rm(list = ls(all.names = TRUE))
-toRM <- names(sessionInfo()$otherPkgs)
-if(!is.null(toRM)){
-    lapply(paste('package:',,sep=""),
-           detach,
-           character.only=TRUE,unload=TRUE)
-}
 if(TRUE){ ## already called in test-all.R
+    rm(list = ls(all.names = TRUE))
     library(testthat)
     library(lavaSearch2)
     library(data.table)

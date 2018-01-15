@@ -3,14 +3,36 @@
 \name{getVarCov2}
 \alias{getVarCov2}
 \alias{.getVarCov2}
+\alias{.getVarCov2.gls}
+\alias{.getVarCov2.lme}
 \title{Reconstruct the Marginal Variance Covariance Matrix from a nlme Model}
 \usage{
 .getVarCov2(object, ...)
+
+\method{.getVarCov2}{gls}(object, param, attr.param, endogenous,
+  name.endogenous, n.endogenous, cluster, n.cluster, ...)
+
+\method{.getVarCov2}{lme}(object, param, attr.param, endogenous,
+  name.endogenous, n.endogenous, cluster, n.cluster, ...)
 }
 \arguments{
 \item{object}{a gls or lme object}
 
-\item{...}{arguments to be passed to lower level methods.}
+\item{...}{[internal] Only used by the generic method.}
+
+\item{param}{the mean and variance parameters.}
+
+\item{attr.param}{the type of each parameter (mean or variance).}
+
+\item{endogenous}{the endogenous variable to which each observation corresponds.}
+
+\item{name.endogenous}{the name of the endogenous variables.}
+
+\item{n.endogenous}{the number of endogenous variables.}
+
+\item{cluster}{the grouping variable relative to which the observations are iid.}
+
+\item{n.cluster}{the number of groups.}
 }
 \description{
 Reconstruct the marginal variance covariance matrix from a nlme model.

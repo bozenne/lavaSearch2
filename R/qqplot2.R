@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (09:26) 
 ## Version: 
-## last-updated: jan 15 2018 (11:46) 
+## last-updated: jan 15 2018 (22:49) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 16
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,13 +33,17 @@
 #' 
 #' @return a data frame/cvlvm object containing the convergence status (by default 0 indicates successful convergence, see ?optim), the value of the log-likelihood and the estimated parameters (in columns) for each initialization (in rows)
 #' 
-#' @examples 
+#' @examples
+#' library(lava)
 #' m <- lvm(list(y~v1+v2+v3+v4,c(v1,v2,v3,v4)~x))
-#' covariance(m) <- v1~v2+v3+v4
 #' latent(m) <- ~ x
-#' dd <- lava::sim(m,100) ## Simulate 100 observations from model
+#'
+#' set.seed(10)
+#' dd <- sim(m,100) ## Simulate 100 observations from model
 #' e <- estimate(m, dd) ## Estimate parameters
 #'
+#' coef(e)
+#' 
 #' qqplot2(e)
 #' 
 #' @export

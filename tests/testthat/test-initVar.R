@@ -1,12 +1,6 @@
 ## * header
-rm(list = ls(all.names = TRUE))
-toRM <- names(sessionInfo()$otherPkgs)
-if(!is.null(toRM)){
-    lapply(paste('package:',,sep=""),
-           detach,
-           character.only=TRUE,unload=TRUE)
-}
 if(TRUE){ ## already called in test-all.R
+    rm(list = ls(all.names = TRUE))
     library(testthat)
     library(lavaSearch2)
     library(data.table)
@@ -14,8 +8,6 @@ if(TRUE){ ## already called in test-all.R
 }
 
 lava.options(symbols = c("~","~~"))
-
-initVarLink <-  lavaSearch2:::initVarLink
 
 context("#### initVar #### \n")
 

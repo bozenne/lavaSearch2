@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: jan 15 2018 (18:57) 
+## Last-Updated: jan 15 2018 (22:01) 
 ##           By: Brice Ozenne
-##     Update #: 28
+##     Update #: 30
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,14 +16,8 @@
 ### Code:
 
 ## * header
-rm(list = ls(all.names = TRUE))
-toRM <- names(sessionInfo()$otherPkgs)
-if(!is.null(toRM)){
-    lapply(paste('package:',,sep=""),
-           detach,
-           character.only=TRUE,unload=TRUE)
-}
 if(TRUE){ ## already called in test-all.R
+    rm(list = ls(all.names = TRUE))
     library(testthat)
     library(lavaSearch2)
     library(data.table)
@@ -35,14 +29,6 @@ lava.options(symbols = c("~","~~"))
 
 context("Utils-nlme")
 n <- 5e1
-
-.coef2 <- lavaSearch2:::.coef2
-.coef2.gls <- lavaSearch2:::.coef2.gls
-.coef2.lme <- lavaSearch2:::.coef2.lme
-
-.getGroups2 <- lavaSearch2:::.getGroups2
-.getGroups2.gls <- lavaSearch2:::.getGroups2.gls
-.getGroups2.lme <- lavaSearch2:::.getGroups2.lme
 
 ## * data
 mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,Y4~1*eta,eta~G+Gender))

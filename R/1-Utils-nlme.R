@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:27) 
+## Last-Updated: jan 15 2018 (22:10) 
 ##           By: Brice Ozenne
-##     Update #: 135
+##     Update #: 154
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,10 +16,22 @@
 ### Code:
 
 ## * .coef2
+#' @title Export Mean and Variance Coefficients from a nlme Model
+#' @description Export mean and variance coefficients from a nlme model.
+#' @name coef2
+#'
+#' @param object a gls or lme object.
+#'  
+#' @details The variance coefficients that are exported are the residual variance of each outcome.
+#' This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
+#'
+#' @export
 `.coef2` <-
     function(object) UseMethod(".coef2")
 
 ## * .coef2.gls
+#' @rdname coef2
+#' @export
 .coef2.gls <- function(object){
 
      ## *** mean parameters
@@ -53,6 +65,8 @@
 
 
 ## * .coef2.lme
+#' @rdname coef2
+#' @export
 .coef2.lme <- function(object){
 
      ## *** mean parameters
@@ -101,10 +115,25 @@
 
 
 ## * .getGroups2
+#' @title Reconstruct the Cluster Variable from a nlme Model
+#' @description Reconstruct the cluster variable from a nlme model.
+#' @name getGroup2
+#'
+#' @param object a gls or lme object.
+#' @param cluster the grouping variable relative to which the observations are iid.
+#' @param data the data set.
+#' @param ... [internal] Only used by the generic method.
+#'  
+#' @details The variance coefficients that are exported are the residual variance of each outcome.
+#' This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
+#'
+#' @export
 `.getGroups2` <-
     function(object, ...) UseMethod(".getGroups2")
 
 ## * .getGroups2.gls
+#' @rdname getGroup2
+#' @export
 .getGroups2.gls <- function(object, cluster, data, ...){
 
     ### ** get cluster
@@ -156,6 +185,8 @@
 }
 
 ## * .getGroups2.lme
+#' @name getGroup2
+#' @export
 .getGroups2.lme <- function(object, ...){
 
     ## ** get cluster
@@ -206,7 +237,14 @@
 #' @name getVarCov2
 #'
 #' @param object a gls or lme object
-#' @param ... arguments to be passed to lower level methods.
+#' @param param the mean and variance parameters.
+#' @param attr.param the type of each parameter (mean or variance).
+#' @param endogenous the endogenous variable to which each observation corresponds.
+#' @param name.endogenous the name of the endogenous variables. 
+#' @param n.endogenous the number of endogenous variables.
+#' @param cluster the grouping variable relative to which the observations are iid.
+#' @param n.cluster the number of groups.
+#' @param ... [internal] Only used by the generic method.
 #'  
 #' @details The marginal variance covariance matrix for gls model is of the form:
 #' 
@@ -217,14 +255,17 @@
 #' }
 #'
 #' The marginal variance covariance matrix for lme model is of the form:
-#' 
+#'
+#' @export
 `.getVarCov2` <-
     function(object, ...) UseMethod(".getVarCov2")
 
 ## * .getVarCov2.gls
+#' @rdname getVarCov2
+#' @export
 .getVarCov2.gls <- function(object, param, attr.param,
                             endogenous, name.endogenous, n.endogenous,
-                            cluster, n.cluster){
+                            cluster, n.cluster, ...){
 
     var.coef <- param[attr.param$var.coef]
     cor.coef <- param[attr.param$cor.coef]
@@ -258,9 +299,11 @@
 }
 
 ## * .getVarCov2.lme
+#' @rdname getVarCov2
+#' @export
 .getVarCov2.lme <- function(object, param, attr.param,
                             endogenous, name.endogenous, n.endogenous,
-                            cluster, n.cluster){
+                            cluster, n.cluster, ...){
 
     ## ** prepare with gls
     out <- .getVarCov2.gls(object, param = param, attr.param = attr.param,

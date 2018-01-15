@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 15 2018 (18:56) 
+## Last-Updated: jan 15 2018 (21:59) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 35
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,14 +16,8 @@
 ### Code:
 
 ## * header
-rm(list = ls(all.names = TRUE))
-toRM <- names(sessionInfo()$otherPkgs)
-if(!is.null(toRM)){
-    lapply(paste('package:',,sep=""),
-           detach,
-           character.only=TRUE,unload=TRUE)
-}
 if(TRUE){ ## already called in test-all.R
+    rm(list = ls(all.names = TRUE))
     library(testthat)
     library(lavaSearch2)
     library(data.table)
@@ -141,8 +135,8 @@ test_that("ls.lvmfit vs mmm", {
     diag(lvm.C[target.coef,target.coef]) <- 1
 
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
-    lvm.glht$vcov <- lavaSearch2:::vcov.ls.lvmfit(ls.lvm, return.null = FALSE,
-                                                  adjust.residuals = FALSE, robust = TRUE)
+    lvm.glht$vcov <- vcov(ls.lvm, return.null = FALSE,
+                          adjust.residuals = FALSE, robust = TRUE)
     lvm.sglht <- summary(lvm.glht)    
 
     ## mmm

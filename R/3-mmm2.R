@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 15 2018 (13:24) 
+## Last-Updated: jan 15 2018 (21:56) 
 ##           By: Brice Ozenne
-##     Update #: 88
+##     Update #: 92
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -54,20 +54,17 @@ coef.ls.lvmfit <- multcomp:::coef.mmm
 #' @title Variance-Covariance Matrix for a Fitted Object
 #' @description Returns the variance-covariance matrix of a fitted object.
 #' For internal use.
-#' @rdname vcov-multcomp
+#' @name vcov-multcomp
 #' 
 #' @param object a \code{mmm2} or \code{ls.lvmfit object}.
 #' @param return.null if TRUE return a matrix filled with NA.
 #' @param adjust.residuals small sample adjustement.
 #' @param robust should robust standard error be used? Otherwise rescale the influence function with the standard error obtained from the information matrix.
 #' @param ... Not used. Only for compatibility with the generic method.
-#' @keywords internal
-
 
 ## * vcov.mm2
 #' @rdname vcov-multcomp
 #' @method vcov mmm2
-#' 
 #' @export
 vcov.mmm2 <- function(object, return.null = TRUE,
                       adjust.residuals = TRUE, robust = TRUE,
