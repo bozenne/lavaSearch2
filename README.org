@@ -4,8 +4,69 @@
 
 * lavaSeach2
 
-*lavaSearch2* provides additional functionnalities for the *lava*
- package, an software package that enables to estimate latent variable
- models (LVM) and simulate data using a LVM as a generative model.
+** Overview
 
+*lava* is an R package that implements Structural Equation Models with
+ latent variables (see [[https://github.com/kkholst/lava]]). *lavaSearch2*
+ provides additional functionnalities to the *lava* package,
+ mainly:
+- Improved control of the type 1 error rate when performing inference
+  in small samples. Also applicable to specific =gls= and =lme= (*nlme* package)
+  objects.
+- Adjustment for multiple comparisons when performing inference using
+  several latent variable models.
+- Improved detection of local dependencies that are not included in
+  the latent variable model. Also applicable to Cox models via the
+  libraries *riskRegression* and *survival* / *rms*
 
+** Installation 
+Install the stable version from CRAN using:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+install.packages("lavaSearch2")
+#+END_SRC
+
+Install the development version from Github using:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+devtools::install_github("bozenne/lavaSearch2")
+#+END_SRC
+
+** Functionalities
+ 
+*** Inference with small samples
+
+Using *lava*, 
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+library(lavaSearch2)
+
+## simulate data
+m <- lvm(Y~X1+X2)
+set.seed(10)
+df.data <- sim(m, 2e2)
+
+## fit model
+e <- estimate(m, data = df.data)
+
+## Compute derivative of the variance-covariance matrix
+## with small sample correction
+dVcov2(e) <- TRUE
+
+## display summary
+summary(e)$coef
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Loading required package: lava
+lava version 1.5.1
+Loading required package: data.table
+data.table 1.10.4
+  The fastest way to learn (by data.table authors): https://www.datacamp.com/courses/data-analysis-the-data-table-way
+  Documentation: ?data.table, example(data.table) and browseVignettes("data.table")
+  Release notes, videos and slides: http://r-datatable.com
+lavaSearch2 version 1.0.0
+       Estimate Std. Error   t-value    P-value     df
+Y~X1  1.0177101 0.06759846 15.055226 0.00000000 197.00
+Y~X2  1.0162407 0.06126662 16.587184 0.00000000 197.00
+Y~~Y  0.9034974 0.09240061  9.778046         NA  49.25
+Y    -0.1179261 0.06814623 -1.730486 0.08510938 197.00
+#+end_example

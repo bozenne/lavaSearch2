@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 15 2018 (16:08) 
+## Last-Updated: jan 15 2018 (18:56) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 30
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,12 +16,18 @@
 ### Code:
 
 ## * header
-rm(list = ls())
-if(FALSE){ ## already called in test-all.R
+rm(list = ls(all.names = TRUE))
+toRM <- names(sessionInfo()$otherPkgs)
+if(!is.null(toRM)){
+    lapply(paste('package:',,sep=""),
+           detach,
+           character.only=TRUE,unload=TRUE)
+}
+if(TRUE){ ## already called in test-all.R
     library(testthat)
-    library(lava)
-    library(data.table)
     library(lavaSearch2)
+    library(data.table)
+    library(lava)    
 }
 
 library(multcomp)
@@ -89,7 +95,7 @@ test_that("mmm2 vs mmm", {
     system.time(
         res.Search <- calcDistMaxIntegral(as.vector(z.value),
                                           iid = iid.tempo, quantile.compute = FALSE,
-                                          df = NULL, trace = TRUE, alpha = 0.05)
+                                          df = NULL, trace = FALSE, alpha = 0.05)
     )
     expect_equal(as.double(res.Search$p.adjust),
                  as.double(res.GS$test$pvalues),

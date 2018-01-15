@@ -1,10 +1,16 @@
 ## * header
-rm(list = ls())
-if(FALSE){ ## already called in test-all.R
+rm(list = ls(all.names = TRUE))
+toRM <- names(sessionInfo()$otherPkgs)
+if(!is.null(toRM)){
+    lapply(paste('package:',,sep=""),
+           detach,
+           character.only=TRUE,unload=TRUE)
+}
+if(TRUE){ ## already called in test-all.R
     library(testthat)
-    library(lava)
-    library(data.table)
     library(lavaSearch2)
+    library(data.table)
+    library(lava)    
 }
 
 lava.options(symbols = c("~","~~"))

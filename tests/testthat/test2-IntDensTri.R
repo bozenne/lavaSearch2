@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:32) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (18:56) 
 ##           By: Brice Ozenne
-##     Update #: 9
+##     Update #: 12
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,11 +15,27 @@
 ## 
 ### Code:
 
-library(testthat)
+## * header
+rm(list = ls(all.names = TRUE))
+toRM <- names(sessionInfo()$otherPkgs)
+if(!is.null(toRM)){
+    lapply(paste('package:',,sep=""),
+           detach,
+           character.only=TRUE,unload=TRUE)
+}
+if(TRUE){ ## already called in test-all.R
+    library(testthat)
+    library(lavaSearch2)
+    library(data.table)
+    library(lava)    
+}
+
 library(mvtnorm)
 lava.options(symbols = c("~","~~"))
 
 context("IntDensTri")
+
+## * tests
 # {{{ around 0
 test_that("Integrate standard gaussian density (2D)", {
     p <- 2

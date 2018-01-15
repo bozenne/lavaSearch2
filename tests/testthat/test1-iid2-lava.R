@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: jan 15 2018 (16:10) 
+## last-updated: jan 15 2018 (18:55) 
 ##           By: Brice Ozenne
-##     Update #: 134
+##     Update #: 137
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,12 +17,18 @@
 ## source("c:/Users/hpl802/Documents/GitHub/lavaSearch2/tests/testthat/test1-iid2-lava.R")
 
 ## * header
-rm(list = ls())
-if(FALSE){ ## already called in test-all.R
+rm(list = ls(all.names = TRUE))
+toRM <- names(sessionInfo()$otherPkgs)
+if(!is.null(toRM)){
+    lapply(paste('package:',,sep=""),
+           detach,
+           character.only=TRUE,unload=TRUE)
+}
+if(TRUE){ ## already called in test-all.R
     library(testthat)
-    library(lava)
-    library(data.table)
     library(lavaSearch2)
+    library(data.table)
+    library(lava)    
 }
 
 library(clubSandwich)

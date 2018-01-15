@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:52) 
 ## Version: 
-## last-updated: jan 15 2018 (16:08) 
+## last-updated: jan 15 2018 (18:57) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 61
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,12 +16,18 @@
 ### Code:
 
 ## * header
-rm(list = ls())
-if(FALSE){ ## already called in test-all.R
+rm(list = ls(all.names = TRUE))
+toRM <- names(sessionInfo()$otherPkgs)
+if(!is.null(toRM)){
+    lapply(paste('package:',,sep=""),
+           detach,
+           character.only=TRUE,unload=TRUE)
+}
+if(TRUE){ ## already called in test-all.R
     library(testthat)
-    library(lava)
-    library(data.table)
     library(lavaSearch2)
+    library(data.table)
+    library(lava)    
 }
 
 lava.options(symbols = c("~","~~"))
