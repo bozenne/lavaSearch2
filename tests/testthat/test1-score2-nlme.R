@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: jan 12 2018 (11:29) 
+## last-updated: jan 15 2018 (11:55) 
 ##           By: Brice Ozenne
-##     Update #: 72
+##     Update #: 77
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,7 +105,7 @@ allCoef.lme <- .coef2(e.lme)
 test_that("lme/gls equivalent to lvm", {
     expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lvm)))
     expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
-    expect_equal(as.double(allCoef.lme),as.double(coef(e.lvm)))
+    expect_equal(as.double(allCoef.lme),as.double(coef(e.lvm)), tol = 1e-7) ## needed for CRAN
 })
 
 test_that("score2.lme/gls equivalent to score2.lvm - no adjustment", {    
@@ -119,7 +119,7 @@ test_that("score2.lme/gls equivalent to score2.lvm - no adjustment", {
                  score.gls[,attr(allCoef.lme,"mean.coef")], tol = 1e-7)
 
     score.lvm <- score2(e.lvm, adjust.residuals = FALSE, indiv = TRUE)
-    expect_equal(unname(score.lme),unname(score.lvm))
+    expect_equal(unname(score.lme),unname(score.lvm), tol = 1e-6) ## needed for CRAN
 })
 
 test_that("score2.lme/gls equivalent to score2.lvm - adjustment", {
@@ -132,7 +132,7 @@ test_that("score2.lme/gls equivalent to score2.lvm - adjustment", {
                      score.gls[,attr(allCoef.lme,"mean.coef")], tol = 1e-7)
 
         score.lvm <- score2(e.lvm, adjust.residuals = TRUE, indiv = TRUE)
-        expect_equal(unname(score.lme),unname(score.lvm))    
+        expect_equal(unname(score.lme),unname(score.lvm), tol = 1e-7) ## needed for CRAN    
 })
 
 ## ** Compound symmetry with weight (lme/gls)

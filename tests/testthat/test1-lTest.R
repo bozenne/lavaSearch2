@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan 12 2018 (12:20) 
+## last-updated: jan 15 2018 (11:52) 
 ##           By: Brice Ozenne
-##     Update #: 130
+##     Update #: 134
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,14 +137,14 @@ test_that("mixed model: df",{
                      numericDerivative = TRUE)
     expect_equal(df1.lvm,df2.lvm)
     expect_equal(as.double(GS),
-                 as.double(df1.lvm[1:5,"df"]))
+                 as.double(df1.lvm[1:5,"df"]), tol = 1e-4) ## needed for CRAN
 
     df1.lme <- lTest(e.lme, adjust.residuals = FALSE,
                           numericDerivative = FALSE)
     df2.lme <- lTest(e.lme, adjust.residuals = FALSE,
                           numericDerivative = TRUE)
     expect_equal(df1.lme, df2.lme)
-    expect_equal(unname(GS), df1.lme[1:5,"df"])
+    expect_equal(unname(GS), df1.lme[1:5,"df"], tol = 1e-4) ## needed for CRAN
 
     df1.gls <- lTest(e.gls, adjust.residuals = FALSE,
                           numericDerivative = FALSE)
