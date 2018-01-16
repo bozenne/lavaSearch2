@@ -7,17 +7,18 @@
 ** Overview
 
 *lava* is an R package that implements Structural Equation Models with
- latent variables (see [[https://github.com/kkholst/lava]]). *lavaSearch2*
- provides additional functionnalities to the *lava* package,
- mainly:
+ latent variables (see [[https://github.com/kkholst/lava]]). The present
+ software package, *lavaSearch2*, provides additional functionnalities
+ to the *lava* package when using maximum likelihood estimation. The
+ main functionnalities are:
 - Improved control of the type 1 error rate when performing inference
-  in small samples. Also applicable to specific =gls= and =lme= (*nlme* package)
-  objects.
+  in small samples. Also applicable to specific =gls= and =lme= models
+  (*nlme* package).
 - Adjustment for multiple comparisons when performing inference using
   several latent variable models.
 - Improved detection of local dependencies that are not included in
   the latent variable model. Also applicable to Cox models via the
-  libraries *riskRegression* and *survival* / *rms*
+  libraries *riskRegression* and *survival* / *rms*.
 
 ** Installation 
 Install the stable version from CRAN using:
@@ -30,43 +31,569 @@ Install the development version from Github using:
 devtools::install_github("bozenne/lavaSearch2")
 #+END_SRC
 
+Note: instabilities were observed when using the package with R i386
+3.5.0 (Pre-release).
+
+
 ** Functionalities
- 
+
+Load *lavaSearch2* in the R session:
+#+BEGIN_SRC R :exports code :results output :session *R* :cache no
+suppressPackageStartupMessages(library(lavaSearch2))
+#+END_SRC 
+
+#+RESULTS:
+: Loading required package: lava
+: lava version 1.5.1
+: Loading required package: data.table
+: data.table 1.10.4
+:   The fastest way to learn (by data.table authors): https://www.datacamp.com/courses/data-analysis-the-data-table-way
+:   Documentation: ?data.table, example(data.table) and browseVignettes("data.table")
+:   Release notes, videos and slides: http://r-datatable.com
+: lavaSearch2 version 1.0.0
+
+
 *** Inference with small samples
 
-Using *lava*, 
+Using *lava*, the p.values that are obtained from the summary (Wald
+tests) rely on a Gaussian approximation. While being asymptotically
+valid, this approximation may not provide a very accurate control of
+the type 1 error rate in small samples. Simulations have shown that
+the type 1 error rate tends to be too large, i.e. the p.value are have
+a downward bias.
+
+*lavaSearch2* improves the Gaussian approximation in two way:
+- using a Student's t distribution instead of a normal distribution to
+  account for the incertainty on the variance of the parameters. The
+  degrees of freedom are estimated using Satterwaite approximation,
+  i.e. identifying the chi-squared distribution that best fit the
+  observed moments of the variance of the parameters.
+- remove the first order bias in the residual variance due to the
+  Maximum Likelihood. This bias also affects the standard error of the
+  estimates and the control of the type 1 error. The correction does
+  not change the estimates (i.e. the column "Estimate" in the summary
+  remain unchanged), but it changes the corresponding standard error
+  and degree of freedoms (i.e. columns "Std. Error" and "df" in the
+  summary are modified).
+
+
+Let's see an example. First, we simulate some data:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-library(lavaSearch2)
-
 ## simulate data
-m <- lvm(Y~X1+X2)
+mSim <- lvm(Y[1:1]~0.3*X1+0.2*X2)
 set.seed(10)
-df.data <- sim(m, 2e2)
+df.data <- sim(mSim, 2e1)
 
-## fit model
+## display
+head(df.data)
+#+END_SRC
+
+#+RESULTS:
+:             Y         X1          X2
+: 1  1.05716326 -0.5963106  1.08655140
+: 2  0.00765243 -2.1852868 -0.76254488
+: 3 -0.73952284 -0.6748659 -0.82866254
+: 4 -0.06799129 -2.1190612  0.83447390
+: 5  0.72145532 -1.2651980 -0.96765199
+: 6  1.27193277 -0.3736616 -0.02881534
+
+Then we fit the latent variable model:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+m <- lvm(Y~X1+X2)
 e <- estimate(m, data = df.data)
+#+END_SRC
 
-## Compute derivative of the variance-covariance matrix
-## with small sample correction
-dVcov2(e) <- TRUE
+#+RESULTS:
 
-## display summary
+and extract the Wald tests based on a normal approximation from the
+summary:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+summary(e)$coef
+class(e)
+#+END_SRC
+
+#+RESULTS:
+:       Estimate Std. Error   Z-value      P-value
+: Y~X1 0.1550938  0.2032984 0.7628877 0.4455303456
+: Y~X2 0.4581556  0.2025335 2.2621221 0.0236898575
+: Y~~Y 0.5557910  0.1757566 3.1622777           NA
+: Y    0.7967775  0.2311125 3.4475747 0.0005656439
+: [1] "lvmfit"
+
+To activate the functionnalities of *lavaSearch2* when calling the
+summary, one needs first to call =dVcov2=: 
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+dVcov2(e) <- TRUE ## with small sample correction 
+class(e)
+#+END_SRC
+
+#+RESULTS:
+: [1] "lvmfit2" "lvmfit"
+This will store the derivative of the variance-covariance matrix and
+add a new class to the object. Then the corrected p-values can be
+obtained calling the =summary= method, as usual:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
 summary(e)$coef
 #+END_SRC
 
 #+RESULTS:
+:       Estimate Std. Error   t-value     P-value    df
+: Y~X1 0.1550938  0.2180132 0.7113965 0.486486336 17.00
+: Y~X2 0.4581556  0.2171930 2.1094398 0.050036443 17.00
+: Y~~Y 0.5557910  0.2192300 2.5351965          NA  4.25
+: Y    0.7967775  0.2478405 3.2148800 0.005082163 17.00
+
+*** Inference using F-tests
+
+The function =lTest= can be use to perform F-test, i.e. to test
+simulataneously several linear combinations of the coefficients.
+=lTest= uses a contrast matrix to encode in lines which linear
+combination of coefficients should be tested. For 3 tests, such a
+contrast matrix looks like:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+name.coef <- names(coef(e))
+n.coef <- length(name.coef)
+M <- matrix(0, ncol = n.coef, nrow = 3, 
+            dimnames = list(NULL, name.coef))
+print(M)
+#+END_SRC
+
+#+RESULTS:
+:      Y Y~X1 Y~X2 Y~~Y
+: [1,] 0    0    0    0
+: [2,] 0    0    0    0
+: [3,] 0    0    0    0
+
+By default, =lTest= set the diagonal to 1, i.e. jointly test whether
+all parameters are different from 0. This is often not very relevant
+since the variance parameters are expected to be strictly positive. A
+more meaningful test could be to test whether all mean parameter are non-0:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+M[1,"Y"] <- 1
+M[2,"Y~X1"] <- 1
+M[3,"Y~X2"] <- 1
+lTest(e, C = M) ## implicit with small sample correction
+#+END_SRC
+
+#+RESULTS:
+:         estimate       std statistic df     p-value
+: Y      0.7967775 0.2478405 3.2148800 17 0.005082163
+: Y~X1   0.1550938 0.2180132 0.7113965 17 0.486486336
+: Y~X2   0.4581556 0.2171930 2.1094398 17 0.050036443
+: global        NA        NA 7.5759403 17 0.001981892
+
+The last line on the output indicates the value of the F-statistic,
+the residual degrees of freedom and the corresponding p.value:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+1-pf(7.5759403, df1 = 3, df2 = 17)
+#+END_SRC
+
+#+RESULTS:
+: [1] 0.001981892
+
+The first degrees of freedom corresponds to the number of linear
+hypotheses, here 3. It is not part of the output of the software.
+
+*** Inference: adjustment for multiple comparisons (single model)
+
+When performing multiple testing, adjustement for multiple comparisons
+is necessary in order to control the type 1 error rate, i.e. to
+provide interpretable p.values. The *multcomp* package enable to do
+such adjustment when all tests comes from the same =lvmfit= object:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+suppressPackageStartupMessages(library(multcomp))
+
+## simulate data
+mSim <- lvm(Y ~ 0.25 * X1 + 0.3 * X2 + 0.35 * X3 + 0.4 * X4 + 0.45 * X5 + 0.5 * X6)
+set.seed(10)
+df.data <- sim(mSim, n = 4e1)
+
+## fit lvm
+e.lvm <- estimate(lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+name.coef <- names(coef(e.lvm))
+n.coef <- length(name.coef)
+
+## Create contrast matrix
+Ccontrast <- matrix(0, ncol = n.coef, nrow = n.coef-2, 
+                    dimnames = list(grep("X",name.coef,value=TRUE),name.coef))
+diag(Ccontrast[,-1]) <- 1
+Ccontrast
+#+END_SRC
+
+#+RESULTS:
+:      Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
+: Y~X1 0    1    0    0    0    0    0    0
+: Y~X2 0    0    1    0    0    0    0    0
+: Y~X3 0    0    0    1    0    0    0    0
+: Y~X4 0    0    0    0    1    0    0    0
+: Y~X5 0    0    0    0    0    1    0    0
+: Y~X6 0    0    0    0    0    0    1    0
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+e.glht <- glht(e.lvm, linfct = Ccontrast)
+summary(e.glht)
+#+END_SRC
+#+RESULTS:
 #+begin_example
-Loading required package: lava
-lava version 1.5.1
-Loading required package: data.table
-data.table 1.10.4
-  The fastest way to learn (by data.table authors): https://www.datacamp.com/courses/data-analysis-the-data-table-way
-  Documentation: ?data.table, example(data.table) and browseVignettes("data.table")
-  Release notes, videos and slides: http://r-datatable.com
-lavaSearch2 version 1.0.0
-       Estimate Std. Error   t-value    P-value     df
-Y~X1  1.0177101 0.06759846 15.055226 0.00000000 197.00
-Y~X2  1.0162407 0.06126662 16.587184 0.00000000 197.00
-Y~~Y  0.9034974 0.09240061  9.778046         NA  49.25
-Y    -0.1179261 0.06814623 -1.730486 0.08510938 197.00
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+
+Linear Hypotheses:
+          Estimate Std. Error z value Pr(>|z|)   
+Y~X1 == 0   0.3270     0.1589   2.058  0.20726   
+Y~X2 == 0   0.4025     0.1596   2.523  0.06616 . 
+Y~X3 == 0   0.5072     0.1383   3.669  0.00145 **
+Y~X4 == 0   0.3161     0.1662   1.902  0.28588   
+Y~X5 == 0   0.3875     0.1498   2.586  0.05555 . 
+Y~X6 == 0   0.3758     0.1314   2.859  0.02479 * 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- single-step method)
+#+end_example
+
+Note that this correction rely on the Gaussian approximation. To use
+small sample corrections implemented in *lavaSearch2*, just call
+=glht2= instead of =glht=:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+e.glht2 <- glht2(e.lvm, linfct = Ccontrast)
+summary(e.glht2)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+
+Linear Hypotheses:
+          Estimate Std. Error t value Pr(>|t|)  
+Y~X1 == 0   0.3270     0.1723   1.898   0.3130  
+Y~X2 == 0   0.4025     0.1730   2.327   0.1375  
+Y~X3 == 0   0.5072     0.1499   3.385   0.0107 *
+Y~X4 == 0   0.3161     0.1802   1.754   0.3960  
+Y~X5 == 0   0.3875     0.1624   2.385   0.1216  
+Y~X6 == 0   0.3758     0.1425   2.637   0.0694 .
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- single-step method)
+#+end_example
+
+See the book: "Multiple Comparisons Using R" by Frank Bretz, Torsten
+Hothorn, and Peter Westfall (2011, CRC Press) for details about the
+theory underlying the *multcomp* package.
+
+*** Inference: adjustment for multiple comparisons (multiple models)
+
+Pipper et al. in "A Versatile Method for Confirmatory Evaluation of
+the Effects of a Covariate in Multiple Models" (2012, Journal of the
+Royal Statistical Society, Series C) developped a method to assess the
+effect of an exposure on several outcomes when a different model is
+fitted for each outcome. This method has been implemented in the =mmm=
+function from the *multcomp* package for glm and Cox
+models. *lavaSearch2* extends it to =lvm=. 
+
+Let's consider an example where we wish to assess the treatment effect
+on three outcomes X, Y, and Z. We have at hand three measurements
+relative to outcome Z for each individual:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+mSim <- lvm(X ~ Age + 0.5*Treatment,
+            Y ~ Gender + 0.25*Treatment,
+            c(Z1,Z2,Z3) ~ eta, eta ~ 0.75*treatment,
+            Age[40:5]~1)
+latent(mSim) <- ~eta
+categorical(mSim, labels = c("placebo","SSRI")) <- ~Treatment
+categorical(mSim, labels = c("male","female")) <- ~Gender
+
+n <- 5e1
+set.seed(10)
+df.data <- sim(mSim, n = n, latent = FALSE)
+head(df.data)
+#+END_SRC
+
+#+RESULTS:
+:          X      Age Treatment          Y Gender         Z1         Z2          Z3  treatment
+: 1 39.12289 39.10415   placebo  0.6088958 female  1.8714112  2.2960633 -0.09326935  1.1639675
+: 2 39.56766 39.25191      SSRI  1.0001325 female  0.9709943  0.6296226  1.31035910 -1.5233846
+: 3 41.68751 43.05884   placebo  2.1551047 female -1.1634011 -0.3332927 -1.30769267 -2.5183351
+: 4 44.68102 44.78019      SSRI  0.3852728 female -1.0305476  0.6678775  0.99780139 -0.7075292
+: 5 41.42559 41.13105   placebo -0.8666783   male -1.6342816 -0.8285492  1.20450488 -0.2874329
+: 6 42.64811 41.75832      SSRI -1.0710170 female -1.2198019 -1.9602130 -1.85472132 -0.4353083
+
+We fit a model specific to each outcome:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+lmX <- estimate(lvm(X ~ -1 + Age + Treatment), data = df.data)
+lmY <- estimate(lvm(Y ~ -1 + Gender + Treatment), data = df.data)
+lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ -1 + 1*eta, eta ~ -1 + Treatment), 
+                 data = df.data)
+#+END_SRC
+
+#+RESULTS:
+
+and combine them into a list of =lvmfit= objects:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
+#+END_SRC
+
+#+RESULTS:
+
+We can then generate a contrast matrix to test each coefficient
+related to the treatment:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+Cmatrix <- createContrast(ls.lvm, var.test = "Treatment")
+Cmatrix
+#+END_SRC
+
+#+RESULTS:
+:                      X: X~Age X: X~TreatmentSSRI X: X~~X Y: Y~Genderfemale Y: Y~TreatmentSSRI Y: Y~~Y Z: eta~TreatmentSSRI Z: Z1~~Z1 Z: Z2~~Z2 Z: Z3~~Z3
+: X: X~TreatmentSSRI          0                  1       0                 0                  0       0                    0         0         0         0
+: Y: Y~TreatmentSSRI          0                  0       0                 0                  1       0                    0         0         0         0
+: Z: eta~TreatmentSSRI        0                  0       0                 0                  0       0                    1         0         0         0
+:                      Z: eta~~eta
+: X: X~TreatmentSSRI             0
+: Y: Y~TreatmentSSRI             0
+: Z: eta~TreatmentSSRI           0
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+lvm.glht2 <- glht2(ls.lvm, linfct = Cmatrix)
+summary(lvm.glht2)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Linear Hypotheses:
+                          Estimate Std. Error t value Pr(>|t|)    
+X: X~TreatmentSSRI == 0     0.4659     0.2494   1.868 0.184541    
+Y: Y~TreatmentSSRI == 0     0.3029     0.2158   1.404 0.410228    
+Z: eta~TreatmentSSRI == 0   1.8280     0.4107   4.450 0.000162 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- single-step method)
+#+end_example
+
+This can be compared to the unadjusted p.values:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+summary(lvm.glht2, test = univariate())
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Linear Hypotheses:
+                          Estimate Std. Error t value Pr(>|t|)    
+X: X~TreatmentSSRI == 0     0.4659     0.2494   1.868   0.0679 .  
+Y: Y~TreatmentSSRI == 0     0.3029     0.2158   1.404   0.1669    
+Z: eta~TreatmentSSRI == 0   1.8280     0.4107   4.450 5.09e-05 ***
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Univariate p values reported)
+#+end_example
+
+*** Model diagnostic: detection of local dependencies
+The =modelsearch= function of *lava* is a diagnostic tool for latent
+variable models. It enables to search for local dependencies
+(i.e. model misspecification) and add them to the model. Obviously it
+is a data-driven procedure and its usefulness can be discussed,
+especially in small samples:
+- the procedure is instable, i.e. is likely to lead to two different
+  models when applied on two different dataset sampled from the same
+  generative model.
+- it is hard to define a meaningful significance threshold since
+  p-values should be adjusted for multiple comparisons and sequential
+  testing. However traditional methods like Bonferonni-Holm tends to
+  over corrected and therefore reduce the power of the procedure since
+  they assume that the test are independent.
+
+The function =modelsearch2= in *lavaSearch2* partially solves the
+second issue by adjusting the p-values for multiple testing.
+
+Let's see an example:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+## simulate data
+mSim <- lvm(c(y1,y2,y3)~u, u~x1+x2)
+latent(mSim) <- ~u
+covariance(mSim) <- y2~y3
+transform(mSim, Id~u) <- function(x){1:NROW(x)}
+set.seed(10)
+df.data <- lava::sim(mSim, n = 125, latent = FALSE)
+head(df.data)
+#+END_SRC
+
+#+RESULTS:
+:           y1           y2         y3         x1         x2 Id
+: 1  5.5071523  4.883752014  6.2928016  0.8694750  2.3991549  1
+: 2 -0.6398644  0.025832617  0.5088030 -0.6800096 -0.0898721  2
+: 3 -2.5835495 -2.616715027 -2.8982645  0.1732145 -0.8216484  3
+: 4 -2.5312637 -2.518185427 -2.9015033 -0.1594380 -0.2869618  4
+: 5  1.6346220 -0.001877577  0.3705181  0.7934994  0.1312789  5
+: 6  0.4939972  1.759884014  1.5010499  1.6943505 -1.0620840  6
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+## fit model
+m <- lvm(c(y1,y2,y3)~u, u~x1)
+latent(m) <- ~u
+addvar(m) <- ~x2 
+e.lvm <- estimate(m, data = df.data)
+#+END_SRC
+
+#+RESULTS:
+
+=modelsearch2= can be used to sequentially apply the =modelsearch=
+function with a given correction for the p.values.
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+resScore <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "holm",
+                         alpha = 0.1)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+** Sequential variable selection using the Wald statistic ** 
+ Number of possible additional links         : 10 
+ Maximum number of steps                     : 10
+ Adjustment method for multiple comparisons  : holm
+ Confidence level                            : 0.9
+ Number of cpus                              : 1
+
+Step 1:
+add u~x2 (statistic = 6.772351, adjusted.p.value = 1.267075e-10)
+Step 2:
+add y2~~y3 (statistic = 2.582396, adjusted.p.value = 0.08830535)
+Step 3:
+no variable to add (statistic = 1.813579, adjusted.p.value = 0.5579408)
+#+end_example
+
+To adjust for multiple comparisons, the argument statistic needs to be
+set to =Wald=.  Setting the argument =method.p.adjust= to =fastmax=
+instead of =max= enable to only compute the adjust
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+resMax <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "max",
+                       alpha = 0.1)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+** Sequential variable selection using the Wald statistic ** 
+ Number of possible additional links         : 10 
+ Maximum number of steps                     : 10
+ Adjustment method for multiple comparisons  : max
+ Type of standard error                      : information
+ Method for extracting the influence function: iid
+ Method for computing the quantile           : integration
+ Correction for sequential testing           : FALSE
+ Confidence level                            : 0.9
+ Number of cpus                              : 1
+
+Step 1:
+add u~x2 (statistic = 6.772351, adjusted.p.value = 9.590145e-10)
+Step 2:
+add y2~~y3 (statistic = 2.582396, adjusted.p.value = 0.07083737)
+Step 3:
+no variable to add
+#+end_example
+
+
+*** Model diagnostic: checking that the names of the variables in the model match those of the data
+
+When estimating latent variable models using *lava*, it sometimes
+happens that the model does not converge:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+## simulate data
+set.seed(10)
+df.data <- sim(lvm(Y~X1+X2), 1e2)
+
+## fit model
+mWrong <- lvm(Y ~ X + X2)
+eWrong <- estimate(mWrong, data = df.data)
+#+END_SRC
+
+#+RESULTS:
+: Warning messages:
+: 1: In estimate.lvm(mWrong, data = df.data) :
+:   Lack of convergence. Increase number of iteration or change starting values.
+: 2: In sqrt(diag(asVar)) : NaNs produced
+
+ This can have several reasons:
+- the model is not identifiable.
+- the optimization routine did not managed to find a local
+  optimum. This may happen for complex latent variable model where the
+  objective function is not convex or locally convex.
+- the user has made a mistake when defining the model or has not given
+  the appropriate dataset.
+
+The =checkData= function enable to check the last point. It compares
+the observed variables defined in the model and the one given by the
+dataset. In case of mismatch it returns a message:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+checkData(mWrong, df.data)
+#+END_SRC
+
+#+RESULTS:
+: Missing variable in data: X
+ 
+In presence of latent variables, the user needs to explicitely define
+them in the model, otherwise =checkData= will identify them as an
+issue:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+## simulate data
+set.seed(10)
+mSim <- lvm(c(Y1,Y2,Y3)~eta)
+latent(mSim) <- ~eta
+df.data <- sim(mSim, n = 1e2, latent = FALSE)
+
+## fit model
+m <- lvm(c(Y1,Y2,Y3)~eta)
+checkData(m, data = df.data)
+#+END_SRC
+
+#+RESULTS:
+: Missing variable in data: eta
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+latent(m) <- ~eta
+checkData(m, data = df.data)
+#+END_SRC
+
+#+RESULTS:
+: No issue detected
+
+
+** Information about the R session used for this document
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+sessionInfo()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+R version 3.4.0 (2017-04-21)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 7 x64 (build 7601) Service Pack 1
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=Danish_Denmark.1252  LC_CTYPE=Danish_Denmark.1252    LC_MONETARY=Danish_Denmark.1252 LC_NUMERIC=C                   
+[5] LC_TIME=Danish_Denmark.1252    
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+[1] multcomp_1.4-6    TH.data_1.0-8     MASS_7.3-47       survival_2.41-3   mvtnorm_1.0-6     lavaSearch2_1.0.0 data.table_1.10.4 lava_1.5.1       
+
+loaded via a namespace (and not attached):
+ [1] Rcpp_0.12.11       compiler_3.4.0     plyr_1.8.4         iterators_1.0.8    tools_3.4.0        optextras_2016-8.8 svUnit_0.7-12      tibble_1.3.3      
+ [9] gtable_0.2.0       lattice_0.20-35    ucminf_1.1-4       rlang_0.1.1        Matrix_1.2-9       foreach_1.4.3      parallel_3.4.0     Rcgmin_2013-2.21  
+[17] BB_2014.10-1       stats4_3.4.0       qqtest_1.1.1       grid_3.4.0         inline_0.3.14      setRNG_2013.9-1    tcltk_3.4.0        tmvtnorm_1.4-10   
+[25] dfoptim_2016.7-1   Rvmmin_2013-11.12  minqa_1.2.4        ggplot2_2.2.1      scales_0.4.1       codetools_0.2-15   splines_3.4.0      colorspace_1.3-2  
+[33] numDeriv_2016.8-1  quadprog_1.5-5     sandwich_2.4-0     optimx_2013.8.7    lazyeval_0.2.0     doParallel_1.0.10  munsell_0.4.3      gmm_1.5-2         
+[41] zoo_1.8-0
 #+end_example

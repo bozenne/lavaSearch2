@@ -7,7 +7,7 @@
 \usage{
 setLink(x, ...)
 
-\method{setLink}{lvm}(x, var1, var2, value, warnings = FALSE)
+\method{setLink}{lvm}(x, var1, var2, value, warnings = FALSE, ...)
 }
 \arguments{
 \item{x}{a lvm model}
@@ -26,8 +26,8 @@ setLink(x, ...)
 Generic interface to set a value to a link in a lvm object.
 }
 \examples{
-\dontrun{
-setLink <- lavaSearch2:::setLink
+library(lava)
+set.seed(10)
 
 m <- lvm()
 regression(m) <- c(y1,y2,y3)~u
@@ -41,5 +41,4 @@ estimate(m1, lava::sim(m,1e2))
 
 m2 <- setLink(m, y1 ~ y2, value = 0.5)
 estimate(m2, lava::sim(m,1e2))
-}
 }

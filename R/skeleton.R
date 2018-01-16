@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 15 2018 (13:38) 
+## Last-Updated: jan 16 2018 (09:08) 
 ##           By: Brice Ozenne
-##     Update #: 546
+##     Update #: 547
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -856,13 +856,13 @@ skeletonDtheta2.lvmfit <- function(object, data, OD,
 #' @param ... vectors
 #' 
 #' @examples
-#' .combination <- lavaSearch2:::.combination
 #' .combination(1,1)
 #' .combination(1:2,1:2)
 #' .combination(c(1:2,1:2),1:2)
 #' 
 #' .combination(alpha = 1:2, beta = 3:4)
-#' 
+#'
+#' @export
 .combination <- function(...){
 
     ## ** normalize arguments

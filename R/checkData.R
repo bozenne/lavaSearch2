@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (14:25) 
 ## Version: 
-## last-updated: jan 15 2018 (11:39) 
+## last-updated: jan 16 2018 (13:37) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 18
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,6 +23,7 @@
 #' 
 #' @param x a lvm model
 #' @param data the dataset containing the variables used to estimate the lvm.
+#' @param trace [logical] should a message be output to indicate the outcome of the check? 
 #' 
 #' @examples 
 #' m <- lvm()
@@ -40,23 +41,46 @@
 #'
 #' @export
 `checkData` <-
-  function(x, data) UseMethod("checkData")
+  function(x, data, trace) UseMethod("checkData")
 
 ## * checkData.lvm
 #' @rdname checkData
 #' @export
-checkData.lvm <- function(x, data){ 
+checkData.lvm <- function(x, data, trace = TRUE){ 
     vars <- vars(x)
     latent <- latent(x)
     missingVars <- vars[vars %in% names(data) == FALSE]
 
-    if(!identical(sort(latent),sort(missingVars))){
-        stop("Wrong specification of the latent variables \n",
-             "latent variables according to the LVM: ",paste(latent, collapse = " "),"\n",
-             "missing variables in data: ",paste(missingVars, collapse = " "),"\n")
-        return(invisible(FALSE))
+    if(length(latent) == 0){
+        
+        if(length(missingVars)>0){
+            if(trace){
+                cat("Missing variable in data: ",paste(missingVars, collapse = " "),"\n", sep ="")
+            }
+            return(invisible(FALSE))
+        }else{
+            if(trace){
+                cat("No issue detected \n")
+            }
+            return(invisible(TRUE))
+        }
+        
     }else{
-        return(invisible(TRUE))
+        
+        if(!identical(sort(latent),sort(missingVars))){
+            if(trace){
+                cat("Wrong specification of the latent variables \n",
+                    "latent variables according to the LVM: ",paste(latent, collapse = " "),"\n",
+                    "missing variables in data: ",paste(missingVars, collapse = " "),"\n", sep = "")
+            }
+            return(invisible(FALSE))
+        }else{
+            if(trace){
+                cat("No issue detected \n")
+            }
+            return(invisible(TRUE))
+        }
+        
     }
 }
 

@@ -464,7 +464,6 @@ modelsearch2.default <- function(object, link, data = NULL,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
                                          export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, initCpus = FALSE)
-           
         }
 
         ## ** update according the most significant p.value
@@ -520,7 +519,11 @@ modelsearch2.default <- function(object, link, data = NULL,
                 if(test.na){
                     cat("NA among the test statistics \n")
                 }else{
-                    cat("no variable to add \n")
+                    rowSelected <- which.max(ls.seqTests[[iStep]][, statistic])
+                    cat("no variable to add",
+                        " (statistic = ",ls.seqTests[[iStep]][rowSelected, statistic],
+                        ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, adjusted.p.value],
+                        ")\n",sep="")
                 }
             }
         }

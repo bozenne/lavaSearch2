@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: jan 15 2018 (22:01) 
+## last-updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 56
+##     Update #: 58
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(pbkrtest)
@@ -402,8 +400,8 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
 e.lvm <- estimate(m, dW)
 
 
-e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
-               data = df.dL, REML = FALSE)
+e.lmer <- lme4::lmer(value ~ time + G + Gender + (1|Id),
+                     data = df.dL, REML = FALSE)
 
 
 ## *** tests

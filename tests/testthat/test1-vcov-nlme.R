@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 13 2017 (15:52) 
 ## Version: 
-## Last-Updated: jan 15 2018 (22:01) 
+## Last-Updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 12
+##     Update #: 15
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(nlme)
@@ -37,7 +35,7 @@ m <- lvm(Y~X1+X2+X3)
 set.seed(10)
 d <- sim(m,n)
 
-e.gls <- gls(Y~X1+X2+X3, data = d, method = "ML")
+e.gls <- nlme::gls(Y~X1+X2+X3, data = d, method = "ML")
 e.lm <- lm(Y~X1+X2+X3, data = d)
 
 Sigma.gls <- attr(residuals2(e.gls, data = d, cluster = 1:n, 

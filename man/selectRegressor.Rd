@@ -7,7 +7,7 @@
 \usage{
 selectRegressor(x, ...)
 
-\method{selectRegressor}{formula}(x, type = "call")
+\method{selectRegressor}{formula}(x, type = "call", ...)
 }
 \arguments{
 \item{x}{a formula}
@@ -20,8 +20,7 @@ selectRegressor(x, ...)
 Return the regressor variables contained in the formula
 }
 \examples{
-\dontrun{
-# selectRegressor <- lavaSearch2:::selectRegressor
+
 selectRegressor(Y1~X1+X2)
 selectRegressor(Y1~X1+X2, type = "vars")
 
@@ -30,5 +29,5 @@ selectRegressor(Y1+Y2~X1+Y1, type = "vars")
 
 selectRegressor(~X1+X2)
 selectRegressor(~X1+X2, type = "vars")
-}
+
 }

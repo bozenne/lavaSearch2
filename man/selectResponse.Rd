@@ -7,7 +7,7 @@
 \usage{
 selectResponse(x, ...)
 
-\method{selectResponse}{formula}(x, type = "call")
+\method{selectResponse}{formula}(x, type = "call", ...)
 }
 \arguments{
 \item{x}{a formula}
@@ -20,8 +20,6 @@ selectResponse(x, ...)
 Return the reponse variable contained in the formula.
 }
 \examples{
-\dontrun{
-# selectResponse <- lavaSearch2:::selectResponse
 selectResponse(Y1~X1+X2)
 selectResponse(Y1~X1+X2, type = "vars")
 selectResponse(Surv(event,time)~X1+X2, type = "vars")
@@ -31,5 +29,5 @@ selectResponse(Y1+Y2~X1+Y1, type = "vars")
 
 selectResponse(~X1+X2)
 selectResponse(~X1+X2, type = "vars")
-}
+
 }

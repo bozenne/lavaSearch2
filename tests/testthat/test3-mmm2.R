@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 15 2018 (21:59) 
+## Last-Updated: jan 16 2018 (17:35) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 47
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(multcomp)
@@ -30,7 +28,7 @@ lava.options(symbols = c("~","~~"))
 
 context("multcomp - mmm")
 
-## * linear regression
+## * simulation
 mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5,Y6,Y7,Y8,Y9,Y10)~ beta * eta, E ~ 1)
 latent(mSim) <- "eta"
 set.seed(10)
@@ -38,21 +36,23 @@ n <- 1e2
 
 dt.data <- as.data.table(sim(mSim, n, latent = FALSE, p = c(beta = 1)))
 
+## * linear regression
 name.Y <- setdiff(endogenous(mSim),"E")
 n.Y <- length(name.Y)
 
 ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
 ls.lm <- lapply(ls.formula, lm, data = dt.data)
 names(ls.lm) <- name.Y
-
+    
 
 test_that("mmm2 vs mmm", {
     ## rescaling using std dev
     class(ls.lm) <- "mmm"
     e.glht <- glht(ls.lm, mlf("E = 0"))
-    
+
     class(ls.lm) <- "mmm2"
-    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = FALSE)
+    e.glht2 <- glht(ls.lm, mlf2("E = 0"),
+                    adjust.residuals = FALSE, robust = FALSE)
 
     expect_equal(e.glht$vcov, n/(n-2)*e.glht2$vcov)
     e.glht$vcov <- NULL
@@ -65,10 +65,12 @@ test_that("mmm2 vs mmm", {
 
     ## no rescaling
     class(ls.lm) <- "mmm"
-    e.glht <- glht(ls.lm, mlf("E = 0"), vcov = sandwich)
+    e.glht <- glht(ls.lm, mlf("E = 0"),
+                   vcov = sandwich)
     
     class(ls.lm) <- "mmm2"    
-    e.glht2 <- glht(ls.lm, mlf2("E = 0"), adjust.residuals = FALSE, robust = TRUE)
+    e.glht2 <- glht(ls.lm, mlf2("E = 0"),
+                    adjust.residuals = FALSE, robust = TRUE)
     
     e.glht2$df <- 0
     e.glht2$model <- NULL
@@ -110,7 +112,6 @@ ls.lvm <- list(Y1 = estimate(lvm(Y1~E), data = dt.data),
                Y9 = estimate(lvm(Y9~E), data = dt.data),
                Y10 = estimate(lvm(Y10~E), data = dt.data)
                )
-class(ls.lvm) <- "ls.lvmfit"
 
 ls.lm <- list(Y1 = lm(Y1~E, data = dt.data),
               Y2 = lm(Y2~E, data = dt.data),
@@ -126,7 +127,15 @@ ls.lm <- list(Y1 = lm(Y1~E, data = dt.data),
 class(ls.lm) <- "mmm"
 
 test_that("ls.lvmfit vs mmm", {
-    ## ls.lvmfit
+
+    ##
+    C <- createContrast(ls.lvm, var.test = "E")
+    lvm2.glht <- glht2(ls.lvm, linfct = C,
+                       adjust.residuals = FALSE, robust = TRUE)
+    lvm2.sglht <- summary(lvm.glht)    
+
+    ##
+    class(ls.lvm) <- "ls.lvmfit"
     lvm.coef <- names(unlist(lapply(ls.lvm,coef)))
     target.coef <- grep("E",lvm.coef, value = TRUE)
     n.coef <- length(lvm.coef)
@@ -137,20 +146,26 @@ test_that("ls.lvmfit vs mmm", {
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
     lvm.glht$vcov <- vcov(ls.lvm, return.null = FALSE,
                           adjust.residuals = FALSE, robust = TRUE)
-    lvm.sglht <- summary(lvm.glht)    
+    lvm.sglht <- summary(lvm.glht)
+
 
     ## mmm
     lm.coef <- names(unlist(lapply(ls.lm,coef)))
     target.coef <- grep("E",lm.coef, value = TRUE)
     n.target <- length(target.coef)
     n.coef <- length(lm.coef)
-    lm.C <- matrix(0, n.target, n.coef, dimnames = list(target.coef, lm.coef) )
+    lm.C <- matrix(0, nrow = n.target, ncol = n.coef,
+                   dimnames = list(target.coef, lm.coef) )
     diag(lm.C[target.coef,target.coef]) <- 1
     
     lm.glht <- glht(ls.lm, linfct = lm.C, vcov = sandwich)
     lm.sglht <- summary(lm.glht)
 
     ## compare
+    expect_equal(as.numeric(lvm2.sglht$test$pvalues),
+                 as.numeric(lvm.sglht$test$pvalues),
+                 tol = attr(lm.sglht$test$pvalues,"error")/10)
+    
     expect_equal(as.double(lvm.sglht$test$coefficients),
                  as.double(lm.sglht$test$coefficients))
 
@@ -159,7 +174,7 @@ test_that("ls.lvmfit vs mmm", {
 
     expect_equal(as.double(lvm.sglht$test$pvalues),
                  as.double(lm.sglht$test$pvalues),
-                 tol = attr(lm.sglht$test$pvalues,"error"))
+                 tol = attr(lm.sglht$test$pvalues,"error")/10)
 })
 
 ##----------------------------------------------------------------------

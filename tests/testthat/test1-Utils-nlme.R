@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: jan 15 2018 (22:01) 
+## Last-Updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 31
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(nlme)
@@ -42,18 +40,18 @@ dL <- melt(dW,id.vars = c("G","Id","Gender"), variable.name = "time")
 setkey(dL, "Id")
 
 ## * Compound symmetry
-e.lme <- lme(value ~ time + G + Gender,
-             random = ~ 1|Id,
-             data = dL,
-             method = "ML")
-e.lme.bis <- lme(value ~ time + G + Gender,
-                 random = ~ 1|Id,
-                 correlation = corCompSymm(),
-                 data = dL,
-                 method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corCompSymm(form=~ 1|Id),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender,
+                   random = ~ 1|Id,
+                   data = dL,
+                   method = "ML")
+e.lme.bis <- nlme::lme(value ~ time + G + Gender,
+                       random = ~ 1|Id,
+                       correlation = corCompSymm(),
+                       data = dL,
+                       method = "ML")
+e.gls <- nlme::gls(value ~ time + G + Gender,
+                   correlation = corCompSymm(form=~ 1|Id),
+                   data = dL, method = "ML")
 
 vecCoef.lme <- .coef2(e.lme)
 vecCoef.lme.bis <- .coef2(e.lme.bis)
@@ -102,14 +100,14 @@ test_that("Compound symmetry", {
 })
 
 ## * Unstructured 
-e.lme <- lme(value ~ time + G + Gender,
-             random = ~ 1|Id,
-             correlation = corSymm(),
-             data = dL,
-             method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corSymm(form=~ 1|Id),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender,
+                   random = ~ 1|Id,
+                   correlation = corSymm(),
+                   data = dL,
+                   method = "ML")
+e.gls <- nlme::gls(value ~ time + G + Gender,
+                   correlation = corSymm(form=~ 1|Id),
+                   data = dL, method = "ML")
 
 vecCoef.lme <- .coef2(e.lme)
 vecCoef.gls <- .coef2(e.gls)
@@ -144,16 +142,16 @@ test_that("Unstructured ", {
 })
 
 ## * Unstructured with weight
-e.lme <- lme(value ~ time + G + Gender,
-             random = ~ 1|Id,
-             correlation = corSymm(),
-             weight = varIdent(form = ~ 1|time),
-             data = dL,
-             method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corSymm(form=~ 1|Id),
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender,
+                   random = ~ 1|Id,
+                   correlation = corSymm(),
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL,
+                   method = "ML")
+e.gls <- nlme::gls(value ~ time + G + Gender,
+                   correlation = corSymm(form=~ 1|Id),
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL, method = "ML")
 
 vecCoef.lme <- .coef2(e.lme)
 vecCoef.gls <- .coef2(e.gls)
@@ -188,14 +186,14 @@ test_that("Unstructured ", {
 })
 
 ## * 2 random effect model (error)
-e.lme <- lme(value ~ time + G + Gender,
-             random=~1|Id/Gender,
-             data = dL,
-             method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender,
+                   random=~1|Id/Gender,
+                   data = dL,
+                   method = "ML")
 
 expect_error(.getGroups2(e.lme))
 
-## e.lme <- lme(value ~ time + G + Gender,
+## e.lme <- nlme::lme(value ~ time + G + Gender,
 ##              random=~1|Id,
 ##              correlation=corCompSymm(form = ~1|Gender),
 ##              data = dL,

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:31) 
+## Last-Updated: jan 16 2018 (10:01) 
 ##           By: Brice Ozenne
-##     Update #: 796
+##     Update #: 797
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,7 +42,8 @@
     function(object, ...) UseMethod("residuals2")
 
 ## * residuals2.lm
-
+#' @rdname residuals2
+#' @export
 residuals2.lm <- function(object, 
                           adjust.residuals = TRUE,
                           return.vcov.param = FALSE, ...){

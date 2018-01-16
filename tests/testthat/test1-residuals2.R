@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: jan 15 2018 (22:00) 
+## Last-Updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 44
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(nlme)
@@ -114,12 +112,12 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
     latent(m) <- ~eta1
     e.lvm <- estimate(m,dW)
 
-    e.gls <- gls(value ~ variable + G1, data = dL,
-                 correlation = corCompSymm(form =~ variable|Id),
-                 method = "ML")
-    e.lme <- lme(value ~ variable + G1, data = dL,
-                 random =~ 1|Id,
-                 method = "ML")
+    e.gls <- nlme::gls(value ~ variable + G1, data = dL,
+                       correlation = corCompSymm(form =~ variable|Id),
+                       method = "ML")
+    e.lme <- nlme::lme(value ~ variable + G1, data = dL,
+                       random =~ 1|Id,
+                       method = "ML")
 
     expect_equal(as.double(logLik(e.lvm)),as.double(logLik(e.gls)))
     expect_equal(as.double(logLik(e.lvm)),as.double(logLik(e.lme)))

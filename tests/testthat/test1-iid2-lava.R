@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (13:31) 
 ## Version: 
-## last-updated: jan 15 2018 (22:00) 
+## last-updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 138
+##     Update #: 140
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,11 +18,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(clubSandwich)
@@ -92,7 +90,8 @@ test_that("iid2.lm/iid2.lvm matches clubSandwich", {
 
     VsandwichHC2.lm <- crossprod(eHC2.iid2.lm)
 
-    expect_equal(as.matrix(vcovCR(e.lm, type = "CR2", cluster = d$Id)),
+    V.GS <- clubSandwich::vcovCR(e.lm, type = "CR2", cluster = d$Id)
+    expect_equal(as.matrix(V.GS),
                  VsandwichHC2.lm[name.coef,name.coef])
 })
 

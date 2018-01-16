@@ -5,14 +5,16 @@
 \alias{checkData.lvm}
 \title{Check that Validity of the Dataset}
 \usage{
-checkData(x, data)
+checkData(x, data, trace)
 
-\method{checkData}{lvm}(x, data)
+\method{checkData}{lvm}(x, data, trace = TRUE)
 }
 \arguments{
 \item{x}{a lvm model}
 
 \item{data}{the dataset containing the variables used to estimate the lvm.}
+
+\item{trace}{[logical] should a message be output to indicate the outcome of the check?}
 }
 \description{
 Check the validity of the dataset used to estimate a lvm.

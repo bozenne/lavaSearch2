@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan 15 2018 (22:00) 
+## last-updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 146
+##     Update #: 147
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(clubSandwich)
@@ -66,7 +64,7 @@ df-e.ttest$parameter
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
 e.lm <- lm(Y1~X1+X2, data = dW)
-e.gls <- gls(Y1~X1+X2, data = dW, method = "ML")
+e.gls <- nlme::gls(Y1~X1+X2, data = dW, method = "ML")
 
 ## vcov(e.lvm)
 
@@ -119,13 +117,13 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
 e.lvm <- estimate(m, dW)
 ## lTest(e.lvm)
 
-e.lmer <- lmer(value ~ time + G + Gender + (1|Id),
+e.lmer <- lme4::lmer(value ~ time + G + Gender + (1|Id),
                data = df.dL, REML = FALSE)
 
-e.lme <- lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corCompSymm(form=~ 1|Id),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ time + G + Gender,
+                   correlation = corCompSymm(form=~ 1|Id),
+                   data = dL, method = "ML")
 
 ## *** clubSandwich - bug
 expect_equal(logLik(e.lmer),logLik(e.lme))
@@ -189,15 +187,15 @@ test_that("mixed model: df adjusted",{
 
 m <- lvm(c(Y1~eta,Y2~eta,Y3~eta,eta~G+Gender))
 e.lvm <- estimate(m, dW)
-e.lme <- lme(value ~ time + G + Gender,
-             random = ~ 1|Id,
-             correlation = corSymm(),
-             weight = varIdent(form = ~1|time),
-             data = dL, method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corSymm(form=~ 1|Id),
-             weight = varIdent(form = ~1|time),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G + Gender,
+                   random = ~ 1|Id,
+                   correlation = corSymm(),
+                   weight = varIdent(form = ~1|time),
+                   data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ time + G + Gender,
+                   correlation = corSymm(form=~ 1|Id),
+                   weight = varIdent(form = ~1|time),
+                   data = dL, method = "ML")
 
 logLik(e.lvm)
 logLik(e.lme)

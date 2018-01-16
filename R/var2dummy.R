@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: jan 15 2018 (11:47) 
+## last-updated: jan 16 2018 (09:06) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 18
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,8 +27,8 @@
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
 #' @examples
-#' \dontrun{
-#' # var2dummy <- lavaSearch2:::var2dummy
+#' library(lava)
+#' 
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
 #' regression(m) <- u ~ X1+X2
@@ -37,13 +37,12 @@
 #' var2dummy(m, var = c("X1","X2"))
 #' categorical(m,labels=c("1","2","3")) <- ~X2
 #' var2dummy(m, var = c("X1","X2"))
-#' }
-#' 
-
+#' @export
 `var2dummy` <-
   function(x,...) UseMethod("var2dummy")
 
 #' @rdname var2dummy
+#' @export
 var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
 
     var <- stats::setNames(var,var)
@@ -63,6 +62,7 @@ var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
 }
 
 #' @rdname var2dummy
+#' @export
 var2dummy.lvm <- function(x, data = NULL, ...){
 
     if(is.null(data)){

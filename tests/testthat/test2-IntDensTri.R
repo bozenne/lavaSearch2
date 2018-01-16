@@ -20,8 +20,6 @@ if(TRUE){ ## already called in test-all.R
     rm(list = ls(all.names = TRUE))
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(mvtnorm)

@@ -4,7 +4,7 @@
 \alias{addLink}
 \alias{addLink.lvm}
 \alias{addLink.lvm.reduced}
-\title{Add a Aew Link Between Two Variables in a LVM}
+\title{Add a New Link Between Two Variables in a LVM}
 \usage{
 addLink(x, ...)
 
@@ -35,8 +35,8 @@ Generic interface to add links to lvm objects.
 The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(x)} does not return all variables. The command \code{vars(x, xlp = TRUE)} must be used instead.
 }
 \examples{
-\dontrun{
-addLink <- lavaSearch2:::addLink
+library(lava)
+set.seed(10)
 
 m <- lvm()
 regression(m) <- c(y1,y2,y3)~u
@@ -44,12 +44,12 @@ regression(m) <- u~x1+x2
 latent(m) <- ~u
 m2 <- m
 
-addLink(m, x1 ~ y1)
-addLink(m, y1 ~ x1)
+addLink(m, x1 ~ y1, covariance = FALSE)
+addLink(m, y1 ~ x1, covariance = FALSE)
 coef(addLink(m, y1 ~ y2, covariance = TRUE))
 
-addLink(m2, "x1", "y1")
-addLink(m2, "y1", "x1")
-coef(addLink(m, "y1", "y2", covariance = TRUE))
-}
+addLink(m2, "x1", "y1", covariance = FALSE)
+addLink(m2, "y1", "x1", covariance = FALSE)
+newM <- addLink(m, "y1", "y2", covariance = TRUE)
+coef(newM)
 }

@@ -16,9 +16,8 @@
 #'
 #' @return A list
 #' 
-#' @examples 
-#' \dontrun{
-#' findNewLink <- lavaSearch2:::findNewLink
+#' @examples
+#' library(lava)
 #' 
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
@@ -33,7 +32,6 @@
 #' findNewLink(m, rm.endo = FALSE)
 #' findNewLink(m, rm.endo = TRUE)
 #' findNewLink(m, rm.endo = TRUE, output = "index")
-#' }
 #' @export
 `findNewLink` <-
   function(x, ...) UseMethod("findNewLink")
@@ -124,7 +122,7 @@ findNewLink.lvm <- function(x, data = NULL,
 
 ## * addLink
 ## ** doc addLink
-#' @title Add a Aew Link Between Two Variables in a LVM
+#' @title Add a New Link Between Two Variables in a LVM
 #' @rdname addLink
 #' @description Generic interface to add links to lvm objects.
 #' 
@@ -140,9 +138,9 @@ findNewLink.lvm <- function(x, data = NULL,
 #' The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(x)} does not return all variables. The command \code{vars(x, xlp = TRUE)} must be used instead.
 #' 
 #' 
-#' @examples 
-#' \dontrun{
-#' addLink <- lavaSearch2:::addLink
+#' @examples
+#' library(lava)
+#' set.seed(10)
 #' 
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
@@ -150,14 +148,14 @@ findNewLink.lvm <- function(x, data = NULL,
 #' latent(m) <- ~u
 #' m2 <- m
 #' 
-#' addLink(m, x1 ~ y1)
-#' addLink(m, y1 ~ x1)
+#' addLink(m, x1 ~ y1, covariance = FALSE)
+#' addLink(m, y1 ~ x1, covariance = FALSE)
 #' coef(addLink(m, y1 ~ y2, covariance = TRUE))
 #' 
-#' addLink(m2, "x1", "y1")
-#' addLink(m2, "y1", "x1")
-#' coef(addLink(m, "y1", "y2", covariance = TRUE))
-#' }
+#' addLink(m2, "x1", "y1", covariance = FALSE)
+#' addLink(m2, "y1", "x1", covariance = FALSE)
+#' newM <- addLink(m, "y1", "y2", covariance = TRUE)
+#' coef(newM)
 #' @export
 `addLink` <-
     function(x, ...) UseMethod("addLink")
@@ -242,7 +240,7 @@ addLink.lvm.reduced <- function(x, ...){
 }
 
 ## * setLink
-## ** doc setLink
+## ** Documentation - setLink
 #' @title Set a Link to a Value
 #' @name setLink
 #' @description Generic interface to set a value to a link in a lvm object.
@@ -255,8 +253,8 @@ addLink.lvm.reduced <- function(x, ...){
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
 #' @examples
-#' \dontrun{
-#' setLink <- lavaSearch2:::setLink
+#' library(lava)
+#' set.seed(10)
 #' 
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
@@ -270,14 +268,14 @@ addLink.lvm.reduced <- function(x, ...){
 #' 
 #' m2 <- setLink(m, y1 ~ y2, value = 0.5)
 #' estimate(m2, lava::sim(m,1e2))
-#' }
 #' @export
 `setLink` <-
   function(x, ...) UseMethod("setLink")
 
 ## ** method setLink.lvm
 #' @rdname setLink
-setLink.lvm <- function(x, var1, var2, value, warnings = FALSE){
+#' @export
+setLink.lvm <- function(x, var1, var2, value, warnings = FALSE, ...){
 
   res <- initVarLink(var1, var2)
   var1 <- res$var1

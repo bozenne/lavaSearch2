@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: jan 15 2018 (22:01) 
+## last-updated: jan 16 2018 (10:47) 
 ##           By: Brice Ozenne
-##     Update #: 96
+##     Update #: 100
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(nlme)
@@ -46,7 +44,7 @@ dL$Z1 <- rnorm(NROW(dL))
 m <- lvm(c(Y1~G))
 e.lvm <- estimate(m, dW)
 
-e.gls <- gls(Y1 ~ G, data = dW, method = "ML")
+e.gls <- nlme::gls(Y1 ~ G, data = dW, method = "ML")
 allCoef.gls <- c(coef(e.gls),sigma2 = sigma(e.gls)^2)
 
 test_that("gls equivalent to lvm", {
@@ -63,9 +61,9 @@ test_that("score2.gls equivalent to score.lvm", {
 m <- lvm(c(Y1~G,Y2~G,Y3~G))
 e.lvm <- estimate(m, dW)
 
-e.gls <- gls(value ~ 0+time + time:G,
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ 0+time + time:G,
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL, method = "ML")
 allCoef.gls <- .coef2(e.gls)
 attributes(allCoef.gls) <- attributes(allCoef.gls)["names"]
 
@@ -100,13 +98,13 @@ m <- lvm(c(Y1[mu1:sigma2]~1*eta,
            eta~G))
 e.lvm <- estimate(m, dW)
 
-e.lme <- lme(value ~ time + G,
-             random =~1| Id,
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G,
+                   random =~1| Id,
+                   data = dL, method = "ML")
 
-e.gls <- gls(value ~ time + G,
-             correlation = corCompSymm(form = ~1| Id),
-             data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ time + G,
+                   correlation = corCompSymm(form = ~1| Id),
+                   data = dL, method = "ML")
 
 allCoef.lme <- .coef2(e.lme)
 # .coef2(e.gls)
@@ -151,15 +149,15 @@ m <- lvm(c(Y1~1*eta,
            eta~G))
 e.lvm <- estimate(m, dW)
 
-e.lme <- lme(value ~ time + G,
-             random =~1| Id,
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time + G,
+                   random =~1| Id,
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL, method = "ML")
 
-e.gls <- gls(value ~ time + G,
-             correlation = corCompSymm(form = ~1| Id),
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ time + G,
+                   correlation = corCompSymm(form = ~1| Id),
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL, method = "ML")
 
 allCoef.lme <- .coef2(e.lme)
 # .coef2(e.gls)
@@ -211,16 +209,16 @@ covariance(m) <- Y1~Y2
 covariance(m) <- Y1~Y3
 e.lvm <- estimate(m, dW)
 
-e.lme <- lme(value ~ time,
-             random =~1| Id,
-             correlation = corSymm(),
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.lme <- nlme::lme(value ~ time,
+                         random =~1| Id,
+                         correlation = corSymm(),
+                         weight = varIdent(form = ~ 1|time),
+                         data = dL, method = "ML")
 
-e.gls <- gls(value ~ time,
-             correlation = corSymm(form = ~1| Id),
-             weight = varIdent(form = ~ 1|time),
-             data = dL, method = "ML")
+e.gls <- nlme::gls(value ~ time,
+                   correlation = corSymm(form = ~1| Id),
+                   weight = varIdent(form = ~ 1|time),
+                   data = dL, method = "ML")
 
 allCoef.lme <- .coef2(e.lme)
 # .coef2(e.gls)

@@ -35,8 +35,7 @@ A list
 Find all new links between variables (copied from lava::modelsearch).
 }
 \examples{
-\dontrun{
-findNewLink <- lavaSearch2:::findNewLink
+library(lava)
 
 m <- lvm()
 regression(m) <- c(y1,y2,y3)~u
@@ -51,5 +50,4 @@ latent(m) <- ~u
 findNewLink(m, rm.endo = FALSE)
 findNewLink(m, rm.endo = TRUE)
 findNewLink(m, rm.endo = TRUE, output = "index")
-}
 }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: jan 15 2018 (22:00) 
+## last-updated: jan 16 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 187
+##     Update #: 188
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,9 @@
 
 ## * header
 if(TRUE){ ## already called in test-all.R
-    rm(list = ls(all.names = TRUE))
+    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
-    library(data.table)
-    library(lava)    
 }
 
 library(lava.tobit)

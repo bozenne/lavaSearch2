@@ -135,8 +135,6 @@ initVarLinks <- function(var1, format = "list",...){
 #' @param ... additional arguments to be passed to lower levels functions.
 #'
 #' @examples
-#' \dontrun{
-#' # selectResponse <- lavaSearch2:::selectResponse
 #' selectResponse(Y1~X1+X2)
 #' selectResponse(Y1~X1+X2, type = "vars")
 #' selectResponse(Surv(event,time)~X1+X2, type = "vars")
@@ -146,9 +144,7 @@ initVarLinks <- function(var1, format = "list",...){
 #' 
 #' selectResponse(~X1+X2)
 #' selectResponse(~X1+X2, type = "vars")
-#' }
-
-## * selectResponse (generic method)
+#' 
 #' @rdname selectResponse
 #' @export
 `selectResponse` <-  function(x, ...) UseMethod("selectResponse")
@@ -156,7 +152,8 @@ initVarLinks <- function(var1, format = "list",...){
 ## * selectResponse.formula
 #' @rdname selectResponse
 #' @method selectResponse formula
-selectResponse.formula <- function(x, type = "call"){
+#' @export
+selectResponse.formula <- function(x, type = "call", ...){
   
   match.arg(type, c("call","vars"))
   
@@ -182,8 +179,7 @@ selectResponse.formula <- function(x, type = "call"){
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
 #' @examples
-#' \dontrun{
-#' # selectRegressor <- lavaSearch2:::selectRegressor
+#' 
 #' selectRegressor(Y1~X1+X2)
 #' selectRegressor(Y1~X1+X2, type = "vars")
 #' 
@@ -192,9 +188,7 @@ selectResponse.formula <- function(x, type = "call"){
 #' 
 #' selectRegressor(~X1+X2)
 #' selectRegressor(~X1+X2, type = "vars")
-#' }
-
-## * selectRegressor (generic method)
+#' 
 #' @rdname selectRegressor
 #' @export
 `selectRegressor` <-  function(x, ...) UseMethod("selectRegressor")
@@ -202,7 +196,8 @@ selectResponse.formula <- function(x, type = "call"){
 ## * selectRegressor.formula
 #' @rdname selectRegressor
 #' @method selectRegressor formula
-selectRegressor.formula <- function(x, type = "call"){
+#' @export
+selectRegressor.formula <- function(x, type = "call", ...){
   
   match.arg(type, c("call","vars"))
   

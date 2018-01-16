@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:40) 
 ## Version: 
-## last-updated: jan 15 2018 (11:33) 
+## last-updated: jan 16 2018 (09:38) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 63
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -44,8 +44,6 @@
 #' 
 #' @examples
 #'
-#' createGrid <- lavaSearch2:::createGrid
-#' 
 #' ## no z 
 #' gridInt_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
 #'                          d.z = 0, fine = FALSE, double = FALSE)
@@ -75,6 +73,7 @@
 
 ## * createGrid
 #' @rdname createGrid
+#' @export
 createGrid <- function(n,
                        xmin, xmax, d.y, 
                        d.z, zmax,

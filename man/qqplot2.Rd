@@ -33,11 +33,15 @@ QQplot for the residuals of a lvm object.
 Simulation is based on a multivariate truncated normal law (even though it is not satifying for the variance components)
 }
 \examples{
+library(lava)
 m <- lvm(list(y~v1+v2+v3+v4,c(v1,v2,v3,v4)~x))
-covariance(m) <- v1~v2+v3+v4
 latent(m) <- ~ x
-dd <- lava::sim(m,100) ## Simulate 100 observations from model
+
+set.seed(10)
+dd <- sim(m,100) ## Simulate 100 observations from model
 e <- estimate(m, dd) ## Estimate parameters
+
+coef(e)
 
 qqplot2(e)
 
