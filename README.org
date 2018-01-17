@@ -505,7 +505,7 @@ Here the difference is small because the generative model did not
 include an unknown correlation structure. Because it can be time
 consuming to compute the exact p-values, an approximation could be to
 only compute them when no p-value passes the bonferroni correction at
-a given step. The what the option =fastmax= does:
+a given step. The is what the option =fastmax= does:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 resMax2 <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "fastmax",
                         alpha = 0.1, trace = FALSE)
