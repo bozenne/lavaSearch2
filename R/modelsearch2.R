@@ -595,6 +595,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                    sequenceSigma = ls.seqSigma,
                    statistic = statistic,
                    method.p.adjust = method.p.adjust,
+                   typeSD = attr(iid.FCT,"typeSD"),
                    alpha = alpha,
                    cv = cv)
     class(output) <- "modelsearch2"

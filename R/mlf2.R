@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 16 2018 (17:34) 
+## Last-Updated: jan 17 2018 (17:16) 
 ##           By: Brice Ozenne
-##     Update #: 122
+##     Update #: 128
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,8 +42,10 @@ mlf2 <- function(...) {
 #' @param robust should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
 #' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{lTest}.
-#' #'
+#' 
 #' @examples
+#' library(multcomp)
+#' 
 #' ## Simulate data
 #' mSim <- lvm(c(Y1,Y2,Y3)~ beta * eta, E ~ 1)
 #' latent(mSim) <- "eta"
@@ -163,7 +165,8 @@ glht2 <- function (model, linfct, adjust.residuals = TRUE, robust = FALSE, ...){
     }else{
         class(linfct) <- append("mlf2",class(linfct))
         class(model) <- "ls.lvmfit"
-        out <- glht(model, linfct, adjust.residuals = adjust.residuals, ...)
+        out <- glht(model, linfct,
+                    adjust.residuals = adjust.residuals, robust = robust, ...)
     }
 
     return(out)

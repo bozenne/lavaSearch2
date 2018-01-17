@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: jan 12 2018 (10:39) 
+## last-updated: jan 17 2018 (17:02) 
 ##           By: Brice Ozenne
-##     Update #: 53
+##     Update #: 61
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@
 #' @export
 summary.modelsearch2 <- function(object, display = TRUE, ...){
 
-    convergence <- df <- NULL ## [:for CRAN check] data.table
+    convergence <- df <- p.value <- NULL ## [:for CRAN check] data.table
     
     ## ** extract data from object
     xx <- copy(object$sequenceTest)
@@ -45,15 +45,25 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
     }else{
         dt.seqTest[, "nTests.adj" := 0.05/(2*(1-stats::pnorm(quantile)))]
     }
+    if(object$method.p.adjust == "fastmax"){
+        dt.seqTest[p.value==0, c("p.value", "adjusted.p.value") := NA]
+    }
     
     ## ** output
     out <- list(output = list(), data = dt.seqTest)
     statistic <- switch(object$statistic,
-                        "Wald" = "robust Wald",
+                        "Wald" = "Wald",
                         "score" = "score",
                         "LR" = "likelihood ratio",
                         "NA" = "NA")
-           
+    if(statistic=="Wald"){
+        addOn <- switch(object$typeSD,
+                        "information"="",
+                        "robust"="robust ",
+                        "jackknife"="jackknife ")
+        statistic <- paste0(addOn, statistic)
+    }
+    
     out$output$message.pre <- paste0("Sequential search for local dependence using the ",statistic," statistic \n")
     if(n.selected==0){
         out$output$message.pre <- c(out$output$message.pre,

@@ -2,12 +2,12 @@
 % Please edit documentation in R/mmm2.R
 \name{createContrast}
 \alias{createContrast}
-\alias{createContrast.ls.lvmfit}
+\alias{createContrast.list}
 \title{Contrast matrix for multiple latent variable models}
 \usage{
 createContrast(object, ...)
 
-\method{createContrast}{ls.lvmfit}(object, coef.test = NULL, n.test = 0,
+\method{createContrast}{list}(object, coef.test = NULL, n.test = 0,
   var.test = NULL, ...)
 }
 \arguments{
@@ -46,9 +46,8 @@ lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ -1 + 1*eta, eta ~ -1 + Treatment),
 
 ## Contrast matrix for the join model
 ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
-class(ls.lvm) <- "ls.lvmfit"
-createContrast(ls.lvm)
 
+createContrast(ls.lvm) 
 createContrast(ls.lvm, var.test = "Treatment")
 
 }

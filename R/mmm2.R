@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:54) 
 ## Version: 
-## Last-Updated: jan 16 2018 (17:12) 
+## Last-Updated: jan 17 2018 (17:04) 
 ##           By: Brice Ozenne
-##     Update #: 135
+##     Update #: 140
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,9 +155,8 @@ vcov.ls.lvmfit <- vcov.mmm2
 #'
 #' ## Contrast matrix for the join model
 #' ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
-#' class(ls.lvm) <- "ls.lvmfit"
-#' createContrast(ls.lvm)
 #' 
+#' createContrast(ls.lvm) 
 #' createContrast(ls.lvm, var.test = "Treatment")
 #'
 

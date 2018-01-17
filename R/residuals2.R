@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 16 2018 (10:01) 
+## Last-Updated: jan 17 2018 (17:01) 
 ##           By: Brice Ozenne
-##     Update #: 797
+##     Update #: 799
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -389,7 +389,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         colnames(vcov.param) <- colnames(Info)
     }        
     ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
-    
+
     ### ** Normalize residuals
     if(adjust.residuals){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dtheta$dmu.dtheta,

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 16 2018 (17:35) 
+## Last-Updated: jan 17 2018 (17:12) 
 ##           By: Brice Ozenne
-##     Update #: 47
+##     Update #: 53
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,7 +43,8 @@ n.Y <- length(name.Y)
 ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
 ls.lm <- lapply(ls.formula, lm, data = dt.data)
 names(ls.lm) <- name.Y
-    
+
+
 
 test_that("mmm2 vs mmm", {
     ## rescaling using std dev
@@ -132,7 +133,7 @@ test_that("ls.lvmfit vs mmm", {
     C <- createContrast(ls.lvm, var.test = "E")
     lvm2.glht <- glht2(ls.lvm, linfct = C,
                        adjust.residuals = FALSE, robust = TRUE)
-    lvm2.sglht <- summary(lvm.glht)    
+    lvm2.sglht <- summary(lvm2.glht)    
 
     ##
     class(ls.lvm) <- "ls.lvmfit"
@@ -146,8 +147,8 @@ test_that("ls.lvmfit vs mmm", {
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
     lvm.glht$vcov <- vcov(ls.lvm, return.null = FALSE,
                           adjust.residuals = FALSE, robust = TRUE)
+    lvm.glht$df <- NROW(dt.data)
     lvm.sglht <- summary(lvm.glht)
-
 
     ## mmm
     lm.coef <- names(unlist(lapply(ls.lm,coef)))
@@ -162,9 +163,15 @@ test_that("ls.lvmfit vs mmm", {
     lm.sglht <- summary(lm.glht)
 
     ## compare
+    expect_equal(as.numeric(lvm2.sglht$test$coefficients),
+                 as.numeric(lvm.sglht$test$coefficients))
+
+    expect_equal(as.numeric(lvm2.sglht$test$sigma),
+                 as.numeric(lvm.sglht$test$sigma))
+
     expect_equal(as.numeric(lvm2.sglht$test$pvalues),
                  as.numeric(lvm.sglht$test$pvalues),
-                 tol = attr(lm.sglht$test$pvalues,"error")/10)
+                 tol = attr(lm.sglht$test$pvalues,"error")*10)
     
     expect_equal(as.double(lvm.sglht$test$coefficients),
                  as.double(lm.sglht$test$coefficients))
@@ -174,7 +181,7 @@ test_that("ls.lvmfit vs mmm", {
 
     expect_equal(as.double(lvm.sglht$test$pvalues),
                  as.double(lm.sglht$test$pvalues),
-                 tol = attr(lm.sglht$test$pvalues,"error")/10)
+                 tol = attr(lm.sglht$test$pvalues,"error")*10)
 })
 
 ##----------------------------------------------------------------------

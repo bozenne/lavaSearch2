@@ -7,10 +7,10 @@
 \title{Variance-Covariance Matrix for a Fitted Object}
 \usage{
 \method{vcov}{mmm2}(object, return.null = TRUE, adjust.residuals = TRUE,
-  robust = TRUE, ...)
+  robust = FALSE, ...)
 
 \method{vcov}{ls.lvmfit}(object, return.null = TRUE,
-  adjust.residuals = TRUE, robust = TRUE, ...)
+  adjust.residuals = TRUE, robust = FALSE, ...)
 }
 \arguments{
 \item{object}{a \code{mmm2} or \code{ls.lvmfit} object.}
