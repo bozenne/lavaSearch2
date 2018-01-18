@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: jan 16 2018 (10:47) 
+## last-updated: jan 18 2018 (17:56) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 102
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,10 +33,10 @@ mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
-setkey(dL, "Id")
+dW <- lava::sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,id.vars = c("G","Id"), variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 dL$Z1 <- rnorm(NROW(dL))
 
 ## * Linear model

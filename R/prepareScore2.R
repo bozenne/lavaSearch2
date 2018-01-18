@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 15 2018 (11:30) 
+## last-updated: jan 18 2018 (18:27) 
 ##           By: Brice Ozenne
-##     Update #: 726
+##     Update #: 729
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -47,9 +47,9 @@
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
 #'
-#' e <- estimate(m,sim(m,1e2))
+#' e <- estimate(m, lava::sim(m,1e2))
 #' res <- prepareScore2(e)
-#' res$skeleton$dt.param
+#' res$skeleton$df.param
 #' @export
 `prepareScore2` <-
   function(object, ...) UseMethod("prepareScore2")
@@ -272,7 +272,7 @@ prepareScore2.lvm <- function(object, data, second.order,
     
     ### ** Initialize partial derivatives
     pS2$dtheta <- skeletonDtheta(object, data = data,
-                                           dt.param.all = pS2$skeleton$dt.param,
+                                           df.param.all = pS2$skeleton$df.param,
                                            param2originalLink = pS2$skeleton$param2originalLink,
                                            name.endogenous = name.endogenous, 
                                            name.latent = name.latent)
@@ -280,7 +280,7 @@ prepareScore2.lvm <- function(object, data, second.order,
     ### ** Initialize second order partial derivatives
     if(second.order){
         pS2$dtheta2 <- skeletonDtheta2(object, data = data,
-                                                 dt.param.all = pS2$skeleton$dt.param,
+                                                 df.param.all = pS2$skeleton$df.param,
                                                  param2originalLink = pS2$skeleton$param2originalLink,
                                                  name.latent = name.latent)
     }
@@ -332,7 +332,7 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     
     ### ** Update first order partial derivatives with current estimates
     pS2$dtheta <- skeletonDtheta(object, data = data,
-                                 dt.param.all = pS2$skeleton$dt.param,
+                                 df.param.all = pS2$skeleton$df.param,
                                  param2originalLink = pS2$skeleton$param2originalLink,
                                  name.endogenous = name.endogenous, 
                                  name.latent = name.latent,
@@ -345,7 +345,7 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     if(second.order){
         pS2$dtheta2 <- skeletonDtheta2(object, data = data,
                                        OD = pS2$dtheta,
-                                       dt.param.all = pS2$skeleton$dt.param,
+                                       df.param.all = pS2$skeleton$df.param,
                                        param2originalLink = pS2$skeleton$param2originalLink,
                                        name.endogenous = name.endogenous,
                                        name.latent = name.latent,

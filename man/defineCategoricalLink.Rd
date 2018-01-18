@@ -20,7 +20,7 @@ defineCategoricalLink(object, link, data)
 Identify categorical links in latent variable models.
 }
 \examples{
- 
+## linear model
 m <- lvm(Y1~X1+X2,Y2~X1+X3)
 categorical(m, K = 3) <- "X1"
 try(defineCategoricalLink(m)) # error
@@ -33,5 +33,15 @@ defineCategoricalLink(m, "X1:1|2")
 defineCategoricalLink(m, c("X1:0|1", "X1:1|2"))
 defineCategoricalLink(m, c("Y~X1","Y~X2"))
 defineCategoricalLink(m, c("Y~X2","Y~X1"))
+
+## latent variable model
+m <- lvm()
+regression(m) <- c(y1,y2,y3)~u
+regression(m) <- u~x1+x2
+latent(m) <- ~u
+covariance(m) <- y1~y2
+categorical(m, labels = as.character(1:3)) <- "X1"
+
+defineCategoricalLink(m)
 
 }

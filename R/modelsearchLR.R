@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (17:58) 
 ## Version: 
-## last-updated: jan 15 2018 (11:38) 
+## last-updated: jan 18 2018 (14:19) 
 ##           By: Brice Ozenne
-##     Update #: 78
+##     Update #: 83
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,19 +30,17 @@ modelsearchLR <- function (x, data, restricted, link, directive,
                            update.FCT, update.args,
                            method.p.adjust, display.warnings, trace){
 
-    p.value <- NULL ## [:for CRAN check] data.table
-    
     ## ** initialisation
     n.link <- length(link)
-    dt.test <- data.table("link" = link,
+    df.test <- data.frame("link" = link,
                           "statistic" = as.numeric(rep(NA,n.link)),
                           "p.value" = as.numeric(rep(NA,n.link)),
                           "adjusted.p.value" = as.numeric(rep(NA,n.link)),
                           "convergence" = as.numeric(rep(NA,n.link)),
                           "coefBeta" = as.numeric(rep(NA,n.link)),
                           "corrected.level" = as.numeric(rep(NA,n.link)),
-                          "quantile" = as.numeric(rep(NA,n.link))
-                          )
+                          "quantile" = as.numeric(rep(NA,n.link)),
+                          stringsAsFactors = FALSE)
 
     best.test <- -Inf
     best.model <- NULL
@@ -57,23 +55,23 @@ modelsearchLR <- function (x, data, restricted, link, directive,
 
             if(newfit$opt$convergence == 0 ){ # test whether the model has correctly converged
                 newCoef.tempo <- stats::coef(newfit)[setdiff(names(coef(newfit)),names(coef(x)))]
-                dt.test[iterI, c("coefBeta") := newCoef.tempo]
+                df.test[iterI, "coefBeta"] <- newCoef.tempo
                 if(class(newfit) == "lvmfit"){
                     compareT <- lava::compare(x,newfit)
-                    dt.test[iterI, c("statistic") := compareT$statistic[[1]]]
-                    dt.test[iterI, c("p.value") := compareT$p.value[[1]]]
+                    df.test[iterI, "statistic"] <- compareT$statistic[[1]]
+                    df.test[iterI, "p.value"] <- compareT$p.value[[1]]
                 }else{
                     compareT <- stats::anova(x, newfit)
-                    dt.test[iterI, c("statistic") := compareT$F[2]]
-                    dt.test[iterI, c("p.value") := compareT$`Pr(>F)`[2]]
+                    df.test[iterI, "statistic"] <- compareT$F[2]
+                    df.test[iterI, "p.value"] <- compareT$`Pr(>F)`[2]
                 }
-                dt.test[iterI, c("convergence") := 0]
+                df.test[iterI, "convergence"] <- 0
             }else{
-                dt.test[iterI, c("convergence") := 1]                
+                df.test[iterI, "convergence"] <- 1             
             }
  
-            if(!is.na(dt.test[iterI][["statistic"]]) && dt.test[iterI][["statistic"]]>best.test){
-                best.test <- dt.test[iterI][["statistic"]]
+            if(!is.na(df.test[iterI,"statistic"]) && df.test[iterI,"statistic"]>best.test){
+                best.test <- df.test[iterI,"statistic"]
                 best.model <- newfit
             }
         }    
@@ -81,10 +79,10 @@ modelsearchLR <- function (x, data, restricted, link, directive,
         if(trace > 0){ utils::setTxtProgressBar(pb, value = iterI) }    
     }
     if(trace > 0){  close(pb) }
-    dt.test[, c("adjusted.p.value") := stats::p.adjust(p.value, method = method.p.adjust)]
+    df.test$adjusted.p.value <- stats::p.adjust(df.test$p.value, method = method.p.adjust)
     
     ## ** export 
-    return(list(dt.test = dt.test,
+    return(list(df.test = df.test,
                 best.test = best.test,
                 best.model = best.model))
 }

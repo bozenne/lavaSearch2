@@ -6,7 +6,6 @@
 #' @param object the fitted model.
 #' @param model.frame should the data be extracted after transformation (e.g. using model frame)
 #' or should the original dataset be extracted.
-#' @param convert2dt should the object containing the data be converted into a data.table?
 #'  
 #' @examples
 #' set.seed(10)
@@ -39,6 +38,7 @@
 #'
 #' \dontrun{
 #'   library(riskRegression) ## needs version >=1.4.3
+#'   library(data.table)
 #'   dt.surv <- sampleData(n, outcome = "survival")
 #'   m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
 #'   extractData(m.cox, model.frame = FALSE)
@@ -56,58 +56,58 @@
 #' }
 #' fct1(m.gls)
 #' @export
-extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
+extractData <- function(object, model.frame = FALSE){
   
   ## check arguments
-  validLogical(convert2dt, valid.length = 1)
   validLogical(model.frame, valid.length = 1)
 
     if(model.frame){ ## use extractors 
         if(any(class(object) %in% c("gls","gnls","lme","lmList","nlme","nls"))){ # nlme package
       
       
-      # assign the dataset to the object if not in the current environment
-      name.data <- as.character(object$call$data)
-      if((length(name.data) == 1) && (name.data %in% ls() == FALSE)){
-        object$data <- evalInParentEnv(object$call$data, environment())
-      }
+            # assign the dataset to the object if not in the current environment
+            name.data <- as.character(object$call$data)
+            if((length(name.data) == 1) && (name.data %in% ls() == FALSE)){
+                object$data <- evalInParentEnv(object$call$data, environment())
+            }
       
-      data <- try(nlme::getData(object), silent = TRUE)
+            data <- try(nlme::getData(object), silent = TRUE)
       
-        }else if(any(class(object) %in% c("coxph","cph"))){            
-            tryPkg <- requireNamespace("riskRegression")
-            if("try-error" %in% class(tryPkg)){
-                stop(tryPkg)
-            }else if(utils::packageVersion("riskRegression")<="1.4.3"){
-                stop("riskRegression version must be > 1.4.3 \n",
-                     "latest version available on Github at tagteam/riskRegression \n")
-            }else{
-                #### [:toUpdate]
-                ##  data <- try(riskRegression::coxDesign(object), silent = TRUE)
-                ##  strataVar <- riskRegression::coxVariableName(object)$stratavars.original
+    }else if(any(class(object) %in% c("coxph","cph"))){
+      
+        tryPkg <- requireNamespace("riskRegression")
+        if("try-error" %in% class(tryPkg)){
+            stop(tryPkg)
+        }else if(utils::packageVersion("riskRegression")<="1.4.3"){
+            stop("riskRegression version must be > 1.4.3 \n",
+                 "latest version available on Github at tagteam/riskRegression \n")
+        }else{
+            #### [:toUpdate]
+            ##  data <- try(riskRegression::coxDesign(object), silent = TRUE)
+            ##  strataVar <- riskRegression::coxVariableName(object)$stratavars.original
 
-                ## this is a temporary modification waiting for the update of riskRegression on CRAN
-                coxDesign.rr <- get("coxDesign", envir = asNamespace("riskRegression"), inherits = FALSE)
-                coxVariableName.rr <- get("coxVariableName", envir = asNamespace("riskRegression"), inherits = FALSE)
-                data <- try(coxDesign.rr(object), silent = TRUE)
-                strataVar <- coxVariableName.rr(object)$stratavars.original
-            }      
-            if(length(strataVar)>0){ 
+            ## this is a temporary modification waiting for the update of riskRegression on CRAN
+            coxDesign.rr <- get("coxDesign", envir = asNamespace("riskRegression"), inherits = FALSE)
+            coxVariableName.rr <- get("coxVariableName", envir = asNamespace("riskRegression"), inherits = FALSE)
+            data <- try(coxDesign.rr(object), silent = TRUE)
+            strataVar <- coxVariableName.rr(object)$stratavars.original
+        } 
+      
+        if(length(strataVar)>0){ 
         
-        data2 <- evalInParentEnv(object$call$data, environment())
+            data2 <- evalInParentEnv(object$call$data, environment())
+            data <- cbind(as.data.frame(data),
+                          as.data.frame(data2)[,strataVar,drop=FALSE])
         
-        data2 <- as.data.table(data2)
-        data <- cbind(data, data2[,.SD,.SDcols = strataVar])
-        
-      }
+        }
     }else{
-      data <- try(stats::model.frame(object), silent = TRUE)
+        data <- try(model.frame(object), silent = TRUE)
     }
     
-    ## check error
-    if("try-error" %in% class(data)){
-      stop(data)
-    }
+        ## check error
+        if("try-error" %in% class(data)){
+            stop(data)
+        }
     
     }else{
         data <- try(eval(object$call$data), silent = TRUE)        
@@ -123,16 +123,7 @@ extractData <- function(object, model.frame = FALSE, convert2dt = TRUE){
             stop("Could not extract the data from the model \n")
         }      
     }  
-    ## conversion to data.table
-    if(convert2dt){
-        if(data.table::is.data.table(data)){
-            data <- copy(data)
-        }else{
-            data <- as.data.table(data)
-        }
-    }
   
-  ## export
-  return(data)
+    ## export
+    return(as.data.frame(data))
 }
-

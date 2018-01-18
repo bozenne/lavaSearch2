@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: jan 15 2018 (11:32) 
+## last-updated: jan 18 2018 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 458
+##     Update #: 469
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,7 +109,7 @@
 IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
                        type = "double", proba.min = 1e-6, prune = NULL, distribution = "pmvnorm"){
 
-    area <- interior <- weight <- NULL ## [:for CRAN check] data.table
+     interior <- area <- weight <- NULL ## [:for CRAN check] subset
     
     ## ** normalize arguments
     type <- match.arg(type, c("raw","fine","double"))
@@ -166,12 +166,15 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
                                        ls.args))
     })
 
+
     if(type=="double"){
-        area.interior <- grid[interior==TRUE,sum(area*weight)]
-        area.exterior <- grid[interior==FALSE,sum(area*weight)]
+        grid.interior <- subset(grid, interior==TRUE,select = c(area,weight))
+        area.interior <- sum(grid.interior$area * grid.interior$weight)
+        grid.exterior <- subset(grid, interior==FALSE,select = c(area,weight))
+        area.exterior <- sum(grid.exterior$area * grid.exterior$weight)
         total.area <- area.interior + (area.exterior-area.interior)/2
-    }else{
-        total.area <- grid[,sum(area*weight)]
+    }else{        
+        total.area <- sum(grid$area * grid$weight)
     }
 
     ## ** export
@@ -197,18 +200,18 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
 #' @export
 autoplot.IntDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...){
 
-    x.min <- x.max <- weight <- NULL
-    
     if(length(coord.plot) != 2){
         stop("coord.plot must have length 2 \n")
     }
 
-    gg.data <- copy(object$grid)
-    gg.data[,index:=as.factor(index)]
-    gg.data[,weight:=as.factor(weight)]
+    gg.data <- object$grid
+    gg.data$index <- as.factor(gg.data$index)
+    gg.data$weight <- as.factor(gg.data$weight)
+    
     if("x" %in% coord.plot == FALSE){
         x.ref <- min(abs(unique(gg.data$x.min)))
-        gg.data <- rbind(gg.data[x.min == x.ref],gg.data[x.max == -x.ref])
+        gg.data <- rbind(gg.data[gg.data$x.min == x.ref,,drop=FALSE],
+                         gg.data[gg.data$x.max == -x.ref,,drop=FALSE])
     }
 
     if(object$type=="fine"){

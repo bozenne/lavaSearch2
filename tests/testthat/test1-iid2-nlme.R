@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (12:57) 
 ## Version: 
-## last-updated: jan 16 2018 (10:48) 
+## last-updated: jan 18 2018 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 91
+##     Update #: 96
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,10 +36,10 @@ mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,Y4~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
-setkey(dL, "Id")
+dW <- lava::sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,id.vars = c("G","Id"), variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 
 
 ## * Heteroscedasticity (gls)
@@ -191,8 +191,8 @@ covariance(m) <- Y1~Y2
 covariance(m) <- Y1~Y3
 e.lvm <- estimate(m, dW)
 
-dataRed <- dL[time!="Y4"]
-dataRed <- dataRed[, time := droplevels(time)]
+dataRed <- dL[dL$time!="Y4",]
+dataRed$time <- droplevels(dataRed$time)
 e.gls <- nlme::gls(value ~ time,
                    correlation = corSymm(form =~ 1| Id),
                    weight = varIdent(form =~ 1|time),

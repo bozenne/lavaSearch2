@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
 Version: 1.0.0
-Date: 2018-01-17
+Date: 2018-01-18
 Author: Brice Ozenne[aut, cre]
 Maintainer: brice ozenne <brice.ozenne@orange.fr>
 URL: https://github.com/bozenne/lavaSearch2
@@ -14,13 +14,11 @@ Description: Tools for model specification in the latent variable framework
 License: GPL-3
 Depends:
     R (>= 2.10),
-    lava,
-    data.table
+    lava
 Imports:
     doParallel,
     foreach,
     ggplot2,
-    inline,
     MASS,
     Matrix,
     methods,
@@ -28,12 +26,10 @@ Imports:
     mvtnorm,
     nlme,
     numDeriv,
-    optimx,
     parallel,
-    qqtest,    
+    reshape2,
     stats,
     tcltk,
-    tmvtnorm,
     utils
 Suggests:
     clubSandwich,

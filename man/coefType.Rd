@@ -110,7 +110,7 @@ coefVar(x, ...)
 \item{keep.var}{should the variance parameters be returned?}
 }
 \value{
-\code{coefType} either returns a data.table:
+\code{coefType} either returns a data.frame:
 \itemize{
 \item name: name of the link
 \item Y: outcome variable
@@ -196,6 +196,10 @@ coefIndexModel(e)
 categorical(m, labels = as.character(1:3)) <- "X1"
 coefExtra(m)
 coefExtra(m, value = TRUE)
+
+categorical(m, labels = as.character(1:3)) <- "x1"
+
+coefType(m, as.lava = FALSE)
 
 coefIntercept(m)
 coefIntercept(m, value = TRUE)

@@ -4,15 +4,13 @@
 \alias{extractData}
 \title{Extract Data From a Model}
 \usage{
-extractData(object, model.frame = FALSE, convert2dt = TRUE)
+extractData(object, model.frame = FALSE)
 }
 \arguments{
 \item{object}{the fitted model.}
 
 \item{model.frame}{should the data be extracted after transformation (e.g. using model frame)
 or should the original dataset be extracted.}
-
-\item{convert2dt}{should the object containing the data be converted into a data.table?}
 }
 \description{
 Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
@@ -49,6 +47,7 @@ library(survival)
 
 \dontrun{
   library(riskRegression) ## needs version >=1.4.3
+  library(data.table)
   dt.surv <- sampleData(n, outcome = "survival")
   m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
   extractData(m.cox, model.frame = FALSE)

@@ -55,7 +55,7 @@ gridExt_4d <- createGrid(5, d.y = 3, xmin = 0, xmax = 4,
 gridInt_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
                          d.z = 0, fine = TRUE, double = FALSE)
 
-## no z
+##  z
 gridIntZ1_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
                            d.z = 1, zmax = 2, fine = FALSE, double = FALSE)
 gridExtZ1_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 

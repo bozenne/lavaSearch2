@@ -7,7 +7,7 @@
 \usage{
 getNewLink(object, ...)
 
-\method{getNewLink}{modelsearch2}(object, step = nStep(object), ...)
+\method{getNewLink}{modelsearch2}(object, step = 1:nStep(object), ...)
 }
 \arguments{
 \item{object}{a modelsearch2 object}
@@ -22,11 +22,11 @@ Find the links that should be added accroding to the sequential testing
 \examples{
 mSim <- lvm(Y~G+X1+X2)
 addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-dt <- as.data.table(lava::sim(mSim, 1e2))
+df.data <- lava::sim(mSim, 1e2)
 
 mBase <- lvm(Y~G)
 addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-e.lvm <- estimate(mBase, data = dt)
+e.lvm <- estimate(mBase, data = df.data)
 res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
 getNewLink(res)
 

@@ -21,18 +21,18 @@ skeleton(object, ...)
 
 skeletonDtheta(object, ...)
 
-\method{skeletonDtheta}{lvm}(object, data, dt.param.all, param2originalLink,
+\method{skeletonDtheta}{lvm}(object, data, df.param.all, param2originalLink,
   name.endogenous, name.latent, ...)
 
-\method{skeletonDtheta}{lvmfit}(object, data, dt.param.all, param2originalLink,
+\method{skeletonDtheta}{lvmfit}(object, data, df.param.all, param2originalLink,
   name.endogenous, name.latent, B, alpha.XGamma, Lambda, Psi, ...)
 
 skeletonDtheta2(object, ...)
 
-\method{skeletonDtheta2}{lvm}(object, data, dt.param.all, param2originalLink,
+\method{skeletonDtheta2}{lvm}(object, data, df.param.all, param2originalLink,
   name.latent, ...)
 
-\method{skeletonDtheta2}{lvmfit}(object, data, OD, dt.param.all,
+\method{skeletonDtheta2}{lvmfit}(object, data, OD, df.param.all,
   param2originalLink, name.endogenous, name.latent, B, Lambda, Psi, ...)
 }
 \arguments{
@@ -51,7 +51,7 @@ Otherwise uses the labels (when defined) of each parameter.}
 
 \item{data}{[optional] data set.}
 
-\item{dt.param.all}{a \code{data.table} object containing detailing the type of each parameter.}
+\item{df.param.all}{a \code{data.table} object containing detailing the type of each parameter.}
 
 \item{param2originalLink}{matching between the name of the parameter in lava and their label.}
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: jan 15 2018 (11:35) 
+## last-updated: jan 18 2018 (13:35) 
 ##           By: Brice Ozenne
-##     Update #: 259
+##     Update #: 272
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -72,10 +72,11 @@
 #' mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 #' latent(mSim) <- ~eta
 #' categorical(mSim, K=2) <- ~G
-#' dW <- as.data.table(lava::sim(mSim, n, latent = FALSE))
-#' dW[,Id := as.character(1:.N)]
-#' dL <- melt(dW, id.vars = c("G","Id"), variable.name = "time", value.name = "Y")
-#' dL[,time := gsub("Y","",time)]
+#' transform(mSim, Id ~ eta) <- function(x){1:NROW(x)}
+#' dW <- lava::sim(mSim, n, latent = FALSE)
+#' dL <- reshape2::melt(dW, id.vars = c("G","Id"),
+#'                      variable.name = "time", value.name = "Y")
+#' dL$time <- gsub("Y","",dL$time)
 #'
 #' m1 <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 #' latent(m1) <- ~eta
@@ -112,11 +113,9 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
 
     ## ** extract data
     if(is.null(data)){
-      myData <- extractData(x, model.frame = FALSE, convert2dt = TRUE) 
-    }else if(is.data.table(data)){
-        myData <-  copy(data)
-    }else{
-        myData <-  as.data.table(data)
+        myData <- extractData(x, model.frame = FALSE)
+    }else{ 
+        myData <-  as.data.frame(data)
     }
     
     n.obs <- NROW(myData)
@@ -140,9 +139,9 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     ## ** define the grouping level for the data
     if(is.null(grouping)){
         if(any(class(x)%in%c("lme","gls","nlme"))){
-            myData[, c("XXXgroupingXXX") := as.vector(apply(x$groups,2,interaction))]
+            myData$XXXgroupingXXX <- as.vector(apply(x$groups,2,interaction))
         }else{
-            myData[, c("XXXgroupingXXX") := 1:n.obs]
+            myData$XXXgroupingXXX <- 1:n.obs
         }
         grouping <- "XXXgroupingXXX"        
     }else{
@@ -153,13 +152,14 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
             stop("variable defined in grouping not found in data \n")
         }
     }
-    myData[, c(grouping) := as.character(.SD[[grouping]])]
-    Ugrouping <- unique(myData[[grouping]])
+    myData$grouping <- as.character(myData$grouping)
+    Ugrouping <- unique(myData$grouping)
     n.group <- length(Ugrouping)
 
     ## ** warper
     warper <- function(i){ # i <- "31"
-        xnew <- tryWithWarnings(stats::update(x, data = myData[myData[[grouping]]!=i,]))
+        newData <- subset(myData,grouping!=i)
+        xnew <- tryWithWarnings(stats::update(x, data = newData))
         if(!is.null(xnew$error)){
             xnew$value <- rep(NA, n.coef)
         }else{
@@ -242,10 +242,10 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     coefJack <- do.call(rbind, lapply(resLoop,"[[","value"))
     rownames(coefJack) <- 1:n.group
 
-    ## ** post treatment: from jackknife coef to IF
+    ## ** post treatment: from jackknife coef to the iid decomposition
     # defined as (n-1)*(coef-coef(-i))
     # division by n to match output of lava, i.e. IF/n
-    iidJack <- -(n.group-1)/n.group*sweep(coefJack, MARGIN = 2, STATS = coef.x, FUN = "-")
+    iidJack <- -(n.group-1)/n.group * sweep(coefJack, MARGIN = 2, STATS = coef.x, FUN = "-")
     colnames(iidJack) <- names.coef
 
     if(keep.warnings){

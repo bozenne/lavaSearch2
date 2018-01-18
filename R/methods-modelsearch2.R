@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: jan 15 2018 (11:36) 
+## last-updated: jan 18 2018 (15:38) 
 ##           By: Brice Ozenne
-##     Update #: 122
+##     Update #: 127
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,11 +25,11 @@
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(lava::sim(mSim, 1e2))
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = dt)
+#' e.lvm <- estimate(mBase, data = df.data)
 #' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
 #' nStep(res)
 #'
@@ -59,12 +59,12 @@ nStep.modelsearch2 <- function(object){
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(lava::sim(mSim, 1e2))
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = dt)
-#' res <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "holm")
+#' e.lvm <- estimate(mBase, data = df.data)
+#' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
 #' getStep(res)
 #' getStep(res, slot = "sequenceTest")
 #' getStep(res, slot = "sequenceQuantile")
@@ -123,11 +123,11 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(lava::sim(mSim, 1e2))
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = dt)
+#' e.lvm <- estimate(mBase, data = df.data)
 #' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
 #' getNewLink(res)
 #'
@@ -138,7 +138,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 ## ** function - getNewLink
 #' @rdname getNewLink
 #' @export
-getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
+getNewLink.modelsearch2 <- function(object, step = 1:nStep(object), ...){
 
     selected <- link <- NULL
     
@@ -150,7 +150,8 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
 
     ## ** extract
     ls.link <- lapply(step, function(x){
-        getStep(object,step=x,slot="sequenceTest")[selected == TRUE,link]
+        iStep <- getStep(object,step=x,slot="sequenceTest")
+        return(subset(iStep, subset = selected == TRUE, select = "link", drop = TRUE))
     })
 
     return(unlist(ls.link))    
@@ -169,11 +170,11 @@ getNewLink.modelsearch2 <- function(object, step = nStep(object), ...){
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(lava::sim(mSim, 1e2))
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = dt)
+#' e.lvm <- estimate(mBase, data = df.data)
 #' res.x <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm", nStep = 2)
 #' res.y <- modelsearch2(getStep(res.x, slot = "sequenceModel"), 
 #'                       statistic = "score", method.p.adjust = "holm")

@@ -263,7 +263,7 @@ validNames <- function(value1, name1 = as.character(substitute(value1)), refuse.
     value1 <- colnames(value1)
   }
   
-  if(data.table::is.data.table(value1) || is.data.frame(value1) || is.list(value1)){
+  if(inherits(value1,"data.frame") || is.list(value1)){
     value1 <- names(value1)
   }
   

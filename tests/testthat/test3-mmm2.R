@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 17 2018 (17:12) 
+## Last-Updated: jan 18 2018 (17:50) 
 ##           By: Brice Ozenne
-##     Update #: 53
+##     Update #: 54
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,14 +34,14 @@ latent(mSim) <- "eta"
 set.seed(10)
 n <- 1e2
 
-dt.data <- as.data.table(sim(mSim, n, latent = FALSE, p = c(beta = 1)))
+df.data <- sim(mSim, n, latent = FALSE, p = c(beta = 1))
 
 ## * linear regression
 name.Y <- setdiff(endogenous(mSim),"E")
 n.Y <- length(name.Y)
 
 ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
-ls.lm <- lapply(ls.formula, lm, data = dt.data)
+ls.lm <- lapply(ls.formula, lm, data = df.data)
 names(ls.lm) <- name.Y
 
 
@@ -102,28 +102,28 @@ test_that("mmm2 vs mmm", {
 
 
 ## * lvm
-ls.lvm <- list(Y1 = estimate(lvm(Y1~E), data = dt.data),
-               Y2 = estimate(lvm(Y2~E), data = dt.data),
-               Y3 = estimate(lvm(Y3~E), data = dt.data),
-               Y4 = estimate(lvm(Y4~E), data = dt.data),
-               Y5 = estimate(lvm(Y5~E), data = dt.data),
-               Y6 = estimate(lvm(Y6~E), data = dt.data),
-               Y7 = estimate(lvm(Y7~E), data = dt.data),
-               Y8 = estimate(lvm(Y8~E), data = dt.data),
-               Y9 = estimate(lvm(Y9~E), data = dt.data),
-               Y10 = estimate(lvm(Y10~E), data = dt.data)
+ls.lvm <- list(Y1 = estimate(lvm(Y1~E), data = df.data),
+               Y2 = estimate(lvm(Y2~E), data = df.data),
+               Y3 = estimate(lvm(Y3~E), data = df.data),
+               Y4 = estimate(lvm(Y4~E), data = df.data),
+               Y5 = estimate(lvm(Y5~E), data = df.data),
+               Y6 = estimate(lvm(Y6~E), data = df.data),
+               Y7 = estimate(lvm(Y7~E), data = df.data),
+               Y8 = estimate(lvm(Y8~E), data = df.data),
+               Y9 = estimate(lvm(Y9~E), data = df.data),
+               Y10 = estimate(lvm(Y10~E), data = df.data)
                )
 
-ls.lm <- list(Y1 = lm(Y1~E, data = dt.data),
-              Y2 = lm(Y2~E, data = dt.data),
-              Y3 = lm(Y3~E, data = dt.data),
-              Y4 = lm(Y4~E, data = dt.data),
-              Y5 = lm(Y5~E, data = dt.data),
-              Y6 = lm(Y6~E, data = dt.data),
-              Y7 = lm(Y7~E, data = dt.data),
-              Y8 = lm(Y8~E, data = dt.data),
-              Y9 = lm(Y9~E, data = dt.data),
-              Y10 = lm(Y10~E, data = dt.data)
+ls.lm <- list(Y1 = lm(Y1~E, data = df.data),
+              Y2 = lm(Y2~E, data = df.data),
+              Y3 = lm(Y3~E, data = df.data),
+              Y4 = lm(Y4~E, data = df.data),
+              Y5 = lm(Y5~E, data = df.data),
+              Y6 = lm(Y6~E, data = df.data),
+              Y7 = lm(Y7~E, data = df.data),
+              Y8 = lm(Y8~E, data = df.data),
+              Y9 = lm(Y9~E, data = df.data),
+              Y10 = lm(Y10~E, data = df.data)
               )
 class(ls.lm) <- "mmm"
 
@@ -147,7 +147,7 @@ test_that("ls.lvmfit vs mmm", {
     lvm.glht <- glht(ls.lvm, linfct = lvm.C)
     lvm.glht$vcov <- vcov(ls.lvm, return.null = FALSE,
                           adjust.residuals = FALSE, robust = TRUE)
-    lvm.glht$df <- NROW(dt.data)
+    lvm.glht$df <- NROW(df.data)
     lvm.sglht <- summary(lvm.glht)
 
     ## mmm

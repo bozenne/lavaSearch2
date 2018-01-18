@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 15 2018 (11:38) 
+## last-updated: jan 18 2018 (16:53) 
 ##           By: Brice Ozenne
-##     Update #: 613
+##     Update #: 648
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,8 +38,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                            export.iid, trace, ncpus, initCpus){
 
     ## WARNING: do not put link as NULL for data.table since it is used as an argument by the function
-    convergence <- p.value <- statistic <- NULL ## [:for CRAN check] data.table
-
+    
     ### ** initialisation
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
@@ -58,17 +57,18 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     ### ** wraper
     warper <- function(iterI){ # iterI <- 2
 
-        out <- list(dt = data.table(statistic = as.numeric(NA),
+        out <- list(df = data.frame(statistic = as.numeric(NA),
                                     df = as.numeric(NA),
                                     p.value = as.numeric(NA),
                                     adjusted.p.value = as.numeric(NA),
                                     convergence = as.numeric(NA),
-                                    coefBeta = as.numeric(NA)),
+                                    coefBeta = as.numeric(NA),
+                                    stringsAsFactors = FALSE),
                     iid = NULL)
         ## *** fit new model
         newfit <- update.FCT(x, args = update.args,
                              restricted = restricted[iterI,], directive = directive[iterI])
-        out$dt[1, c("convergence") := newfit$opt$convergence]
+        out$df[1, "convergence"] <- newfit$opt$convergence
         
         ## *** extract influence function        
         if(class(newfit) != "try-error"){ # test whether the model was estimated
@@ -80,7 +80,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                     stop("Coefficient ",link[iterI]," not found \n",
                          "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
                 }
-                out$dt[1, "coefBeta" := new.coef[link[iterI]]]
+
+                out$df[1, "coefBeta"] <- new.coef[link[iterI]]
                 
                 ## extract degree of freedom and standard error
                 if(df){
@@ -96,7 +97,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                     e.df <- lTest(newfit, C = C, adjust.residuals = adjust.residuals,
                                   Ftest = FALSE)
                     
-                    out$dt[1, "df" := e.df[1, "df"]]
+                    out$df[1, "df"] <- e.df[1, "df"]
 
                     if(typeSD == "information"){
                         sd.coef <- e.df[1, "std"]
@@ -118,7 +119,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                         
                 }
                 ## compute test statistic
-                out$dt[1, "statistic" := abs(.SD$coefBeta/sd.coef)] ## keep .SD for clarity
+                out$df[1, "statistic"] <- abs(out$df$coefBeta/sd.coef) ## keep .SD for clarity
             }
         }
         return(out)
@@ -132,7 +133,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     if(ncpus>1){
 
         FCTcombine <- function(res1,res2){
-            res <- list(dt = rbind(res1$dt,res2$dt),
+            res <- list(df = rbind(res1$df,res2$df),
                         iid = cbind(res1$iid,res2$iid))
             return(res)
         }
@@ -146,7 +147,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
             parallel::clusterExport(cl, varlist = "trace")
         }
 
-        vec.packages <- c("lavaSearch2", "data.table", packages)
+        vec.packages <- c("lavaSearch2", packages)
         i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link, .packages =  vec.packages,
@@ -167,40 +168,40 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }
         
     }else{
-
         if(trace>0){
             requireNamespace("pbapply")
             resApply <- pbapply::pblapply(1:n.link, warper)
         }else{
             resApply <- lapply(1:n.link, warper)
         }
-        res <- list(dt = data.table::rbindlist(lapply(resApply,"[[","dt")),
+        res <- list(df = do.call(rbind, lapply(resApply,"[[","df")),
                     iid = do.call(cbind,lapply(resApply,"[[","iid")))
         
     }
-    dt.test <- cbind(link = link, res$dt)    
+    df.test <- cbind(link = link, res$df)    
     iid.link <- res$iid
 
-    if(all(dt.test$convergence!=0)){
+    if(all(df.test$convergence!=0)){
         stop("none of the extended model has converged \n",
              "the additional links may be misspecified \n")
     }
     
-### ** p.value
-    indexCV <- dt.test[, .I[convergence==0]]
-
+    ### ** p.value
+    indexCV <- which(df.test$convergence==0)
+    df.test[indexCV, "p.value"] <- as.numeric(NA)
     if(df){
-        dt.test[indexCV, "p.value" := 2*(1-stats::pt(abs(.SD$statistic), df = df))] ## keep .SD for clarity
+        df.test[indexCV, "p.value"] <- 2*(1-stats::pt(abs(df.test[indexCV,"statistic"]),
+                                                      df = df.test[indexCV,"statistic"]))
     }else{
-        dt.test[indexCV, "p.value" := 2*(1-pnorm(abs(statistic)))]
+        df.test[indexCV, "p.value"] <- 2*(1-pnorm(abs(df.test[indexCV,"statistic"])))
     }
 
     ### ** adjust p.value
     if(method.p.adjust == "fastmax"){
 
-        adj.tempo <- stats::p.adjust(dt.test$p.value, method = "bonferroni")
+        adj.tempo <- stats::p.adjust(df.test$p.value, method = "bonferroni")
         if(any(adj.tempo<0.05)){
-            dt.test[, p.value := as.numeric(p.value != min(p.value))]
+            df.test$p.value <- as.numeric(df.test$p.value != min(df.test$p.value))
             method.p.adjust <- "bonferroni"
         }else{
             method.p.adjust <- "max"
@@ -209,10 +210,12 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     }
     
     if(method.p.adjust == "max"){
-        nameN0 <- dt.test[indexCV, link]
-        statisticN0 <- setNames(dt.test[convergence==0][["statistic"]],nameN0)
+        nameN0 <- df.test[indexCV, "link"]
+        statisticN0 <- setNames(subset(df.test, subset = convergence==0, select = "statistic", drop = TRUE),
+                                nameN0)
         if(df){
-            dfN0 <- round(stats::median(stats::setNames(dt.test[convergence==0][["df"]],nameN0)))
+            dfN0 <- round(stats::median(stats::setNames(subset(df.test, subset = convergence==0, select = "df"),
+                                                        nameN0)))
         }else {
             dfN0 <- NULL
         }
@@ -233,27 +236,27 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                             alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
         }
 
-        dt.test[indexCV,c("corrected.level") := resQmax$correctedLevel]
-        dt.test[indexCV,c("adjusted.p.value") := resQmax$p.adjust]
-        dt.test[indexCV,c("quantile") := resQmax$z]
+        df.test[indexCV, "corrected.level"] <- resQmax$correctedLevel
+        df.test[indexCV, "adjusted.p.value"] <- resQmax$p.adjust
+        df.test[indexCV, "quantile"] <- resQmax$z
         Sigma <- resQmax$Sigma
-        rownames(Sigma) <- dt.test[indexCV, link]
-        colnames(Sigma) <- dt.test[indexCV, link]
+        rownames(Sigma) <- df.test[indexCV, "link"]
+        colnames(Sigma) <- df.test[indexCV, "link"]
         
         if(initCpus){
             parallel::stopCluster(cl)
         }
         
     }else{
-        dt.test[indexCV,c("corrected.level") := NA]
-        dt.test[dt.test$convergence==0,
-                c("adjusted.p.value") := stats::p.adjust(p.value, method = method.p.adjust)]
-        dt.test[indexCV,c("quantile") := as.numeric(NA)]
+        df.test[indexCV, "corrected.level"] <- as.numeric(NA)
+        df.test[indexCV, "adjusted.p.value"] <- stats::p.adjust(df.test[indexCV, "p.value"],
+                                                                method = method.p.adjust)
+        df.test[indexCV, "quantile"] <- as.numeric(NA)
         Sigma <- NULL        
     }    
 
     ### ** export
-    out <- list(dt.test = dt.test,
+    out <- list(df.test = df.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)
     return(out)

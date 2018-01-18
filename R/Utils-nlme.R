@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: jan 15 2018 (22:10) 
+## Last-Updated: jan 18 2018 (10:17) 
 ##           By: Brice Ozenne
-##     Update #: 154
+##     Update #: 157
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -163,7 +163,7 @@
         }
         vec.rep <- vec.rep0[order(order(cluster2))]
     }else{
-        vec.rep <- as.data.table(cluster2)[, rep := 1:.N, by = cluster2][["rep"]]
+        vec.rep <- unlist(tapply(cluster2, cluster2, function(x){1:length(x)}))
         # vec.rep <- rep("1",NROW(data))
         name.endogenous <- unique(vec.rep)
     }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 23 2017 (16:52) 
 ## Version: 
-## last-updated: jan 15 2018 (11:44) 
+## last-updated: jan 17 2018 (19:05) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 27
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,7 +38,11 @@ matrixPower <- function(x, power, symmetric, tol = 1e-12){
     x.eigen <- eigen(x, symmetric = symmetric)
     x.eigen$values[abs(x.eigen$values) < tol] <- 0 ## abs is not really necessary since the eigenvalues are positives
     x.eigen$values <- x.eigen$values^power
-    return(x.eigen$vectors %*% sweep(t(x.eigen$vectors),MARGIN = 1, FUN = "*", STATS = x.eigen$values))
+    return(x.eigen$vectors %*% sweep(t(x.eigen$vectors),
+                                     MARGIN = 1,
+                                     FUN = "*",
+                                     STATS = x.eigen$values)
+           )
 }
 
 #----------------------------------------------------------------------

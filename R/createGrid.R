@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:40) 
 ## Version: 
-## last-updated: jan 16 2018 (09:38) 
+## last-updated: jan 18 2018 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 63
+##     Update #: 77
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,7 +58,7 @@
 #' gridInt_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
 #'                          d.z = 0, fine = TRUE, double = FALSE)
 #' 
-#' ## no z
+#' ##  z
 #' gridIntZ1_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
 #'                            d.z = 1, zmax = 2, fine = FALSE, double = FALSE)
 #' gridExtZ1_2d <- createGrid(5, d.y = 1, xmin = 0, xmax = 4, 
@@ -79,7 +79,7 @@ createGrid <- function(n,
                        d.z, zmax,
                        fine, double){
 
-    index <- x.max <- x.min <- y1.max <- y1.min <- NULL ## [:for CRAN check] data.table
+    y1.min <- y1.max <- NULL ## [:for CRAN check] subset
     
     ## ** find step along the x axis
     if(xmin[1]==0){
@@ -107,9 +107,9 @@ createGrid <- function(n,
                              rep(-seqPointsX[iX+double],d.y), rep(seqPointsX[iX+double],d.y),
                              1, iX)
                            )
-    }    
-    grid.main <- as.data.table(grid.main)
-    setnames(grid.main, old = names(grid.main), new = all.Names )
+    }
+    grid.main <- as.data.frame(grid.main)
+    names(grid.main) <- all.Names
     
     ## gg.main <- ggplot(grid.main, aes(xmin = x.min, ymin = y1.min, xmax = x.max, ymax = y1.max, fill = index))
     ## gg.main <- gg.main + geom_rect()
@@ -123,8 +123,7 @@ createGrid <- function(n,
         ls.mp <- lapply(1:d.y, function(x){c(-1,1)})
         grid.mp <- expand.grid(ls.mp)
         n.mp <- NROW(grid.mp)
-        ls.index <- list(1:d.y,
-                         (d.y+1):(2*d.y))
+        ls.index <- list(1:d.y, (d.y+1):(2*d.y))
 
         for(iX in 1:n.seqX){ # iX <- 1
             for(iMP in 1:n.mp){ # iMP <- 1
@@ -145,9 +144,8 @@ createGrid <- function(n,
                                    )
             }
         }        
-        grid.fine <- as.data.table(grid.fine)
-        setnames(grid.fine, old = names(grid.fine), new = all.Names)
-        grid.fine[,c(all.Names) := lapply(.SD,as.numeric)]
+        grid.fine <- as.data.frame(grid.fine)
+        names(grid.fine) <- all.Names        
         ## gg.fine <- ggplot(grid.fine, aes(xmin = x.min, ymin = y1.min, xmax = x.max, ymax = y1.max, fill = index))
         ## gg.fine <- gg.fine + geom_rect()
         ## gg.fine <- gg.fine + geom_abline(slope = 1,color = "red") + geom_abline(slope = -1,color = "red")
@@ -155,26 +153,25 @@ createGrid <- function(n,
     }
 
     ## ** Merge grids and remove empty cells
-    grid.all <- rbind(grid.main, grid.fine)    
-    grid.all <- grid.all[grid.all[, .I[y1.min!=y1.max]]] # remove empty rectangles
-    
+    grid.all <- rbind(grid.main, grid.fine)
+    grid.all <- subset(grid.all, y1.min!=y1.max) # remove empty rectangles
+
+    ## update index
+    grid.all$index <- grid.all$index - min(grid.all$index) + 1
     ## ** duplicate grid  (negative x  and positive x)
-    grid.all <- grid.all[ ,"index" := index - min(index) + 1]
-
-    grid.all2 <- copy(grid.all)    
-    grid.all2[, "x.min" := -grid.all$x.max] 
-    grid.all2[, "x.max" := -grid.all$x.min] # DO NOT use just x.min, we need grid.all$x.min due to the previous line
-    grid.all2[, "index" := index + max(index)]
-
+    grid.all2 <- grid.all
+    grid.all2$x.min <- -grid.all$x.max 
+    grid.all2$x.max <- -grid.all$x.min # we need grid.all$x.min due to the previous line
+    grid.all2$index <- grid.all2$index + max(grid.all2$index)
     grid <- rbind(grid.all,grid.all2)
 
     ## ** add z coordinate
     if(d.z>0){
         z.minNames <- paste0("z",1:d.z,".min")
         z.maxNames <- paste0("z",1:d.z,".max")
-        
-        grid[,c(z.minNames) := -abs(zmax)]
-        grid[,c(z.maxNames) := abs(zmax)]
+
+        grid[,z.minNames] <- -abs(zmax)
+        grid[,z.maxNames] <- abs(zmax)
         seqNames.min <- c(seqNames.min, z.minNames)
         seqNames.max <- c(seqNames.max, z.maxNames)
     }

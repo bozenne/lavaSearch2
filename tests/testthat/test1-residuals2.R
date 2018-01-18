@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: jan 16 2018 (10:48) 
+## Last-Updated: jan 18 2018 (17:54) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 46
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,10 +34,10 @@ mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
 latent(mSim) <- ~eta
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id"), variable.name = "time")
-setkey(dL, "Id")
+dW <- sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,id.vars = c("G","Id"), variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 dL$Z1 <- rnorm(NROW(dL))
 
 ## * raw residuals
@@ -103,8 +103,8 @@ test_that("residuals2 match residuals.lm (multiple lm)", {
 mSim <- lvm(c(Y1~1*eta1,Y2~1*eta1,Y3~1*eta1,eta1~G1))
 latent(mSim) <- ~eta1
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
-dW <- as.data.table(sim(mSim, 5e1, latent = FALSE))
-dL <- melt(dW, id.vars = c("Id","G1")) 
+dW <- sim(mSim, 5e1, latent = FALSE)
+dL <- reshape2::melt(dW, id.vars = c("Id","G1"))
 
 
 test_that("equivalence residuals2.lvm residuals.lvm", {

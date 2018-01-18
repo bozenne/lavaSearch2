@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: jan 16 2018 (10:48) 
+## Last-Updated: jan 18 2018 (17:56) 
 ##           By: Brice Ozenne
-##     Update #: 31
+##     Update #: 33
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,10 +34,10 @@ latent(mSim) <- ~eta
 categorical(mSim, labels = c("M","F")) <- ~Gender
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id","Gender"), variable.name = "time")
-setkey(dL, "Id")
+dW <- lava::sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,id.vars = c("G","Id","Gender"), variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 
 ## * Compound symmetry
 e.lme <- nlme::lme(value ~ time + G + Gender,

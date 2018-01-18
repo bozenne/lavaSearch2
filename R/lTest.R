@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan 15 2018 (11:30) 
+## last-updated: jan 18 2018 (18:27) 
 ##           By: Brice Ozenne
-##     Update #: 624
+##     Update #: 636
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,7 +34,7 @@
 #' mSim <- lvm(Y~0.1*X1+0.2*X2)
 #' categorical(mSim, labels = c("a","b","c")) <- ~X1
 #' transform(mSim, Id~Y) <- function(x){1:NROW(x)}
-#' df.data <- sim(mSim, 1e2)
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' ## gold standard
 #' e.lm <- lm(Y~X1+X2, data = df.data)
@@ -218,25 +218,25 @@ lTest.lvmfit <- lTest.lm
 #' 
 .contrast2name <- function(C){
     col <- coef <- coefname <- rowname <- nrow <- NULL
-    
-    dt.index <- as.data.table(which(C != 0, arr.ind = TRUE))
-    dt.index[, col := colnames(C)[col]]
-    dt.index[, nrow := 1:.N, by = "row"]
 
-    dt.index[, coef := C[which(C!=0)]]
-    dt.index[, coefname := paste0(as.character(coef)," ")]
-    dt.index[coef>0, coefname := paste0("+",coefname)]
-    dt.index[coefname == "+1 " & nrow == 1, coefname := ""]
-    dt.index[coefname == "+1 ", coefname := " + "]
-            
-    dt.index[coefname == "-1 ", coefname := " - "]
+    df.index <- as.data.frame(which(C != 0, arr.ind = TRUE))
+    df.index$col <- colnames(C)[df.index$col]
+    df.index$nrow <- unlist(tapply(df.index$row, df.index$row, function(x){1:length(x)}))
 
-    dt.index[, rowname := paste0(coefname,col)]
+    df.index$coef <- C[which(C!=0)]
+    df.index$coefname <- paste0(as.character(df.index$coef)," ")
+    df.index[df.index$coef>0,"coefname"] <- paste0("+",df.index$coefname[df.index$coef>0])
+    df.index[df.index$coefname == "+1 " & df.index$nrow == 1, "coefname"] <- ""
+    df.index[df.index$coefname == "+1 ", "coefname"] <- " + "
             
-    out <- dt.index[,paste(rowname,collapse=""),by = "row"][[2]]
+    df.index[df.index$coefname == "-1 ", "coefname"] <- " - "
+
+    df.index$rowname <- paste0(df.index$coefname,df.index$col)
+    out <- unlist(tapply(df.index$rowname,df.index$row,paste,collapse=""))
 
     return(out)
 }
+
 
 
 ##----------------------------------------------------------------------

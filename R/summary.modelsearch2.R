@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: jan 17 2018 (17:02) 
+## last-updated: jan 18 2018 (17:35) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 68
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,37 +20,38 @@
 #' @export
 summary.modelsearch2 <- function(object, display = TRUE, ...){
 
-    convergence <- df <- p.value <- NULL ## [:for CRAN check] data.table
+    p.value <- NULL # [:for CRAN check] subset
     
     ## ** extract data from object
-    xx <- copy(object$sequenceTest)
-    dt.seqTest <- rbindlist(lapply(xx, function(step){
+    xx <- object$sequenceTest
+    df.seqTest <- do.call(rbind,lapply(xx, function(step){
         if("convergence" %in% names(step)){
-            step[, c("noConvergence") := sum(convergence!=0)]
-            step[, c("convergence") := sum(convergence==0)]
+            step$noConvergence <- sum(step$convergence!=0)
+            step$convergence <- sum(step$convergence==0)
         }
         indexMax <- which.max(abs(step$statistic))
-        return(step[indexMax])
+        return(step[indexMax,,drop = FALSE])
     }))
-    n.step <- NROW(dt.seqTest)
-    n.selected <- sum(dt.seqTest$selected)
+    n.step <- NROW(df.seqTest)
+    n.selected <- sum(df.seqTest$selected)
 
     keep.cols <- c("link","nTests","noConvergence","statistic","adjusted.p.value")    
     if(!is.na(object$method.p.adjust) && object$method.p.adjust == "max"){
         keep.cols <- c(keep.cols,"quantile")
     }
 
-    if("df" %in% names(dt.seqTest)){
-        dt.seqTest[, "nTests.adj" := 0.05/(2*(1-stats::pt(quantile, df = df)))]
+    if("df" %in% names(df.seqTest)){
+        df.seqTest$nTests.adj <- 0.05/(2*(1-stats::pt(df.seqTest$quantile,
+                                                      df = df.seqTest$df)))
     }else{
-        dt.seqTest[, "nTests.adj" := 0.05/(2*(1-stats::pnorm(quantile)))]
+        df.seqTest$nTests.adj <- 0.05/(2*(1-stats::pnorm(df.seqTest$quantile)))
     }
     if(object$method.p.adjust == "fastmax"){
-        dt.seqTest[p.value==0, c("p.value", "adjusted.p.value") := NA]
+        df.seqTest[p.value==0, c("p.value", "adjusted.p.value")] <- NA
     }
     
     ## ** output
-    out <- list(output = list(), data = dt.seqTest)
+    out <- list(output = list(), data = df.seqTest)
     statistic <- switch(object$statistic,
                         "Wald" = "Wald",
                         "score" = "score",
@@ -75,8 +76,7 @@ summary.modelsearch2 <- function(object, display = TRUE, ...){
                                     )     
     }
      
-    out$output$table <- dt.seqTest[,.SD,.SDcols = keep.cols]
-    data.table::setcolorder(out$output$table, keep.cols)
+    out$output$table <- df.seqTest[,keep.cols,drop=FALSE]
     out$output$message.post <- paste0("confidence level: ",1-object$alpha," (two sided, adjustement: ",object$method.p.adjust,")\n")  
 
     ## ** display

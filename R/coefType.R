@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 15 2018 (11:40) 
+## last-updated: jan 18 2018 (18:14) 
 ##           By: Brice Ozenne
-##     Update #: 400
+##     Update #: 465
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -44,7 +44,7 @@
 #' \item variance: diagonal of \eqn{\Sigma} and \eqn{\Psi}.
 #' }
 #'
-#' @return \code{coefType} either returns a data.table:
+#' @return \code{coefType} either returns a data.frame:
 #' \itemize{
 #' \item name: name of the link
 #' \item Y: outcome variable
@@ -59,7 +59,6 @@
 #' or a named vector containing the type of the links.
 #' 
 #' @examples 
-#'
 #' #### regression ####
 #' m <- lvm(Y~X1+X2)
 #' e <- estimate(m, sim(m, 1e2))
@@ -110,6 +109,10 @@
 #' categorical(m, labels = as.character(1:3)) <- "X1"
 #' coefExtra(m)
 #' coefExtra(m, value = TRUE)
+#'
+#' categorical(m, labels = as.character(1:3)) <- "x1"
+#'
+#' coefType(m, as.lava = FALSE)
 #' 
 #' coefIntercept(m)
 #' coefIntercept(m, value = TRUE)
@@ -145,8 +148,8 @@
 #' @export
 coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 
-   detail <- endogenous <- exogenous <- externalLink <- factice <- level <- link <- marginal <- name <- originalLink <- type <- . <- NULL ## [:for CRAN check] data.table
-
+    externalLink <- type <- NULL ## [:for CRAN check] subset
+    
     ## *** extract all coef
     index.all <- which(!is.na(x$M), arr.ind = FALSE)
     ls.name <- list()
@@ -261,71 +264,91 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
     }
 
     ## *** merge
-    dt.param <- data.table(name = unlist(ls.name),
+    df.param <- data.frame(name = unlist(ls.name),
                            Y = unlist(ls.Y),
                            X = unlist(ls.X),
-                           data = as.character(NA),
+                           data = unlist(ls.X),
                            type = unlist(ls.type),
                            value = unlist(ls.value),
                            param = unlist(ls.param),
-                           marginal = unlist(ls.marginal))
-
+                           marginal = unlist(ls.marginal),
+                           stringsAsFactors = FALSE)
+    df.param[df.param$X %in% latent(x),"data"] <- NA
+    
     ## *** categorical variables
     if(!is.null(x$attributes$ordinalparname)){
-        resCar <- defineCategoricalLink(x, link = dt.param$name, data = data)
-
+        resCar <- defineCategoricalLink(x, link = df.param$name, data = data)
+        
         ## normal parameters
-        resCar.Nexternal <- resCar[is.na(resCar$externalLink),
-                                   .(name = link, distribution = type,
-                                     factice, level, originalLink, externalLink)]
-        dt.Nexternal <- merge(dt.param[type != "external"],resCar.Nexternal,by = "name")
+        resCar.Nexternal <- subset(resCar,
+                                   subset = is.na(externalLink),
+                                   select = c("link","type","factice","level","originalLink","externalLink"))
+        ## rename according to the main data frame
+        match.tempo <- match(c("link","type"),
+                             names(resCar.Nexternal))
+        names(resCar.Nexternal)[match.tempo] <- c("name","distribution") 
+        
+        df.Nexternal <- merge(subset(df.param, subset = type != "external"),
+                              resCar.Nexternal, by = "name")
 
         ## external parameters
-        resCar.external <- resCar[!is.na(resCar$externalLink),
-                                  .(name = link, Y = endogenous, X = paste0(exogenous,level),
-                                    data = exogenous, distribution = type,
-                                    factice, level, originalLink, externalLink)]
+        resCar.external <- subset(resCar,
+                                  subset = !is.na(externalLink),
+                                  select = c("link", "endogenous", "exogenous", "type", "factice", "level", "originalLink", "externalLink"))
+        resCar.external$X <- paste0(resCar.external$exogenous,
+                                    resCar.external$level)
 
-        resCar.external[, "param" := name]
-        for(iCol in c("type","value","marginal")){ # iCol <- "Y"
-            name2col <- stats::setNames(dt.param[[iCol]],dt.param$name)
-            resCar.external[,c(iCol) := name2col[originalLink]]
+        ## rename according to the main data frame
+        match.tempo <- match(c("link","endogenous","exogenous","type"),
+                             names(resCar.external))
+        names(resCar.external)[match.tempo] <- c("name","Y","data","distribution")
+        resCar.external$param <- resCar.external$name
+
+        for(iCol in c("type","value","marginal")){ # iCol <- "type"
+            name2col <- stats::setNames(df.param[[iCol]],df.param$name)
+            resCar.external[,iCol] <- name2col[resCar.external$originalLink]
         }
-
-        setcolorder(resCar.external, neworder = names(dt.Nexternal))
-        dt.param <- rbind(resCar.external,dt.Nexternal)
+        df.param <- rbind(resCar.external[,names(df.Nexternal),drop=FALSE],
+                          df.Nexternal)
     }else{
-        dt.param[,c("factice") := FALSE]
-        dt.param[,c("level") := as.character(NA)]        
-        dt.param[,c("externalLink") := as.character(NA)]        
-        dt.param[,c("originalLink") := name]
+        df.param$factice <- FALSE
+        df.param$level <- as.character(NA)
+        df.param$externalLink <-  as.character(NA)
+        df.param$originalLink <- df.param$name
     }
 
     ## *** merge with lava
     coef.lava <- coef(x)
     name.coef <- names(coef.lava)
 
-    dt.param[type!="external" & factice == FALSE & marginal == FALSE,
-             detail := detailName(x, name.coef = name, type.coef = type)]
-    dt.param[,lava:=name.coef[match(originalLink,coef.lava)]]
-    setkeyv(dt.param, c("type","detail","name"))
-       
+    index.keep <- which(df.param$type!="external" & df.param$factice == FALSE & df.param$marginal == FALSE)
+    df.param$detail <- as.character(NA)
+    df.param[index.keep, "detail"] <- detailName(x,
+                                                 name.coef = df.param[index.keep, "name"],
+                                                 type.coef = df.param[index.keep, "type"])
+    df.param$lava <- name.coef[match(df.param$originalLink,coef.lava)]
+    df.param <- df.param[order(df.param$type,df.param$detail,df.param$name),,drop=FALSE]
+    rownames(df.param) <- NULL
+
     ## *** export
     if(as.lava){
         ## add extra parameter as links
-        vec.extra <- unique(stats::na.omit(dt.param[["externalLink"]]))
+        vec.extra <- unique(stats::na.omit(df.param$externalLink))
         if(length(vec.extra)>0){
-            dt.extra <- data.table(name = vec.extra, type = "extra",
-                                   lava = name.coef[match(vec.extra,coef.lava)])
-            dt.param <- rbind(dt.param[,.(name, type, lava)], dt.extra)
+            df.extra <- data.frame(name = vec.extra, type = "extra",
+                                   lava = name.coef[match(vec.extra,coef.lava)],
+                                   stringsAsFactors = FALSE)
+            df.param <- rbind(df.param[,c("name", "type", "lava")],
+                              df.extra)
         }
         
         ## 
-        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
+        out <- subset(df.param, subset = !is.na(lava), select = c("type", "name"))
+        out <- stats::setNames(out$type, out$name)
         out <- out[!duplicated(names(out))]
         return(out[coef.lava])    
     }else{
-        return(dt.param[])
+        return(df.param)
     }
 }
 
@@ -334,18 +357,17 @@ coefType.lvm <- function(x, data = NULL, as.lava = TRUE, ...){
 #' @export
 coefType.lvmfit <- function(x, as.lava = TRUE, ...){ 
 
-    lava <- name <- type <- NULL ## [:for CRAN check] data.table
-    
     ## *** find type of the coefficients in the original model
-    dt.param <- coefType(x$model0, as.lava = FALSE)
+    df.param <- coefType(x$model0, as.lava = FALSE)
     
     ## *** export
     if(as.lava){
-        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
+        out <- subset(df.param, subset = !is.na(lava), select = c("type", "name"))
+        out <- stats::setNames(out$type, out$name)
         coef.lava <- names(stats::coef(x))
         return(out[coef.lava])    
     }else{
-        return(dt.param[])
+        return(df.param)
     }
 }
 
@@ -354,29 +376,26 @@ coefType.lvmfit <- function(x, as.lava = TRUE, ...){
 #' @export
 coefType.multigroup <- function(x, as.lava = TRUE, ...){
 
-    lava <- model <- name <- type <- NULL ## [:for CRAN check] data.table
-    
     n.model <- length(x$lvm)
-    dt.param <- NULL
+    df.param <- NULL
     
-    for(iModel in 1:n.model){ # iModel <- 1
+    for(iModel in 1:n.model){ # iModel <- 2
 
-        dt.param <- rbind(dt.param,
+        df.param <- rbind(df.param,
                           cbind(coefType(x$lvm[[iModel]], as.lava = FALSE), model = iModel)
                           )
       
     }
 
-    dt.param[,name := paste0(model,"@",name)]
+    df.param$name <- paste0(df.param$model,"@",df.param$name)
     
     ## *** export
     if(as.lava){        
-        out <- dt.param[!is.na(lava), stats::setNames(type, name)]
-        ## coef.lava <- names(coef(x))
-        ## return(out[coef.lava])
+        out <- subset(df.param, subset = !is.na(lava), select = c("type", "name"))
+        out <- stats::setNames(out$type, out$name)
         return(out)
     }else{
-        return(dt.param[])
+        return(df.param)
     }
 }
 

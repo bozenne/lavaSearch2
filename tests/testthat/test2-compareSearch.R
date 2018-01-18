@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt  5 2017 (09:25) 
 ## Version: 
-## last-updated: jan 15 2018 (22:02) 
+## last-updated: jan 18 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 19
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,8 +33,8 @@ m.sim <- lvm(Y~E+X1+0.5*X2+0.1*X3,~Z1+Z2+Z3)
 m.base <- lvm(Y~E,~X1+X2+X3+Z1+Z2+Z3)
 
 set.seed(10)
-dt.sim <- as.data.table(sim(m.sim, n=100, latent = FALSE))
-e.base <- estimate(m.base, data = dt.sim)
+df.sim <- sim(m.sim, n=100, latent = FALSE)
+e.base <- estimate(m.base, data = df.sim)
 
 resCompare <- compareSearch(e.base, 
                             method.p.adjust = c("none","bonferroni","fdr","max"),

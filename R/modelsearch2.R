@@ -56,10 +56,8 @@
 #' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 #'              statistic = "Wald", method.p.adjust = "holm", nStep = 1)
 #' \dontrun{
-#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"))
-#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-#'                     nStep = 2, conditional = TRUE)
-#' res$sequenceTest[[2]]
+#' possible.link <- c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2")
+#' res <- modelsearch2(eLM, link = possible.link)
 #' }
 #' 
 #' #### Cox model ####
@@ -69,8 +67,8 @@
 #' \dontrun{
 #' res <- modelsearch2(m, link = c(status~epicel,status~sex),
 #'                     packages = "survival", nStep = 1)
-#' }
 #' res
+#' }
 #' 
 #' #### LVM ####
 #' mSim <- lvm()
@@ -79,16 +77,14 @@
 #' categorical(mSim,labels=c("A","B","C")) <- "x2"
 #' latent(mSim) <- ~u
 #' covariance(mSim) <- y1~y2
-#' df <- lava::sim(mSim, 1e2)
-#' df$Id <- 1:NROW(df)
+#' transform(mSim, Id~u) <- function(x){1:NROW(x)}
+#' df <- lava::sim(mSim, n = 1e2, latent = FALSE)
 #' 
 #' m <- lvm(c(y1,y2,y3)~u)
 #' latent(m) <- ~u
 #' addvar(m) <- ~x1+x2 
 #'
 #' e <- estimate(m, df)
-#' 
-#' e$model$index$P1
 #'
 #' \dontshow{
 #' links <- c(u~x1,u~x2C,y3~x2C)
@@ -157,12 +153,12 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ls.call <- lapply(add.args, function(arg){object$call[[arg]]})
     names(ls.call) <- add.args
 
-    ls.call$data <- as.data.table(stats::model.frame(object))
+    ls.call$data <- as.data.frame(stats::model.frame(object))
     if(!is.null(data)){
         index.cols <- which(names(data)%in%names(ls.call$data)==FALSE)
         if(length(index.cols)>0){
             ls.call$data <- cbind(ls.call$data,
-                                  as.data.table(data)[,.SDcols=index.cols])
+                                  subset(as.data.frame(data), select = index.cols))
         }
     }
     ls.call$control <- object$control
@@ -351,8 +347,6 @@ modelsearch2.default <- function(object, link, data = NULL,
                           display.warnings = TRUE, export.iid = FALSE ## not documented
                           ){
 
-    adjusted.p.value <- selected <- NULL ## [:for CRAN check] data.table
-
     ## ** preliminary tests
     method.max <- match.arg(method.max, lava.options()$search.calcMaxDist)
     method.p.adjust <- match.arg(method.p.adjust, lava.options()$search.p.adjust)
@@ -430,20 +424,20 @@ modelsearch2.default <- function(object, link, data = NULL,
                                       silent = (trace <= 1))
             
             iN.link <- NROW(iRestricted)        
-            res.search$dt.test <- data.table("link" = iLink,
+            res.search$df.test <- data.frame("link" = iLink,
                                              "statistic" = as.numeric(rep(NA,iN.link)),
                                              "p.value" = as.numeric(rep(NA,iN.link)),
                                              "adjusted.p.value" = as.numeric(rep(NA,iN.link)),
-                                             "convergence" = 1,
+                                             "convergence" = 0,
                                              "coefBeta" = as.numeric(rep(NA,iN.link)),
                                              "quantile" = as.numeric(rep(NA,iN.link)),
-                                             "corrected.level" = as.numeric(rep(NA,iN.link))
-                                             )
+                                             "corrected.level" = as.numeric(rep(NA,iN.link)),
+                                             stringsAsFactors = FALSE)
             index.match <- match(gsub("~~","~",iLink), res.search$res[,"Index"])
             ## res.search$res[index.match,"Index"]
-            res.search$dt.test[, "statistic" := res.search$test[index.match,"Test Statistic"]]
-            res.search$dt.test[, "p.value" := res.search$test[index.match,"P-value"]]
-            res.search$dt.test[, "adjusted.p.value" := stats::p.adjust(.SD$p.value, method = method.p.adjust)] ## keep .SD for clarity
+            res.search$df.test$statistic <- res.search$test[index.match,"Test Statistic"]
+            res.search$df.test$p.value <- res.search$test[index.match,"P-value"]
+            res.search$df.test$adjusted.p.value <- stats::p.adjust(res.search$df.test$p.value, method = method.p.adjust) 
         }else if(statistic == "LR"){
             ### *** run modelsearchLR
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
@@ -459,6 +453,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                 iid.previous <- NULL
                 quantile.previous <- NULL
             }
+
             res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, packages = packages, alpha = alpha,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
@@ -469,10 +464,10 @@ modelsearch2.default <- function(object, link, data = NULL,
         ## ** update according the most significant p.value
         ### *** check convergence
         if(na.omit){
-            cv <- all(stats::na.omit(res.search$dt.test[["adjusted.p.value"]]) > alpha)
+            cv <- all(stats::na.omit(res.search$df.test$adjusted.p.value) > alpha)
             test.na <- FALSE
         }else{
-            cv <- all(res.search$dt.test[["adjusted.p.value"]] > alpha)
+            cv <- all(res.search$df.test$adjusted.p.value > alpha)
             if(is.na(cv)){                    
                 cv <- TRUE
                 test.na <- TRUE
@@ -482,19 +477,20 @@ modelsearch2.default <- function(object, link, data = NULL,
         }
 
         ### *** identify most promising test
-        index.rm <- which.max(abs(res.search$dt.test[["statistic"]]))
+        index.rm <- which.max(abs(res.search$df.test$statistic))
 
         ### *** update the output
-        res.search$dt.test[,"selected" := .I==index.rm*(1-cv)]
-        res.search$dt.test[,"nTests" := .N]
-        setkey(res.search$dt.test,statistic)
-        rowSelected <- res.search$dt.test[, .I[selected==TRUE]]
+        res.search$df.test$selected <- FALSE
+        res.search$df.test[index.rm,"selected"] <- (res.search$df.test[index.rm,"convergence"]==0)
+        res.search$df.test$nTests <- NROW(res.search$df.test)
+        res.search$df.test <- res.search$df.test[order(res.search$df.test$statistic),]
+        rowSelected <- which(res.search$df.test$selected)
 		
-        ls.seqTests[[iStep]] <- copy(res.search$dt.test)
+        ls.seqTests[[iStep]] <- res.search$df.test
         if(method.p.adjust %in% "max"){
             ls.seqIID[[iStep]] <- res.search$iid
             ls.seqSigma[[iStep]] <- res.search$Sigma
-            vec.seqQuantile <- c(vec.seqQuantile,unique(res.search$dt.test$quantile))
+            vec.seqQuantile <- c(vec.seqQuantile,unique(res.search$df.test$quantile))
         }
         
         ### *** update the model
@@ -510,19 +506,19 @@ modelsearch2.default <- function(object, link, data = NULL,
         ### *** display results
         if(trace > 0){
             if(cv==FALSE){
-                
-                cat("add ",ls.seqTests[[iStep]][rowSelected, link],
-                    " (statistic = ",ls.seqTests[[iStep]][rowSelected, statistic],
-                    ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, adjusted.p.value],
+
+                cat("add ",ls.seqTests[[iStep]][rowSelected, "link"],
+                    " (statistic = ",ls.seqTests[[iStep]][rowSelected, "statistic"],
+                    ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, "adjusted.p.value"],
                     ")\n",sep="")
             }else{
                 if(test.na){
                     cat("NA among the test statistics \n")
                 }else{
-                    rowSelected <- which.max(ls.seqTests[[iStep]][, statistic])
+                    rowSelected <- which.max(ls.seqTests[[iStep]][, "statistic"])
                     cat("no variable to add",
-                        " (statistic = ",ls.seqTests[[iStep]][rowSelected, statistic],
-                        ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, adjusted.p.value],
+                        " (statistic = ",ls.seqTests[[iStep]][rowSelected, "statistic"],
+                        ", adjusted.p.value = ",ls.seqTests[[iStep]][rowSelected, "adjusted.p.value"],
                         ")\n",sep="")
                 }
             }
@@ -534,7 +530,7 @@ modelsearch2.default <- function(object, link, data = NULL,
     ## * Test treatment effect
     if(!is.null(exposure) && FALSE){
         if(statistic == "Wald" && method.p.adjust == "max"){
-            ## dt.exposure <- data.table("link" = exposure,
+            ## df.exposure <- data.table("link" = exposure,
         ##                               "statistic" = numeric(1),
         ##                               "p.value" = numeric(1),
         ##                               "statistic Wald" = numeric(1),
@@ -545,11 +541,11 @@ modelsearch2.default <- function(object, link, data = NULL,
         ##     newBeta <- coef(iObject)[exposure]
         ##     IF.beta <- sqrt(n)*iid(iObject)[,exposure,drop=FALSE]
         ##     SeBeta <- sd(IF.beta)
-        ##     dt.exposure[,`statistic` := abs(newBeta/SeBeta)]
+        ##     df.exposure[,`statistic` := abs(newBeta/SeBeta)]
             
             
-        ##     dt.exposure[,"statistic Wald" := summary(iObject)$coef[exposure,1]/summary(iObject)$coef[exposure,2]]
-        ##     dt.exposure[,"p.value Wald" := summary(iObject)$coef[exposure,4]]
+        ##     df.exposure[,"statistic Wald" := summary(iObject)$coef[exposure,1]/summary(iObject)$coef[exposure,2]]
+        ##     df.exposure[,"p.value Wald" := summary(iObject)$coef[exposure,4]]
             
         ##     #### compute quantile
         ##     if(method.max == "normal"){
@@ -558,24 +554,24 @@ modelsearch2.default <- function(object, link, data = NULL,
         ##         sigma <- NULL
         ##     }
             
-        ##     resQmax <- calcDistMax(dt.exposure[["statistic"]], 
+        ##     resQmax <- calcDistMax(df.exposure[["statistic"]], 
         ##                            iid = cbind(iid.conditional,IF.beta), 
         ##                            mu = c(mu.conditional,newBeta), 
         ##                            conditional = c(mu.conditional,rep(0,length(exposure))),
         ##                            method = method.max,
         ##                            n.sim = n.sim, ncpus = ncpus, initCpus = FALSE, trace = trace)
             
-        ##     dt.exposure[,`p.value` := resQmax$p.adjust]
+        ##     df.exposure[,`p.value` := resQmax$p.adjust]
         ##     z <- resQmax$z
             
             ## }else{
             ##   if(identical(iObject$call$robust,TRUE)){
-            ##     dt.exposure <- data.table(link = exposure, summary(iObject)$coef[exposure,c("Estimate","Robust SE","P-value"),drop=FALSE])
-            ##     dt.exposure[, c("Robust SE") := .SD[["Estimate"]]/.SD[["Robust SE"]], .SDcols = c("Estimate","Robust SE")]
+            ##     df.exposure <- data.table(link = exposure, summary(iObject)$coef[exposure,c("Estimate","Robust SE","P-value"),drop=FALSE])
+            ##     df.exposure[, c("Robust SE") := .SD[["Estimate"]]/.SD[["Robust SE"]], .SDcols = c("Estimate","Robust SE")]
             ##   }else{
-            ##     dt.exposure <- data.table(link = exposure, summary(iObject)$coef[exposure,c("Estimate","Z-value","P-value"),drop=FALSE])
+            ##     df.exposure <- data.table(link = exposure, summary(iObject)$coef[exposure,c("Estimate","Z-value","P-value"),drop=FALSE])
             ##   }
-            ##     names(dt.exposure) <- c("link","estimate","statistic","p.value")
+            ##     names(df.exposure) <- c("link","estimate","statistic","p.value")
             ##     z <- NULL
             ## }
         }
@@ -682,7 +678,11 @@ modelsearch2.default <- function(object, link, data = NULL,
     ## ** take care of categorical variables
     ls.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){
         data.frame(Y = restricted[row,1],
-                   X = var2dummy(object$model, data = data, var = restricted[row,2]), dir = directive[row])
+                   X = var2dummy(object$model,
+                                 data = data,
+                                 var = restricted[row,2]),
+                   dir = directive[row],
+                   stringsAsFactors = FALSE)
     }))
     restricted2 <- as.matrix(ls.linkvar[,1:2,drop=FALSE])
     directive <- ls.linkvar[,3]

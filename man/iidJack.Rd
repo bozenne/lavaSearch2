@@ -75,10 +75,11 @@ set.seed(10)
 mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 latent(mSim) <- ~eta
 categorical(mSim, K=2) <- ~G
-dW <- as.data.table(lava::sim(mSim, n, latent = FALSE))
-dW[,Id := as.character(1:.N)]
-dL <- melt(dW, id.vars = c("G","Id"), variable.name = "time", value.name = "Y")
-dL[,time := gsub("Y","",time)]
+transform(mSim, Id ~ eta) <- function(x){1:NROW(x)}
+dW <- lava::sim(mSim, n, latent = FALSE)
+dL <- reshape2::melt(dW, id.vars = c("G","Id"),
+                     variable.name = "time", value.name = "Y")
+dL$time <- gsub("Y","",dL$time)
 
 m1 <- lvm(c(Y1,Y2,Y3,Y4,Y5) ~ 1*eta)
 latent(m1) <- ~eta

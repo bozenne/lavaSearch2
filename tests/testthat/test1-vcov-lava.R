@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: jan 16 2018 (10:48) 
+## last-updated: jan 18 2018 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 60
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -386,11 +386,12 @@ latent(mSim) <- ~eta
 categorical(mSim, labels = c("M","F")) <- ~Gender
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
-setkey(dL, "Id")
-df.dL <- as.data.table(dL)
+dW <- sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,
+                     id.vars = c("G","Id","Gender","X1","X2"),
+                     variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 
 ## *** model fit
 m <- lvm(c(Y1[mu1:sigma]~1*eta,
@@ -401,7 +402,7 @@ e.lvm <- estimate(m, dW)
 
 
 e.lmer <- lme4::lmer(value ~ time + G + Gender + (1|Id),
-                     data = df.dL, REML = FALSE)
+                     data = dL, REML = FALSE)
 
 
 ## *** tests

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:26) 
+## Last-Updated: jan 18 2018 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 217
+##     Update #: 222
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,11 +42,9 @@
 dVcov2.lm <- function(object, adjust.residuals = FALSE,
                       return.score = FALSE, ...){
 
-  
     ## ** extract information
     X <- stats::model.matrix(object)
-    
-    
+        
     epsilonD2 <- residuals2(object, adjust.residuals = adjust.residuals,
                             return.vcov.param = TRUE)
     p <- c(stats::coef(object), sigma2 = mean(stats::residuals(object)^2))
@@ -114,9 +112,9 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
             pp <- p
             pp[names(iParam)] <- iParam
             res.tempo <- residuals2(object, cluster = cluster, p = pp, data = data,
-                                          adjust.residuals = adjust.residuals,
-                                          as.clubSandwich = as.clubSandwich,
-                                          return.vcov.param = TRUE, second.order = FALSE)
+                                    adjust.residuals = adjust.residuals,
+                                    as.clubSandwich = as.clubSandwich,
+                                    return.vcov.param = TRUE, second.order = FALSE)
             vcov.tempo <- attr(res.tempo, "vcov.param")
             attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
             return(vcov.tempo)
@@ -195,7 +193,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
                           adjust.residuals = TRUE, numericDerivative = FALSE,
                           return.score = FALSE, ...){
 
-    detail <- lava <- originalLink <- NULL ## [:for CRAN check] data.table
+    detail <- NULL ## [:for CRAN check] subset
     
     p <- lava::pars(object)
     data <- stats::model.frame(object)
@@ -226,7 +224,7 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     ## ** param with non-zero third derivative
     keep.type <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
     tableType <- coefType(object, as.lava=FALSE)        
-    keep.param <- tableType[!is.na(lava) & detail %in% keep.type, originalLink]
+    keep.param <- subset(tableType, subset = !is.na(lava) & detail %in% keep.type, select = "originalLink")
     
     ### ** Compute the gradient 
     if(numericDerivative){

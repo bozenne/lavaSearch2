@@ -82,10 +82,8 @@ res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
 res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
              statistic = "Wald", method.p.adjust = "holm", nStep = 1)
 \dontrun{
-res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"))
-res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-                    nStep = 2, conditional = TRUE)
-res$sequenceTest[[2]]
+possible.link <- c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2")
+res <- modelsearch2(eLM, link = possible.link)
 }
 
 #### Cox model ####
@@ -95,8 +93,8 @@ m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 \dontrun{
 res <- modelsearch2(m, link = c(status~epicel,status~sex),
                     packages = "survival", nStep = 1)
-}
 res
+}
 
 #### LVM ####
 mSim <- lvm()
@@ -105,16 +103,14 @@ regression(mSim) <- u~x1+x2
 categorical(mSim,labels=c("A","B","C")) <- "x2"
 latent(mSim) <- ~u
 covariance(mSim) <- y1~y2
-df <- lava::sim(mSim, 1e2)
-df$Id <- 1:NROW(df)
+transform(mSim, Id~u) <- function(x){1:NROW(x)}
+df <- lava::sim(mSim, n = 1e2, latent = FALSE)
 
 m <- lvm(c(y1,y2,y3)~u)
 latent(m) <- ~u
 addvar(m) <- ~x1+x2 
 
 e <- estimate(m, df)
-
-e$model$index$P1
 
 \dontshow{
 links <- c(u~x1,u~x2C,y3~x2C)

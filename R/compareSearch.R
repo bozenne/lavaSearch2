@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: jan 15 2018 (11:33) 
+## last-updated: jan 18 2018 (16:36) 
 ##           By: Brice Ozenne
-##     Update #: 240
+##     Update #: 243
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,11 +27,11 @@
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' dt <- as.data.table(lava::sim(mSim, 1e2))
+#' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = dt)
+#' e.lvm <- estimate(mBase, data = df.data)
 #'
 #' \dontrun{
 #' res <- compareSearch(e.lvm, statistic = c("score","Wald"),
@@ -49,11 +49,11 @@ compareSearch <- function(object, alpha = 0.05,
 
     p.value <- link <- NULL
     
-### ** normalize arguments
+    ### ** normalize arguments
     method.p.adjust <- sapply(method.p.adjust, match.arg, choices = lava.options()$search.p.adjust, several.ok = TRUE)
     statistic <-  sapply(statistic, match.arg, choices = lava.options()$search.statistic, several.ok = TRUE)
 
-### ** fit all models using unadjusted p.values
+    ### ** fit all models using unadjusted p.values
     ls.search <- list()
     if("score" %in% statistic){
         if(trace){
@@ -157,7 +157,7 @@ compareSearch <- function(object, alpha = 0.05,
         }
     }
 
-### ** check only errors
+    ### ** check only errors
     if(length(statistic)==0){
         return(list(newlinks = NULL,
                     table.coef = NULL,
@@ -165,7 +165,7 @@ compareSearch <- function(object, alpha = 0.05,
                )
     }
 
-### ** Adjust p.values
+    ### ** Adjust p.values
     ls.searchAll <- list()    
     for(iStatistic in statistic){ # iStatistic <- statistic[1]
         ##  print(iStatistic)
@@ -199,7 +199,7 @@ compareSearch <- function(object, alpha = 0.05,
         table.alllinks[names(stats::coef(M.tempo)),iSearch] <- coef(M.tempo)
     }
     
-### ** export
+    ### ** export
     return(list(newlinks = ls.newlinks,
                 table.coef = table.alllinks,
                 ls.search = ls.searchAll))
@@ -209,12 +209,11 @@ compareSearch <- function(object, alpha = 0.05,
 ## * adjustModelSearch
 .adjustModelSearch <- function(object,model0,  method.p.adjust, alpha){
 
-    object <- copy(object)
-  
     ## ** adjust p.value
     seqP.value <- sapply(object$sequenceTest, function(x){        
         if(method.p.adjust!="max"){            
-            x[,c("adjusted.p.value") := stats::p.adjust(x$p.value, method = method.p.adjust)]
+            x$adjusted.p.value <- stats::p.adjust(x$p.value,
+                                                  method = method.p.adjust)
         }
         return(min(x$adjusted.p.value))
     })

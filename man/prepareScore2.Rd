@@ -82,7 +82,7 @@ For lvmfit objects, there are two levels of pre-computation:
 m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 latent(m) <- ~eta
 
-e <- estimate(m,sim(m,1e2))
+e <- estimate(m, lava::sim(m,1e2))
 res <- prepareScore2(e)
-res$skeleton$dt.param
+res$skeleton$df.param
 }

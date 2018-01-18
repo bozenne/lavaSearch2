@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan 16 2018 (10:48) 
+## last-updated: jan 18 2018 (17:55) 
 ##           By: Brice Ozenne
-##     Update #: 147
+##     Update #: 149
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,11 +38,10 @@ latent(mSim) <- ~eta
 categorical(mSim, labels = c("M","F")) <- ~Gender
 transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-dW <- as.data.table(sim(mSim,n,latent = FALSE))
-setkey(dW, "Id")
-dL <- melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
-setkey(dL, "Id")
-df.dL <- as.data.table(dL)
+dW <- sim(mSim,n,latent = FALSE)
+dW <- dW[order(dW$Id),,drop=FALSE]
+dL <- reshape2::melt(dW,id.vars = c("G","Id","Gender","X1","X2"), variable.name = "time")
+dL <- dL[order(dL$Id),,drop=FALSE]
 
 ## * linear regression
 ## ** t test
@@ -118,7 +117,7 @@ e.lvm <- estimate(m, dW)
 ## lTest(e.lvm)
 
 e.lmer <- lme4::lmer(value ~ time + G + Gender + (1|Id),
-               data = df.dL, REML = FALSE)
+               data = dL, REML = FALSE)
 
 e.lme <- nlme::lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
 e.gls <- nlme::gls(value ~ time + G + Gender,

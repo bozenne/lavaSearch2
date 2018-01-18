@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 15 2018 (11:41) 
+## last-updated: jan 17 2018 (19:15) 
 ##           By: Brice Ozenne
-##     Update #: 2190
+##     Update #: 2192
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -169,7 +169,7 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     
 ### ** Export
     if(return.vcov.param){
-        attr(out.score,"vcov.param") <- vcov.param[OPS2$name.param,OPS2$name.param,drop=FALSE]
+        attr(out.score,"vcov.param") <- vcov.param[OPS2$name.param, OPS2$name.param, drop=FALSE]
     }
     return(out.score)
 }
@@ -186,7 +186,8 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     clusterSpecific <- !is.null(ls.indexOmega)
     name.meanparam <- names(dmu.dtheta)
     name.vcovparam <- names(dOmega.dtheta)
-    out.score <- matrix(0, nrow = n.cluster, ncol = n.param, dimnames = list(NULL,name.param))
+    out.score <- matrix(0, nrow = n.cluster, ncol = n.param,
+                        dimnames = list(NULL,name.param))
 
 ### ** Individual specific Omega (e.g. presence of missing values)
     if(clusterSpecific){
@@ -234,11 +235,6 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     return(out.score)
 }
 
-
-
-
-#----------------------------------------------------------------------
-### score2.R ends here
 ## * .information2
 .information2 <- function(dmu.dtheta, dOmega.dtheta,
                           Omega, ls.indexOmega, hat,
@@ -311,3 +307,6 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     return(Info)
 }
 
+
+#----------------------------------------------------------------------
+### score2.R ends here

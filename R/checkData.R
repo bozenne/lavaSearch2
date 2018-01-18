@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (14:25) 
 ## Version: 
-## last-updated: jan 16 2018 (13:37) 
+## last-updated: jan 18 2018 (13:29) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 23
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,9 +46,14 @@
 ## * checkData.lvm
 #' @rdname checkData
 #' @export
-checkData.lvm <- function(x, data, trace = TRUE){ 
+checkData.lvm <- function(x, data, trace = TRUE){
+
+    ## ** normalize arguments
+    data <- as.data.frame(data)
+        
+    ## ** check missing names
     vars <- vars(x)
-    latent <- latent(x)
+    latent <- latent(x)    
     missingVars <- vars[vars %in% names(data) == FALSE]
 
     if(length(latent) == 0){
