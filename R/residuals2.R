@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 17 2018 (17:01) 
+## Last-Updated: jan 19 2018 (15:20) 
 ##           By: Brice Ozenne
-##     Update #: 799
+##     Update #: 806
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -152,7 +152,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     
     ## *** data    
     if(is.null(data)){
-        data <- extractData(object)
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
     }
     X <- stats::model.matrix(formula.object, data)
     X <- X[,attr.param$mean.coef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)    
@@ -370,7 +370,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     ls.hat <- lapply(1:n.cluster, function(iC){
         matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
     })
-    
+
     ### ** Compute variance covariance matrix (parameters)
     if(null.p){
         vcov.param <- stats::vcov(object)
@@ -529,7 +529,79 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     return(out)
 }
 
+## * .information2
+.information2 <- function(dmu.dtheta, dOmega.dtheta,
+                          Omega, ls.indexOmega, hat,
+                          n.param, name.param, n.cluster){
+
+    ### ** prepare
+    clusterSpecific <- !is.null(ls.indexOmega)
+    iOmega <- chol2inv(chol(Omega))
+
+    
+    if(!clusterSpecific){ ## small sample correction          
+        df.mean <- Reduce("+",hat)
+        iN.cluster <- as.double(n.cluster - diag(df.mean))   
+    }
+
+### ** compute information matrix for each pair of parameters
+    Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
+    
+    for(iP1 in 1:n.param){ # iP <- 1
+        for(iP2 in iP1:n.param){ # iP <- 1
+            iName1 <- name.param[iP1]
+            iName2 <- name.param[iP2]
+            test.mu <- !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
+            test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
+                    
+            
+            ## *** Individual specific Omega (e.g. presence of missing values)
+            if(clusterSpecific){
+                for(iC in 1:n.cluster){
+                    
+                    Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                    iOmega.tempo <- iOmega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                    
+                    if(test.mu){
+                        dmu.tempo1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
+                        dmu.tempo2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
+                        Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.tempo1 %*% iOmega.tempo * dmu.tempo2)
+                    }
+
+                    if(test.Omega){
+                        dOmega.dtheta.tempo1 <- dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        dOmega.dtheta.tempo2 <- dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
+                        iDiag <- diag(iOmega.tempo %*% dOmega.dtheta.tempo1 %*% iOmega.tempo %*% dOmega.dtheta.tempo2)
+                        
+                        ## small sample correction  
+                        iW.cluster <- 1 -  diag(hat[[iC]])
+
+                        Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag * iW.cluster)
+                    }
+                }                
+            }
+            
+            ## *** Same for all individuals
+            if(clusterSpecific == FALSE){
+                if(test.mu){
+                    Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.dtheta[[iName1]] %*% iOmega * dmu.dtheta[[iName2]])
+                }
+
+                if(test.Omega){
+                    iDiag <- diag(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
+                    Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.cluster)
+                }
+            }
+
+        }
+    }
+    Info <- symmetrize(Info, update.upper = FALSE)
+    
+### ** export
+    return(Info)
+}
+
+
 
 ##----------------------------------------------------------------------
 ### residuals2.R ends here
-

@@ -2,15 +2,40 @@
 % Please edit documentation in R/package-butils-extractData.R
 \name{extractData}
 \alias{extractData}
+\alias{extractData.lm}
+\alias{extractData.coxph}
+\alias{extractData.cph}
+\alias{extractData.lvmfit}
+\alias{extractData.gls}
+\alias{extractData.lme}
 \title{Extract Data From a Model}
 \usage{
-extractData(object, model.frame = FALSE)
+extractData(object, design.matrix, as.data.frame)
+
+\method{extractData}{lm}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
+
+\method{extractData}{coxph}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
+
+\method{extractData}{cph}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
+
+\method{extractData}{lvmfit}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
+
+\method{extractData}{gls}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
+
+\method{extractData}{lme}(object, design.matrix = FALSE,
+  as.data.frame = TRUE)
 }
 \arguments{
 \item{object}{the fitted model.}
 
-\item{model.frame}{should the data be extracted after transformation (e.g. using model frame)
-or should the original dataset be extracted.}
+\item{design.matrix}{should the data be extracted after transformation (e.g. conversion of categorical variables to dummy variables)? Otherwise the original data will be returned.}
+
+\item{is.data.frame}{should the output be converted into a dataa.frame object?}
 }
 \description{
 Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
@@ -28,21 +53,21 @@ data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
            data.frame(Y=Y2,G="2",Id = Id)
            )
 m.lm <- lm(Y ~ G, data = data.df)
-extractData(m.lm, model.frame = TRUE)
-extractData(m.lm, model.frame = FALSE)
+a <- extractData(m.lm, design.matrix = TRUE)
+b <- extractData(m.lm, design.matrix = FALSE)
 
 library(nlme)
 m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = data.df)
-extractData(m.gls)
+c <- extractData(m.gls)
 m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
-extractData(m.lme)
+d <- extractData(m.lme)
 
 library(lava)
-e <- estimate(lvm(Y ~ G), data = data.df)
-extractData(e)
-extractData(e, model.frame = TRUE)
+e.lvm <- estimate(lvm(Y ~ G), data = data.df)
+e <- extractData(e.lvm)
+e <- extractData(e.lvm, design.matrix = TRUE)
 
-#### survival #####' 
+#### survival #### 
 library(survival)
 
 \dontrun{
@@ -50,10 +75,10 @@ library(survival)
   library(data.table)
   dt.surv <- sampleData(n, outcome = "survival")
   m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-  extractData(m.cox, model.frame = FALSE)
-  extractData(m.cox, model.frame = TRUE)
+  f <- extractData(m.cox, design.matrix = FALSE)
+  f <- extractData(m.cox, design.matrix = TRUE)
   m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-  extractData(m.cox, model.frame = TRUE)
+  f <- extractData(m.cox, design.matrix = TRUE)
 }
 
 #### nested fuuctions ####
@@ -63,5 +88,5 @@ fct1 <- function(m){
 fct2 <- function(m){ 
    extractData(m)
 }
-fct1(m.gls)
+g <- fct1(m.gls)
 }

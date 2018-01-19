@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan 18 2018 (18:27) 
+## last-updated: jan 19 2018 (11:12) 
 ##           By: Brice Ozenne
-##     Update #: 636
+##     Update #: 637
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,15 +45,15 @@
 #' ## gls model
 #' library(nlme)
 #' e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
-#' e.gls$dVcov <- dVcov2(e.gls, cluster = df.data$Id)
+#' e.gls$dVcov <- dVcov2(e.gls, data = df.data, cluster = df.data$Id)
 #' 
 #' C <- rbind(c(0,1,0,0,0),c(0,0,1,0,0))
 #' colnames(C) <- names(attr(e.gls$dVcov,"param"))
-#' lTest(e.gls, C = C)
+#' lTest(e.gls, data = df.data, C = C)
 #'
 #' C <- rbind(c(0,0,0,1,0))
 #' colnames(C) <- names(attr(e.gls$dVcov,"param"))
-#' lTest(e.gls, C = C)
+#' lTest(e.gls, data = df.data, C = C)
 #' 
 #' ## latent variable model
 #' m <- lvm(Y~X1+X2)

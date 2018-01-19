@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: jan 18 2018 (17:52) 
+## last-updated: jan 19 2018 (14:58) 
 ##           By: Brice Ozenne
-##     Update #: 60
+##     Update #: 66
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-if(TRUE){ ## already called in test-all.R
+if(FALSE){ ## already called in test-all.R
     rm(list = ls())
     library(testthat)
     library(lavaSearch2)
@@ -74,7 +74,7 @@ test_that("linear regression (not at ML: +1:p)",{
 test_that("linear regression: constrains",{
     m <- lvm(Y[0:2]~X1+1*X2)
     e <- estimate(m, d)
-
+    
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
                  "vcov.param")
     GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))
@@ -213,7 +213,7 @@ test_that("factor model: fixed coefficients",{
 test_that("factor model: constrains",{
     m <- lvm(Y1~1*eta+X2,Y2~lambda*eta+X2,Y3~lambda*eta,eta ~ beta*X2+beta*X1)
     e <- estimate(m, d)
-    
+
     test <- attr(score2(e, p = pars(e), indiv=TRUE, adjust.residuals = FALSE, return.vcov.param = TRUE),
                  "vcov.param")
     GS <- rmAttr(vcov(e),c("det","pseudo","minSV"))

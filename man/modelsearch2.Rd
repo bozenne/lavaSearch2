@@ -74,16 +74,16 @@ Argument \code{...} passed to \code{\link{modelsearch2}}:
 set.seed(10)
 mSim <- lvm(Y~X1+X2+X3+X4)
 addvar(mSim) <- ~Z1+Z2
-d <- lava::sim(mSim,1e2)
-eLM <- lm(Y~X1,data = d)
-
-res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "LR", method.p.adjust = "holm")
-res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-             statistic = "Wald", method.p.adjust = "holm", nStep = 1)
-\dontrun{
+df.data <- lava::sim(mSim, n = 1e2)
+eLM <- lm(Y~X1, data = df.data)
 possible.link <- c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2")
-res <- modelsearch2(eLM, link = possible.link)
+
+res <- modelsearch2(eLM, link = possible.link, data = df.data,
+             statistic = "LR", method.p.adjust = "holm")
+res <- modelsearch2(eLM, link = possible.link, data = df.data,
+             statistic = "Wald", method.p.adjust = "holm", nStep = 1)
+\dontrun{ 
+res <- modelsearch2(eLM, data = df.data, link = possible.link)
 }
 
 #### Cox model ####
@@ -104,13 +104,13 @@ categorical(mSim,labels=c("A","B","C")) <- "x2"
 latent(mSim) <- ~u
 covariance(mSim) <- y1~y2
 transform(mSim, Id~u) <- function(x){1:NROW(x)}
-df <- lava::sim(mSim, n = 1e2, latent = FALSE)
+df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 
 m <- lvm(c(y1,y2,y3)~u)
 latent(m) <- ~u
 addvar(m) <- ~x1+x2 
 
-e <- estimate(m, df)
+e <- estimate(m, df.data)
 
 \dontshow{
 links <- c(u~x1,u~x2C,y3~x2C)

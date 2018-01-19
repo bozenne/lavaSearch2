@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 18 2018 (16:38) 
+## Last-Updated: jan 19 2018 (15:53) 
 ##           By: Brice Ozenne
-##     Update #: 222
+##     Update #: 225
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -85,7 +85,7 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
                        return.score = FALSE, ...){
 
     p <- .coef2(object)
-    data <- extractData(object)
+    data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
 
     n.param <- length(p)
     name.param <- names(p)
@@ -224,7 +224,9 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
     ## ** param with non-zero third derivative
     keep.type <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
     tableType <- coefType(object, as.lava=FALSE)        
-    keep.param <- subset(tableType, subset = !is.na(lava) & detail %in% keep.type, select = "originalLink")
+    keep.param <- subset(tableType,
+                         subset = !is.na(lava) & detail %in% keep.type,
+                         select = "originalLink", drop = TRUE)
     
     ### ** Compute the gradient 
     if(numericDerivative){

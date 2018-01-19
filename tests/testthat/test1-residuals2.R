@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: jan 18 2018 (17:54) 
+## Last-Updated: jan 19 2018 (15:23) 
 ##           By: Brice Ozenne
-##     Update #: 46
+##     Update #: 49
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-if(TRUE){ ## already called in test-all.R
+if(FALSE){ ## already called in test-all.R
     rm(list = ls())
     library(testthat)
     library(lavaSearch2)
@@ -108,6 +108,7 @@ dL <- reshape2::melt(dW, id.vars = c("Id","G1"))
 
 
 test_that("equivalence residuals2.lvm residuals.lvm", {
+    
     m <- lvm(c(Y1[mu1:sigma]~1*eta1,Y2[mu2:sigma]~1*eta1,Y3[mu3:sigma]~1*eta1,eta1~G1))
     latent(m) <- ~eta1
     e.lvm <- estimate(m,dW)
@@ -127,7 +128,7 @@ test_that("equivalence residuals2.lvm residuals.lvm", {
     expect_equal(unname(test.gls),unname(test.lme))
     
     test.lvm <- residuals2(e.lvm, adjust.residuals = FALSE)
-    expect_equal(test.lvm,test.gls)
+    expect_equal(unname(test.lvm),unname(test.gls))
 
     GS.lme <- as.double(residuals(e.lme, type = "response", level = 0))
     GS.gls <- as.double(residuals(e.gls))

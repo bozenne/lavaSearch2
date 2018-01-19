@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: jan 18 2018 (13:35) 
+## last-updated: jan 19 2018 (10:23) 
 ##           By: Brice Ozenne
-##     Update #: 272
+##     Update #: 283
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -47,7 +47,7 @@
 #' colSums(iid1^2)
 #' 
 #' #### Cox model ####
-#' library(survival)#' 
+#' library(survival)
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 #' 
@@ -113,7 +113,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
 
     ## ** extract data
     if(is.null(data)){
-        myData <- extractData(x, model.frame = FALSE)
+        myData <- extractData(x, design.matrix = FALSE, as.data.frame = TRUE)
     }else{ 
         myData <-  as.data.frame(data)
     }
@@ -152,13 +152,13 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
             stop("variable defined in grouping not found in data \n")
         }
     }
-    myData$grouping <- as.character(myData$grouping)
-    Ugrouping <- unique(myData$grouping)
+    myData[,grouping] <- as.character(myData[,grouping])
+    Ugrouping <- unique(myData[,grouping])
     n.group <- length(Ugrouping)
 
     ## ** warper
     warper <- function(i){ # i <- "31"
-        newData <- subset(myData,grouping!=i)
+        newData <- subset(myData, subset = myData[[grouping]]!=i)
         xnew <- tryWithWarnings(stats::update(x, data = newData))
         if(!is.null(xnew$error)){
             xnew$value <- rep(NA, n.coef)
@@ -209,7 +209,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
             toExport <- c(toExport,as.character(x$call$fixed))        
         }
         toExport <- c(unique(toExport),"tryWithWarnings")
-        
+
         #sapply(as.list(x$call),as.character)
         i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(

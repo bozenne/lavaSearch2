@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan 18 2018 (17:55) 
+## last-updated: jan 19 2018 (16:02) 
 ##           By: Brice Ozenne
-##     Update #: 149
+##     Update #: 153
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-if(TRUE){ ## already called in test-all.R
+if(FALSE){ ## already called in test-all.R
     rm(list = ls())
     library(testthat)
     library(lavaSearch2)
@@ -200,38 +200,39 @@ logLik(e.lvm)
 logLik(e.lme)
 logLik(e.gls)
 
-test_that("mixed mode: df",{
+test_that("UN mixed model: df",{
     ## singular information matrix
     ## df.adj.lme <- lTest(e.lme,
     ##                          robust = FALSE, adjust.residuals = FALSE)
-
+    skip_on_cran()
+    
     system.time(
         df1.gls <- lTest(e.gls, adjust.residuals = FALSE,
-                              numericDerivative = TRUE)
+                         numericDerivative = TRUE)
     )
     system.time(
         df2.gls <- lTest(e.gls, adjust.residuals = FALSE,
-                              numericDerivative = FALSE)
+                         numericDerivative = FALSE)
     )    
     expect_equal(df1.gls,df2.gls)
     system.time(
         df2.adj.gls <- lTest(e.gls, adjust.residuals = TRUE,
-                                  numericDerivative = FALSE)
+                             numericDerivative = FALSE)
     )
     df2.adj.gls
 
     system.time(
         df1.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                              numericDerivative = TRUE)
+                         numericDerivative = TRUE)
     )
     system.time(
         df2.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                              numericDerivative = FALSE)
+                         numericDerivative = FALSE)
     )
     expect_equal(df1.lvm,df2.lvm)
     system.time(
         df2.adj.lvm <- lTest(e.lvm, adjust.residuals = TRUE,
-                                  numericDerivative = FALSE)
+                             numericDerivative = FALSE)
     )
     df2.adj.lvm
 })

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 18 2018 (18:27) 
+## last-updated: jan 19 2018 (14:48) 
 ##           By: Brice Ozenne
-##     Update #: 729
+##     Update #: 742
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -310,7 +310,6 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     if(!is.matrix(data)){
         data <- as.matrix(data)
     }
-
     
     if(usefit==FALSE){
         pS2 <- prepareScore2(lava::Model(object), data = data, second.order = second.order,
@@ -323,13 +322,12 @@ prepareScore2.lvmfit <- function(object, data = NULL, p = NULL, usefit = TRUE,
     }
     
     pS2 <- list()
-
     ### ** Update skeleton with current estimates
     pS2$skeleton <- skeleton(object, data = data, p = p,
                              name.endogenous = name.endogenous, 
                              name.latent = name.latent, 
                              as.lava = TRUE)
-    
+ 
     ### ** Update first order partial derivatives with current estimates
     pS2$dtheta <- skeletonDtheta(object, data = data,
                                  df.param.all = pS2$skeleton$df.param,

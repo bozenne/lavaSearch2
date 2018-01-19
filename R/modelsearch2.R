@@ -48,16 +48,16 @@
 #' set.seed(10)
 #' mSim <- lvm(Y~X1+X2+X3+X4)
 #' addvar(mSim) <- ~Z1+Z2
-#' d <- lava::sim(mSim,1e2)
-#' eLM <- lm(Y~X1,data = d)
-#'
-#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-#'              statistic = "LR", method.p.adjust = "holm")
-#' res <- modelsearch2(eLM, link = c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2"),
-#'              statistic = "Wald", method.p.adjust = "holm", nStep = 1)
-#' \dontrun{
+#' df.data <- lava::sim(mSim, n = 1e2)
+#' eLM <- lm(Y~X1, data = df.data)
 #' possible.link <- c("Y~X2","Y~X3","Y~X4","Y~Z1","Y~Z2")
-#' res <- modelsearch2(eLM, link = possible.link)
+#'
+#' res <- modelsearch2(eLM, link = possible.link, data = df.data,
+#'              statistic = "LR", method.p.adjust = "holm")
+#' res <- modelsearch2(eLM, link = possible.link, data = df.data,
+#'              statistic = "Wald", method.p.adjust = "holm", nStep = 1)
+#' \dontrun{ 
+#' res <- modelsearch2(eLM, data = df.data, link = possible.link)
 #' }
 #' 
 #' #### Cox model ####
@@ -78,13 +78,13 @@
 #' latent(mSim) <- ~u
 #' covariance(mSim) <- y1~y2
 #' transform(mSim, Id~u) <- function(x){1:NROW(x)}
-#' df <- lava::sim(mSim, n = 1e2, latent = FALSE)
+#' df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 #' 
 #' m <- lvm(c(y1,y2,y3)~u)
 #' latent(m) <- ~u
 #' addvar(m) <- ~x1+x2 
 #'
-#' e <- estimate(m, df)
+#' e <- estimate(m, df.data)
 #'
 #' \dontshow{
 #' links <- c(u~x1,u~x2C,y3~x2C)
@@ -208,7 +208,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                                  typeSD = "information", df = FALSE, adjust.residuals = FALSE,
                                  trace = TRUE,
                                  ...){
-
+    
     ## ** normalise arguments
     typeSD <- match.arg(typeSD, c("information","robust","jackknife"))
     if(df == FALSE && adjust.residuals == TRUE){
@@ -234,19 +234,15 @@ modelsearch2.default <- function(object, link, data = NULL,
         stop("Extraction of the iid decomposition failed \n",
              "No iid method for models of class ",class(object)," \n")
     }
-      
-    ## ** get data
-    if(is.null(data)){
-        data <- evalInParentEnv(object$call$data, envir = environment())
-        if(is.null(data)){
-            stop("object$call$data not found in the current environment or its parents \n",
-                 "consider specify the argument \'data\' \n")
-        }
-    }
-
+        
     ## ** get model vars
     model.var <- all.vars(stats::formula(object))
-    
+
+    ## ** get data
+    if(is.null(data)){
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)        
+    }
+   
     ## ** normalize the links
     restricted <- do.call(cbind,initVarLinks(link, Slink = "~"))
     allVars <- union(model.var, names(data))
@@ -255,8 +251,9 @@ modelsearch2.default <- function(object, link, data = NULL,
 
     if(any(unique(as.vector(restricted)) %in% allVars == FALSE)){
         wrong.var <- unique(as.vector(restricted))[unique(as.vector(restricted)) %in% allVars == FALSE]
-        stop("Some links contains variables that are not in the model \n",
-             "variables(s) : \"",paste(wrong.var,collapse ="\" \""),"\"\n")
+        stop("Some links contains variables that are not in the model/data \n",
+             "variables(s) : \"",paste(wrong.var,collapse ="\" \""),"\"\n",
+             "(consider specifying the argument \'data\') \n")
     }
     
     if(any(restricted[,2] %in% model.var)){
@@ -284,7 +281,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         ls.call <- list()
     }
     ls.call$data <- data
-
+        
     ## ** extract influence function
     if(class(object) %in% c("coxph","cph")){
         

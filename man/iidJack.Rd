@@ -50,7 +50,7 @@ colSums(iid2^2)
 colSums(iid1^2)
 
 #### Cox model ####
-library(survival)#' 
+library(survival)
 data(Melanoma, package = "riskRegression")
 m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
 

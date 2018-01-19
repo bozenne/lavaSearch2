@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 17 2018 (19:15) 
+## last-updated: jan 19 2018 (11:21) 
 ##           By: Brice Ozenne
-##     Update #: 2192
+##     Update #: 2194
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -235,78 +235,5 @@ score2.lvmfit <- function(object, p = NULL, data = NULL,
     return(out.score)
 }
 
-## * .information2
-.information2 <- function(dmu.dtheta, dOmega.dtheta,
-                          Omega, ls.indexOmega, hat,
-                          n.param, name.param, n.cluster){
-
-### ** prepare
-    clusterSpecific <- !is.null(ls.indexOmega)
-    iOmega <- chol2inv(chol(Omega))
-
-    
-    if(!clusterSpecific){ ## small sample correction          
-        df.mean <- Reduce("+",hat)
-        iN.cluster <- as.double(n.cluster - diag(df.mean))   
-    }
-
-### ** compute information matrix for each pair of parameters
-    Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
-    
-    for(iP1 in 1:n.param){ # iP <- 1
-        for(iP2 in iP1:n.param){ # iP <- 1
-            iName1 <- name.param[iP1]
-            iName2 <- name.param[iP2]
-            test.mu <- !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
-            test.Omega <- !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-                    
-            
-            ## *** Individual specific Omega (e.g. presence of missing values)
-            if(clusterSpecific){
-                for(iC in 1:n.cluster){
-                    
-                    Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                    iOmega.tempo <- iOmega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                    
-                    if(test.mu){
-                        dmu.tempo1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        dmu.tempo2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.tempo1 %*% iOmega.tempo * dmu.tempo2)
-                    }
-
-                    if(test.Omega){
-                        dOmega.dtheta.tempo1 <- dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        dOmega.dtheta.tempo2 <- dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        iDiag <- diag(iOmega.tempo %*% dOmega.dtheta.tempo1 %*% iOmega.tempo %*% dOmega.dtheta.tempo2)
-                        
-                        ## small sample correction  
-                        iW.cluster <- 1 -  diag(hat[[iC]])
-
-                        Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag * iW.cluster)
-                    }
-                }                
-            }
-            
-            ## *** Same for all individuals
-            if(clusterSpecific == FALSE){
-                if(test.mu){
-                    Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu.dtheta[[iName1]] %*% iOmega * dmu.dtheta[[iName2]])
-                }
-
-                if(test.Omega){
-                    iDiag <- diag(iOmega %*% dOmega.dtheta[[iName1]] %*% iOmega %*% dOmega.dtheta[[iName2]])
-                    Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.cluster)
-                }
-            }
-
-        }
-    }
-    Info <- symmetrize(Info, update.upper = FALSE)
-    
-### ** export
-    return(Info)
-}
-
-
 #----------------------------------------------------------------------
-### score2.R ends here
+### score2.R ends her

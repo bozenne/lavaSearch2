@@ -145,7 +145,6 @@ or it groups them:
 }
 }
 \examples{
-
 #### regression ####
 m <- lvm(Y~X1+X2)
 e <- estimate(m, sim(m, 1e2))

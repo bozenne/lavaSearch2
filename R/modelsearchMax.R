@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 18 2018 (16:53) 
+## last-updated: jan 19 2018 (15:14) 
 ##           By: Brice Ozenne
-##     Update #: 648
+##     Update #: 650
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -214,8 +214,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         statisticN0 <- setNames(subset(df.test, subset = convergence==0, select = "statistic", drop = TRUE),
                                 nameN0)
         if(df){
-            dfN0 <- round(stats::median(stats::setNames(subset(df.test, subset = convergence==0, select = "df"),
-                                                        nameN0)))
+            dfN0.all <- subset(df.test, subset = convergence==0, select = "df", drop = TRUE)
+            dfN0 <- round(stats::median(dfN0.all))
         }else {
             dfN0 <- NULL
         }

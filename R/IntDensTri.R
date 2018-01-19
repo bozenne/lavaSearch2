@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: jan 18 2018 (16:37) 
+## last-updated: jan 19 2018 (15:12) 
 ##           By: Brice Ozenne
-##     Update #: 469
+##     Update #: 470
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,7 +109,7 @@
 IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
                        type = "double", proba.min = 1e-6, prune = NULL, distribution = "pmvnorm"){
 
-     interior <- area <- weight <- NULL ## [:for CRAN check] subset
+     interior <- NULL ## [:for CRAN check] subset
     
     ## ** normalize arguments
     type <- match.arg(type, c("raw","fine","double"))
@@ -168,9 +168,9 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
 
 
     if(type=="double"){
-        grid.interior <- subset(grid, interior==TRUE,select = c(area,weight))
+        grid.interior <- subset(grid, interior==TRUE,select = c("area", "weight"))
         area.interior <- sum(grid.interior$area * grid.interior$weight)
-        grid.exterior <- subset(grid, interior==FALSE,select = c(area,weight))
+        grid.exterior <- subset(grid, interior==FALSE,select = c("area", "weight"))
         area.exterior <- sum(grid.exterior$area * grid.exterior$weight)
         total.area <- area.interior + (area.exterior-area.interior)/2
     }else{        

@@ -45,7 +45,7 @@ set.seed(10)
 mSim <- lvm(Y~0.1*X1+0.2*X2)
 categorical(mSim, labels = c("a","b","c")) <- ~X1
 transform(mSim, Id~Y) <- function(x){1:NROW(x)}
-df.data <- sim(mSim, 1e2)
+df.data <- lava::sim(mSim, 1e2)
 
 ## gold standard
 e.lm <- lm(Y~X1+X2, data = df.data)
@@ -56,15 +56,15 @@ lTest(e.lm)
 ## gls model
 library(nlme)
 e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
-e.gls$dVcov <- dVcov2(e.gls, cluster = df.data$Id)
+e.gls$dVcov <- dVcov2(e.gls, data = df.data, cluster = df.data$Id)
 
 C <- rbind(c(0,1,0,0,0),c(0,0,1,0,0))
 colnames(C) <- names(attr(e.gls$dVcov,"param"))
-lTest(e.gls, C = C)
+lTest(e.gls, data = df.data, C = C)
 
 C <- rbind(c(0,0,0,1,0))
 colnames(C) <- names(attr(e.gls$dVcov,"param"))
-lTest(e.gls, C = C)
+lTest(e.gls, data = df.data, C = C)
 
 ## latent variable model
 m <- lvm(Y~X1+X2)
