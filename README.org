@@ -43,14 +43,6 @@ suppressPackageStartupMessages(library(lavaSearch2))
 #+END_SRC 
 
 #+RESULTS:
-: Loading required package: lava
-: lava version 1.5.1
-: Loading required package: data.table
-: data.table 1.10.4
-:   The fastest way to learn (by data.table authors): https://www.datacamp.com/courses/data-analysis-the-data-table-way
-:   Documentation: ?data.table, example(data.table) and browseVignettes("data.table")
-:   Release notes, videos and slides: http://r-datatable.com
-: lavaSearch2 version 1.0.0
 
 
 *** Inference with small samples
@@ -242,12 +234,12 @@ Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
 
 Linear Hypotheses:
           Estimate Std. Error z value Pr(>|z|)   
-Y~X1 == 0   0.3270     0.1589   2.058  0.20726   
-Y~X2 == 0   0.4025     0.1596   2.523  0.06616 . 
-Y~X3 == 0   0.5072     0.1383   3.669  0.00145 **
-Y~X4 == 0   0.3161     0.1662   1.902  0.28588   
-Y~X5 == 0   0.3875     0.1498   2.586  0.05555 . 
-Y~X6 == 0   0.3758     0.1314   2.859  0.02479 * 
+Y~X1 == 0   0.3270     0.1589   2.058  0.20730   
+Y~X2 == 0   0.4025     0.1596   2.523  0.06606 . 
+Y~X3 == 0   0.5072     0.1383   3.669  0.00146 **
+Y~X4 == 0   0.3161     0.1662   1.902  0.28581   
+Y~X5 == 0   0.3875     0.1498   2.586  0.05548 . 
+Y~X6 == 0   0.3758     0.1314   2.859  0.02486 * 
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 (Adjusted p values reported -- single-step method)
@@ -271,7 +263,7 @@ Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
 Linear Hypotheses:
           Estimate Std. Error t value Pr(>|t|)  
 Y~X1 == 0   0.3270     0.1723   1.898   0.3130  
-Y~X2 == 0   0.4025     0.1730   2.327   0.1375  
+Y~X2 == 0   0.4025     0.1730   2.327   0.1376  
 Y~X3 == 0   0.5072     0.1499   3.385   0.0107 *
 Y~X4 == 0   0.3161     0.1802   1.754   0.3960  
 Y~X5 == 0   0.3875     0.1624   2.385   0.1216  
@@ -456,11 +448,11 @@ summary(resScore)
 
 #+RESULTS:
 : Sequential search for local dependence using the score statistic 
-:  The variable selection procedure retained 2 variables:
+:  The variable selection procedure retained 3 variables:
 :      link nTests noConvergence statistic adjusted.p.value
-: 1:   u~x2     10            10 36.436487     1.577228e-08
-: 2: y2~~y3      9             9  6.912568     7.703278e-02
-: 3:  y3~x1      8             8  3.136431     6.124895e-01
+: 10   u~x2     10             0 36.436487     1.577228e-08
+: 5  y2~~y3      9             0  6.912568     7.703278e-02
+: 7   y3~x1      8             0  3.136431     6.124895e-01
 : confidence level: 0.9 (two sided, adjustement: holm)
 
 This indeed matches the highest score statistic found by
@@ -483,18 +475,18 @@ summary(resMax)
 #+END_SRC
 
 #+RESULTS:
-: Sequential search for local dependence using the robust Wald statistic 
-:  The variable selection procedure retained 2 variables:
+: Sequential search for local dependence using the Wald statistic 
+:  The variable selection procedure retained 3 variables:
 :      link nTests noConvergence statistic adjusted.p.value quantile
-: 1:   u~x2     10             0  6.772351     1.258976e-09 2.427734
-: 2: y2~~y3      9             0  2.582396     6.946423e-02 2.436287
-: 3:  y3~x1      8             0  1.813579     2.696723e-01 2.296602
+: 10   u~x2     10             0  6.772351     1.258976e-09 2.427734
+: 5  y2~~y3      9             0  2.582396     6.946423e-02 2.436287
+: 7   y3~x1      8             0  1.813579     2.696723e-01 2.296602
 : confidence level: 0.9 (two sided, adjustement: max)
 
 We can compare the adjustment using the max distribution to bonferroni:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-c(bonferroni =  min(p.adjust(resMax$sequenceTest[[2]][,p.value], method = "bonferroni")),
-  max = min(resMax$sequenceTest[[2]][,adjusted.p.value]))
+c(bonferroni =  min(p.adjust(resMax$sequenceTest[[2]][,"p.value"], method = "bonferroni")),
+  max = min(resMax$sequenceTest[[2]][,"adjusted.p.value"]))
 #+END_SRC
 
 #+RESULTS:
@@ -514,11 +506,11 @@ summary(resMax2)
 
 #+RESULTS:
 : Sequential search for local dependence using the Wald statistic 
-:  The variable selection procedure retained 2 variables:
+:  The variable selection procedure retained 3 variables:
 :      link nTests noConvergence statistic adjusted.p.value
-: 1:   u~x2     10             0  6.772351               NA
-: 2: y2~~y3      9             0  2.582396       0.06926312
-: 3:  y3~x1      8             0  1.813579       0.26946349
+: 10   u~x2     10             0  6.772351       0.00000000
+: 5  y2~~y3      9             0  2.582396       0.06980319
+: 7   y3~x1      8             0  1.813579       0.26925092
 : confidence level: 0.9 (two sided, adjustement: fastmax)
 
 *** Model diagnostic: checking that the names of the variables in the model match those of the data
@@ -607,13 +599,11 @@ attached base packages:
 [1] stats     graphics  grDevices utils     datasets  methods   base     
 
 other attached packages:
-[1] multcomp_1.4-6    TH.data_1.0-8     MASS_7.3-47       survival_2.41-3   mvtnorm_1.0-6     lavaSearch2_1.0.0 data.table_1.10.4 lava_1.5.1       
+[1] multcomp_1.4-6    TH.data_1.0-8     MASS_7.3-47       survival_2.41-3   mvtnorm_1.0-6     lavaSearch2_1.0.0 lava_1.5.1       
 
 loaded via a namespace (and not attached):
- [1] Rcpp_0.12.11       compiler_3.4.0     plyr_1.8.4         iterators_1.0.8    tools_3.4.0        optextras_2016-8.8 svUnit_0.7-12      tibble_1.3.3      
- [9] gtable_0.2.0       lattice_0.20-35    ucminf_1.1-4       rlang_0.1.1        Matrix_1.2-9       foreach_1.4.3      parallel_3.4.0     Rcgmin_2013-2.21  
-[17] BB_2014.10-1       stats4_3.4.0       qqtest_1.1.1       grid_3.4.0         inline_0.3.14      setRNG_2013.9-1    tcltk_3.4.0        tmvtnorm_1.4-10   
-[25] dfoptim_2016.7-1   Rvmmin_2013-11.12  minqa_1.2.4        ggplot2_2.2.1      scales_0.4.1       codetools_0.2-15   splines_3.4.0      colorspace_1.3-2  
-[33] numDeriv_2016.8-1  quadprog_1.5-5     sandwich_2.4-0     optimx_2013.8.7    lazyeval_0.2.0     doParallel_1.0.10  munsell_0.4.3      gmm_1.5-2         
-[41] zoo_1.8-0
+ [1] Rcpp_0.12.11      magrittr_1.5      splines_3.4.0     munsell_0.4.3     doParallel_1.0.10 colorspace_1.3-2  lattice_0.20-35   rlang_0.1.1      
+ [9] foreach_1.4.3     stringr_1.2.0     plyr_1.8.4        tcltk_3.4.0       tools_3.4.0       parallel_3.4.0    grid_3.4.0        gtable_0.2.0     
+[17] iterators_1.0.8   lazyeval_0.2.0    tibble_1.3.3      numDeriv_2016.8-1 Matrix_1.2-9      reshape2_1.4.2    ggplot2_2.2.1     codetools_0.2-15 
+[25] inline_0.3.14     sandwich_2.4-0    stringi_1.1.5     compiler_3.4.0    scales_0.4.1      zoo_1.8-0
 #+end_example

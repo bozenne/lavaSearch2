@@ -37,7 +37,6 @@
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach foreach
 #' @importFrom graphics par plot text
-#' @importFrom inline cfunction
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag
 #' @importFrom methods is
