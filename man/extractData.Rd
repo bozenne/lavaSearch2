@@ -35,7 +35,7 @@ extractData(object, design.matrix, as.data.frame)
 
 \item{design.matrix}{should the data be extracted after transformation (e.g. conversion of categorical variables to dummy variables)? Otherwise the original data will be returned.}
 
-\item{is.data.frame}{should the output be converted into a dataa.frame object?}
+\item{as.data.frame}{should the output be converted into a dataa.frame object?}
 }
 \description{
 Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
