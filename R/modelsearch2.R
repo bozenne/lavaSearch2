@@ -59,18 +59,21 @@
 #' \dontrun{ 
 #' res <- modelsearch2(eLM, data = df.data, link = possible.link)
 #' }
+#'
 #' 
 #' #### Cox model ####
+#' \dontrun{
 #' library(survival)
 #' data(Melanoma, package = "riskRegression")
 #' m <- coxph(Surv(time,status==1)~ici+age, data = Melanoma, x = TRUE, y = TRUE)
-#' \dontrun{
+#' 
 #' res <- modelsearch2(m, link = c(status~epicel,status~sex),
 #'                     packages = "survival", nStep = 1)
 #' res
 #' }
 #' 
 #' #### LVM ####
+#' \dontrun{
 #' mSim <- lvm()
 #' regression(mSim) <- c(y1,y2,y3)~u
 #' regression(mSim) <- u~x1+x2
@@ -85,20 +88,16 @@
 #' addvar(m) <- ~x1+x2 
 #'
 #' e <- estimate(m, df.data)
-#'
-#' \dontshow{
+#' 
 #' links <- c(u~x1,u~x2C,y3~x2C)
 #' resScore <- modelsearch2(e, statistic = "score", link = links, method.p.adjust = "holm")
 #' resLR <- modelsearch2(e, statistic = "LR", link = links, method.p.adjust = "holm", nStep = 1)
 #' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald", link = links, nStep = 1)
-#' } 
-#' \dontrun{
 #' resScore <- modelsearch2(e, statistic = "score", method.p.adjust = "holm")
 #' resLR <- modelsearch2(e, statistic = "LR", method.p.adjust = "holm")
 #' resMax <- modelsearch2(e, rm.endo_endo = TRUE, statistic = "Wald")
 #' }
 #' 
-#'
 #' @export
 `modelsearch2` <-
   function(object, ...) UseMethod("modelsearch2")

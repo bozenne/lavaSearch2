@@ -69,6 +69,7 @@ res$value-1/2
 ggplot2::autoplot(res)
 
 ## trivariate normal distribution
+\dontrun{
 p <- 3
 Sigma <- diag(p)
 mu <- rep(0, p)
@@ -77,8 +78,10 @@ res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 0, z.max = 10)
 ggplot2::autoplot(res2)
 ggplot2::autoplot(res2, coord.plot = c("x","z1"))
 res2
+}
 
 #### when the distribution is far from 0
+\dontrun{
 eq1 <- IntDensTri(mu = c(10,0), Sigma = diag(1,2), 
                   x.min = 2, n=10)
 eq1$value-1
@@ -97,6 +100,7 @@ mu <- rep(0, p)
 
 res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 1, z.max = c(2,2))
 res2$grid
+}
 
 }
 \author{
