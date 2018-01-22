@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 22 2018 (11:45) 
 ## Version: 
-## Last-Updated: jan 22 2018 (12:03) 
+## Last-Updated: jan 22 2018 (12:11) 
 ##           By: Brice Ozenne
-##     Update #: 3
+##     Update #: 6
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-if(TRUE){ ## already called in test-all.R
+if(FALSE){ ## already called in test-all.R
     rm(list = ls())
     library(testthat)
     library(lavaSearch2)
@@ -38,7 +38,7 @@ e.base <- estimate(m, data = df.sim)
 
 test_that("Score 1 link",{
     GS.score <- modelsearch(e.base, silent = TRUE)
-    index.coef <- which(GS.score$res[,"Index"]=="E~X1")
+    index.coef <- which(GS.score$res[,"Index"]=="Y~X1")
 
     test.score <- summary(modelsearch2(e.base, statistic = "score", method.p.adjust = "holm", trace = 0), display = FALSE)
 
