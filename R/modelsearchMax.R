@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 19 2018 (15:14) 
+## last-updated: jan 22 2018 (11:33) 
 ##           By: Brice Ozenne
-##     Update #: 650
+##     Update #: 671
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,21 +103,21 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                         sd.coef <- e.df[1, "std"]
                         out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
                     }else{
-                        sd.coef <- stats::sd(out$iid, na.rm = TRUE)
+                        sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))
                     }
                     
                 }else{
-
                     out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                     if(typeSD == "information"){
                         ## NOTE: it assumes that whenever df is FALSE then adjust.residuals is FALSE
                         sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
                         out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
                     }else{
-                        sd.coef <- stats::sd(out$iid, na.rm = TRUE)
+                        sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))
                     }
                         
                 }
+
                 ## compute test statistic
                 out$df[1, "statistic"] <- abs(out$df$coefBeta/sd.coef) ## keep .SD for clarity
             }
@@ -191,7 +191,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     df.test[indexCV, "p.value"] <- as.numeric(NA)
     if(df){
         df.test[indexCV, "p.value"] <- 2*(1-stats::pt(abs(df.test[indexCV,"statistic"]),
-                                                      df = df.test[indexCV,"statistic"]))
+                                                      df = df.test[indexCV,"df"]))
     }else{
         df.test[indexCV, "p.value"] <- 2*(1-pnorm(abs(df.test[indexCV,"statistic"])))
     }
@@ -219,12 +219,15 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }else {
             dfN0 <- NULL
         }
-
+        resQmax <- calcDistMaxIntegral(statistic = statisticN0[1], iid = iid.link[,1,drop=FALSE], df = dfN0,
+                                       iid.previous = iid.previous, quantile.previous = quantile.previous, 
+                                       alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
+        
         if(method.max=="integration"){
             resQmax <- calcDistMaxIntegral(statistic = statisticN0, iid = iid.link, df = dfN0,
                                            iid.previous = iid.previous, quantile.previous = quantile.previous, 
                                            alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
-            
+            resQmax$p.adjust
         }else{
             method.boot <- switch(method.max,
                                   "boot-naive" = "naive",
@@ -235,7 +238,6 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                             iid.previous = iid.previous, quantile.previous = quantile.previous, 
                                             alpha = alpha, ncpus = ncpus, initCpus = FALSE, trace = trace)
         }
-
         df.test[indexCV, "corrected.level"] <- resQmax$correctedLevel
         df.test[indexCV, "adjusted.p.value"] <- resQmax$p.adjust
         df.test[indexCV, "quantile"] <- resQmax$z

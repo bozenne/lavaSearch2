@@ -176,7 +176,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             return(res)
         }
         attr(iid.FCT,"method.iid") <- "iid"
-    }else if(typeSD == "iid2"){
+    }else{
         iid.FCT <- function(x){
             iid2(x, adjust.residuals = TRUE)
         }
