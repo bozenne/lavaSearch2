@@ -8,9 +8,9 @@
 
 *lava* is an R package that implements Structural Equation Models with
  latent variables (see [[https://github.com/kkholst/lava]]). The present
- software package, *lavaSearch2*, provides additional functionnalities
+ software package, *lavaSearch2*, provides additional functionalities
  to the *lava* package when using maximum likelihood estimation. The
- main functionnalities are:
+ main functionalities are:
 - Improved control of the type 1 error rate when performing inference
   in small samples. Also applicable to specific =gls= and =lme= models
   (*nlme* package).
@@ -51,12 +51,12 @@ Using *lava*, the p.values that are obtained from the summary (Wald
 tests) rely on a Gaussian approximation. While being asymptotically
 valid, this approximation may not provide a very accurate control of
 the type 1 error rate in small samples. Simulations have shown that
-the type 1 error rate tends to be too large, i.e. the p.value are have
+the type 1 error rate tends to be too large, i.e. the p.values are have
 a downward bias.
 
 *lavaSearch2* improves the Gaussian approximation in two way:
 - using a Student's t distribution instead of a normal distribution to
-  account for the incertainty on the variance of the parameters. The
+  account for the uncertainty on the variance of the parameters. The
   degrees of freedom are estimated using Satterwaite approximation,
   i.e. identifying the chi-squared distribution that best fit the
   observed moments of the variance of the parameters.
@@ -112,7 +112,7 @@ class(e)
 : Y    0.7967775  0.2311125 3.4475747 0.0005656439
 : [1] "lvmfit"
 
-To activate the functionnalities of *lavaSearch2* when calling the
+To activate the functionalities of *lavaSearch2* when calling the
 summary, one needs first to call =dVcov2=: 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 dVcov2(e) <- TRUE ## with small sample correction 
@@ -138,7 +138,7 @@ summary(e)$coef
 *** Inference using F-tests
 
 The function =lTest= can be use to perform F-test, i.e. to test
-simulataneously several linear combinations of the coefficients.
+simultaneously several linear combinations of the coefficients.
 =lTest= uses a contrast matrix to encode in lines which linear
 combination of coefficients should be tested. For 3 tests, such a
 contrast matrix looks like:
@@ -159,7 +159,7 @@ print(M)
 By default, =lTest= set the diagonal to 1, i.e. jointly test whether
 all parameters are different from 0. This is often not very relevant
 since the variance parameters are expected to be strictly positive. A
-more meaningful test could be to test whether all mean parameter are non-0:
+more meaningful test could be to test whether all mean parameters are non-0:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 M[1,"Y"] <- 1
 M[2,"Y~X1"] <- 1
@@ -183,14 +183,14 @@ the residual degrees of freedom and the corresponding p.value:
 #+RESULTS:
 : [1] 0.001981892
 
-The first degrees of freedom corresponds to the number of linear
+The first degree of freedom corresponds to the number of linear
 hypotheses, here 3. It is not part of the output of the software.
 
 *** Inference: adjustment for multiple comparisons (single model)
 
-When performing multiple testing, adjustement for multiple comparisons
+When performing multiple testing, adjustment for multiple comparisons
 is necessary in order to control the type 1 error rate, i.e. to
-provide interpretable p.values. The *multcomp* package enable to do
+provide interpretable p.values. The *multcomp* package enables to do
 such adjustment when all tests comes from the same =lvmfit= object:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 suppressPackageStartupMessages(library(multcomp))
@@ -245,7 +245,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 (Adjusted p values reported -- single-step method)
 #+end_example
 
-Note that this correction rely on the Gaussian approximation. To use
+Note that this correction relies on the Gaussian approximation. To use
 small sample corrections implemented in *lavaSearch2*, just call
 =glht2= instead of =glht=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
@@ -281,7 +281,7 @@ theory underlying the *multcomp* package.
 
 Pipper et al. in "A Versatile Method for Confirmatory Evaluation of
 the Effects of a Covariate in Multiple Models" (2012, Journal of the
-Royal Statistical Society, Series C) developped a method to assess the
+Royal Statistical Society, Series C) developed a method to assess the
 effect of an exposure on several outcomes when a different model is
 fitted for each outcome. This method has been implemented in the =mmm=
 function from the *multcomp* package for glm and Cox
@@ -400,7 +400,7 @@ especially in small samples:
   generative model.
 - it is hard to define a meaningful significance threshold since
   p-values should be adjusted for multiple comparisons and sequential
-  testing. However traditional methods like Bonferonni-Holm tends to
+  testing. However traditional methods like Bonferonni-Holm tend to
   over corrected and therefore reduce the power of the procedure since
   they assume that the test are independent.
 
@@ -541,7 +541,7 @@ eWrong <- estimate(mWrong, data = df.data)
 - the user has made a mistake when defining the model or has not given
   the appropriate dataset.
 
-The =checkData= function enable to check the last point. It compares
+The =checkData= function enables to check the last point. It compares
 the observed variables defined in the model and the one given by the
 dataset. In case of mismatch it returns a message:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no

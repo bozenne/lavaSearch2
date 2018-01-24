@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 17 2018 (17:16) 
+## Last-Updated: jan 22 2018 (13:11) 
 ##           By: Brice Ozenne
-##     Update #: 128
+##     Update #: 133
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -81,7 +81,7 @@ glht.mlf2 <- function(model, linfct, ...) {
         linfct <- linfct[rep(1, length(model))]
         names(linfct) <- names(model)
     }
- 
+
     ## ** get the name of each model
     n.model <- length(model)
     name.model <- names(model)    

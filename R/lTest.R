@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (09:29) 
 ## Version: 
-## last-updated: jan 19 2018 (11:12) 
+## last-updated: jan 22 2018 (13:12) 
 ##           By: Brice Ozenne
-##     Update #: 637
+##     Update #: 639
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -130,7 +130,6 @@ lTest.lm <- function(object, C = NULL, adjust.residuals = TRUE,
         C.dVcov.C <- sapply(keep.param, function(x){
             rowSums(M.C %*% dVcov.dtheta[,,x] * M.C)
         })
-        
         numerator <- 2 *(C.vcov.C)^2
         denom <- rowSums(C.dVcov.C %*% vcov.param[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
         df <- numerator/denom
