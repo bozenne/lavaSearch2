@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: jan 19 2018 (15:20) 
+## Last-Updated: jan 25 2018 (17:37) 
 ##           By: Brice Ozenne
-##     Update #: 806
+##     Update #: 812
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -575,7 +575,6 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
                         
                         ## small sample correction  
                         iW.cluster <- 1 -  diag(hat[[iC]])
-
                         Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag * iW.cluster)
                     }
                 }                

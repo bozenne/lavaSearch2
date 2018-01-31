@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 19 2018 (15:53) 
+## Last-Updated: jan 30 2018 (14:36) 
 ##           By: Brice Ozenne
-##     Update #: 225
+##     Update #: 227
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,8 +29,8 @@
 #' @param value same as adjust.residuals.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
 #' @param return.score [for internal use] export the score.
-#' @param ... arguments to be passed to lower level methods.
-#' 
+#' @param ... [internal] Only used by the generic method.
+#'
 #' @export
 `dVcov2` <-
   function(object, ...) UseMethod("dVcov2")

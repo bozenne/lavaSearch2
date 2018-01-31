@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 22 2018 (13:11) 
+## Last-Updated: jan 31 2018 (17:28) 
 ##           By: Brice Ozenne
-##     Update #: 133
+##     Update #: 165
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,10 @@ mlf2 <- function(...) {
 #' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param robust should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
-#' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{lTest}.
+#' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.
+#'
+#' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
+#' \code{\link{dVcov2}} to pre-compute quantities for the small sample correction.
 #' 
 #' @examples
 #' library(multcomp)
@@ -54,13 +57,18 @@ mlf2 <- function(...) {
 #'
 #' df.data <- sim(mSim, n, latent = FALSE, p = c(beta = 1))
 #'
+#' #### Inference on a single model ####
+#' e.lvm <- estimate(lvm(Y1~E), data = df.data)
+#' summary(glht2(e.lvm, linfct = c("Y1~E + Y1","Y1")))
+#' 
+#' #### Inference on separate models ####
 #' ## Fit separate models
 #' ls.lvm <- list(Y1 = estimate(lvm(Y1~E), data = df.data),
 #'                Y2 = estimate(lvm(Y2~E), data = df.data),
 #'                Y3 = estimate(lvm(Y3~E), data = df.data))
 #' 
 #' ## Create contrast matrix
-#' C <- createContrast(ls.lvm, var.test = "E")
+#' C <- createContrast(ls.lvm, var.test = "E")$contrast
 #'
 #' lvm.glht <- glht2(ls.lvm, linfct = C)
 #' summary(lvm.glht) ## adjusted
@@ -135,7 +143,11 @@ glht.mlf2 <- function(model, linfct, ...) {
         if(identical(class(model[[iName]]),"lm") && "sigma2" %in% names(K[[iName]]) == FALSE){
             K[[iName]] <- cbind(K[[iName]], sigma2 = 0)
         }
-        lTest(model[[iName]], C = K[[iName]], Ftest = FALSE, ...)$df
+
+        iK <- K[[iName]]
+        colnames(iK) <- gsub(paste0(iName,": "),"",colnames(iK))
+        resTest <- compare2(model[[iName]], contrast = iK, as.lava = FALSE, ...)
+        return(resTest[1,"df"])
     })
     out$df <- as.double(round(stats::median(df)))
     return(out)
@@ -143,26 +155,54 @@ glht.mlf2 <- function(model, linfct, ...) {
 
 #' @rdname glht
 #' @export
-glht2 <- function (model, linfct, adjust.residuals = TRUE, robust = FALSE, ...){
-
-    if(!is.matrix(linfct)){
-        stop("Argument \'linfct\' must be a matrix \n")
-    }
+glht2 <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust = FALSE, ...){
 
     if("lvmfit" %in% class(model)){
-        out <- glht(model, linfct, ...)
-
-        dVcov2(model, return.score = adjust.residuals) <- adjust.residuals
-        res <- lTest(model, C = linfct, Ftest = TRUE)
-        out$df <- round(res["global","df"])
-
-        if(robust){
-            out$vcov <- crossprod(attr(model$dVcov, "score") %*% attr(model$dVcov, "vcov.param"))
-        }else{
-            out$vcov <- attr(model$dVcov,"vcov.param")
+        ### ** define contrast matrix
+        if(!is.matrix(linfct)){
+            resC <- createContrast(model, par = linfct)
+            linfct <- resC$contrast
+            if("rhs" %in% names(match.call()) == FALSE){
+                rhs <- resC$null
+            }
         }
 
+        ### ** pre-compute quantities for the small sample correction
+        if(is.null(model$dVcov)){
+            dVcov2(model, robust = robust, return.score = adjust.residuals) <- adjust.residuals
+        }
+
+        if(robust){
+            vcov.model <- crossprod(attr(model$dVcov, "score") %*% attr(model$dVcov, "vcov.param"))
+        }else{
+            vcov.model <- attr(model$dVcov,"vcov.param")
+        }
+
+        ### ** Wald test
+        name.param <- colnames(linfct)
+        n.param <- NCOL(linfct)
+        n.hypo <- NROW(linfct)
+
+        resWald <- compare2(model, contrast = linfct, null = rhs, as.lava = FALSE)
+        rownames(linfct) <- .contrast2name(linfct, null = NULL)
+        
+        ### ** convert to the appropriate format
+
+        out <- list(model = model,
+                    linfct = linfct,
+                    rhs = unname(rhs),
+                    coef = coef(model),
+                    vcov = vcov.model,
+                    df = round(resWald["global","df"]),
+                    alternative = "two.sided",
+                    type = NULL)
+
+        class(out) <- "glht"
+        
     }else{
+        if(!is.matrix(linfct)){
+            stop("Argument \'linfct\' must be a matrix \n")
+        }        
         class(linfct) <- append("mlf2",class(linfct))
         class(model) <- "ls.lvmfit"
         out <- glht(model, linfct,

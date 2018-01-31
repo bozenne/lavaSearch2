@@ -6,7 +6,7 @@
 \alias{lTest.gls}
 \alias{lTest.lme}
 \alias{lTest.lvmfit}
-\title{Compute the Degree of Freedom of the Variance Parameters}
+\title{Test linear hypotheses using Wald statistic}
 \usage{
 lTest(object, ...)
 
@@ -34,11 +34,17 @@ lTest(object, ...)
 \item{Ftest}{should a join test be computed.}
 }
 \description{
-Compute the degree of freedom of the variance parameters.
+Test linear hypotheses using Wald statistic
 }
 \details{
-In the case of a \code{lm} object, the contrast matrix need not to contain
-a column for the variance parameter when the columns are named. When so, a column containing 0 is added to the contrast matrix.
+The contrast matrix must contain as many columns as there are parameters in the model (mean and variance parameters).
+In the case of a \code{lm} object, including the variance parameter is not compulsory.
+When omitted  a column containing 0 is added to the contrast matrix.
+
+Instead of a contrast matrix, on can also use expressions encoded in a vector of characters (e.g. c("beta = 0")).
+Using the chrlinfct2matrix of the multtest package, a contrast matrix will be generated from the expression.
+
+The right hand side of the linear hypothesis C b = a is always assumed to be null, i.e. a=0.
 }
 \examples{
 set.seed(10)

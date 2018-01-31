@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 15 2018 (11:32) 
+## Last-Updated: jan 31 2018 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 146
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,6 @@
 #' @name summary
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.
-#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param digit the number of digit to keep when diplaying the summary.
 #' @param ... arguments passed to lower level methods.
 #' 
@@ -47,6 +46,7 @@
 #' ## lvm models
 #' e.lvm <- estimate(m, data = d)
 #' summary(e.lvm)$coef
+#' 
 #' dVcov2(e.lvm) <- FALSE ## no small sample correction
 #' summary(e.lvm)$coef
 #' 
@@ -60,19 +60,25 @@
 #' @export
 summary.gls2 <- function(object, 
                          digit = max(3, getOption("digit")),
-                         adjust.residuals = TRUE, ...){
+                         ...){
+    
+    ### ** perform Wald test
+    name.param <- names(coef(object))
+    n.param <- length(name.param)
 
+    tTable <- compare2(object, par = name.param, as.lava = FALSE)[1:n.param,]
+    dimnames(tTable) <- list(name.param,
+                             c("Value","Std.Error","t-value","p-value","df")
+                             )
+
+    ### ** get summary
     class(object) <- setdiff(class(object),"gls2")
     object.summary <- summary(object, digits = digit, ...)
-
-    ## find digit
-    
     
     ### ** update summary
-    tTable <- lTest(object, Ftest = FALSE)[rownames(object.summary$tTable),c(1:3,5,4)]
-    colnames(tTable) <- c("Value","Std.Error","t-value","p-value","df")
-
     object.summary$tTable <- tTable
+
+    ### ** export
     return(object.summary)
 }
 
@@ -86,32 +92,33 @@ summary.lme2 <- summary.gls2
 #' @rdname summary
 #' @method summary lvmfit2
 #' @export
-summary.lvmfit2 <- function(object, adjust.residuals = FALSE, ...){
+summary.lvmfit2 <- function(object, ...){
 
+    ### ** perform Wald test
+    param <- lava::pars(object)
+    name.param <- names(param)
+    n.param <- length(param)
+    table.coef <- compare2(object, par = name.param, as.lava = FALSE)[1:n.param,c(1:3,5,4)]
+    dimnames(table.coef) <- list(name.param,
+                                 c("Estimate", "Std. Error", "t-value", "P-value", "df")
+                                 )
+
+    ### ** get summary
     class(object) <- setdiff(class(object),"lvmfit2")
-    
     object.summary <- summary(object, ...)
 
     ## find digit
     vec.char <- setdiff(object.summary$coefmat[,"Estimate"],"")
     digit <- max(c(nchar(gsub(".","",vec.char,fixed = TRUE)))-1,1)
 
-    ##
-    param <- lava::pars(object)
-    name.param <- names(param)
-    name.allParam <- rownames(object.summary$coef)
-    n.allParam <- length(name.allParam)
-    data <- stats::model.frame(object)
-    
-    vcov.object <- attr(object$dVcov, "vcov.param")
-        
     ### ** update summary
     ### *** vcov
-    object.summary$vcov <- vcov.object[name.param,name.param]    
+    object.summary$vcov <- attr(object$dVcov, "vcov.param")[name.param,name.param]    
 
     ### *** coef
-    table.coef <- lTest(object, Ftest = FALSE)[rownames(object.summary$coef),c(1:3,5,4)]
-    colnames(table.coef) <- c("Estimate", "Std. Error", "t-value", "P-value", "df")
+    ## re-order table according to lava
+    table.coef <- table.coef[rownames(object.summary$coef),,drop=FALSE]
+    ## remove unappropriate p.values
     table.coef[is.na(object.summary$coef[,"P-value"]),"P-value"] <- NA
     object.summary$coef <- table.coef
     

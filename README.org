@@ -137,54 +137,69 @@ summary(e)$coef
 
 *** Inference using F-tests
 
-The function =lTest= can be use to perform F-test, i.e. to test
+The function =compare2= can be use to perform F-test, i.e. to test
 simultaneously several linear combinations of the coefficients.
-=lTest= uses a contrast matrix to encode in lines which linear
-combination of coefficients should be tested. For 3 tests, such a
-contrast matrix looks like:
+=compare2= uses a contrast matrix to encode in lines which linear
+combination of coefficients should be tested. For instance if we want
+to simultaneously test whether all the mean coefficients are 0, we can
+create a contrast matrix using =createContrast=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-name.coef <- names(coef(e))
-n.coef <- length(name.coef)
-M <- matrix(0, ncol = n.coef, nrow = 3, 
-            dimnames = list(NULL, name.coef))
-print(M)
+resC <- createContrast(e, par = c("Y=0","Y~X1=0","Y~X2=0"))
+resC
 #+END_SRC
 
 #+RESULTS:
-:      Y Y~X1 Y~X2 Y~~Y
-: [1,] 0    0    0    0
-: [2,] 0    0    0    0
-: [3,] 0    0    0    0
+#+begin_example
+$contrast
+           Y Y~X1 Y~X2 Y~~Y
+[Y] = 0    1    0    0    0
+[Y~X1] = 0 0    1    0    0
+[Y~X2] = 0 0    0    1    0
 
-By default, =lTest= set the diagonal to 1, i.e. jointly test whether
-all parameters are different from 0. This is often not very relevant
-since the variance parameters are expected to be strictly positive. A
-more meaningful test could be to test whether all mean parameters are non-0:
+$null
+   [Y] = 0 [Y~X1] = 0 [Y~X2] = 0 
+         0          0          0 
+
+$Q
+[1] 3
+#+end_example
+
+We can then test the linear hypothesis by specifying in =compare2= the
+left hand side of the hypothesis (argument contrast) and the right
+hand side (argument null):
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-M[1,"Y"] <- 1
-M[2,"Y~X1"] <- 1
-M[3,"Y~X2"] <- 1
-lTest(e, C = M) ## implicit with small sample correction
+resTest <- compare2(e, contrast = resC$contrast, null = resC$null)
+resTest
 #+END_SRC
 
 #+RESULTS:
-:         estimate       std statistic df     p-value
-: Y      0.7967775 0.2478405 3.2148800 17 0.005082163
-: Y~X1   0.1550938 0.2180132 0.7113965 17 0.486486336
-: Y~X2   0.4581556 0.2171930 2.1094398 17 0.050036443
-: global        NA        NA 7.5759403 17 0.001981892
+#+begin_example
 
-The last line on the output indicates the value of the F-statistic,
-the residual degrees of freedom and the corresponding p.value:
+	- Wald test -
+
+	Null Hypothesis:
+	[Y] = 0
+	[Y~X1] = 0
+	[Y~X2] = 0
+
+data:  
+F-statistic = 7.5759, df1 = 3, df2 = 17, p-value = 0.001982
+sample estimates:
+            Estimate   Std.Err df          2.5%     97.5%
+[Y] = 0    0.7967775 0.2478405 17  2.738798e-01 1.3196753
+[Y~X1] = 0 0.1550938 0.2180132 17 -3.048738e-01 0.6150615
+[Y~X2] = 0 0.4581556 0.2171930 17 -8.162049e-05 0.9163928
+#+end_example
+
+The same result could have been obtained using the par argument to
+define the linear hypothesis:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-1-pf(7.5759403, df1 = 3, df2 = 17)
+resTest2 <- compare2(e, par = c("Y","Y~X1","Y~X2"))
+identical(resTest,resTest2)
 #+END_SRC
 
 #+RESULTS:
-: [1] 0.001981892
-
-The first degree of freedom corresponds to the number of linear
-hypotheses, here 3. It is not part of the output of the software.
+: [1] TRUE
 
 *** Inference: adjustment for multiple comparisons (single model)
 
@@ -206,23 +221,21 @@ name.coef <- names(coef(e.lvm))
 n.coef <- length(name.coef)
 
 ## Create contrast matrix
-Ccontrast <- matrix(0, ncol = n.coef, nrow = n.coef-2, 
-                    dimnames = list(grep("X",name.coef,value=TRUE),name.coef))
-diag(Ccontrast[,-1]) <- 1
-Ccontrast
+resC <- createContrast(e.lvm, par = paste0("Y~X",1:6))
+resC$contrast
 #+END_SRC
 
 #+RESULTS:
-:      Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
-: Y~X1 0    1    0    0    0    0    0    0
-: Y~X2 0    0    1    0    0    0    0    0
-: Y~X3 0    0    0    1    0    0    0    0
-: Y~X4 0    0    0    0    1    0    0    0
-: Y~X5 0    0    0    0    0    1    0    0
-: Y~X6 0    0    0    0    0    0    1    0
+:            Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
+: [Y~X1] = 0 0    1    0    0    0    0    0    0
+: [Y~X2] = 0 0    0    1    0    0    0    0    0
+: [Y~X3] = 0 0    0    0    1    0    0    0    0
+: [Y~X4] = 0 0    0    0    0    1    0    0    0
+: [Y~X5] = 0 0    0    0    0    0    1    0    0
+: [Y~X6] = 0 0    0    0    0    0    0    1    0
 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-e.glht <- glht(e.lvm, linfct = Ccontrast)
+e.glht <- glht(e.lvm, linfct = resC$contrast, rhs = resC$null)
 summary(e.glht)
 #+END_SRC
 #+RESULTS:
@@ -233,13 +246,13 @@ summary(e.glht)
 Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
 
 Linear Hypotheses:
-          Estimate Std. Error z value Pr(>|z|)   
-Y~X1 == 0   0.3270     0.1589   2.058  0.20730   
-Y~X2 == 0   0.4025     0.1596   2.523  0.06606 . 
-Y~X3 == 0   0.5072     0.1383   3.669  0.00146 **
-Y~X4 == 0   0.3161     0.1662   1.902  0.28581   
-Y~X5 == 0   0.3875     0.1498   2.586  0.05548 . 
-Y~X6 == 0   0.3758     0.1314   2.859  0.02486 * 
+                Estimate Std. Error z value Pr(>|z|)   
+[Y~X1] = 0 == 0   0.3270     0.1589   2.058  0.20724   
+[Y~X2] = 0 == 0   0.4025     0.1596   2.523  0.06609 . 
+[Y~X3] = 0 == 0   0.5072     0.1383   3.669  0.00145 **
+[Y~X4] = 0 == 0   0.3161     0.1662   1.902  0.28584   
+[Y~X5] = 0 == 0   0.3875     0.1498   2.586  0.05556 . 
+[Y~X6] = 0 == 0   0.3758     0.1314   2.859  0.02482 * 
 ---
 Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 (Adjusted p values reported -- single-step method)
@@ -249,7 +262,7 @@ Note that this correction relies on the Gaussian approximation. To use
 small sample corrections implemented in *lavaSearch2*, just call
 =glht2= instead of =glht=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-e.glht2 <- glht2(e.lvm, linfct = Ccontrast)
+e.glht2 <- glht2(e.lvm, linfct = resC$contrast, rhs = resC$null)
 summary(e.glht2)
 #+END_SRC
 
@@ -273,9 +286,37 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 (Adjusted p values reported -- single-step method)
 #+end_example
 
-See the book: "Multiple Comparisons Using R" by Frank Bretz, Torsten
-Hothorn, and Peter Westfall (2011, CRC Press) for details about the
-theory underlying the *multcomp* package.
+The single step method is the appropriate correction when one wants to
+report the most significant p-value relative to a set of
+hypotheses. If the second most significant p-value is also to be
+reported then the method "free" is more appropriate:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+summary(e.glht2, test = adjusted("free"))
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+
+Linear Hypotheses:
+          Estimate Std. Error t value Pr(>|t|)  
+Y~X1 == 0   0.3270     0.1723   1.898   0.1219  
+Y~X2 == 0   0.4025     0.1730   2.327   0.0842 .
+Y~X3 == 0   0.5072     0.1499   3.385   0.0107 *
+Y~X4 == 0   0.3161     0.1802   1.754   0.1219  
+Y~X5 == 0   0.3875     0.1624   2.385   0.0842 .
+Y~X6 == 0   0.3758     0.1425   2.637   0.0587 .
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- free method)
+#+end_example
+Indeed, here there is no relations between the hypotheses. See the
+book: "Multiple Comparisons Using R" by Frank Bretz, Torsten Hothorn,
+and Peter Westfall (2011, CRC Press) for details about the theory
+underlying the *multcomp* package.
 
 *** Inference: adjustment for multiple comparisons (multiple models)
 
@@ -334,8 +375,8 @@ ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
 We can then generate a contrast matrix to test each coefficient
 related to the treatment:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-Cmatrix <- createContrast(ls.lvm, var.test = "Treatment")
-Cmatrix
+resC <- createContrast(ls.lvm, var.test = "Treatment")
+resC$contrast
 #+END_SRC
 
 #+RESULTS:
@@ -349,7 +390,7 @@ Cmatrix
 : Z: eta~TreatmentSSRI           0
 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-lvm.glht2 <- glht2(ls.lvm, linfct = Cmatrix)
+lvm.glht2 <- glht2(ls.lvm, linfct = resC$contrast, rhs = resC$null)
 summary(lvm.glht2)
 #+END_SRC
 

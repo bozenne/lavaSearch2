@@ -5,7 +5,7 @@
 ## Version: 
 ## last-updated: jan 22 2018 (11:33) 
 ##           By: Brice Ozenne
-##     Update #: 671
+##     Update #: 677
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -82,20 +82,13 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 }
 
                 out$df[1, "coefBeta"] <- new.coef[link[iterI]]
-                
                 ## extract degree of freedom and standard error
                 if(df){
                     dVcov2(newfit, return.score = TRUE) <- adjust.residuals
                     out$iid <- (attr(newfit$dVcov, "score") %*% attr(newfit$dVcov, "vcov.param")[,link[iterI],drop=FALSE])
                     
-                    C <- matrix(0,
-                                nrow = 1,
-                                ncol = length(new.coef),
-                                dimnames = list(NULL, names(new.coef)))
-                    C[1,link[iterI]] <- 1
-                    
-                    e.df <- lTest(newfit, C = C, adjust.residuals = adjust.residuals,
-                                  Ftest = FALSE)
+                    e.df <- compare2(newfit, par = link[iterI],
+                                     adjust.residuals = adjust.residuals, as.lava = FALSE)
                     
                     out$df[1, "df"] <- e.df[1, "df"]
 

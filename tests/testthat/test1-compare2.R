@@ -1,11 +1,11 @@
-### test-lTest.R --- 
+### test-compare2.R --- 
 #----------------------------------------------------------------------
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
 ## last-updated: jan 19 2018 (16:02) 
 ##           By: Brice Ozenne
-##     Update #: 153
+##     Update #: 158
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,7 +29,7 @@ library(lmerTest)
 library(pbkrtest)
 lava.options(symbols = c("~","~~"))
 
-context("lTest")
+context("compare2")
 
 ## * Simulation
 n <- 5e1
@@ -73,12 +73,17 @@ cS.df <- coef_test(e.lm, vcov = cS.vcov, test = "Satterthwaite", cluster = 1:NRO
 cS.df
 ## cS.df$df is very suspect: should be the same for all coefficient and close to n-p
 
-### *** lTest
+### *** compare2
 test_that("linear regression: df",{
+    name.param <- names(coef(e.lvm))
+    n.param <- length(name.param)        
+    df.lvm <- compare2(e.lvm, par = name.param, adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
 
-    df.lvm <- lTest(e.lvm, adjust.residuals = FALSE, Ftest = FALSE)
-    df.lm <- lTest(e.lm, adjust.residuals = FALSE, Ftest = FALSE)
-    df.gls <- lTest(e.gls, cluster = 1:n, adjust.residuals = FALSE, Ftest = FALSE)
+    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    n.param <- length(name.param)        
+    df.lm <- compare2(e.lm, par = name.param, adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
+
+    df.gls <- compare2(e.gls, par = name.param, cluster = 1:n, adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
     
     ## test equivalence
     expect_equivalent(df.lvm,df.gls)
@@ -86,14 +91,25 @@ test_that("linear regression: df",{
 
     ## test value
     n.param <- length(coef(e.lm))
-    GS <- c(rep(NROW(dW),n.param), NROW(dW)/4)
-    expect_equal(df.lm$df,GS)
+    df.GS <- c(rep(NROW(dW),n.param), NROW(dW)/4)
+    expect_equal(df.lm$df, df.GS)
+
+    sigma2 <- coef(e.lvm)["Y1~~Y1"]
+    iXX <- solve(crossprod(model.matrix(e.lm)))
+    std.GS <- c(sqrt(diag(iXX*sigma2)),sqrt(2*sigma2^2/e.lvm$data$n))
+    expect_equal(df.lm$std, unname(std.GS))
 })
 
 test_that("linear regression: df adjusted",{
-    df.adj.lm <- lTest(e.lm, adjust.residuals = TRUE, Ftest = FALSE)
-    df.adj.lvm <- lTest(e.lvm, adjust.residuals = TRUE, Ftest = FALSE)
-    df.adj.gls <- lTest(e.gls, cluster = 1:n, adjust.residuals = TRUE, Ftest = FALSE)
+    name.param <- names(coef(e.lvm))
+    n.param <- length(name.param)        
+    df.adj.lvm <- compare2(e.lvm, par = name.param, adjust.residuals = TRUE, as.lava = FALSE)[1:n.param,]
+
+    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    n.param <- length(name.param)        
+    df.adj.lm <- compare2(e.lm, par = name.param, adjust.residuals = TRUE, as.lava = FALSE)[1:n.param,]
+
+    df.adj.gls <- compare2(e.gls, par = name.param, cluster = 1:n, adjust.residuals = TRUE, as.lava = FALSE)[1:n.param,]
     
     ## test equivalence
     expect_equivalent(df.adj.lvm,df.adj.gls)
@@ -103,7 +119,11 @@ test_that("linear regression: df adjusted",{
     n.param <- length(coef(e.lm))
     GS <- c(rep(NROW(dW)-n.param,n.param), (NROW(dW)-n.param)/4)
     expect_equal(df.adj.lm$df,GS)    
-    
+
+    sigma2 <- (e.lvm$data$n+n.param)/e.lvm$data$n * coef(e.lvm)["Y1~~Y1"]
+    iXX <- solve(crossprod(model.matrix(e.lm)))
+    std.GS <- c(sqrt(diag(iXX*sigma2)),sqrt(2*sigma2^2/(e.lvm$data$n-n.param)))
+    expect_equal(df.adj.lm$std, unname(std.GS))
 })
 
 ## * mixed model
@@ -114,10 +134,10 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
            Y3[mu3:sigma]~1*eta,
            eta~G+Gender)) 
 e.lvm <- estimate(m, dW)
-## lTest(e.lvm)
+## compare2(e.lvm)
 
 e.lmer <- lme4::lmer(value ~ time + G + Gender + (1|Id),
-               data = dL, REML = FALSE)
+                     data = dL, REML = FALSE)
 
 e.lme <- nlme::lme(value ~ time + G + Gender, random = ~ 1|Id, data = dL, method = "ML")
 e.gls <- nlme::gls(value ~ time + G + Gender,
@@ -138,24 +158,24 @@ test_that("mixed model: df",{
     ## GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
     GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")$df
 
-    df1.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                     numericDerivative = FALSE)
-    df2.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
-                     numericDerivative = TRUE)
+    df1.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
+                        numericDerivative = FALSE)
+    df2.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
+                        numericDerivative = TRUE)
     expect_equal(df1.lvm,df2.lvm)
     expect_equal(as.double(GS),
                  as.double(df1.lvm[1:5,"df"]), tol = 1e-4) ## needed for CRAN
 
-    df1.lme <- lTest(e.lme, adjust.residuals = FALSE,
+    df1.lme <- compare2(e.lme, adjust.residuals = FALSE,
                           numericDerivative = FALSE)
-    df2.lme <- lTest(e.lme, adjust.residuals = FALSE,
+    df2.lme <- compare2(e.lme, adjust.residuals = FALSE,
                           numericDerivative = TRUE)
     expect_equal(df1.lme, df2.lme)
     expect_equal(unname(GS), df1.lme[1:5,"df"], tol = 1e-4) ## needed for CRAN
 
-    df1.gls <- lTest(e.gls, adjust.residuals = FALSE,
+    df1.gls <- compare2(e.gls, adjust.residuals = FALSE,
                           numericDerivative = FALSE)
-    df2.gls <- lTest(e.gls, adjust.residuals = FALSE,
+    df2.gls <- compare2(e.gls, adjust.residuals = FALSE,
                           numericDerivative = TRUE)
     expect_equal(df1.gls, df2.gls) 
     expect_equal(unname(GS), df1.gls[1:5,"df"], tol = 1e-4)
@@ -169,15 +189,15 @@ test_that("mixed model: df adjusted",{
 
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
-    df.adj.lvm <- lTest(e.lvm, adjust.residuals = TRUE,
+    df.adj.lvm <- compare2(e.lvm, adjust.residuals = TRUE,
                              numericDerivative = FALSE)
     df.adj.lvm
 
-    df.adj.lme <- lTest(e.lme, adjust.residuals = TRUE,
+    df.adj.lme <- compare2(e.lme, adjust.residuals = TRUE,
                              numericDerivative = FALSE)
     df.adj.lme
 
-    df.adj.gls <- lTest(e.gls, adjust.residuals = TRUE,
+    df.adj.gls <- compare2(e.gls, adjust.residuals = TRUE,
                              numericDerivative = FALSE)
     df.adj.gls
 })
@@ -202,36 +222,36 @@ logLik(e.gls)
 
 test_that("UN mixed model: df",{
     ## singular information matrix
-    ## df.adj.lme <- lTest(e.lme,
+    ## df.adj.lme <- compare2(e.lme,
     ##                          robust = FALSE, adjust.residuals = FALSE)
     skip_on_cran()
     
     system.time(
-        df1.gls <- lTest(e.gls, adjust.residuals = FALSE,
+        df1.gls <- compare2(e.gls, adjust.residuals = FALSE,
                          numericDerivative = TRUE)
     )
     system.time(
-        df2.gls <- lTest(e.gls, adjust.residuals = FALSE,
+        df2.gls <- compare2(e.gls, adjust.residuals = FALSE,
                          numericDerivative = FALSE)
     )    
     expect_equal(df1.gls,df2.gls)
     system.time(
-        df2.adj.gls <- lTest(e.gls, adjust.residuals = TRUE,
+        df2.adj.gls <- compare2(e.gls, adjust.residuals = TRUE,
                              numericDerivative = FALSE)
     )
     df2.adj.gls
 
     system.time(
-        df1.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
+        df1.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
                          numericDerivative = TRUE)
     )
     system.time(
-        df2.lvm <- lTest(e.lvm, adjust.residuals = FALSE,
+        df2.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
                          numericDerivative = FALSE)
     )
     expect_equal(df1.lvm,df2.lvm)
     system.time(
-        df2.adj.lvm <- lTest(e.lvm, adjust.residuals = TRUE,
+        df2.adj.lvm <- compare2(e.lvm, adjust.residuals = TRUE,
                              numericDerivative = FALSE)
     )
     df2.adj.lvm
@@ -239,5 +259,5 @@ test_that("UN mixed model: df",{
 
 
 #----------------------------------------------------------------------
-### test-lTest.R ends here
+### test-compare2.R ends here
 
