@@ -8,14 +8,15 @@
 \usage{
 \method{glht}{mlf2}(model, linfct, ...)
 
-glht2(model, linfct, adjust.residuals = TRUE, robust = FALSE, ...)
+glht2(model, linfct, rhs = 0, adjust.residuals = TRUE, robust = FALSE,
+  ...)
 }
 \arguments{
 \item{model}{a list of latent variable models.}
 
 \item{linfct}{a contrast matrix specifying the linear hypotheses to be tested.}
 
-\item{...}{arguments passed to \code{glht}, \code{vcov}, and \code{lTest}.}
+\item{...}{arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.}
 
 \item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
@@ -36,16 +37,25 @@ n <- 1e2
 
 df.data <- sim(mSim, n, latent = FALSE, p = c(beta = 1))
 
+#### Inference on a single model ####
+e.lvm <- estimate(lvm(Y1~E), data = df.data)
+summary(glht2(e.lvm, linfct = c("Y1~E + Y1","Y1")))
+
+#### Inference on separate models ####
 ## Fit separate models
 ls.lvm <- list(Y1 = estimate(lvm(Y1~E), data = df.data),
                Y2 = estimate(lvm(Y2~E), data = df.data),
                Y3 = estimate(lvm(Y3~E), data = df.data))
 
 ## Create contrast matrix
-C <- createContrast(ls.lvm, var.test = "E")
+C <- createContrast(ls.lvm, var.test = "E")$contrast
 
 lvm.glht <- glht2(ls.lvm, linfct = C)
 summary(lvm.glht) ## adjusted
 
 summary(lvm.glht, test = univariate()) ## not adjusted
+}
+\seealso{
+\code{\link{createContrast}} to create contrast matrices. \cr
+\code{\link{dVcov2}} to pre-compute quantities for the small sample correction.
 }

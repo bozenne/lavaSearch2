@@ -48,7 +48,7 @@ dVcov2(x, ...) <- value
 \arguments{
 \item{object}{a gls, lme, or lvm object.}
 
-\item{...}{arguments to be passed to lower level methods.}
+\item{...}{[internal] Only used by the generic method.}
 
 \item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 

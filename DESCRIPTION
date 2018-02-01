@@ -1,8 +1,8 @@
 Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
-Version: 1.0.0
-Date: 2015-07-17
+Version: 1.1.0
+Date: 2018-02-01
 Author: Brice Ozenne [aut, cre]
 Maintainer: Brice Ozenne <brice.ozenne@orange.fr>
 URL: https://github.com/bozenne/lavaSearch2
@@ -28,6 +28,7 @@ Imports:
     numDeriv,
     parallel,
     reshape2,
+    sandwich,
     stats,
     tcltk,
     utils

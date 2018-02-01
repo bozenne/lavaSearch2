@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: jan 19 2018 (16:02) 
+## last-updated: feb  1 2018 (13:25) 
 ##           By: Brice Ozenne
-##     Update #: 158
+##     Update #: 171
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,7 +103,8 @@ test_that("linear regression: df",{
 test_that("linear regression: df adjusted",{
     name.param <- names(coef(e.lvm))
     n.param <- length(name.param)        
-    df.adj.lvm <- compare2(e.lvm, par = name.param, adjust.residuals = TRUE, as.lava = FALSE)[1:n.param,]
+    df.adj.lvm <- compare2(e.lvm, par = name.param,
+                           adjust.residuals = TRUE, as.lava = FALSE)[1:n.param,]
 
     name.param <- names(lavaSearch2:::.coef2(e.gls))
     n.param <- length(name.param)        
@@ -153,53 +154,77 @@ coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dL$Id)
 ## *** lava - ok
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
-test_that("mixed model: df",{
+test_that("mixed model: Satterthwaite correction (Wald)",{
     ## does not work when running test
     ## GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
-    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")$df
+    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")
 
-    df1.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
-                        numericDerivative = FALSE)
-    df2.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
-                        numericDerivative = TRUE)
+    name.param <- names(coef(e.lvm))
+    n.param <- length(name.param)        
+    df1.lvm <- compare2(e.lvm, par = name.param, numericDerivative = FALSE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
+    df2.lvm <- compare2(e.lvm, par = name.param, numericDerivative = TRUE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
     expect_equal(df1.lvm,df2.lvm)
-    expect_equal(as.double(GS),
+    expect_equal(as.double(GS$df),
                  as.double(df1.lvm[1:5,"df"]), tol = 1e-4) ## needed for CRAN
+    expect_equal(as.double(GS$tvalue),
+                 as.double(df1.lvm[1:5,"statistic"]), tol = 1e-8) ## needed for CRAN
 
-    df1.lme <- compare2(e.lme, adjust.residuals = FALSE,
-                          numericDerivative = FALSE)
-    df2.lme <- compare2(e.lme, adjust.residuals = FALSE,
-                          numericDerivative = TRUE)
+    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    n.param <- length(name.param)        
+    df1.lme <- compare2(e.lme, par = name.param, numericDerivative = FALSE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
+    df2.lme <- compare2(e.lme, par = name.param, numericDerivative = TRUE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
     expect_equal(df1.lme, df2.lme)
-    expect_equal(unname(GS), df1.lme[1:5,"df"], tol = 1e-4) ## needed for CRAN
+    expect_equivalent(df1.lme, df1.lvm)
 
-    df1.gls <- compare2(e.gls, adjust.residuals = FALSE,
-                          numericDerivative = FALSE)
-    df2.gls <- compare2(e.gls, adjust.residuals = FALSE,
-                          numericDerivative = TRUE)
-    expect_equal(df1.gls, df2.gls) 
-    expect_equal(unname(GS), df1.gls[1:5,"df"], tol = 1e-4)
-
+    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    n.param <- length(name.param)        
+    df1.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
+    df2.gls <- compare2(e.gls, par = name.param, numericDerivative = TRUE,
+                        adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
+    expect_equal(df1.gls, df2.gls)
+    expect_equal(unlist(df1.gls[1:5,]), unlist(df1.lvm[1:5,]), tolerance = 1e-6)
 })
 
-test_that("mixed model: df adjusted",{
+test_that("mixed model: Satterthwaite correction (F-test)",{
+
+    GS <- lava::compare(e.lvm, par = c("eta~G"))
+    e.lava2 <- compare2(e.lvm, par = c("eta~G"), adjust.residuals = FALSE, as.lava = FALSE)
+    expect_equal(e.lava2["global","statistic"], as.double(GS$statistic))
+
+    GS <- lava::compare(e.lvm, par = c("Y2","Y3"))
+    e.lava2 <- compare2(e.lvm, par = c("Y2","Y3"), adjust.residuals = FALSE, as.lava = FALSE)
+    expect_equal(2*e.lava2["global","statistic"], as.double(GS$statistic))
+}
+
+
+test_that("mixed model: KR-like correction",{
     ## does not work when running test
     ## GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
-    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Kenward-Roger")$df
+    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Kenward-Roger")
 
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
-    df.adj.lvm <- compare2(e.lvm, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    df.adj.lvm
+    name.param <- names(coef(e.lvm))
+    n.param <- length(name.param)        
+    df.adj.lvm <- compare2(e.lvm, par = name.param, numericDerivative = FALSE,
+                           adjust.residuals = TRUE, as.lava = FALSE)
 
-    df.adj.lme <- compare2(e.lme, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    df.adj.lme
+    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    n.param <- length(name.param)        
+    df.adj.lme <- compare2(e.lme, par = name.param, numericDerivative = FALSE,
+                           adjust.residuals = TRUE, as.lava = FALSE)
+    expect_equivalent(df.adj.lvm, df.adj.lme)
 
-    df.adj.gls <- compare2(e.gls, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    df.adj.gls
+    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    n.param <- length(name.param)        
+    df.adj.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
+                           adjust.residuals = TRUE, as.lava = FALSE)
+    expect_equal(unlist(df1.gls[1:5,]), unlist(df1.lvm[1:5,]), tolerance = 1e-6)
 })
 
 ## ** Unstructured with weights
@@ -226,35 +251,23 @@ test_that("UN mixed model: df",{
     ##                          robust = FALSE, adjust.residuals = FALSE)
     skip_on_cran()
     
-    system.time(
-        df1.gls <- compare2(e.gls, adjust.residuals = FALSE,
-                         numericDerivative = TRUE)
-    )
-    system.time(
-        df2.gls <- compare2(e.gls, adjust.residuals = FALSE,
-                         numericDerivative = FALSE)
-    )    
-    expect_equal(df1.gls,df2.gls)
-    system.time(
-        df2.adj.gls <- compare2(e.gls, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    )
-    df2.adj.gls
+    name.param <- names(coef(e.lvm))
+    n.param <- length(name.param)        
+    df1.lvm <- compare2(e.lvm, par = name.param, adjust.residuals = FALSE,
+                        numericDerivative = FALSE, as.lava = FALSE)
+    df2.lvm <- compare2(e.lvm, par = name.param, adjust.residuals = FALSE,
+                        numericDerivative = TRUE, as.lava = FALSE)
+    expect_equal(df1.lvm, df2.lvm)
 
-    system.time(
-        df1.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
-                         numericDerivative = TRUE)
-    )
-    system.time(
-        df2.lvm <- compare2(e.lvm, adjust.residuals = FALSE,
-                         numericDerivative = FALSE)
-    )
-    expect_equal(df1.lvm,df2.lvm)
-    system.time(
-        df2.adj.lvm <- compare2(e.lvm, adjust.residuals = TRUE,
-                             numericDerivative = FALSE)
-    )
-    df2.adj.lvm
+    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    n.param <- length(name.param)        
+    df1.gls <- compare2(e.gls, par = name.param, adjust.residuals = FALSE,
+                        numericDerivative = TRUE, as.lava = FALSE)
+    df2.gls <- compare2(e.gls, par = name.param, adjust.residuals = FALSE,
+                        numericDerivative = FALSE, as.lava = FALSE)
+    expect_equal(df1.gls,df2.gls)
+
+
 })
 
 

@@ -3,13 +3,21 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 18 2018 (17:50) 
+## Last-Updated: feb  1 2018 (18:38) 
 ##           By: Brice Ozenne
-##     Update #: 54
+##     Update #: 69
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
-## 
+## Test battery:
+##  - linear regression: compare multcomp:::mlf to lavaSearch2:::mlf2
+##       * standard error derived from the information matrix
+##       * right hand side of the hypothesis not null
+##       * robust standard error derived from the iid decomposition
+##
+##  - latent variable model: in the specific case of a linear regression
+##    compare the result of glht applied to a ml object vs. a lvm object
+##
 ### Change Log:
 ##----------------------------------------------------------------------
 ## 
@@ -43,16 +51,30 @@ n.Y <- length(name.Y)
 ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
 ls.lm <- lapply(ls.formula, lm, data = df.data)
 names(ls.lm) <- name.Y
+class(ls.lm) <- "mmm"
 
-
-
-test_that("mmm2 vs mmm", {
-    ## rescaling using std dev
-    class(ls.lm) <- "mmm"
+test_that("mlf vs. mlf2: information std", {
     e.glht <- glht(ls.lm, mlf("E = 0"))
 
+    e.glht2 <- glht2(ls.lm, mlf("E = 0"),
+                     adjust.residuals = FALSE, robust = FALSE)
+
+    expect_equal(e.glht$vcov, n/(n-2)*e.glht2$vcov)
+    e.glht$vcov <- NULL
+    e.glht2$vcov <- NULL
+    ##e.glht$df <- 0    
+    e.glht2$df <- 0
+    e.glht2$model <- NULL
+    e.glht$model <- NULL
+    expect_equal(e.glht,e.glht2)
+})
+     
+test_that("mlf vs mlf2: information std, second member", {
+    class(ls.lm) <- "mmm"
+    e.glht <- glht(ls.lm, mlf("E = 1"))
+
     class(ls.lm) <- "mmm2"
-    e.glht2 <- glht(ls.lm, mlf2("E = 0"),
+    e.glht2 <- glht(ls.lm, mlf2("E = 1"),
                     adjust.residuals = FALSE, robust = FALSE)
 
     expect_equal(e.glht$vcov, n/(n-2)*e.glht2$vcov)
@@ -64,7 +86,8 @@ test_that("mmm2 vs mmm", {
     e.glht$model <- NULL
     expect_equal(e.glht,e.glht2)
 
-    ## no rescaling
+})
+test_that("mlf vs. mlf2: robust std", {
     class(ls.lm) <- "mmm"
     e.glht <- glht(ls.lm, mlf("E = 0"),
                    vcov = sandwich)
@@ -79,21 +102,22 @@ test_that("mmm2 vs mmm", {
     dimnames(e.glht$vcov) <- NULL
     dimnames(e.glht2$vcov) <- NULL
     expect_equal(e.glht,e.glht2)
+})
 
-    ## same p.values
-    system.time(
-        res.GS <- summary(e.glht)
-    )
+test_that("glht vs. calcDistMaxIntegral", {
+    class(ls.lm) <- "mmm"
+    e.glht <- glht(ls.lm, mlf("E = 0"),
+                   vcov = sandwich)
+    res.GS <- summary(e.glht)
 
     iid.tempo <- do.call(cbind,lapply(ls.lm, iid)) %*% t(e.glht$linfct)
     beta <- unlist(lapply(ls.lm, coef)) %*% t(e.glht$linfct)
     beta.var <- diag(crossprod(iid.tempo))
     z.value <- beta/sqrt(beta.var)
-    system.time(
-        res.Search <- calcDistMaxIntegral(as.vector(z.value),
-                                          iid = iid.tempo, quantile.compute = FALSE,
-                                          df = NULL, trace = FALSE, alpha = 0.05)
-    )
+    res.Search <- calcDistMaxIntegral(as.vector(z.value),
+                                      iid = iid.tempo, quantile.compute = FALSE,
+                                      df = NULL, trace = FALSE, alpha = 0.05)
+    
     expect_equal(as.double(res.Search$p.adjust),
                  as.double(res.GS$test$pvalues),
                  tol = attr(res.GS$test$pvalues, "error")
@@ -127,7 +151,7 @@ ls.lm <- list(Y1 = lm(Y1~E, data = df.data),
               )
 class(ls.lm) <- "mmm"
 
-test_that("ls.lvmfit vs mmm", {
+test_that("glht2 for a list of lvm vs. glht for a list of lm", {
 
     ##
     C <- createContrast(ls.lvm, var.test = "E")

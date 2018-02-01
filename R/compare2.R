@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan 31 2018 (16:41) 
+## Last-Updated: feb  1 2018 (13:42) 
 ##           By: Brice Ozenne
-##     Update #: 199
+##     Update #: 202
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' @param adjust.residuals [logical] small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
-#' @param contrast [matrix] the contrast matrix defining the left hand side of the linear hypotheses to be tested.
+#' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param null [vector] the right hand side of the linear hypotheses to be tested.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}.
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
@@ -172,7 +172,7 @@ compare2.lvmfit2 <- compare2.lm2
     }else{
         
         if(is.null(contrast)){
-            stop("Argument \'contrast\' and arugment \'par\' cannot be both NULL \n",
+            stop("Argument \'contrast\' and argument \'par\' cannot be both NULL \n",
                  "Please specify the null hypotheses using one of the two arguments \n")
         }
         if(NCOL(contrast) != n.param){
@@ -271,8 +271,8 @@ compare2.lvmfit2 <- compare2.lm2
         df.estimate[,"Estimate"] <- df.table[name.hypo,"estimate"]
         df.estimate[,"Std.Err"] <- df.table[name.hypo,"std"]
         df.estimate[,"df"] <- df.table[name.hypo,"df"]
-        df.estimate[,level.inf.label] <- df.table[name.hypo,"estimate"] + qt(level.inf, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
-        df.estimate[,level.sup.label] <- df.table[name.hypo,"estimate"] + qt(level.sup, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
+        df.estimate[,level.inf.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.inf, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
+        df.estimate[,level.sup.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.sup, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
 
         out <- list(statistic = setNames(df.table["global","statistic"],"F-statistic"),
                     parameter = setNames(round(df.table["global","df"],2), paste0("df1 = ",n.hypo,", df2")),

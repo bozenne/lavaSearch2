@@ -10,79 +10,21 @@
 \usage{
 lTest(object, ...)
 
-\method{lTest}{lm}(object, C = NULL, adjust.residuals = TRUE,
-  Ftest = TRUE, ...)
+\method{lTest}{lm}(object, C = NULL, ...)
 
-\method{lTest}{gls}(object, C = NULL, adjust.residuals = TRUE,
-  Ftest = TRUE, ...)
+\method{lTest}{gls}(object, C = NULL, ...)
 
-\method{lTest}{lme}(object, C = NULL, adjust.residuals = TRUE,
-  Ftest = TRUE, ...)
+\method{lTest}{lme}(object, C = NULL, ...)
 
-\method{lTest}{lvmfit}(object, C = NULL, adjust.residuals = TRUE,
-  Ftest = TRUE, ...)
+\method{lTest}{lvmfit}(object, C = NULL, ...)
 }
 \arguments{
 \item{object}{a lvm object.}
 
-\item{...}{arguments to be passed to \code{\link{dVcov2}}.}
+\item{...}{arguments to be passed to lower level functions.}
 
 \item{C}{[optional] a contrast matrix.}
-
-\item{adjust.residuals}{should a small-sample correction be used when computing the variance of the parameters and the degree of freedoms.}
-
-\item{Ftest}{should a join test be computed.}
 }
 \description{
-Test linear hypotheses using Wald statistic
-}
-\details{
-The contrast matrix must contain as many columns as there are parameters in the model (mean and variance parameters).
-In the case of a \code{lm} object, including the variance parameter is not compulsory.
-When omitted  a column containing 0 is added to the contrast matrix.
-
-Instead of a contrast matrix, on can also use expressions encoded in a vector of characters (e.g. c("beta = 0")).
-Using the chrlinfct2matrix of the multtest package, a contrast matrix will be generated from the expression.
-
-The right hand side of the linear hypothesis C b = a is always assumed to be null, i.e. a=0.
-}
-\examples{
-set.seed(10)
-mSim <- lvm(Y~0.1*X1+0.2*X2)
-categorical(mSim, labels = c("a","b","c")) <- ~X1
-transform(mSim, Id~Y) <- function(x){1:NROW(x)}
-df.data <- lava::sim(mSim, 1e2)
-
-## gold standard
-e.lm <- lm(Y~X1+X2, data = df.data)
-anova(e.lm)
-
-lTest(e.lm)
-
-## gls model
-library(nlme)
-e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
-e.gls$dVcov <- dVcov2(e.gls, data = df.data, cluster = df.data$Id)
-
-C <- rbind(c(0,1,0,0,0),c(0,0,1,0,0))
-colnames(C) <- names(attr(e.gls$dVcov,"param"))
-lTest(e.gls, data = df.data, C = C)
-
-C <- rbind(c(0,0,0,1,0))
-colnames(C) <- names(attr(e.gls$dVcov,"param"))
-lTest(e.gls, data = df.data, C = C)
-
-## latent variable model
-m <- lvm(Y~X1+X2)
-e.lvm <- estimate(m, df.data)
-e.lvm$dVcov <- dVcov2(e.lvm)
-
-C <- rbind(c(0,0,1,0,0),c(0,0,0,1,0))
-colnames(C) <- names(coef(e.lvm))
-lTest(e.lvm, C = C)
-
-C <- rbind(c(0,1,0,0,0))
-colnames(C) <- names(coef(e.lvm))
-lTest(e.lvm, C = C)
-
+Test linear hypotheses using Wald statistic. Deprecated see compare2.
 }
