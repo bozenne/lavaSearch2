@@ -46,7 +46,7 @@ this can be useful when the argument cluster is required.}
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}
 
-\item{contrast}{[matrix] the contrast matrix defining the left hand side of the linear hypotheses to be tested.}
+\item{contrast}{[matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.}
 
 \item{null}{[vector] the right hand side of the linear hypotheses to be tested.}
 
@@ -90,7 +90,7 @@ compare2(e.lm, par = c("X1b=0","X1c=0"))
 dVcov2(e.lm) <- TRUE
 
 ## and define the contrast matrix
-C <- createContrast(e.lm, par = c("X1b=0","X1c=0"))
+C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
 
 ## run compare2
 compare2(e.lm, contrast = C$contrast, null = C$null)

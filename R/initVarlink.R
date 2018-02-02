@@ -130,7 +130,7 @@ initVarLinks <- function(var1, format = "list",...){
 #' @description Return the reponse variable contained in the formula.
 #' @name selectResponse
 #' 
-#' @param x a formula
+#' @param object a formula
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
 #' @param ... additional arguments to be passed to lower levels functions.
 #'
@@ -147,18 +147,18 @@ initVarLinks <- function(var1, format = "list",...){
 #' 
 #' @rdname selectResponse
 #' @export
-`selectResponse` <-  function(x, ...) UseMethod("selectResponse")
+`selectResponse` <-  function(object, ...) UseMethod("selectResponse")
 
 ## * selectResponse.formula
 #' @rdname selectResponse
 #' @method selectResponse formula
 #' @export
-selectResponse.formula <- function(x, type = "call", ...){
+selectResponse.formula <- function(object, type = "call", ...){
   
   match.arg(type, c("call","vars"))
   
-  if(length(x)==3){
-    res <- x[[2]]
+  if(length(object)==3){
+    res <- object[[2]]
     if(type == "vars"){
       res <- all.vars(res)
     }
@@ -174,7 +174,7 @@ selectResponse.formula <- function(x, type = "call", ...){
 #' @description Return the regressor variables contained in the formula
 #' @name selectRegressor
 #' 
-#' @param x a formula
+#' @param object a formula
 #' @param type either return an object of type call (\code{"call"}) or the names of the variables (\code{"vars"})
 #' @param ... additional arguments to be passed to lower levels functions.
 #' 
@@ -191,21 +191,21 @@ selectResponse.formula <- function(x, type = "call", ...){
 #' 
 #' @rdname selectRegressor
 #' @export
-`selectRegressor` <-  function(x, ...) UseMethod("selectRegressor")
+`selectRegressor` <-  function(object, ...) UseMethod("selectRegressor")
 
 ## * selectRegressor.formula
 #' @rdname selectRegressor
 #' @method selectRegressor formula
 #' @export
-selectRegressor.formula <- function(x, type = "call", ...){
+selectRegressor.formula <- function(object, type = "call", ...){
   
   match.arg(type, c("call","vars"))
   
-  if(length(x)==3){
-    res <- x[[3]]
+  if(length(object)==3){
+    res <- object[[3]]
     
-  }else if(length(x)==2){
-    res <- x[[2]]
+  }else if(length(object)==2){
+    res <- object[[2]]
   }else{
     res <- NULL
   }

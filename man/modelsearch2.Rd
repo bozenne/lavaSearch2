@@ -34,7 +34,10 @@ Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.}
 
 \item{df}{[relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.}
 
-\item{adjust.residuals}{[relevant when statistic is Wald] small sample correction: should the leverage-adjusted residuals be used to compute the influence function? Otherwise the raw residuals will be used.}
+\item{adjust.residuals}{[logical] small sample correction:
+should the leverage-adjusted residuals be used to compute the score?
+Otherwise the raw residuals will be used.
+Only relevant when the argument \code{statistic} is set to \code{"Wald"}.}
 
 \item{trace}{should the execution be traced?}
 }

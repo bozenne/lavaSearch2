@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: jan 19 2018 (10:23) 
+## last-updated: feb  2 2018 (11:56) 
 ##           By: Brice Ozenne
-##     Update #: 283
+##     Update #: 293
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,13 +21,14 @@
 #'
 #' @name iidJack
 #' 
-#' @param x model object.
+#' @param object a object containing the model.
 #' @param data dataset used to perform the jacknife.
 #' @param grouping variable defining cluster of observations that will be simultaneously removed by the jackknife.
-#' @param ncpus number of cpus available for parallel computation.
+#' @param ncpus [integer >0] the number of processors to use.
+#' If greater than 1, the fit of the model and the computation of the influence function for each jackknife sample is performed in parallel. 
 #' @param keep.warnings keep warning messages obtained when estimating the model with the jackknife samples.
 #' @param keep.error keep error messages obtained when estimating the model with the jackknife samples.
-#' @param initCpus should the parallel computation be initialized?
+#' @param initCpus [logical] should the processors for the parallel computation be initialized?
 #' @param trace should a progress bar be used to trace the execution of the function
 #' @param ... additional arguments.
 #' @examples
@@ -100,12 +101,12 @@
 #' apply(iid3,2,sd)
 #' }
 #' @export
-iidJack <- function(x,...) UseMethod("iidJack")
+iidJack <- function(object,...) UseMethod("iidJack")
 
 ## * method iidJack.default
 #' @rdname iidJack
 #' @export
-iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
+iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
                             keep.warnings=TRUE, keep.error=TRUE,
                             initCpus=TRUE,trace=TRUE,...) {
     
@@ -113,33 +114,33 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
 
     ## ** extract data
     if(is.null(data)){
-        myData <- extractData(x, design.matrix = FALSE, as.data.frame = TRUE)
+        myData <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
     }else{ 
         myData <-  as.data.frame(data)
     }
     
     n.obs <- NROW(myData)
-    if(any(class(x) %in% "lme")){
+    if(any(class(object) %in% "lme")){
         getCoef <- nlme::fixef
     }else{
         getCoef <- coef
     }
-    coef.x <- getCoef(x)
+    coef.x <- getCoef(object)
     names.coef <- names(coef.x)
     n.coef <- length(coef.x)
 
     ## ** update formula/model when defined by a variable and not in the current namespace
-    if(length(x$call[[2]])==1){
-        modelName <- as.character(x$call[[2]])
+    if(length(object$call[[2]])==1){
+        modelName <- as.character(object$call[[2]])
         if(modelName %in% ls() == FALSE){
-            assign(modelName, value = evalInParentEnv(x$call[[2]]))
+            assign(modelName, value = evalInParentEnv(object$call[[2]]))
         }
     }
 
     ## ** define the grouping level for the data
     if(is.null(grouping)){
-        if(any(class(x)%in%c("lme","gls","nlme"))){
-            myData$XXXgroupingXXX <- as.vector(apply(x$groups,2,interaction))
+        if(any(class(object)%in%c("lme","gls","nlme"))){
+            myData$XXXgroupingXXX <- as.vector(apply(object$groups,2,interaction))
         }else{
             myData$XXXgroupingXXX <- 1:n.obs
         }
@@ -159,7 +160,7 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     ## ** warper
     warper <- function(i){ # i <- "31"
         newData <- subset(myData, subset = myData[[grouping]]!=i)
-        xnew <- tryWithWarnings(stats::update(x, data = newData))
+        xnew <- tryWithWarnings(stats::update(object, data = newData))
         if(!is.null(xnew$error)){
             xnew$value <- rep(NA, n.coef)
         }else{
@@ -172,21 +173,36 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     ## ** parallel computations: get jackknife coef
     if(ncpus>1){
         if(initCpus){
+            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'doParallel\' \n",
+                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+            }
+            test.package <- try(requireNamespace("foreach"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'foreach\' \n",
+                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+            }
             cl <- parallel::makeCluster(ncpus)
             doParallel::registerDoParallel(cl)
         }
  
         if(trace > 0){
+            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'tcltk\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
+            }
             parallel::clusterExport(cl, varlist = "trace")
         }
 
-        estimator <- as.character(x$call[[1]]) 
+        estimator <- as.character(object$call[[1]]) 
 
         vec.packages <- c("lava")
         possiblePackage <- gsub("package:","",utils::getAnywhere(estimator)$where[1])
         existingPackage <- as.character(utils::installed.packages()[,"Package"])
 
-        ls.call <- as.list(x$call)
+        ls.call <- as.list(object$call)
         test.length <- which(unlist(lapply(ls.call, length))==1)
         test.class <- which(unlist(lapply(ls.call, function(cc){
             (class(c) %in% c("numeric","character","logical")) == FALSE
@@ -199,18 +215,18 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
         if(possiblePackage %in% existingPackage){
             vec.packages <- c(vec.packages,possiblePackage)
         }
-        if(length(x$call$data)==1){
-            toExport <- c(toExport,as.character(x$call$data))
+        if(length(object$call$data)==1){
+            toExport <- c(toExport,as.character(object$call$data))
         }
-        if(length(x$call$formula)==1){
-            toExport <- c(toExport,as.character(x$call$formula))
+        if(length(object$call$formula)==1){
+            toExport <- c(toExport,as.character(object$call$formula))
         }
-        if(length(x$call$fixed)==1){
-            toExport <- c(toExport,as.character(x$call$fixed))        
+        if(length(object$call$fixed)==1){
+            toExport <- c(toExport,as.character(object$call$fixed))        
         }
         toExport <- c(unique(toExport),"tryWithWarnings")
 
-        #sapply(as.list(x$call),as.character)
+        #sapply(as.list(object$call),as.character)
         i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(
                                 foreach::foreach(i = 1:n.group, .packages =  vec.packages,
@@ -231,8 +247,13 @@ iidJack.default <- function(x,data=NULL,grouping=NULL,ncpus=1,
     }else{
         
         if(trace>0){
-            requireNamespace("pbapply")
+            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'pbapply\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
+            }
             resLoop <- pbapply::pblapply(Ugrouping, warper)
+            
         }else{
             resLoop <- lapply(Ugrouping, warper)
         }

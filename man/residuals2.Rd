@@ -30,7 +30,9 @@ residuals2(object, ...)
 
 \item{...}{[internal] Only used by the generic method.}
 
-\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+\item{adjust.residuals}{[logical] small sample correction:
+should the leverage-adjusted residuals be used to compute the score?
+Otherwise the raw residuals will be used.}
 
 \item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
 

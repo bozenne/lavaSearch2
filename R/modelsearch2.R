@@ -11,7 +11,10 @@
 #' @param typeSD [relevant when statistic is Wald] the type of standard error to be used to compute the Wald statistic.
 #' Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.
 #' @param df [relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.
-#' @param adjust.residuals [relevant when statistic is Wald] small sample correction: should the leverage-adjusted residuals be used to compute the influence function? Otherwise the raw residuals will be used.
+#' @param adjust.residuals [logical] small sample correction:
+#' should the leverage-adjusted residuals be used to compute the score?
+#' Otherwise the raw residuals will be used.
+#' Only relevant when the argument \code{statistic} is set to \code{"Wald"}.
 #' @param trace should the execution be traced?
 #' @param ... additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.
 #'
@@ -386,6 +389,16 @@ modelsearch2.default <- function(object, link, data = NULL,
     ## cpus
     if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     if(ncpus>1){
+        test.package <- try(requireNamespace("doParallel"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'doParallel\' \n",
+                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+        }
+        test.package <- try(requireNamespace("foreach"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'foreach\' \n",
+                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+        }
         cl <- parallel::makeCluster(ncpus)
         doParallel::registerDoParallel(cl)
     }

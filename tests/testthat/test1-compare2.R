@@ -3,13 +3,27 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: feb  1 2018 (13:25) 
+## last-updated: feb  2 2018 (10:45) 
 ##           By: Brice Ozenne
-##     Update #: 171
+##     Update #: 181
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
-## 
+## Test battery:
+## - linear regression:
+##   compare2.lvm and compare2.lm
+##   * check whether df and sigma match with what is expected
+##     with and without small sample correction
+##
+## - mixed model (compound symmetry)
+##   compare2.lvm, compare2.gls, and compare2.lme
+##   * compare Satterthwaite correction with lmerTest (Wald test)
+##   * compare with lava::compare (F-test)
+##   * small sample correction: assess internal consistency between compare2.lvm, compare2.gls, and compare2.lme
+##
+## - mixed model (unstructured)
+##   compare2.lvm, compare2.gls, and compare2.lme
+##   * Satterthwaite correction: consistency between using or not numerical derivative
 ### Change Log:
 #----------------------------------------------------------------------
 ## 
@@ -180,7 +194,7 @@ test_that("mixed model: Satterthwaite correction (Wald)",{
     expect_equal(df1.lme, df2.lme)
     expect_equivalent(df1.lme, df1.lvm)
 
-    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    name.param <- names(lavaSearch2:::.coef2(e.gls))
     n.param <- length(name.param)        
     df1.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
                         adjust.residuals = FALSE, as.lava = FALSE)[1:n.param,]
@@ -191,7 +205,6 @@ test_that("mixed model: Satterthwaite correction (Wald)",{
 })
 
 test_that("mixed model: Satterthwaite correction (F-test)",{
-
     GS <- lava::compare(e.lvm, par = c("eta~G"))
     e.lava2 <- compare2(e.lvm, par = c("eta~G"), adjust.residuals = FALSE, as.lava = FALSE)
     expect_equal(e.lava2["global","statistic"], as.double(GS$statistic))
@@ -199,7 +212,7 @@ test_that("mixed model: Satterthwaite correction (F-test)",{
     GS <- lava::compare(e.lvm, par = c("Y2","Y3"))
     e.lava2 <- compare2(e.lvm, par = c("Y2","Y3"), adjust.residuals = FALSE, as.lava = FALSE)
     expect_equal(2*e.lava2["global","statistic"], as.double(GS$statistic))
-}
+})
 
 
 test_that("mixed model: KR-like correction",{
@@ -224,7 +237,7 @@ test_that("mixed model: KR-like correction",{
     n.param <- length(name.param)        
     df.adj.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
                            adjust.residuals = TRUE, as.lava = FALSE)
-    expect_equal(unlist(df1.gls[1:5,]), unlist(df1.lvm[1:5,]), tolerance = 1e-6)
+    expect_equal(unlist(df.adj.gls[1:5,]), unlist(df.adj.lvm[1:5,]), tolerance = 1e-6)
 })
 
 ## ** Unstructured with weights

@@ -17,4 +17,3 @@
 
 lava_categorical2dummy <- get("categorical2dummy", envir = asNamespace("lava"), inherits = FALSE)
 lava_estimate.lvm <- get("estimate.lvm", envir = asNamespace("lava"), inherits = FALSE)
-lava_matrices.lvm <- get("matrices.lvm", envir = asNamespace("lava"), inherits = FALSE)

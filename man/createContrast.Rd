@@ -8,22 +8,27 @@
 \alias{createContrast.lme}
 \alias{createContrast.lvmfit}
 \alias{createContrast.list}
-\title{Contrast matrix for multiple latent variable models}
+\alias{createContrast.mmm}
+\title{Create Contrast matrix.}
 \usage{
 createContrast(object, ...)
 
 \method{createContrast}{character}(object, name.param, add.rowname = TRUE,
   ...)
 
-\method{createContrast}{lm}(object, par, ...)
+\method{createContrast}{lm}(object, par, add.variance, ...)
 
-\method{createContrast}{gls}(object, par, ...)
+\method{createContrast}{gls}(object, par, add.variance, ...)
 
-\method{createContrast}{lme}(object, par, ...)
+\method{createContrast}{lme}(object, par, add.variance, ...)
 
 \method{createContrast}{lvmfit}(object, par, ...)
 
-\method{createContrast}{list}(object, par = NULL, var.test = NULL, ...)
+\method{createContrast}{list}(object, par = NULL, add.variance,
+  var.test = NULL, ...)
+
+\method{createContrast}{mmm}(object, par = NULL, add.variance,
+  var.test = NULL, ...)
 }
 \arguments{
 \item{object}{an \code{ls.lvmfit} object.}
@@ -36,10 +41,30 @@ createContrast(object, ...)
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested. See the examples section.}
 
+\item{add.variance}{[logical] should the variance parameters be considered as model parameters?
+Required for lm, gls, and lme models.}
+
 \item{var.test}{[character] a regular expression that is used to identify the coefficients to be tested using \code{grep}. Each coefficient will be tested in a separate hypothesis. When this argument is used, the argument \code{par} is disregarded.}
 }
+\value{
+A list containing
+\itemize{
+\item{contrast} [matrix] a contrast matrix corresponding to the left hand side of the linear hypotheses.
+\item{null} [vector] the right hand side of the linear hypotheses.
+\item{Q} [integer] the rank of the contrast matrix.
+\item{ls.contrast} [list, optional] the contrast matrix corresponding to each submodel.
+Only present when the argument object is a list of models.
+}
+}
 \description{
-Returns an empty contrast matrix corresponding to a list of latent variable models.
+Returns an contrast matrix corresponding an object.
+The contrast matrix will contains the hypotheses in rows and the model parameters in columns.
+}
+\details{
+One can initialize an empty contrast matrix setting the argument par to \code{character(0)}. \cr \cr
+
+When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}.
+When using \code{lavaSearch2::glht2} one should set the argument \code{add.variance} to \code{TRUE}.
 }
 \examples{
 ## Simulate data
@@ -61,11 +86,13 @@ lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ -1 + 1*eta, eta ~ -1 + Treatment),
                  data = df.data)
 
 ## Contrast matrix for a given model
-createContrast(lmX, "X~Age")
-createContrast(lmX, c("X~Age=0","X~Age+5*X~TreatmentSSRI=0"))
+createContrast(lmX, par = "X~Age")
+createContrast(lmX, par = c("X~Age=0","X~Age+5*X~TreatmentSSRI=0"))
+createContrast(lmX, par = character(0))
 
 ## Contrast matrix for the join model
 ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
 createContrast(ls.lvm, var.test = "Treatment")
+createContrast(ls.lvm, par = character(0))
 
 }

@@ -34,70 +34,70 @@
 \alias{coefVar.multigroup}
 \title{Extract the Specific Coefficient Bames or Positions in a LVM}
 \usage{
-coefType(x, ...)
+coefType(object, ...)
 
-\method{coefType}{lvm}(x, data = NULL, as.lava = TRUE, ...)
+\method{coefType}{lvm}(object, data = NULL, as.lava = TRUE, ...)
 
-\method{coefType}{lvmfit}(x, as.lava = TRUE, ...)
+\method{coefType}{lvmfit}(object, as.lava = TRUE, ...)
 
-\method{coefType}{multigroup}(x, as.lava = TRUE, ...)
+\method{coefType}{multigroup}(object, as.lava = TRUE, ...)
 
-coefCov(x, ...)
+coefCov(object, ...)
 
-\method{coefCov}{lvm}(x, value = FALSE, keep.var = FALSE, ...)
+\method{coefCov}{lvm}(object, value = FALSE, keep.var = FALSE, ...)
 
-\method{coefCov}{lvmfit}(x, value = FALSE, keep.var = FALSE, ...)
+\method{coefCov}{lvmfit}(object, value = FALSE, keep.var = FALSE, ...)
 
-\method{coefCov}{multigroup}(x, value = FALSE, keep.var = FALSE, ...)
+\method{coefCov}{multigroup}(object, value = FALSE, keep.var = FALSE, ...)
 
-coefExtra(x, ...)
+coefExtra(object, ...)
 
-\method{coefExtra}{lvm}(x, value = FALSE, ...)
+\method{coefExtra}{lvm}(object, value = FALSE, ...)
 
-\method{coefExtra}{lvmfit}(x, value = FALSE, ...)
+\method{coefExtra}{lvmfit}(object, value = FALSE, ...)
 
-\method{coefExtra}{multigroup}(x, value = FALSE, ...)
+\method{coefExtra}{multigroup}(object, value = FALSE, ...)
 
-coefIndexModel(x, ...)
+coefIndexModel(object, ...)
 
-\method{coefIndexModel}{lvm}(x, ...)
+\method{coefIndexModel}{lvm}(object, ...)
 
-\method{coefIndexModel}{lvmfit}(x, ...)
+\method{coefIndexModel}{lvmfit}(object, ...)
 
-\method{coefIndexModel}{multigroup}(x, ...)
+\method{coefIndexModel}{multigroup}(object, ...)
 
-\method{coefIndexModel}{multigroupfit}(x, ...)
+\method{coefIndexModel}{multigroupfit}(object, ...)
 
-coefIntercept(x, ...)
+coefIntercept(object, ...)
 
-\method{coefIntercept}{lvm}(x, value = FALSE, ...)
+\method{coefIntercept}{lvm}(object, value = FALSE, ...)
 
-\method{coefIntercept}{lvmfit}(x, value = FALSE, ...)
+\method{coefIntercept}{lvmfit}(object, value = FALSE, ...)
 
-\method{coefIntercept}{multigroup}(x, value = FALSE, ...)
+\method{coefIntercept}{multigroup}(object, value = FALSE, ...)
 
-coefRef(x, ...)
+coefRef(object, ...)
 
-\method{coefRef}{lvmfit}(x, value = FALSE, ...)
+\method{coefRef}{lvmfit}(object, value = FALSE, ...)
 
-coefReg(x, ...)
+coefReg(object, ...)
 
-\method{coefReg}{lvm}(x, value = FALSE, ...)
+\method{coefReg}{lvm}(object, value = FALSE, ...)
 
-\method{coefReg}{lvmfit}(x, value = FALSE, ...)
+\method{coefReg}{lvmfit}(object, value = FALSE, ...)
 
-\method{coefReg}{multigroup}(x, value = FALSE, ...)
+\method{coefReg}{multigroup}(object, value = FALSE, ...)
 
-coefVar(x, ...)
+coefVar(object, ...)
 
-\method{coefVar}{lvm}(x, value = FALSE, ...)
+\method{coefVar}{lvm}(object, value = FALSE, ...)
 
-\method{coefVar}{lvmfit}(x, value = FALSE, ...)
+\method{coefVar}{lvmfit}(object, value = FALSE, ...)
 
-\method{coefVar}{multigroup}(x, value = FALSE, ...)
+\method{coefVar}{multigroup}(object, value = FALSE, ...)
 }
 \arguments{
-\item{x}{a lvm model or a fitted lvm model}
+\item{object}{a lvm model or a fitted lvm model}
 
 \item{...}{arguments to be passed to \code{lava::coef}}
 

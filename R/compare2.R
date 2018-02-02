@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  1 2018 (13:42) 
+## Last-Updated: feb  2 2018 (12:07) 
 ##           By: Brice Ozenne
-##     Update #: 202
+##     Update #: 206
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,9 @@
 #' @name compare2
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
-#' @param adjust.residuals [logical] small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param adjust.residuals [logical] small sample correction:
+#' should the leverage-adjusted residuals be used to compute the score?
+#' Otherwise the raw residuals will be used.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
@@ -68,7 +70,7 @@
 #' dVcov2(e.lm) <- TRUE
 #' 
 #' ## and define the contrast matrix
-#' C <- createContrast(e.lm, par = c("X1b=0","X1c=0"))
+#' C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
 #'
 #' ## run compare2
 #' compare2(e.lm, contrast = C$contrast, null = C$null)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jan 22 2018 (11:33) 
+## last-updated: feb  2 2018 (10:40) 
 ##           By: Brice Ozenne
-##     Update #: 677
+##     Update #: 681
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -132,11 +132,27 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }
 
         if(initCpus){
+            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'doParallel\' \n",
+                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+            }
+            test.package <- try(requireNamespace("foreach"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'foreach\' \n",
+                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+            
+            }
             cl <- parallel::makeCluster(ncpus)
             doParallel::registerDoParallel(cl)
         }
     
         if(trace > 0){
+            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'tcltk\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
+            }
             parallel::clusterExport(cl, varlist = "trace")
         }
 
@@ -162,8 +178,13 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         
     }else{
         if(trace>0){
-            requireNamespace("pbapply")
+            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'pbapply\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
+            }                
             resApply <- pbapply::pblapply(1:n.link, warper)
+            
         }else{
             resApply <- lapply(1:n.link, warper)
         }

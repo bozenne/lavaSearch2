@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 23 2017 (16:52) 
 ## Version: 
-## last-updated: jan 17 2018 (19:05) 
+## last-updated: feb  2 2018 (12:02) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 29
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 ##' @title Power of a Matrix
 ##' @description Compute the power of a matrix.
 ##' 
-##' @param x a matrix.
+##' @param object a matrix.
 ##' @param power power to be applied to the matrix.
 ##' @param symmetric is the matrix symmetric? Argument passed to the function \code{eigen}.
 ##' @param tol the threshold under which the eigenvalues are set to 0.
@@ -34,14 +34,15 @@
 ##' round(Sigma.m1 %*% Sigma,5)
 ##' 
 ##' @export
-matrixPower <- function(x, power, symmetric, tol = 1e-12){
-    x.eigen <- eigen(x, symmetric = symmetric)
-    x.eigen$values[abs(x.eigen$values) < tol] <- 0 ## abs is not really necessary since the eigenvalues are positives
-    x.eigen$values <- x.eigen$values^power
-    return(x.eigen$vectors %*% sweep(t(x.eigen$vectors),
+matrixPower <- function(object, power, symmetric, tol = 1e-12){
+    object.eigen <- eigen(object, symmetric = symmetric)
+    object.eigen$values[abs(object.eigen$values) < tol] <- 0 ## abs is not really necessary since the eigenvalues are positives
+    object.eigen$values <- object.eigen$values^power
+    
+    return(object.eigen$vectors %*% sweep(t(object.eigen$vectors),
                                      MARGIN = 1,
                                      FUN = "*",
-                                     STATS = x.eigen$values)
+                                     STATS = object.eigen$values)
            )
 }
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  1 2018 (18:37) 
+## Last-Updated: feb  2 2018 (10:55) 
 ##           By: Brice Ozenne
-##     Update #: 298
+##     Update #: 319
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,8 @@
 #' Otherwise when calling multcomp:::vcov.mmm then sandwich::sandwich and then sandwich::meat, sandwich::meat will complain that estfun is not defined for lvmfit objects.
 #'
 #' @examples
+#' library(multcomp)
+#' 
 #' #### generative model ####
 #' mSim <- lvm(X ~ Age + 0.5*Treatment,
 #'             Y ~ Gender + 0.25*Treatment,
@@ -52,7 +54,7 @@
 #' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, var.test = "Treatment")
+#' resC <- createContrast(e.mmm, var.test = "Treatment", add.variance = FALSE)
 #'
 #' #### adjust for multiple comparisons ####
 #' e.glht <- glht(e.mmm, linfct = resC$mlf)
@@ -75,7 +77,9 @@ estfun.lvmfit <- function(x, ...){
 #' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument par of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
-#' @param adjust.residuals [logical] small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param adjust.residuals [logical] small sample correction:
+#' should the leverage-adjusted residuals be used to compute the score?
+#' Otherwise the raw residuals will be used.
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
 #' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.
@@ -117,7 +121,7 @@ estfun.lvmfit <- function(x, ...){
 #' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, var.test = "E")
+#' resC <- createContrast(e.mmm, var.test = "E", add.variance = TRUE)
 #'
 #' #### adjust for multiple comparisons ####
 #' e.glht2 <- glht2(e.mmm, linfct = resC$contrast)
@@ -125,7 +129,7 @@ estfun.lvmfit <- function(x, ...){
 #' 
 #' @export
 `glht2` <-
-  function(object, ...) UseMethod("glht2")
+  function(model, ...) UseMethod("glht2")
 
 ## * glht2.lvmfit
 #' @rdname glht2
@@ -203,10 +207,10 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
              "Incorrect element(s): ",paste(index.wrong, collapse = " "),".\n")
     }
 
-     ### ** define the contrast matrix
+    ### ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
-        resC <- createContrast(model, par = linfct)
+        resC <- createContrast(model, par = linfct, add.variance = TRUE)
         contrast <- resC$contrast
         ls.contrast <- resC$ls.contrast
         if("rhs" %in% names(match.call()) == FALSE){
@@ -234,8 +238,10 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
         if(is.null(model[[iM]]$dVcov)){
             dVcov2(model[[iM]], return.score = TRUE) <- adjust.residuals
         }
-        out$param <- attr(model[[iM]]$dVcov, "param")
+        out$param <- attr(model[[iM]]$dVcov, "param")                              
         name.param <- names(out$param)
+        name.object.param <- paste0(name.model[iM],": ",name.param)
+        out$param <- setNames(out$param, name.object.param)
         
         ### *** Compute df for each test
         ## here null does not matter since we only extract the degrees of freedom
@@ -252,14 +258,16 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
             iVec.sigma.robust <- sqrt(apply(out$iid^2,2,sum))
             out$iid <- sweep(out$iid, MARGIN = 2, FUN = "*", STATS = iVec.sigma/iVec.sigma.robust)
         }
+        colnames(out$iid) <- name.object.param
+            
         return(out)
         
     })
     seq.df <- unlist(lapply(ls.res,"[[","df"))
     seq.param <- unlist(lapply(ls.res,"[[","param"))
-    df.global <- stats::median(round(seq.df, digit = 0))
+    df.global <- stats::median(round(seq.df, digits = 0))
     vcov.model <- crossprod(do.call(cbind,lapply(ls.res,"[[","iid")))
-    
+
     ### ** convert to the appropriate format
     out <- list(model = model,
                 linfct = linfct,

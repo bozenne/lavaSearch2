@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 30 2018 (14:36) 
+## Last-Updated: feb  2 2018 (10:54) 
 ##           By: Brice Ozenne
-##     Update #: 227
+##     Update #: 232
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,9 @@
 #' @param cluster the grouping variable relative to which the observations are iid.
 #'                Only required for gls models with no correlation argument.
 #' @param vcov.param the variance-covariance matrix of the estimates.
-#' @param adjust.residuals Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param adjust.residuals [logical] small sample correction:
+#' should the leverage-adjusted residuals be used to compute the score?
+#' Otherwise the raw residuals will be used.
 #' @param value same as adjust.residuals.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
 #' @param return.score [for internal use] export the score.
@@ -125,7 +127,13 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
         }
 
         ### *** numerical derivative
-        jac.param <- p[keep.param]
+        test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'numDeriv\' \n",
+                 "This package is necessary when argument \'numericDerivative\' is TRUE \n")
+        }
+        
+        jac.param <- p[keep.param]        
         res.tempo <- numDeriv::jacobian(calcSigma, x = jac.param, method = "Richardson")
 
         dVcov.dtheta <- array(res.tempo,
@@ -260,6 +268,12 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
         }
         
         ### *** numerical derivative
+        test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'numDeriv\' \n",
+                 "This package is necessary when argument \'numericDerivative\' is TRUE \n")
+        }
+        
         jac.param <- p[keep.param]
         res.tempo <- numDeriv::jacobian(calcVcov, x = jac.param, method = "Richardson")
 

@@ -5,12 +5,16 @@
 \alias{.contrast2name}
 \title{Create Rownames for a Contrast Matrix}
 \usage{
-.contrast2name(C, null = NULL)
+.contrast2name(contrast, null = NULL)
 }
 \arguments{
-\item{C}{a constrast matrix.}
+\item{contrast}{[matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.}
+
+\item{null}{[vector, optional] the right hand side of the linear hypotheses to be tested.}
 }
 \description{
-Create rownames for a contrast matrix.
-using the coefficients and the names of the parameters
+Create rownames for a contrast matrix using the coefficients and the names of the parameters. The rownames will be [value * name] == null, e.g. [beta + 4*alpha] = 0.
+}
+\details{
+When argument NULL is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
 }

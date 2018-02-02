@@ -10,7 +10,9 @@ compareSearch(object, alpha = 0.05, method.p.adjust, statistic, trace = 1,
 \arguments{
 \item{object}{a lvm model.}
 
-\item{alpha}{the significance level.}
+\item{alpha}{[numeric 0-1] the significance cutoff for the p-values.
+When the p-value is below, the corresponding link will be added to the model
+and the search will continue. Otherwise the search will stop.}
 
 \item{method.p.adjust}{the method used to adjust the p.values for multiple comparisons. Ignored when using the max statistic. Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).}
 

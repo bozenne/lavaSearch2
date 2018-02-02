@@ -5,16 +5,23 @@
 #' 
 #' @name findNewLink
 #' 
-#' @param x a lvm model
-#' @param data an optional dataset used to identify the categorical variables if not specified in the lvm object.
-#' @param exclude.var all links related to these variables will be ignore.
-#' @param rm.latent_latent ignore links relating two latent variables.
-#' @param rm.endo_endo ignore links relating two endogenous variables
-#' @param rm.latent_endo ignore links relating one endogenous variable and one latent variable
-#' @param output return the names of the variables to link ("names") or their position ("index")
-#' @param ... additional arguments to be passed to lower levels functions.
+#' @param object a \code{lvm} object.
+#' @param data [optional] a dataset used to identify the categorical variables when not specified in the lvm object.
+#' @param exclude.var [character vector] all links related to these variables will be ignore.
+#' @param rm.latent_latent [logical] should the links relating two latent variables be ignored?
+#' @param rm.endo_endo [logical] should the links relating two endogenous variables be ignored?
+#' @param rm.latent_endo [logical] should the links relating one endogenous variable and one latent variable be ignored?
+#' @param output [character] Specify \code{"names"} to return the names of the variables to link
+#' or specify \code{"index"} to return their position.
+#' @param ... [internal] Only used by the generic method.
 #'
-#' @return A list
+#' @return A list containing:
+#' \itemize{
+#' \item M.links: a matrix with two columns indicating (by name or position) the exogenous and endogenous variable corresponding to each link.
+#' \item links: the name of the additional possible links
+#' \item directional: a logical vector indicating for each link whether the link is unidirectional (\code{TRUE}, i.e. regression link)
+#' or bidirectional (\code{FALSE}, i.e. covariance link).
+#' }
 #' 
 #' @examples
 #' library(lava)
@@ -34,24 +41,26 @@
 #' findNewLink(m, rm.endo = TRUE, output = "index")
 #' @export
 `findNewLink` <-
-  function(x, ...) UseMethod("findNewLink")
+  function(object, ...) UseMethod("findNewLink")
 
 ## ** method findNewLink.lvm
 #' @export
 #' @rdname findNewLink
-findNewLink.lvm <- function(x, data = NULL,
+findNewLink.lvm <- function(object, data = NULL,
                             exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
                             output = "names", ...){
 
     match.arg(output, choices = c("names","index"))
     if(is.null(data)){        
-        data <- lava::sim(x, n = 1)
+        data <- lava::sim(object, n = 1)
     }
    
     ## *** convertion to dummy variable name for categorical variables
-    xF <- lava_categorical2dummy(x, data)
+    xF <- lava_categorical2dummy(object, data)
     AP <- with(lava::index(xF$x), A + t(A) + P)
-
+    latent.xF <-  latent(xF$x)
+    endogenous.xF <- endogenous(xF$x)
+    exogenous.xF <- exogenous(xF$x)
 
     if(!is.null(exclude.var)){
         exclude.var <- var2dummy(xF, exclude.var)
@@ -61,7 +70,7 @@ findNewLink.lvm <- function(x, data = NULL,
         wrong.var <- exclude.var[exclude.var %in% colnames(AP) == FALSE]
         stop("unknown variable to exclude \n",
              "variable(s): \"",paste(wrong.var, collapse = "\" \""),"\"\n")
-        }
+    }
 
     ## *** loop over links
     restricted <- c()
@@ -76,12 +85,12 @@ findNewLink.lvm <- function(x, data = NULL,
                 next
             }
 
-            isLatent.i <- var.i %in% latent(xF$x)
-            isLatent.j <- var.j %in% latent(xF$x)
-            isEndogenous.i <- var.i %in% endogenous(xF$x)
-            isEndogenous.j <- var.j %in% endogenous(xF$x)
-            isExogenous.i <- var.i %in% exogenous(xF$x)
-            isExogenous.j <- var.j %in% exogenous(xF$x)
+            isLatent.i <- var.i %in% latent.xF
+            isLatent.j <- var.j %in% latent.xF
+            isEndogenous.i <- var.i %in% endogenous.xF
+            isEndogenous.j <- var.j %in% endogenous.xF
+            isExogenous.i <- var.i %in% exogenous.xF
+            isExogenous.j <- var.j %in% exogenous.xF
 
             if(rm.latent_latent && isLatent.i && isLatent.j){
                 next
@@ -126,18 +135,17 @@ findNewLink.lvm <- function(x, data = NULL,
 #' @rdname addLink
 #' @description Generic interface to add links to lvm objects.
 #' 
-#' @param x a lvm model
-#' @param var1 the first variable (character) or a formula describing the link to be added to the lvm
-#' @param var2 the second variable (character). Only used if var1 is a character.
-#' @param allVars all the existing variables.
-#' @param covariance does the link is bidirectional. Ignored if one of the variable is exogenous.
-#' @param warnings should a warning be displayed when no link is added
-#' @param ... additional arguments to be passed to lower levels functions.
+#' @param object a \code{lvm} object.
+#' @param var1 [character or formula] the exogenous variable of the new link or a formula describing the link to be added to the lvm.
+#' @param var2 [character] the endogenous variable of the new link. Disregarded if the argument \code{var1} is a formula.
+#' @param allVars [internal] a character vector containing all the variables of the \code{lvm} object.
+#' @param covariance [logical] is the link is bidirectional? Ignored if one of the variable non-stochastic (e.g. exogenous variables).
+#' @param warnings [logical] Should a warning be displayed when no link is added?
+#' @param ... [internal] Only used by the generic method and from addLink.lvm.reduced to addLink.lvm.
 #'
 #' @details
-#' The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(x)} does not return all variables. The command \code{vars(x, xlp = TRUE)} must be used instead.
-#' 
-#' 
+#' The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(object)} does not return all variables. The command \code{vars(object, xlp = TRUE)} must be used instead.
+#'
 #' @examples
 #' library(lava)
 #' set.seed(10)
@@ -158,26 +166,29 @@ findNewLink.lvm <- function(x, data = NULL,
 #' coef(newM)
 #' @export
 `addLink` <-
-    function(x, ...) UseMethod("addLink")
+    function(object, ...) UseMethod("addLink")
 
 ## ** method addLink.lvm
 #' @export
 #' @rdname addLink
-addLink.lvm <- function(x,
+addLink.lvm <- function(object,
                         var1,
                         var2,
                         covariance,
-                        allVars = vars(x),
+                        allVars = vars(object),
                         warnings = FALSE,
                         ...){
 
     res <- initVarLink(var1, var2, format = "list")
     var1 <- res$var1
     var2 <- res$var2
+    endogenous.object <- endogenous(object)
+    exogenous.object <- exogenous(object)
+    latent.object <- latent(object)
     
     if(var1 %in% allVars == FALSE){
         if(warnings){
-            warning("addLink.lvm: var1 does not match any variable in x, no link is added \n",
+            warning("addLink.lvm: var1 does not match any variable in object, no link is added \n",
                     "var1: ",var1,"\n")
         }
     }
@@ -185,7 +196,7 @@ addLink.lvm <- function(x,
     ####
     if(is.na(var2)){
         
-        intercept(x) <- stats::as.formula(paste0("~", var1))
+        intercept(object) <- stats::as.formula(paste0("~", var1))
         
     }else{
         
@@ -199,11 +210,11 @@ addLink.lvm <- function(x,
         
         ## if(var2 %in% allVars == FALSE){
         ##     if(warnings){
-        ##         warning("addLink.lvm: var2 does not match any variable in x, no link is added \n",
+        ##         warning("addLink.lvm: var2 does not match any variable in object, no link is added \n",
         ##                 "var2: ",var2,"\n")
         ##     }
         ## }
-        if(var1 %in% endogenous(x) && var2 %in% endogenous(x)){
+        if(var1 %in% endogenous.object && var2 %in% endogenous.object){
             if(missing(covariance)){
                 covariance <- TRUE
             }else if(covariance == FALSE){
@@ -213,16 +224,16 @@ addLink.lvm <- function(x,
     
        
         if(covariance){
-            covariance(x) <- stats::as.formula(paste(var1, var2, sep = "~"))  
-        }else if(var1 %in% endogenous(x) || var2 %in% exogenous(x)){
-            regression(x) <- stats::as.formula(paste(var1, var2,  sep = "~"))
-        }else if(var2 %in% endogenous(x) || var1 %in% exogenous(x)){
-            regression(x) <- stats::as.formula(paste(var2, var1, sep = "~"))
+            covariance(object) <- stats::as.formula(paste(var1, var2, sep = "~"))  
+        }else if(var1 %in% endogenous.object || var2 %in% exogenous.object){
+            regression(object) <- stats::as.formula(paste(var1, var2,  sep = "~"))
+        }else if(var2 %in% endogenous.object || var1 %in% exogenous.object){
+            regression(object) <- stats::as.formula(paste(var2, var1, sep = "~"))
         }else {
-            if(var1 %in% latent(x)){
-                regression(x) <- stats::as.formula(paste(var1, var2, sep = "~"))  
-            }else if(var2 %in% latent(x)){
-                regression(x) <- stats::as.formula(paste(var2, var1, sep = "~"))  
+            if(var1 %in% latent.object){
+                regression(object) <- stats::as.formula(paste(var1, var2, sep = "~"))  
+            }else if(var2 %in% latent.object){
+                regression(object) <- stats::as.formula(paste(var2, var1, sep = "~"))  
             }else{
                 stop("unknow configuration \n")
             }
@@ -230,13 +241,13 @@ addLink.lvm <- function(x,
         }
     }
     
-    return(x)
+    return(object)
 }
 
 ## ** method addLink.lvm.reduced
 #' @rdname addLink
-addLink.lvm.reduced <- function(x, ...){
-  return(addLink.lvm(x, allVars = vars(x, lp = FALSE, xlp = TRUE) , ...))
+addLink.lvm.reduced <- function(object, ...){
+  return(addLink.lvm(object, allVars = vars(object, lp = FALSE, xlp = TRUE) , ...))
 }
 
 ## * setLink
@@ -245,13 +256,13 @@ addLink.lvm.reduced <- function(x, ...){
 #' @name setLink
 #' @description Generic interface to set a value to a link in a lvm object.
 #' 
-#' @param x a lvm model
-#' @param var1 the first variable (character) or a formula describing the link
-#' @param var2 the second variable (character). Only used if var1 is a character.
-#' @param value the value to which the link should be set
-#' @param warnings should a warning be displayed when the link is not found in the lvm.
-#' @param ... additional arguments to be passed to lower levels functions.
-#' 
+#' @param object a \code{lvm} object.
+#' @param var1 [character or formula] the exogenous variable of the new link or a formula describing the link to be added to the lvm.
+#' @param var2 [character] the endogenous variable of the new link. Disregarded if the argument \code{var1} is a formula.
+#' @param value [numeric] the value at which the link should be set.
+#' @param warnings [logical] should a warning be displayed if the link is not found in the \code{lvm} object.
+#' @param ... [internal] Only used by the generic method.
+#'  
 #' @examples
 #' library(lava)
 #' set.seed(10)
@@ -270,26 +281,27 @@ addLink.lvm.reduced <- function(x, ...){
 #' estimate(m2, lava::sim(m,1e2))
 #' @export
 `setLink` <-
-  function(x, ...) UseMethod("setLink")
+  function(object, ...) UseMethod("setLink")
 
 ## ** method setLink.lvm
 #' @rdname setLink
 #' @export
-setLink.lvm <- function(x, var1, var2, value, warnings = FALSE, ...){
+setLink.lvm <- function(object, var1, var2, value, warnings = FALSE, ...){
 
-  res <- initVarLink(var1, var2)
-  var1 <- res$var1
-  var2 <- res$var2
-  
+    res <- initVarLink(var1, var2)
+    var1 <- res$var1
+    var2 <- res$var2
+    object.coef <- stats::coef(object)
+    
   #### set the link
   if(is.na(var2)){
-    intercept(x, stats::as.formula(paste0("~",var1))) <- value
-  }else if(paste(var1, var2, sep = "~") %in% stats::coef(x)){
-    regression(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
-  }else if(paste(var1,var2, sep = ",") %in% stats::coef(x)){
-    covariance(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
-  }else if(paste(var2,var1, sep = ",") %in% stats::coef(x)){
-    covariance(x, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
+    intercept(object, stats::as.formula(paste0("~",var1))) <- value
+  }else if(paste(var1, var2, sep = "~") %in% object.coef){
+    regression(object, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
+  }else if(paste(var1,var2, sep = ",") %in% object.coef){
+    covariance(object, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
+  }else if(paste(var2,var1, sep = ",") %in% object.coef){
+    covariance(object, stats::as.formula(paste(var1,var2, sep = "~"))) <- value
   }else{
     if(warnings){
       warning("setLink.lvm: no link was found from var1 to var2, no link is set \n",
@@ -298,7 +310,7 @@ setLink.lvm <- function(x, var1, var2, value, warnings = FALSE, ...){
     }
   }
   
-  return(x)
+  return(object)
 }
 
 

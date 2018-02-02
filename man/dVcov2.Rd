@@ -50,7 +50,9 @@ dVcov2(x, ...) <- value
 
 \item{...}{[internal] Only used by the generic method.}
 
-\item{adjust.residuals}{Small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+\item{adjust.residuals}{[logical] small sample correction:
+should the leverage-adjusted residuals be used to compute the score?
+Otherwise the raw residuals will be used.}
 
 \item{return.score}{[for internal use] export the score.}
 

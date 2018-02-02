@@ -5,12 +5,12 @@
 \alias{selectRegressor.formula}
 \title{Regressor of a Formula.}
 \usage{
-selectRegressor(x, ...)
+selectRegressor(object, ...)
 
-\method{selectRegressor}{formula}(x, type = "call", ...)
+\method{selectRegressor}{formula}(object, type = "call", ...)
 }
 \arguments{
-\item{x}{a formula}
+\item{object}{a formula}
 
 \item{...}{additional arguments to be passed to lower levels functions.}
 

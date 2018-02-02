@@ -4,10 +4,10 @@
 \alias{matrixPower}
 \title{Power of a Matrix}
 \usage{
-matrixPower(x, power, symmetric, tol = 1e-12)
+matrixPower(object, power, symmetric, tol = 1e-12)
 }
 \arguments{
-\item{x}{a matrix.}
+\item{object}{a matrix.}
 
 \item{power}{power to be applied to the matrix.}
 

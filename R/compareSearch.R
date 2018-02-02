@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: jan 18 2018 (16:36) 
+## last-updated: feb  2 2018 (11:56) 
 ##           By: Brice Ozenne
-##     Update #: 243
+##     Update #: 250
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,9 @@
 #' @name compareSearch
 #' 
 #' @param object a lvm model.
-#' @param alpha the significance level.
+#' @param alpha [numeric 0-1] the significance cutoff for the p-values.
+#' When the p-value is below, the corresponding link will be added to the model
+#' and the search will continue. Otherwise the search will stop.
 #' @inherit modelsearch2
 #' 
 #' @examples
@@ -207,15 +209,15 @@ compareSearch <- function(object, alpha = 0.05,
 }
 
 ## * adjustModelSearch
-.adjustModelSearch <- function(object,model0,  method.p.adjust, alpha){
+.adjustModelSearch <- function(object, model0,  method.p.adjust, alpha){
 
     ## ** adjust p.value
-    seqP.value <- sapply(object$sequenceTest, function(x){        
+    seqP.value <- sapply(object$sequenceTest, function(iTest){        
         if(method.p.adjust!="max"){            
-            x$adjusted.p.value <- stats::p.adjust(x$p.value,
-                                                  method = method.p.adjust)
+            iTest$adjusted.p.value <- stats::p.adjust(iTest$p.value,
+                                                      method = method.p.adjust)
         }
-        return(min(x$adjusted.p.value))
+        return(min(iTest$adjusted.p.value))
     })
 
     ## ** stop search when necessary

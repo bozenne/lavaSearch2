@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: jan 16 2018 (09:06) 
+## last-updated: feb  2 2018 (11:57) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 19
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@
 #' This function convert a set of variable names to their corresponding name in the model with dummy variables
 #' @name var2dummy
 #' 
-#' @param x a latent variable model.
+#' @param object a latent variable model.
 #' @param var the variable to be transformed.
 #' @param data dataset according to which the model should be updated.
 #' @param rm.first.factor should the first level of each categorical variable be ignored?
@@ -39,20 +39,20 @@
 #' var2dummy(m, var = c("X1","X2"))
 #' @export
 `var2dummy` <-
-  function(x,...) UseMethod("var2dummy")
+  function(object,...) UseMethod("var2dummy")
 
 #' @rdname var2dummy
 #' @export
-var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
+var2dummy.list <- function(object, var, rm.first.factor = TRUE, ...){
 
     var <- stats::setNames(var,var)
     ## convertion to dummy variable name for categorical variables
-    factor.var <- names(x$x$attributes$labels)
+    factor.var <- names(object$x$attributes$labels)
     
     if(!is.null(var) && any(var %in% factor.var)){
         subvar <- var[var %in% factor.var]
         for(iFactor in subvar){ # iFactor <- "X1"
-            newvar <- paste0(iFactor,x$x$attributes$labels[[iFactor]])
+            newvar <- paste0(iFactor,object$x$attributes$labels[[iFactor]])
             if(rm.first.factor){newvar <- newvar[-1]}
             newvar <- stats::setNames(newvar, rep(iFactor, length(newvar)))
             var <- c(var[names(var)!=iFactor],newvar)            
@@ -63,16 +63,16 @@ var2dummy.list <- function(x, var, rm.first.factor = TRUE, ...){
 
 #' @rdname var2dummy
 #' @export
-var2dummy.lvm <- function(x, data = NULL, ...){
+var2dummy.lvm <- function(object, data = NULL, ...){
 
     if(is.null(data)){
-        data <- lava::sim(x,1)
+        data <- lava::sim(object,1)
     }
 
-    x2 <- lava_categorical2dummy(x, data)
+    object2 <- lava_categorical2dummy(object, data)
 
     ## recover attributes for models not defined using categorical
-    obsvars <- setdiff(vars(x2$x),latent(x))
+    obsvars <- setdiff(vars(object2$x),latent(object))
     if(any(obsvars %in% names(data) == FALSE)){
         missing.vars <- obsvars[obsvars %in% names(data) == FALSE]
         test.num <- sapply(1:NCOL(data), function(col){is.numeric(data[[col]])})
@@ -88,10 +88,10 @@ var2dummy.lvm <- function(x, data = NULL, ...){
             }
         }
 
-        x2$x$attributes$labels <- ls.labels
+        object2$x$attributes$labels <- ls.labels
     }
     
-    res <- var2dummy(x2, ...)
+    res <- var2dummy(object2, ...)
     return(res)
 }
 

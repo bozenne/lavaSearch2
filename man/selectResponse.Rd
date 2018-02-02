@@ -5,12 +5,12 @@
 \alias{selectResponse.formula}
 \title{Response Variable of a Formula}
 \usage{
-selectResponse(x, ...)
+selectResponse(object, ...)
 
-\method{selectResponse}{formula}(x, type = "call", ...)
+\method{selectResponse}{formula}(object, type = "call", ...)
 }
 \arguments{
-\item{x}{a formula}
+\item{object}{a formula}
 
 \item{...}{additional arguments to be passed to lower levels functions.}
 

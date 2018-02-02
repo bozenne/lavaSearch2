@@ -6,14 +6,14 @@
 \alias{var2dummy.lvm}
 \title{Convert Variable Names to Dummy Variables Names.}
 \usage{
-var2dummy(x, ...)
+var2dummy(object, ...)
 
-\method{var2dummy}{list}(x, var, rm.first.factor = TRUE, ...)
+\method{var2dummy}{list}(object, var, rm.first.factor = TRUE, ...)
 
-\method{var2dummy}{lvm}(x, data = NULL, ...)
+\method{var2dummy}{lvm}(object, data = NULL, ...)
 }
 \arguments{
-\item{x}{a latent variable model.}
+\item{object}{a latent variable model.}
 
 \item{...}{additional arguments to be passed to lower levels functions.}
 
