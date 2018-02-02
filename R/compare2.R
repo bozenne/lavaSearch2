@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  2 2018 (12:18) 
+## Last-Updated: feb  2 2018 (18:03) 
 ##           By: Brice Ozenne
-##     Update #: 207
+##     Update #: 208
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -49,7 +49,7 @@
 #' For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model parameters.
 #'
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
-#' \code{\link{estimate2}} to pre-compute quantities for the small sample correction.
+#' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 #' 
 #' 
 #' @examples
@@ -67,7 +67,7 @@
 #' compare2(e.lm, par = c("X1b=0","X1c=0"))
 #'
 #' ## or first compute the derivative of the information matrix
-#' estimate2(e.lm) <- TRUE
+#' sCorrect(e.lm) <- TRUE
 #' 
 #' ## and define the contrast matrix
 #' C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
@@ -80,7 +80,7 @@
 #' e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
 #'
 #' ## first compute the derivative of the information matrix
-#' estimate2(e.gls, cluster = 1:NROW(df.data)) <- TRUE
+#' sCorrect(e.gls, cluster = 1:NROW(df.data)) <- TRUE
 #' 
 #' compare2(e.gls, par = c("5*X1b+2*X2 = 0","(Intercept) = 0"))
 #' 
@@ -97,7 +97,7 @@
 #' @rdname compare2
 #' @export
 compare2.lm <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- estimate2(object, adjust.residuals = adjust.residuals)
+    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals)
     return(.compare2(object, ...))
 }
 
@@ -105,7 +105,7 @@ compare2.lm <- function(object, adjust.residuals = TRUE, ...){
 #' @rdname compare2
 #' @export
 compare2.gls <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- estimate2(object, adjust.residuals = adjust.residuals, ...)
+    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals, ...)
     return(.compare2(object, ...))
 }
 
@@ -118,7 +118,7 @@ compare2.lme <- compare2.lm
 #' @rdname compare2
 #' @export
 compare2.lvmfit <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- estimate2(object, adjust.residuals = adjust.residuals)
+    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals)
     return(.compare2(object, ...))
 }
 

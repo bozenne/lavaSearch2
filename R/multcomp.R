@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  2 2018 (13:33) 
+## Last-Updated: feb  2 2018 (18:03) 
 ##           By: Brice Ozenne
-##     Update #: 324
+##     Update #: 325
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,7 +91,7 @@ estfun.lvmfit <- function(x, ...){
 #' 
 #' @seealso
 #' \code{\link{createContrast}} to create contrast matrices. \cr
-#' \code{\link{estimate2}} to pre-compute quantities for the small sample correction.
+#' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 #' 
 #' @concept multiple comparisons
 #'
@@ -148,7 +148,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 
     ### ** pre-compute quantities for the small sample correction
     if(is.null(model$dVcov)){
-        estimate2(model, return.score = adjust.residuals) <- adjust.residuals
+        sCorrect(model, return.score = adjust.residuals) <- adjust.residuals
     }
 
     ### ** Wald test with small sample correction
@@ -236,7 +236,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
    
         ### *** Pre-compute quantities
         if(is.null(model[[iM]]$dVcov)){
-            estimate2(model[[iM]], return.score = TRUE) <- adjust.residuals
+            sCorrect(model[[iM]], return.score = TRUE) <- adjust.residuals
         }
         out$param <- attr(model[[iM]]$dVcov, "param")                              
         name.param <- names(out$param)

@@ -125,24 +125,24 @@ summary(e)$coef
 
 
 To activate the functionalities of *lavaSearch2* one needs first to
- call =estimate2= to update the object. Two small sample corrections
- are implemented: 
+ call =sCorrect= (i.e. Satterthwaite correction) to update the
+ object. Two small sample corrections are implemented:
 - the Satterthwaite correction
 - the Satterthwaite correction with a bias correction for the
-  variance-covariance matrix of the coefficients. This correction 
-is inspired from the Kenward-Roger correction in mixed models.
+  variance-covariance matrix of the coefficients. This correction is
+  inspired from the Kenward-Roger correction in mixed models.
 
-When calling =estimate2=, the right hand side indicates whether the
+When calling =sCorrect=, the right hand side indicates whether the
   bias correction should be used or not.
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-estimate2(e) <- TRUE ## with biais correction
+sCorrect(e) <- TRUE ## with biais correction
 #+END_SRC
 
 #+RESULTS:
 
-=estimate2= pre-computes quantities necessary for the small sample
+=sCorrect= pre-computes quantities necessary for the small sample
 correction (e.g. the derivative of the variance-covariance matrix) and
-store them in the object. =estimate2= also adds the class =lvmfit2= to
+store them in the object. =sCorrect= also adds the class =lvmfit2= to
 the object:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 class(e)

@@ -1,11 +1,11 @@
-### test-estimate2.R --- 
+### test-sCorrect.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: feb  2 2018 (12:19) 
+## Last-Updated: feb  2 2018 (18:04) 
 ##           By: Brice Ozenne
-##     Update #: 66
+##     Update #: 67
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,7 +26,7 @@ library(nlme)
 library(lme4)
 lava.options(symbols = c("~","~~"))
 
-context("estimate2")
+context("sCorrect")
 
 ## * Simulation
 n <- 5e1
@@ -48,18 +48,18 @@ e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
 e.lvm$prepareScore2 <- prepareScore2(e.lvm, second.order = TRUE, usefit = FALSE)
 e.gls <- gls(Y1~X1+X2, data = dW, method = "ML")
 
-test_that("linear regression: estimate2",{
+test_that("linear regression: sCorrect",{
     ## lvm
-    GS.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    GS.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    res.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
-    GS.gls <- estimate2(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
+    GS.gls <- sCorrect(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.gls <- estimate2(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
+    res.gls <- sCorrect(e.gls, cluster = dW$Id, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.gls, res.gls)
     
@@ -84,25 +84,25 @@ e.gls <- gls(value ~ time + G + Gender,
 
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
-test_that("mixed model CS: estimate2",{
+test_that("mixed model CS: sCorrect",{
     ## lvm
-    GS.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    GS.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    res.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
-    GS.gls <- estimate2(e.gls, adjust.residuals = FALSE,
+    GS.gls <- sCorrect(e.gls, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.gls <- estimate2(e.gls, adjust.residuals = FALSE,
+    res.gls <- sCorrect(e.gls, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.gls, res.gls)
 
     ## lme
-    GS.lme <- estimate2(e.lme, adjust.residuals = FALSE,
+    GS.lme <- sCorrect(e.lme, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lme <- estimate2(e.lme, adjust.residuals = FALSE,
+    res.lme <- sCorrect(e.lme, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.lme, res.lme)
 })
@@ -129,27 +129,27 @@ logLik(e.lvm)
 logLik(e.lme)
 logLik(e.gls)
 
-test_that("mixed model UN: estimate2",{
+test_that("mixed model UN: sCorrect",{
     ## lvm
-    GS.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    GS.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lvm <- estimate2(e.lvm, adjust.residuals = FALSE,
+    res.lvm <- sCorrect(e.lvm, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
-    GS.gls <- estimate2(e.gls, adjust.residuals = FALSE,
+    GS.gls <- sCorrect(e.gls, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.gls <- estimate2(e.gls, adjust.residuals = FALSE,
+    res.gls <- sCorrect(e.gls, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
 
     expect_equal(GS.gls, res.gls)
 
     ## lme
     ## pb: singular information matrix
-    ## GS.lme <- estimate2(e.lme, adjust.residuals = FALSE,
+    ## GS.lme <- sCorrect(e.lme, adjust.residuals = FALSE,
     ##                  numericDerivative = TRUE)
-    ## res.lme <- estimate2(e.lme, adjust.residuals = FALSE,
+    ## res.lme <- sCorrect(e.lme, adjust.residuals = FALSE,
     ##                   numericDerivative = FALSE)
 })
 
@@ -170,10 +170,10 @@ regression(m) <- eta1~X1+X2
 
 e.lvm1F <- estimate(m,d)
 
-GS.lvm1F <- estimate2(e.lvm1F, adjust.residuals = FALSE,
+GS.lvm1F <- sCorrect(e.lvm1F, adjust.residuals = FALSE,
                    numericDerivative = TRUE)
-test_that("1 factor model: estimate2",{    
-    res.lvm1F <- estimate2(e.lvm1F, adjust.residuals = FALSE,
+test_that("1 factor model: sCorrect",{    
+    res.lvm1F <- sCorrect(e.lvm1F, adjust.residuals = FALSE,
                         numericDerivative = FALSE)
     expect_equal(GS.lvm1F, res.lvm1F)
     ## range(GS.lvm1F-res.lvm1F)
@@ -188,11 +188,11 @@ latent(m) <- ~eta1+eta2
 
 e.lvm2F <- estimate(m,d)
 
-GS.lvm2F <- estimate2(e.lvm2F, adjust.residuals = FALSE,
+GS.lvm2F <- sCorrect(e.lvm2F, adjust.residuals = FALSE,
                    numericDerivative = TRUE)
 
-test_that("2 factor model: estimate2",{
-    res.lvm2F <- estimate2(e.lvm2F, adjust.residuals = FALSE,
+test_that("2 factor model: sCorrect",{
+    res.lvm2F <- sCorrect(e.lvm2F, adjust.residuals = FALSE,
                         numericDerivative = FALSE)
     
     expect_equal(GS.lvm2F, res.lvm2F)
@@ -210,10 +210,10 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 
-test_that("2 factor model (covariance between LV): estimate2",{
-    GS.lvm <- estimate2(e, adjust.residuals = FALSE,
+test_that("2 factor model (covariance between LV): sCorrect",{
+    GS.lvm <- sCorrect(e, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lvm <- estimate2(e, adjust.residuals = FALSE,
+    res.lvm <- sCorrect(e, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     
     expect_equal(GS.lvm, res.lvm)
@@ -228,10 +228,10 @@ regression(m) <- eta1 ~ eta2+X2+X3
 
 e <- estimate(m,d)
 
-test_that("2 factor model (correlation between LV): estimate2",{
-    GS.lvm <- estimate2(e, adjust.residuals = FALSE,
+test_that("2 factor model (correlation between LV): sCorrect",{
+    GS.lvm <- sCorrect(e, adjust.residuals = FALSE,
                      numericDerivative = TRUE)
-    res.lvm <- estimate2(e, adjust.residuals = FALSE,
+    res.lvm <- sCorrect(e, adjust.residuals = FALSE,
                       numericDerivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
     ## range(GS.lvm2F-res.lvm2F)
@@ -246,13 +246,13 @@ d <- sim(m.sim,n,latent=FALSE)
 
 e.lvmC <- estimate(m.sim,d)
 
-test_that("1 factor model: estimate2",{    
-    GS.lvmC <- estimate2(e.lvmC, adjust.residuals = FALSE,
+test_that("1 factor model: sCorrect",{    
+    GS.lvmC <- sCorrect(e.lvmC, adjust.residuals = FALSE,
                        numericDerivative = TRUE)
-    res.lvmC <- estimate2(e.lvmC, adjust.residuals = FALSE,
+    res.lvmC <- sCorrect(e.lvmC, adjust.residuals = FALSE,
                         numericDerivative = FALSE)
     expect_equal(GS.lvmC, res.lvmC)
 })
 
 ##----------------------------------------------------------------------
-### test-estimate2.R ends here
+### test-sCorrect.R ends here
