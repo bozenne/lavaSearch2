@@ -20,6 +20,15 @@
   the latent variable model. Also applicable to Cox models via the
   libraries *riskRegression* and *survival* / *rms*.
 
+_Limitations_: *lavaSearch2* has been design for Gaussian latent variable
+models with complete data. This means that it may not work / give valid results:
+- in presence of missing values. Note: this case could probably be fixed,
+  you can contact the package maintainer if you need this functionality.
+- in presence of censored or binary outcomes.
+- with stratified models (i.e. object of class =multigroup=). Note:
+  this case could probably be fixed, you can contact the package
+  maintainer if you need this functionality.
+
 ** Installation 
 Install the stable version from CRAN using:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no

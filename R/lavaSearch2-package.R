@@ -6,8 +6,15 @@
 #' (add-on to the lava package). The package contains three main functionalites:
 #' Wald tests/F-tests with improved control of the type 1 error in small samples,
 #' adjustment for multiple comparisons when searching for local dependencies,
-#' and adjustment for multiple comparisons when doing inference for multiple latent variable models. 
+#' and adjustment for multiple comparisons when doing inference for multiple latent variable models. \cr \cr
 #'
+#' \emph{Limitations}: 'lavaSearch2' has been design for Gaussian latent variable
+#' models with complete data. This means that it may not work / give valid results:
+#' \itemize{
+#' \item in presence of missing values. 
+#' \item in presence of censored or binary outcomes.
+#' \item with stratified models (i.e. object of class \code{multigroup}).
+#' } 
 #' @details The latent variable models (lvm) considered in this package can be written \cr
 #' as a measurement model:
 #' \deqn{Y_i = \nu + \eta_i \Lambda + X_i K + \epsilon_i}
