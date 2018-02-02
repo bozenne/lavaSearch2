@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 31 2018 (17:45) 
+## Last-Updated: feb  2 2018 (12:18) 
 ##           By: Brice Ozenne
-##     Update #: 146
+##     Update #: 147
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,20 +37,20 @@
 #' library(nlme)
 #' e.gls <- gls(Y~X1+X2, data = d, method = "ML")
 #' summary(e.gls)$tTable
-#' dVcov2(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction
+#' estimate2(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction
 #' summary(e.gls)$tTable
 #' 
-#' dVcov2(e.gls, cluster = 1:NROW(d)) <- TRUE ## small sample correction
+#' estimate2(e.gls, cluster = 1:NROW(d)) <- TRUE ## small sample correction
 #' summary(e.gls)$tTable
 #' 
 #' ## lvm models
 #' e.lvm <- estimate(m, data = d)
 #' summary(e.lvm)$coef
 #' 
-#' dVcov2(e.lvm) <- FALSE ## no small sample correction
+#' estimate2(e.lvm) <- FALSE ## no small sample correction
 #' summary(e.lvm)$coef
 #' 
-#' dVcov2(e.lvm) <- TRUE ## small sample correction
+#' estimate2(e.lvm) <- TRUE ## small sample correction
 #' summary(e.lvm)$coef
 #'
 

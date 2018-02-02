@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  2 2018 (10:55) 
+## Last-Updated: feb  2 2018 (13:33) 
 ##           By: Brice Ozenne
-##     Update #: 319
+##     Update #: 324
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,7 +91,7 @@ estfun.lvmfit <- function(x, ...){
 #' 
 #' @seealso
 #' \code{\link{createContrast}} to create contrast matrices. \cr
-#' \code{\link{dVcov2}} to pre-compute quantities for the small sample correction.
+#' \code{\link{estimate2}} to pre-compute quantities for the small sample correction.
 #' 
 #' @concept multiple comparisons
 #'
@@ -148,7 +148,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 
     ### ** pre-compute quantities for the small sample correction
     if(is.null(model$dVcov)){
-        dVcov2(model, return.score = adjust.residuals) <- adjust.residuals
+        estimate2(model, return.score = adjust.residuals) <- adjust.residuals
     }
 
     ### ** Wald test with small sample correction
@@ -161,7 +161,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
     rownames(linfct) <- .contrast2name(linfct, null = NULL) 
 
     ### ** Global degree of freedom
-    df.global <- round(resWald["global","df"])
+    df.global <- round(resWald["global","df"], digits = 0)
     
     ### ** compute variance-covariance matrix
     if(robust){
@@ -236,7 +236,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
    
         ### *** Pre-compute quantities
         if(is.null(model[[iM]]$dVcov)){
-            dVcov2(model[[iM]], return.score = TRUE) <- adjust.residuals
+            estimate2(model[[iM]], return.score = TRUE) <- adjust.residuals
         }
         out$param <- attr(model[[iM]]$dVcov, "param")                              
         name.param <- names(out$param)
@@ -254,7 +254,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
         ### *** get iid decomposition
         out$iid <- attr(model[[iM]]$dVcov, "score") %*% attr(model[[iM]]$dVcov, "vcov.param")
         if(robust == FALSE){
-            iVec.sigma <- sqrt(diag(attr(model[[iM]]$dVcov, "vcov.param")))
+            iVec.sigma <- sqrt(dixag(attr(model[[iM]]$dVcov, "vcov.param")))
             iVec.sigma.robust <- sqrt(apply(out$iid^2,2,sum))
             out$iid <- sweep(out$iid, MARGIN = 2, FUN = "*", STATS = iVec.sigma/iVec.sigma.robust)
         }
@@ -265,7 +265,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
     })
     seq.df <- unlist(lapply(ls.res,"[[","df"))
     seq.param <- unlist(lapply(ls.res,"[[","param"))
-    df.global <- stats::median(round(seq.df, digits = 0))
+    df.global <- round(stats::median(seq.df), digits = 0)
     vcov.model <- crossprod(do.call(cbind,lapply(ls.res,"[[","iid")))
 
     ### ** convert to the appropriate format

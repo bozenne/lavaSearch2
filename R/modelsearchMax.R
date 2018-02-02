@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: feb  2 2018 (10:40) 
+## last-updated: feb  2 2018 (12:18) 
 ##           By: Brice Ozenne
-##     Update #: 681
+##     Update #: 682
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -84,7 +84,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 out$df[1, "coefBeta"] <- new.coef[link[iterI]]
                 ## extract degree of freedom and standard error
                 if(df){
-                    dVcov2(newfit, return.score = TRUE) <- adjust.residuals
+                    estimate2(newfit, return.score = TRUE) <- adjust.residuals
                     out$iid <- (attr(newfit$dVcov, "score") %*% attr(newfit$dVcov, "vcov.param")[,link[iterI],drop=FALSE])
                     
                     e.df <- compare2(newfit, par = link[iterI],

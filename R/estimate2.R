@@ -1,11 +1,11 @@
-### dVcov2.R --- 
+### estimate2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  2 2018 (10:54) 
+## Last-Updated: feb  2 2018 (12:18) 
 ##           By: Brice Ozenne
-##     Update #: 232
+##     Update #: 233
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,10 +15,10 @@
 ## 
 ### Code:
 
-## * Documentation - dVcov2
+## * Documentation - estimate2
 #' @title  Compute the Derivative of the Information Matrix
 #' @description Compute the derivative of the information matrix.
-#' @name dVcov2
+#' @name estimate2
 #'
 #' @param object a gls, lme, or lvm object.
 #' @param x same as object.
@@ -34,14 +34,14 @@
 #' @param ... [internal] Only used by the generic method.
 #'
 #' @export
-`dVcov2` <-
-  function(object, ...) UseMethod("dVcov2")
+`estimate2` <-
+  function(object, ...) UseMethod("estimate2")
 
 
 ## * dVcov.lm
-#' @rdname dVcov2
+#' @rdname estimate2
 #' @export
-dVcov2.lm <- function(object, adjust.residuals = FALSE,
+estimate2.lm <- function(object, adjust.residuals = FALSE,
                       return.score = FALSE, ...){
 
     ## ** extract information
@@ -79,10 +79,10 @@ dVcov2.lm <- function(object, adjust.residuals = FALSE,
     return(dVcov.dtheta)
     
 }
-## * dVcov2.gls
-#' @rdname dVcov2
+## * estimate2.gls
+#' @rdname estimate2
 #' @export
-dVcov2.gls <- function(object, cluster, vcov.param = NULL,
+estimate2.gls <- function(object, cluster, vcov.param = NULL,
                        adjust.residuals = FALSE, numericDerivative = FALSE,
                        return.score = FALSE, ...){
 
@@ -189,15 +189,15 @@ dVcov2.gls <- function(object, cluster, vcov.param = NULL,
  
 }
 
-## * dVcov2.lme
-#' @rdname dVcov2
+## * estimate2.lme
+#' @rdname estimate2
 #' @export
-dVcov2.lme <- dVcov2.gls
+estimate2.lme <- estimate2.gls
 
-## * dVcov2.lvmfit
-#' @rdname dVcov2
+## * estimate2.lvmfit
+#' @rdname estimate2
 #' @export
-dVcov2.lvmfit <- function(object, vcov.param = NULL,
+estimate2.lvmfit <- function(object, vcov.param = NULL,
                           adjust.residuals = TRUE, numericDerivative = FALSE,
                           return.score = FALSE, ...){
 
@@ -332,65 +332,65 @@ dVcov2.lvmfit <- function(object, vcov.param = NULL,
 
 
 
-## * dVcov2.lvmfit2
-#' @rdname dVcov2
+## * estimate2.lvmfit2
+#' @rdname estimate2
 #' @export
-dVcov2.lvmfit2 <- function(object, ...){
+estimate2.lvmfit2 <- function(object, ...){
     class(object) <- setdiff(class(object),"lvmfit2")
-    return(dVcov2(object, ...))    
+    return(estimate2(object, ...))    
 }
 
-## * dVcov2<-
-#' @rdname dVcov2
+## * estimate2<-
+#' @rdname estimate2
 #' @export
-`dVcov2<-` <-
-  function(x, ..., value) UseMethod("dVcov2<-")
+`estimate2<-` <-
+  function(x, ..., value) UseMethod("estimate2<-")
 
-## * dVcov2<-.lm
-#' @rdname dVcov2
+## * estimate2<-.lm
+#' @rdname estimate2
 #' @export
-`dVcov2<-.lm` <- function(x, ..., value){
-    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+`estimate2<-.lm` <- function(x, ..., value){
+    x$dVcov <- estimate2(x, ..., adjust.residuals = value)
     class(x) <- append("lm2",class(x))
 
     return(x)
 }    
-## * dVcov2<-.gls
-#' @rdname dVcov2
+## * estimate2<-.gls
+#' @rdname estimate2
 #' @export
-`dVcov2<-.gls` <- function(x, ..., value){
-    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+`estimate2<-.gls` <- function(x, ..., value){
+    x$dVcov <- estimate2(x, ..., adjust.residuals = value)
     class(x) <- append("gls2",class(x))
 
     return(x)
 }    
-## * dVcov2<-.lme
-#' @rdname dVcov2
+## * estimate2<-.lme
+#' @rdname estimate2
 #' @export
-`dVcov2<-.lme` <- function(x, ..., value){
-    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+`estimate2<-.lme` <- function(x, ..., value){
+    x$dVcov <- estimate2(x, ..., adjust.residuals = value)
     class(x) <- append("lme2",class(x))
     
     return(x)
 }    
 
-## * dVcov2<-.lvmfit
-#' @rdname dVcov2
+## * estimate2<-.lvmfit
+#' @rdname estimate2
 #' @export
-`dVcov2<-.lvmfit` <- function(x, ..., value){
-    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+`estimate2<-.lvmfit` <- function(x, ..., value){
+    x$dVcov <- estimate2(x, ..., adjust.residuals = value)
     class(x) <- append("lvmfit2",class(x))
 
     return(x)
 }    
 
-## * dVcov2<-.lvmfit2
-#' @rdname dVcov2
+## * estimate2<-.lvmfit2
+#' @rdname estimate2
 #' @export
-`dVcov2<-.lvmfit2` <- function(x, ..., value){
+`estimate2<-.lvmfit2` <- function(x, ..., value){
 
     class(x) <- setdiff(class(x),"lvmfit2")
-    x$dVcov <- dVcov2(x, ..., adjust.residuals = value)
+    x$dVcov <- estimate2(x, ..., adjust.residuals = value)
     class(x) <- append("lvmfit2",class(x))
     
     return(x)
@@ -605,7 +605,7 @@ dVcov2.lvmfit2 <- function(object, ...){
 
 
 ##----------------------------------------------------------------------
-### dVcov2.R ends here
+### estimate2.R ends here
 
 
 

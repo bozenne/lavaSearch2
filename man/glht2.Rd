@@ -74,7 +74,7 @@ summary(e.glht2)
 }
 \seealso{
 \code{\link{createContrast}} to create contrast matrices. \cr
-\code{\link{dVcov2}} to pre-compute quantities for the small sample correction.
+\code{\link{estimate2}} to pre-compute quantities for the small sample correction.
 }
 \concept{
 multiple comparisons

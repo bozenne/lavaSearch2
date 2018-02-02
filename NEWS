@@ -2,6 +2,7 @@
 
 * Version 1.1.0 <2018-02-01 Thu>
 ** User visible changes
+ - The method =dVcov2= has been renamed =estimate2=.
  - The method =lTest= is now replaced by the method =compare2=.
    =compare2= is similar to =lava::compare= but with small sample correction.
    The argument =C= of =lTest= is now =contrast= in =compare2=.

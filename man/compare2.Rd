@@ -41,7 +41,9 @@ compare2(object, ...)
 One exception: for gls models \code{...} is passed to dVco2,
 this can be useful when the argument cluster is required.}
 
-\item{adjust.residuals}{[logical] small sample correction: should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+\item{adjust.residuals}{[logical] small sample correction:
+should the leverage-adjusted residuals be used to compute the score?
+Otherwise the raw residuals will be used.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}
@@ -87,7 +89,7 @@ anova(e.lm)
 compare2(e.lm, par = c("X1b=0","X1c=0"))
 
 ## or first compute the derivative of the information matrix
-dVcov2(e.lm) <- TRUE
+estimate2(e.lm) <- TRUE
 
 ## and define the contrast matrix
 C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
@@ -100,7 +102,7 @@ library(nlme)
 e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
 
 ## first compute the derivative of the information matrix
-dVcov2(e.gls, cluster = 1:NROW(df.data)) <- TRUE
+estimate2(e.gls, cluster = 1:NROW(df.data)) <- TRUE
 
 compare2(e.gls, par = c("5*X1b+2*X2 = 0","(Intercept) = 0"))
 
@@ -112,5 +114,5 @@ compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
 }
 \seealso{
 \code{\link{createContrast}} to create contrast matrices. \cr
-\code{\link{dVcov2}} to pre-compute quantities for the small sample correction.
+\code{\link{estimate2}} to pre-compute quantities for the small sample correction.
 }
