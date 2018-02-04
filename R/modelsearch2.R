@@ -11,7 +11,7 @@
 #' @param typeSD [relevant when statistic is Wald] the type of standard error to be used to compute the Wald statistic.
 #' Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.
 #' @param df [relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.
-#' @param bias.correct [logical] should a small sample correction for the standard errors of the coefficients be performed ?
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' Only relevant when the argument \code{statistic} is set to \code{"Wald"}.
 #' @param trace should the execution be traced?
 #' @param ... additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.

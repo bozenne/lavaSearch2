@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  4 2018 (13:52) 
+## Last-Updated: feb  4 2018 (14:50) 
 ##           By: Brice Ozenne
-##     Update #: 211
+##     Update #: 216
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,7 @@
 #' @name compare2
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
-#' @param bias.correct [logical] should a small sample correction for the variance/influence function of the coefficients be performed ?
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
@@ -142,7 +142,7 @@ compare2.lvmfit2 <- compare2.lm2
 ## * .compare2
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
-                      as.lava = TRUE, level = 0.95, ...){
+                      as.lava = TRUE, level = 0.95){
 
     ## ** extract information
     dVcov.dtheta <- object$dVcov

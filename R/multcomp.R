@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:16) 
+## Last-Updated: feb  4 2018 (14:50) 
 ##           By: Brice Ozenne
-##     Update #: 327
+##     Update #: 329
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,9 +77,7 @@ estfun.lvmfit <- function(x, ...){
 #' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument par of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
-#' @param bias.correct [logical] small sample correction:
-#' should the leverage-adjusted residuals be used to compute the score?
-#' Otherwise the raw residuals will be used.
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
 #' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.

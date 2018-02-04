@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  4 2018 (13:52) 
+## Last-Updated: feb  4 2018 (14:48) 
 ##           By: Brice Ozenne
-##     Update #: 236
+##     Update #: 238
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' @param cluster the grouping variable relative to which the observations are iid.
 #'                Only required for gls models with no correlation argument.
 #' @param vcov.param the variance-covariance matrix of the estimates.
-#' @param bias.correct [logical] should a small sample correction for the standard errors of the coefficients be performed ?
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param value same as bias.correct.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
 #' @param return.score [for internal use] export the score.

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: feb  4 2018 (13:52) 
+## Last-Updated: feb  4 2018 (14:50) 
 ##           By: Brice Ozenne
-##     Update #: 815
+##     Update #: 816
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,7 +24,8 @@
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
 #' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
-#' @param bias.correct [logical] should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
+#' @param bias.correct [logical] should the leverage-adjusted residuals be used to compute the score?
+#' Otherwise the raw residuals will be used.
 #' @param as.clubSandwich method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
 #' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
 #' @param return.vcov.param Should the variance covariance matrix of the parameters be included in the output?
