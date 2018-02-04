@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  2 2018 (18:03) 
+## Last-Updated: feb  4 2018 (14:17) 
 ##           By: Brice Ozenne
-##     Update #: 148
+##     Update #: 171
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,9 +21,18 @@
 #' @name summary
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.
-#' @param digit the number of digit to keep when diplaying the summary.
-#' @param ... arguments passed to lower level methods.
+#' @param digit [interger > 0] the number of digit to keep when diplaying the summary.
+#' @param bias.correct [logical] should a small sample correction for the standard errors of the coefficients be performed ? See \code{\link{sCorrect}} for more details.
+#' @param ... arguments passed to the \code{summary} method of the object (when calling \code{summary})
+#' or to the \code{sCorrect} method (when calling \code{summary2}). 
 #' 
+#' @seealso \code{\link{sCorrect}} for more detail about the small sample correction.
+#'
+#' @details \code{summary2} is the same as \code{summary}
+#' except that it first computes the small sample correction (but does not store it).
+#' So if \code{summary2} is to be called several times,
+#' it is more efficient to pre-compute the quantities for the small sample correction
+#' using \code{sCorrect} and then call \code{summary}.
 #' 
 #' @examples
 #' m <- lvm(Y~X1+X2)
@@ -157,5 +166,34 @@ summary.lvmfit2 <- function(object, ...){
     return(object.summary)    
 }
 
+## * summary2
+#' @rdname summary
+#' @export
+`summary2` <-
+  function(object,...) UseMethod("summary2")
+
+## * summary2.gls
+#' @rdname summary
+#' @export
+summary2.gls <- function(object, bias.correct, ...){
+    sCorrect(object, ...) <- bias.correct
+    return(summary(object))
+}
+
+## * summary2.gls
+#' @rdname summary
+#' @export
+summary2.lme <- summary2.gls
+
+## * summary2.lvmfit
+#' @rdname summary
+#' @export
+summary2.lvmfit <- function(object, bias.correct = TRUE, ...){
+    sCorrect(object, ...) <- bias.correct
+    return(summary(object))
+}
+
+
 ##----------------------------------------------------------------------
 ### summary2.R ends here
+

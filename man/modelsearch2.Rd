@@ -10,11 +10,11 @@ modelsearch2(object, ...)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
   statistic = "Wald", method.p.adjust = "max", typeSD = "information",
-  df = FALSE, adjust.residuals = FALSE, trace = TRUE, ...)
+  df = FALSE, bias.correct = FALSE, trace = TRUE, ...)
 
 \method{modelsearch2}{default}(object, link, data = NULL,
   statistic = "Wald", method.p.adjust = "max", typeSD = "information",
-  df = FALSE, adjust.residuals = FALSE, trace = TRUE, ...)
+  df = FALSE, bias.correct = FALSE, trace = TRUE, ...)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}
@@ -34,9 +34,7 @@ Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.}
 
 \item{df}{[relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.}
 
-\item{adjust.residuals}{[logical] small sample correction:
-should the leverage-adjusted residuals be used to compute the score?
-Otherwise the raw residuals will be used.
+\item{bias.correct}{[logical] should a small sample correction for the standard errors of the coefficients be performed ?
 Only relevant when the argument \code{statistic} is set to \code{"Wald"}.}
 
 \item{trace}{should the execution be traced?}

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: feb  2 2018 (10:55) 
+## Last-Updated: feb  4 2018 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 813
+##     Update #: 815
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,9 +24,7 @@
 #' @param p [optional] vector of parameters at which to evaluate the score.
 #' @param data [optional] data set.
 #' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
-#' @param adjust.residuals [logical] small sample correction:
-#' should the leverage-adjusted residuals be used to compute the score?
-#' Otherwise the raw residuals will be used.
+#' @param bias.correct [logical] should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.
 #' @param as.clubSandwich method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
 #' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
 #' @param return.vcov.param Should the variance covariance matrix of the parameters be included in the output?
@@ -47,7 +45,7 @@
 #' @rdname residuals2
 #' @export
 residuals2.lm <- function(object, 
-                          adjust.residuals = TRUE,
+                          bias.correct = TRUE,
                           return.vcov.param = FALSE, ...){
 
 ### ** Extract information
@@ -72,7 +70,7 @@ residuals2.lm <- function(object,
 
     ### ** Small sample adjustement
     iXX <- solve(t(X) %*% X)
-    if(adjust.residuals){
+    if(bias.correct){
         ## *** Compute the leverage
         leverage <- rowSums((X %*% iXX) * X)
         ### same as influence(object)$hat
@@ -114,7 +112,7 @@ residuals2.lm <- function(object,
 #' @rdname residuals2
 #' @export
 residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
-                           adjust.residuals = TRUE, as.clubSandwich = TRUE,
+                           bias.correct = TRUE, as.clubSandwich = TRUE,
                            second.order = FALSE,
                            return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...){
 
@@ -208,7 +206,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                            cluster = cluster, n.cluster = n.cluster)
     
     ### ** Compute partial derivatives
-    if(adjust.residuals || return.vcov.param || return.prepareScore2){
+    if(bias.correct || return.vcov.param || return.prepareScore2){
         OPS2 <- prepareScore2(object, X = X,
                               param = p, attr.param = attr.param,
                               n.cluster = n.cluster, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
@@ -227,7 +225,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     })
    
     ### ** compute variance covariance matrix (parameters)
-    if(adjust.residuals || return.vcov.param){        
+    if(bias.correct || return.vcov.param){        
         Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
                               dOmega.dtheta = OPS2$dOmega.dtheta,
                               Omega = resVcov$Omega,
@@ -249,7 +247,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
     
     ### ** Normalize residuals
-    if(adjust.residuals){
+    if(bias.correct){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dmu.dtheta,
                                      dOmega.dtheta = OPS2$dOmega.dtheta,
                                      vcov.param = vcov.param,
@@ -300,7 +298,7 @@ residuals2.lme <- residuals2.gls
 #' @rdname residuals2
 #' @export
 residuals2.lvmfit <- function(object, p = NULL, data = NULL,
-                              adjust.residuals = TRUE, as.clubSandwich = TRUE,
+                              bias.correct = TRUE, as.clubSandwich = TRUE,
                               second.order = FALSE,
                               return.vcov.param = FALSE, return.prepareScore2 = FALSE,
                               ...){
@@ -393,7 +391,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
     ## round(vcov.param[rownames(vcov(object)),colnames(vcov(object))] - vcov(object),10)
 
     ### ** Normalize residuals
-    if(adjust.residuals){
+    if(bias.correct){
         resLeverage <- .calcLeverage(dmu.dtheta = OPS2$dtheta$dmu.dtheta,
                                      dOmega.dtheta = OPS2$dtheta$dOmega.dtheta,
                                      vcov.param = vcov.param,

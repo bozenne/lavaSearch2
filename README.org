@@ -64,7 +64,7 @@ a downward bias.
   account for the uncertainty on the variance of the parameters. The
   degrees of freedom are estimated using Satterwaite approximation,
   i.e. identifying the chi-squared distribution that best fit the
-  observed moments of the variance of the parameters.
+  observed moments of the variance of the parameters. 
 - remove the first order bias in the residual variance due to the
   Maximum Likelihood. This bias also affects the standard error of the
   estimates and the control of the type 1 error. The correction does
@@ -100,16 +100,6 @@ m <- lvm(Y~X1+X2)
 e <- estimate(m, data = df.data)
 #+END_SRC
 
-#+RESULTS:
-
-The class of the resulting object is =lvmfit=:
-#+BEGIN_SRC R :exports both :results output :session *R* :cache no
-class(e)
-#+END_SRC
-
-#+RESULTS:
-: [1] "lvmfit"
-
 We can extract the Wald tests based on a normal approximation using
 =summary=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
@@ -123,27 +113,54 @@ summary(e)$coef
 : Y~~Y 0.5557910  0.1757566 3.1622777           NA
 : Y    0.7967775  0.2311125 3.4475747 0.0005656439
 
+As explain at the begining of this section, *lavaSearch2* implements
+two corrections can be used directly by calling the =summary2= method:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+summary2(e)$coef
+#+END_SRC
 
-To activate the functionalities of *lavaSearch2* one needs first to
- call =sCorrect= (i.e. Satterthwaite correction) to update the
- object. Two small sample corrections are implemented:
-- the Satterthwaite correction
-- the Satterthwaite correction with a bias correction for the
-  variance-covariance matrix of the coefficients. This correction is
-  inspired from the Kenward-Roger correction in mixed models.
+#+RESULTS:
+:       Estimate Std. Error   t-value     P-value    df
+: Y~X1 0.1550938  0.2180132 0.7113965 0.486486336 17.00
+: Y~X2 0.4581556  0.2171930 2.1094398 0.050036443 17.00
+: Y~~Y 0.5557910  0.2192300 2.5351965          NA  4.25
+: Y    0.7967775  0.2478405 3.2148800 0.005082163 17.00
 
-When calling =sCorrect=, the right hand side indicates whether the
-  bias correction should be used or not.
+By default both correction are used (i.e. Satterthwaite correction
+  with a bias correction for the variance-covariance matrix of the
+  coefficients). While this correction is inspired from the
+  Kenward-Roger correction in mixed models, the two corrections are
+  not exaclty the same and won't, in general, give identical
+  results. To use the Satterthwaite corrections alone, set the
+  argument =bias.correct= to =FALSE=:
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+summary2(e, bias.correct = FALSE)$coef
+#+END_SRC
+
+#+RESULTS:
+:       Estimate Std. Error   t-value     P-value df
+: Y~X1 0.1550938  0.2032984 0.7628877 0.454435146 20
+: Y~X2 0.4581556  0.2025335 2.2621221 0.034980741 20
+: Y~~Y 0.5557910  0.1757566 3.1622777          NA  5
+: Y    0.7967775  0.2311125 3.4475747 0.002545845 20
+
+Note that for each call to =summary2= the small sample size
+correction(s) will be recalculated. However the calculation of the
+sample correction(s) can be time consuming. In such a case one can
+pre-compute the main terms of the correction (i.e. the derivative of
+the variance-covariance matrix) once for all using the =sCorrect=
+method (=sCorrect= stands for Satterthwaite correction). When calling
+=sCorrect=, the right hand side indicates whether the bias correction
+should be used or not.
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 sCorrect(e) <- TRUE ## with biais correction
 #+END_SRC
 
 #+RESULTS:
 
-=sCorrect= pre-computes quantities necessary for the small sample
-correction (e.g. the derivative of the variance-covariance matrix) and
-store them in the object. =sCorrect= also adds the class =lvmfit2= to
-the object:
+=sCorrect= automatically store the pre-computed terms in the =dVcov=
+slot of the object. It also adds the class =lvmfit2= to the object:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 class(e)
 #+END_SRC

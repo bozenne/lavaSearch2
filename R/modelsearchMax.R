@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: feb  2 2018 (18:03) 
+## last-updated: feb  4 2018 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 683
+##     Update #: 684
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -51,7 +51,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
 
     typeSD <- attr(iid.FCT, "typeSD")
     df <- attr(iid.FCT, "df")
-    adjust.residuals <- attr(iid.FCT, "adjust.residuals")
+    bias.correct <- attr(iid.FCT, "bias.correct")
     prepareScore <- df
     
     ### ** wraper
@@ -84,11 +84,11 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 out$df[1, "coefBeta"] <- new.coef[link[iterI]]
                 ## extract degree of freedom and standard error
                 if(df){
-                    sCorrect(newfit, return.score = TRUE) <- adjust.residuals
+                    sCorrect(newfit, return.score = TRUE) <- bias.correct
                     out$iid <- (attr(newfit$dVcov, "score") %*% attr(newfit$dVcov, "vcov.param")[,link[iterI],drop=FALSE])
                     
                     e.df <- compare2(newfit, par = link[iterI],
-                                     adjust.residuals = adjust.residuals, as.lava = FALSE)
+                                     bias.correct = bias.correct, as.lava = FALSE)
                     
                     out$df[1, "df"] <- e.df[1, "df"]
 
@@ -102,7 +102,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 }else{
                     out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
                     if(typeSD == "information"){
-                        ## NOTE: it assumes that whenever df is FALSE then adjust.residuals is FALSE
+                        ## NOTE: it assumes that whenever df is FALSE then bias.correct is FALSE
                         sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
                         out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
                     }else{

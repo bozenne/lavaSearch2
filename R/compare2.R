@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  2 2018 (18:03) 
+## Last-Updated: feb  4 2018 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 208
+##     Update #: 211
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,9 +22,7 @@
 #' @name compare2
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
-#' @param adjust.residuals [logical] small sample correction:
-#' should the leverage-adjusted residuals be used to compute the score?
-#' Otherwise the raw residuals will be used.
+#' @param bias.correct [logical] should a small sample correction for the variance/influence function of the coefficients be performed ?
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
@@ -96,16 +94,16 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals)
+compare2.lm <- function(object, bias.correct = TRUE, ...){
+    object$dVcov  <- sCorrect(object, bias.correct = bias.correct)
     return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals, ...)
+compare2.gls <- function(object, bias.correct = TRUE, ...){
+    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, ...)
     return(.compare2(object, ...))
 }
 
@@ -117,8 +115,8 @@ compare2.lme <- compare2.lm
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-compare2.lvmfit <- function(object, adjust.residuals = TRUE, ...){
-    object$dVcov  <- sCorrect(object, adjust.residuals = adjust.residuals)
+compare2.lvmfit <- function(object, bias.correct = TRUE, ...){
+    object$dVcov  <- sCorrect(object, bias.correct = bias.correct)
     return(.compare2(object, ...))
 }
 

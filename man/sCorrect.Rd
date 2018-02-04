@@ -17,20 +17,19 @@
 \usage{
 sCorrect(object, ...)
 
-\method{sCorrect}{lm}(object, adjust.residuals = FALSE,
-  return.score = FALSE, ...)
+\method{sCorrect}{lm}(object, bias.correct = FALSE, return.score = FALSE,
+  ...)
 
 \method{sCorrect}{gls}(object, cluster, vcov.param = NULL,
-  adjust.residuals = FALSE, numericDerivative = FALSE,
-  return.score = FALSE, ...)
+  bias.correct = FALSE, numericDerivative = FALSE, return.score = FALSE,
+  ...)
 
 \method{sCorrect}{lme}(object, cluster, vcov.param = NULL,
-  adjust.residuals = FALSE, numericDerivative = FALSE,
-  return.score = FALSE, ...)
+  bias.correct = FALSE, numericDerivative = FALSE, return.score = FALSE,
+  ...)
 
-\method{sCorrect}{lvmfit}(object, vcov.param = NULL,
-  adjust.residuals = TRUE, numericDerivative = FALSE,
-  return.score = FALSE, ...)
+\method{sCorrect}{lvmfit}(object, vcov.param = NULL, bias.correct = TRUE,
+  numericDerivative = FALSE, return.score = FALSE, ...)
 
 \method{sCorrect}{lvmfit2}(object, ...)
 
@@ -51,9 +50,7 @@ sCorrect(x, ...) <- value
 
 \item{...}{[internal] Only used by the generic method.}
 
-\item{adjust.residuals}{[logical] small sample correction:
-should the leverage-adjusted residuals be used to compute the score?
-Otherwise the raw residuals will be used.}
+\item{bias.correct}{[logical] should a small sample correction for the standard errors of the coefficients be performed ?}
 
 \item{return.score}{[for internal use] export the score.}
 
@@ -66,7 +63,7 @@ Only required for gls models with no correlation argument.}
 
 \item{x}{same as object.}
 
-\item{value}{same as adjust.residuals.}
+\item{value}{same as bias.correct.}
 }
 \description{
 Compute the derivative of the information matrix.

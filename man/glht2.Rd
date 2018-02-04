@@ -8,10 +8,10 @@
 \usage{
 glht2(model, ...)
 
-\method{glht2}{lvmfit}(model, linfct, rhs = 0, adjust.residuals = TRUE,
+\method{glht2}{lvmfit}(model, linfct, rhs = 0, bias.correct = TRUE,
   robust = FALSE, ...)
 
-\method{glht2}{mmm}(model, linfct, rhs = 0, adjust.residuals = TRUE,
+\method{glht2}{mmm}(model, linfct, rhs = 0, bias.correct = TRUE,
   robust = FALSE, ...)
 }
 \arguments{
@@ -24,7 +24,7 @@ The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.}
 
 \item{rhs}{[vector] the right hand side of the linear hypotheses to be tested.}
 
-\item{adjust.residuals}{[logical] small sample correction:
+\item{bias.correct}{[logical] small sample correction:
 should the leverage-adjusted residuals be used to compute the score?
 Otherwise the raw residuals will be used.}
 

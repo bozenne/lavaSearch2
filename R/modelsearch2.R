@@ -11,9 +11,7 @@
 #' @param typeSD [relevant when statistic is Wald] the type of standard error to be used to compute the Wald statistic.
 #' Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.
 #' @param df [relevant when statistic is Wald] small sample correction: should the degree of freedom be computed using the Satterthwaite approximation.
-#' @param adjust.residuals [logical] small sample correction:
-#' should the leverage-adjusted residuals be used to compute the score?
-#' Otherwise the raw residuals will be used.
+#' @param bias.correct [logical] should a small sample correction for the standard errors of the coefficients be performed ?
 #' Only relevant when the argument \code{statistic} is set to \code{"Wald"}.
 #' @param trace should the execution be traced?
 #' @param ... additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.
@@ -110,14 +108,14 @@
 #' @export
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
                                 statistic = "Wald",  method.p.adjust = "max",
-                                typeSD = "information", df = FALSE, adjust.residuals = FALSE,
+                                typeSD = "information", df = FALSE, bias.correct = FALSE,
                                 trace = TRUE,
                                 ...){
 
     ## ** normalise arguments
     typeSD <- match.arg(typeSD, c("information","robust","jackknife"))
-    if(df == FALSE && adjust.residuals == TRUE){
-        stop("Argument \'df\' must be TRUE when arguemnt \'adjust.residuals\' is TRUE \n")
+    if(df == FALSE && bias.correct == TRUE){
+        stop("Argument \'df\' must be TRUE when arguemnt \'bias.correct\' is TRUE \n")
     }
 
     dots <- list(...)
@@ -172,7 +170,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             iidJack(x, keep.warnings = FALSE, keep.error = FALSE, trace = FALSE)
         }
         attr(iid.FCT,"method.iid") <- "iidJack"
-    }else if(adjust.residuals == FALSE){
+    }else if(bias.correct == FALSE){
         iid.FCT <- function(x){
             res <- lava::iid(x)
             attr(res, "bread") <- NULL
@@ -181,13 +179,13 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         attr(iid.FCT,"method.iid") <- "iid"
     }else{
         iid.FCT <- function(x){
-            iid2(x, adjust.residuals = TRUE)
+            iid2(x, bias.correct = TRUE)
         }
         attr(iid.FCT,"method.iid") <- "iid2"
     }
     attr(iid.FCT,"typeSD") <- typeSD
     attr(iid.FCT,"df") <- df
-    attr(iid.FCT,"adjust.residuals") <- adjust.residuals
+    attr(iid.FCT,"bias.correct") <- bias.correct
 
     ## ** run modelsearch
     out <- do.call(.modelsearch2,
@@ -207,14 +205,14 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 #' @export
 modelsearch2.default <- function(object, link, data = NULL,
                                  statistic = "Wald", method.p.adjust = "max", 
-                                 typeSD = "information", df = FALSE, adjust.residuals = FALSE,
+                                 typeSD = "information", df = FALSE, bias.correct = FALSE,
                                  trace = TRUE,
                                  ...){
     
     ## ** normalise arguments
     typeSD <- match.arg(typeSD, c("information","robust","jackknife"))
-    if(df == FALSE && adjust.residuals == TRUE){
-        stop("Argument \'df\' must be TRUE when arguemnt \'adjust.residuals\' is TRUE \n")
+    if(df == FALSE && bias.correct == TRUE){
+        stop("Argument \'df\' must be TRUE when arguemnt \'bias.correct\' is TRUE \n")
     }
 
     if("lvm" %in% class(object)){
@@ -229,8 +227,8 @@ modelsearch2.default <- function(object, link, data = NULL,
         if(df == TRUE){
             stop("argument \'df\' must be FALSE for Cox models \n")
         }
-        if(adjust.residuals == TRUE){
-            stop("argument \'adjust.residuals\' must be FALSE for Cox models \n")
+        if(bias.correct == TRUE){
+            stop("argument \'bias.correct\' must be FALSE for Cox models \n")
         }        
     }else if (!any(paste("score", class(object), sep = ".") %in% methods("score"))) {        
         stop("Extraction of the iid decomposition failed \n",
@@ -306,7 +304,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                 attr(iid.FCT, "method.iid") <- "iid"
             }
         }
-    }else if(adjust.residuals == FALSE){
+    }else if(bias.correct == FALSE){
         iid.FCT <- function(x){
             res <- lava::iid(x)
             attr(res, "bread") <- NULL
@@ -315,14 +313,14 @@ modelsearch2.default <- function(object, link, data = NULL,
         attr(iid.FCT, "method.iid") <- "iid"
     }else{
         iid.FCT <- function(x){
-            iid2(x, adjust.residuals = TRUE)
+            iid2(x, bias.correct = TRUE)
         }
         attr(iid.FCT,"method.iid") <- "iid2"        
     }
 
     attr(iid.FCT,"typeSD") <- typeSD
     attr(iid.FCT,"df") <- df
-    attr(iid.FCT,"adjust.residuals") <- adjust.residuals
+    attr(iid.FCT,"bias.correct") <- bias.correct
     
     ## ** run modelsearch
     out <- .modelsearch2(object, link = link, restricted = restricted, directive = directive,

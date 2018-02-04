@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  2 2018 (18:03) 
+## Last-Updated: feb  4 2018 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 234
+##     Update #: 236
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,10 +25,8 @@
 #' @param cluster the grouping variable relative to which the observations are iid.
 #'                Only required for gls models with no correlation argument.
 #' @param vcov.param the variance-covariance matrix of the estimates.
-#' @param adjust.residuals [logical] small sample correction:
-#' should the leverage-adjusted residuals be used to compute the score?
-#' Otherwise the raw residuals will be used.
-#' @param value same as adjust.residuals.
+#' @param bias.correct [logical] should a small sample correction for the standard errors of the coefficients be performed ?
+#' @param value same as bias.correct.
 #' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
 #' @param return.score [for internal use] export the score.
 #' @param ... [internal] Only used by the generic method.
@@ -41,13 +39,13 @@
 ## * dVcov.lm
 #' @rdname sCorrect
 #' @export
-sCorrect.lm <- function(object, adjust.residuals = FALSE,
+sCorrect.lm <- function(object, bias.correct = FALSE,
                       return.score = FALSE, ...){
 
     ## ** extract information
     X <- stats::model.matrix(object)
         
-    epsilonD2 <- residuals2(object, adjust.residuals = adjust.residuals,
+    epsilonD2 <- residuals2(object, bias.correct = bias.correct,
                             return.vcov.param = TRUE)
     p <- c(stats::coef(object), sigma2 = mean(stats::residuals(object)^2))
     name.param <- names(p)
@@ -83,7 +81,7 @@ sCorrect.lm <- function(object, adjust.residuals = FALSE,
 #' @rdname sCorrect
 #' @export
 sCorrect.gls <- function(object, cluster, vcov.param = NULL,
-                       adjust.residuals = FALSE, numericDerivative = FALSE,
+                       bias.correct = FALSE, numericDerivative = FALSE,
                        return.score = FALSE, ...){
 
     p <- .coef2(object)
@@ -100,7 +98,7 @@ sCorrect.gls <- function(object, cluster, vcov.param = NULL,
     ## ** pre-compute quantities
     if(return.score || numericDerivative == FALSE){
         epsilonD2 <- residuals2(object, p = p, data = data, cluster = cluster,
-                                adjust.residuals = adjust.residuals,
+                                bias.correct = bias.correct,
                                 as.clubSandwich = as.clubSandwich,
                                 return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
         pS2  <- attr(epsilonD2, "prepareScore2")
@@ -114,7 +112,7 @@ sCorrect.gls <- function(object, cluster, vcov.param = NULL,
             pp <- p
             pp[names(iParam)] <- iParam
             res.tempo <- residuals2(object, cluster = cluster, p = pp, data = data,
-                                    adjust.residuals = adjust.residuals,
+                                    bias.correct = bias.correct,
                                     as.clubSandwich = as.clubSandwich,
                                     return.vcov.param = TRUE, second.order = FALSE)
             vcov.tempo <- attr(res.tempo, "vcov.param")
@@ -198,7 +196,7 @@ sCorrect.lme <- sCorrect.gls
 #' @rdname sCorrect
 #' @export
 sCorrect.lvmfit <- function(object, vcov.param = NULL,
-                          adjust.residuals = TRUE, numericDerivative = FALSE,
+                          bias.correct = TRUE, numericDerivative = FALSE,
                           return.score = FALSE, ...){
 
     detail <- NULL ## [:for CRAN check] subset
@@ -223,7 +221,7 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
 
     if(return.score || numericDerivative == FALSE){
         epsilonD2 <- residuals2(object, p = p, data = data,
-                                adjust.residuals = adjust.residuals,
+                                bias.correct = bias.correct,
                                 as.clubSandwich = as.clubSandwich,
                                 return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
         pS2  <- attr(epsilonD2, "prepareScore2")
@@ -240,7 +238,7 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
     if(numericDerivative){
 
         ### *** Define function to compute the variance-covariance matrix
-        if(adjust.residuals==FALSE){
+        if(bias.correct==FALSE){
             calcVcov <- function(iParam){ # x <- p.obj
                 pp <- p
                 pp[names(iParam)] <- iParam
@@ -253,7 +251,7 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
                 pp <- p
                 pp[names(iParam)] <- iParam
                 res.tempo <- residuals2(object, p = pp, data = data,
-                                        adjust.residuals = adjust.residuals,                                        
+                                        bias.correct = bias.correct,                                        
                                         as.clubSandwich = as.clubSandwich,
                                         return.vcov.param = TRUE)
                 vcov.tempo <- attr(res.tempo, "vcov.param")
@@ -350,7 +348,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lm` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., adjust.residuals = value)
+    x$dVcov <- sCorrect(x, ..., bias.correct = value)
     class(x) <- append("lm2",class(x))
 
     return(x)
@@ -359,7 +357,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.gls` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., adjust.residuals = value)
+    x$dVcov <- sCorrect(x, ..., bias.correct = value)
     class(x) <- append("gls2",class(x))
 
     return(x)
@@ -368,7 +366,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lme` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., adjust.residuals = value)
+    x$dVcov <- sCorrect(x, ..., bias.correct = value)
     class(x) <- append("lme2",class(x))
     
     return(x)
@@ -378,7 +376,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lvmfit` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., adjust.residuals = value)
+    x$dVcov <- sCorrect(x, ..., bias.correct = value)
     class(x) <- append("lvmfit2",class(x))
 
     return(x)
@@ -390,7 +388,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 `sCorrect<-.lvmfit2` <- function(x, ..., value){
 
     class(x) <- setdiff(class(x),"lvmfit2")
-    x$dVcov <- sCorrect(x, ..., adjust.residuals = value)
+    x$dVcov <- sCorrect(x, ..., bias.correct = value)
     class(x) <- append("lvmfit2",class(x))
     
     return(x)

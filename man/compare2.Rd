@@ -15,13 +15,13 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, adjust.residuals = TRUE, ...)
+\method{compare2}{lm}(object, bias.correct = TRUE, ...)
 
-\method{compare2}{gls}(object, adjust.residuals = TRUE, ...)
+\method{compare2}{gls}(object, bias.correct = TRUE, ...)
 
-\method{compare2}{lme}(object, adjust.residuals = TRUE, ...)
+\method{compare2}{lme}(object, bias.correct = TRUE, ...)
 
-\method{compare2}{lvmfit}(object, adjust.residuals = TRUE, ...)
+\method{compare2}{lvmfit}(object, bias.correct = TRUE, ...)
 
 \method{compare2}{lm2}(object, ...)
 
@@ -41,9 +41,7 @@ compare2(object, ...)
 One exception: for gls models \code{...} is passed to dVco2,
 this can be useful when the argument cluster is required.}
 
-\item{adjust.residuals}{[logical] small sample correction:
-should the leverage-adjusted residuals be used to compute the score?
-Otherwise the raw residuals will be used.}
+\item{bias.correct}{[logical] should a small sample correction for the variance/influence function of the coefficients be performed ?}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}

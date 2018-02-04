@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 22 2018 (11:45) 
 ## Version: 
-## Last-Updated: jan 31 2018 (18:15) 
+## Last-Updated: feb  4 2018 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 8
+##     Update #: 9
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,9 +50,9 @@ test_that("Score 1 link",{
 test_that("Wald 1 link",{
     ## no adjustement
     e.GS <-  estimate(lvm(Y~E+X1), data = df.sim)
-    test.GS <- compare2(e.GS, par = "Y~X1" , adjust.residuals = FALSE, as.lava = FALSE)
+    test.GS <- compare2(e.GS, par = "Y~X1" , bias.correct = FALSE, as.lava = FALSE)
     
-    test.Wald <- summary(modelsearch2(e.base, link = "Y~X1", df = FALSE, adjust.residuals = FALSE,
+    test.Wald <- summary(modelsearch2(e.base, link = "Y~X1", df = FALSE, bias.correct = FALSE,
                                        statistic = "Wald", method.p.adjust = "max", trace = 0), display = FALSE)
 
     expect_equivalent(abs(test.GS[1,"statistic"]), test.Wald$data[1,"statistic"])
@@ -60,9 +60,9 @@ test_that("Wald 1 link",{
 
     ## with adjustment
     e.GS <-  estimate(lvm(Y~E+X1), data = df.sim)
-    test.GS <- compare2(e.GS, par  = "Y~X1", adjust.residuals = TRUE, as.lava = FALSE)
+    test.GS <- compare2(e.GS, par  = "Y~X1", bias.correct = TRUE, as.lava = FALSE)
     
-    test.Wald <- summary(modelsearch2(e.base, link = "Y~X1", df = TRUE, adjust.residuals = TRUE,
+    test.Wald <- summary(modelsearch2(e.base, link = "Y~X1", df = TRUE, bias.correct = TRUE,
                                        statistic = "Wald", method.p.adjust = "max", trace = 0), display = FALSE)
 
     expect_equivalent(abs(test.GS[1,"statistic"]), test.Wald$data[1,"statistic"])

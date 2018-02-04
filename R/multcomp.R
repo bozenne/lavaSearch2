@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  2 2018 (18:03) 
+## Last-Updated: feb  4 2018 (14:16) 
 ##           By: Brice Ozenne
-##     Update #: 325
+##     Update #: 327
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,7 +77,7 @@ estfun.lvmfit <- function(x, ...){
 #' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument par of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
-#' @param adjust.residuals [logical] small sample correction:
+#' @param bias.correct [logical] small sample correction:
 #' should the leverage-adjusted residuals be used to compute the score?
 #' Otherwise the raw residuals will be used.
 #' @param robust [logical] should robust standard error be used? 
@@ -135,7 +135,7 @@ estfun.lvmfit <- function(x, ...){
 #' @rdname glht2
 #' @export
 glht2.lvmfit <- function(model, linfct, rhs = 0,
-                         adjust.residuals = TRUE, robust = FALSE, ...){
+                         bias.correct = TRUE, robust = FALSE, ...){
 
     ### ** define contrast matrix
     if(!is.matrix(linfct)){
@@ -148,7 +148,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 
     ### ** pre-compute quantities for the small sample correction
     if(is.null(model$dVcov)){
-        sCorrect(model, return.score = adjust.residuals) <- adjust.residuals
+        sCorrect(model, return.score = bias.correct) <- bias.correct
     }
 
     ### ** Wald test with small sample correction
@@ -189,7 +189,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 ## * glht2.mmm
 #' @rdname glht2
 #' @export
-glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust = FALSE, ...){
+glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FALSE, ...){
     ### ** check the class of each model
     n.model <- length(model)
     name.model <- names(model)    
@@ -236,7 +236,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
    
         ### *** Pre-compute quantities
         if(is.null(model[[iM]]$dVcov)){
-            sCorrect(model[[iM]], return.score = TRUE) <- adjust.residuals
+            sCorrect(model[[iM]], return.score = TRUE) <- bias.correct
         }
         out$param <- attr(model[[iM]]$dVcov, "param")                              
         name.param <- names(out$param)
@@ -254,7 +254,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, adjust.residuals = TRUE, robust =
         ### *** get iid decomposition
         out$iid <- attr(model[[iM]]$dVcov, "score") %*% attr(model[[iM]]$dVcov, "vcov.param")
         if(robust == FALSE){
-            iVec.sigma <- sqrt(dixag(attr(model[[iM]]$dVcov, "vcov.param")))
+            iVec.sigma <- sqrt(diag(attr(model[[iM]]$dVcov, "vcov.param")))
             iVec.sigma.robust <- sqrt(apply(out$iid^2,2,sum))
             out$iid <- sweep(out$iid, MARGIN = 2, FUN = "*", STATS = iVec.sigma/iVec.sigma.robust)
         }

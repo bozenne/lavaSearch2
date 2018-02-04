@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: feb  2 2018 (10:17) 
+## Last-Updated: feb  4 2018 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 101
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,7 +66,7 @@ test_that("glht vs. glht2 (list lm): information std", {
     name.mean <- name.all[-grep("sigma",name.all)]
 
     e.glht2 <- glht2(ls.lm, linfct = resC$contrast,
-                     adjust.residuals = FALSE, robust = FALSE)
+                     bias.correct = FALSE, robust = FALSE)
 
     expect_equal(e.glht$vcov,
                  n/(n-2)*e.glht2$vcov[name.mean,name.mean])
@@ -86,7 +86,7 @@ test_that("glht vs. glht2 (list ml): robust std", {
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
     e.glht2 <- glht2(ls.lm, linfct = resC$contrast,
-                     adjust.residuals = FALSE, robust = TRUE)
+                     bias.correct = FALSE, robust = TRUE)
 
     expect_equivalent(e.glht$vcov,
                       e.glht2$vcov[name.mean,name.mean])
@@ -137,9 +137,9 @@ test_that("glht vs. glht2 (lvm): information std", {
     e.glht.H1 <- glht(e.lvm, linfct = resC$contrast, rhs = resC$null)
 
     e.glht2.null <- glht2(e.lvm, linfct = resC$contrast, rhs = rep(0,3),
-                          adjust.residuals = FALSE)
+                          bias.correct = FALSE)
     e.glht2.H1 <- glht2(e.lvm, linfct = resC$contrast, rhs = resC$null,
-                        adjust.residuals = FALSE)
+                        bias.correct = FALSE)
 
 
     eS.glht.null <- summary(e.glht.null)
@@ -173,12 +173,12 @@ test_that("glht vs. glht2 (list lvm): information std", {
     ##
     resC <- createContrast(mmm.lvm, var.test = "E")
     lvm2.glht <- glht2(mmm.lvm, linfct = resC$contrast,
-                       adjust.residuals = FALSE, robust = FALSE)
+                       bias.correct = FALSE, robust = FALSE)
     lvm2.sglht <- summary(lvm2.glht)    
 
     lvm3.glht <- glht2(mmm.lvm, linfct = resC$contrast,
                        rhs = rnorm(10),
-                       adjust.residuals = FALSE, robust = FALSE)
+                       bias.correct = FALSE, robust = FALSE)
     lvm3.sglht <- summary(lvm3.glht)    
 
     ##

@@ -5,6 +5,10 @@
 \alias{summary.gls2}
 \alias{summary.lme2}
 \alias{summary.lvmfit2}
+\alias{summary2}
+\alias{summary2.gls}
+\alias{summary2.lme}
+\alias{summary2.lvmfit}
 \title{Summary with Small Sample Correction}
 \usage{
 \method{summary}{gls2}(object, digit = max(3, getOption("digit")), ...)
@@ -12,16 +16,34 @@
 \method{summary}{lme2}(object, digit = max(3, getOption("digit")), ...)
 
 \method{summary}{lvmfit2}(object, ...)
+
+summary2(object, ...)
+
+\method{summary2}{gls}(object, bias.correct, ...)
+
+\method{summary2}{lme}(object, bias.correct, ...)
+
+\method{summary2}{lvmfit}(object, bias.correct = TRUE, ...)
 }
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}
 
-\item{digit}{the number of digit to keep when diplaying the summary.}
+\item{digit}{[interger > 0] the number of digit to keep when diplaying the summary.}
 
-\item{...}{arguments passed to lower level methods.}
+\item{...}{arguments passed to the \code{summary} method of the object (when calling \code{summary})
+or to the \code{sCorrect} method (when calling \code{summary2}).}
+
+\item{bias.correct}{[logical] should a small sample correction for the standard errors of the coefficients be performed ? See \code{\link{sCorrect}} for more details.}
 }
 \description{
 Summary with small sample correction.
+}
+\details{
+\code{summary2} is the same as \code{summary}
+except that it first computes the small sample correction (but does not store it).
+So if \code{summary2} is to be called several times,
+it is more efficient to pre-compute the quantities for the small sample correction
+using \code{sCorrect} and then call \code{summary}.
 }
 \examples{
 m <- lvm(Y~X1+X2)
@@ -51,4 +73,7 @@ summary(e.lvm)$coef
 sCorrect(e.lvm) <- TRUE ## small sample correction
 summary(e.lvm)$coef
 
+}
+\seealso{
+\code{\link{sCorrect}} for more detail about the small sample correction.
 }

@@ -10,19 +10,19 @@
 \usage{
 residuals2(object, ...)
 
-\method{residuals2}{lm}(object, adjust.residuals = TRUE,
+\method{residuals2}{lm}(object, bias.correct = TRUE,
   return.vcov.param = FALSE, ...)
 
 \method{residuals2}{gls}(object, cluster = NULL, p = NULL, data = NULL,
-  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  bias.correct = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
   return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 
 \method{residuals2}{lme}(object, cluster = NULL, p = NULL, data = NULL,
-  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  bias.correct = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
   return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 
 \method{residuals2}{lvmfit}(object, p = NULL, data = NULL,
-  adjust.residuals = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
+  bias.correct = TRUE, as.clubSandwich = TRUE, second.order = FALSE,
   return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 }
 \arguments{
@@ -30,9 +30,7 @@ residuals2(object, ...)
 
 \item{...}{[internal] Only used by the generic method.}
 
-\item{adjust.residuals}{[logical] small sample correction:
-should the leverage-adjusted residuals be used to compute the score?
-Otherwise the raw residuals will be used.}
+\item{bias.correct}{[logical] should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
 
 \item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
 
