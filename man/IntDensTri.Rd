@@ -12,7 +12,7 @@ IntDensTri(mu, Sigma, df, n, x.min, z.max = NULL, type = "double",
 
 \item{Sigma}{[matrix] the variance-covariance of the joint distribution.}
 
-\item{df}{[interger > 0] the degree of freedom of the joint Student's t distribution.
+\item{df}{[integer > 0] the degree of freedom of the joint Student's t distribution.
 Only used when \code{distribution="pvmt"}.}
 
 \item{n}{[integer > 0] number of points for the numerical integration.}

@@ -43,7 +43,7 @@ If greater than 1, the computation of the p-value relative to each test is perfo
 \item{method}{[character] the method used to compute the p-values.
 See the output of \code{lava.options()$search.calcMaxDist} for the possible values.}
 
-\item{n.sim}{[interger >0] the number of bootstrap simulations used to compute each p-values.
+\item{n.sim}{[integer >0] the number of bootstrap simulations used to compute each p-values.
 Disregarded when the p-values are computed using numerical integration.}
 
 \item{n.repMax}{[integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.

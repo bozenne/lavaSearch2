@@ -36,7 +36,7 @@ extractData(object, design.matrix, as.data.frame)
 \item{design.matrix}{[logical] should the data be extracted after transformation (e.g. conversion of categorical variables to dummy variables)?
 Otherwise the original data will be returned.}
 
-\item{as.data.frame}{[logical] should the output be converted into a dataa.frame object?}
+\item{as.data.frame}{[logical] should the output be converted into a \code{data.frame} object?}
 }
 \value{
 a dataset.

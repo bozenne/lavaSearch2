@@ -19,7 +19,7 @@ calcType1postSelection(level, mu, Sigma, quantile.previous, distribution, df,
 \item{distribution}{[character] distribution of the test statistics.
 Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (Student's t distribution)}
 
-\item{df}{[interger > 0] the degree of freedom of the joint Student's t distribution.
+\item{df}{[integer > 0] the degree of freedom of the joint Student's t distribution.
 Only used when \code{distribution="pvmt"}.}
 
 \item{n}{[integer > 0] number of points for the numerical integration}
