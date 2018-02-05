@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:50) 
+## Last-Updated: feb  5 2018 (16:16) 
 ##           By: Brice Ozenne
-##     Update #: 329
+##     Update #: 341
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,13 +19,13 @@
 ## * estfun.lvmfit
 #' @title Extract Empirical Estimating Functions (lvmfit Object)
 #' @description Extract the empirical estimating functions of a lvmfit object.
-#' This function is for internal use.
+#' This function is for internal use but need to be public to enable its use by \code{multcomp::glht}.
 #' 
-#' @param x an lvmfit object.
+#' @param x an \code{lvmfit} object.
 #' @param ... arguments passed to methods.
 #'
-#' @details This function enables to use the glht function with lvmfit object.
-#' Otherwise when calling multcomp:::vcov.mmm then sandwich::sandwich and then sandwich::meat, sandwich::meat will complain that estfun is not defined for lvmfit objects.
+#' @details This function enables to use the \code{glht} function with lvmfit object.
+#' Otherwise when calling \code{multcomp:::vcov.mmm} then \code{sandwich::sandwich} and then \code{sandwich::meat}, \code{sandwich::meat} will complain that \code{estfun} is not defined for \code{lvmfit} objects.
 #'
 #' @examples
 #' library(multcomp)
@@ -61,6 +61,7 @@
 #' summary(e.glht)
 #' 
 #' @method estfun lvmfit
+#' @concept multiple comparison
 #' @export
 estfun.lvmfit <- function(x, ...){
     U <- lava::score(x, indiv = TRUE)
@@ -75,17 +76,19 @@ estfun.lvmfit <- function(x, ...){
 #' 
 #' @param model a \code{lvmfit} or \code{mmm} object.
 #' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
-#' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument par of \code{\link{createContrast}}.
+#' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
-#' @param ... arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.
+#' @param ... [internal] Only used by the generic method.
 #'
 #' @details
 #' Whenever the argument linfct is not a matrix, it is passed ot the function \code{createContrast} to generate the contrast matrix and, if not specified, rhs. \cr \cr
 #'
 #' Since only one degree of freedom can be specify in a glht object and it must be an integer, the degree of freedom of the denominator of an F test simultaneously testing all hypotheses is retained, after rounding.
+#'
+#' @return A \code{glht} object.
 #' 
 #' @seealso
 #' \code{\link{createContrast}} to create contrast matrices. \cr
@@ -124,7 +127,8 @@ estfun.lvmfit <- function(x, ...){
 #' #### adjust for multiple comparisons ####
 #' e.glht2 <- glht2(e.mmm, linfct = resC$contrast)
 #' summary(e.glht2)
-#' 
+#'
+#' @concept multiple comparison
 #' @export
 `glht2` <-
   function(model, ...) UseMethod("glht2")

@@ -2,6 +2,7 @@
 
 * Version 1.1.0 <2018-02-01 Thu>
 ** User visible changes
+ - The argument =numericDerivative= has been renamed =numeric.derivative=.
  - The argument =adjust.residuals= has been renamed =bias.correct=.
  - The method =dVcov2= has been renamed =sCorrect=.
  - The method =lTest= is now replaced by the method =compare2=.

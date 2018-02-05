@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:42) 
 ## Version: 
-## last-updated: jan 15 2018 (11:32) 
+## last-updated: feb  5 2018 (15:51) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 125
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,25 +20,25 @@
 ##' @description Compute the type 1 error after selection.
 ##' @name calcType1postSelection
 ##' 
-##' @param level expected coverage.
-##' @param mu vector of means for the joint distribution of the test statistics
-##' @param Sigma variance-covariance matrix for the joint distribution of the test statistics.
-##' @param quantile.previous significance quantile used at the previous step.
-##' @param df degree of freedoms (only used for the student distribution).
-##' @param n number of points for the numerical integration
-##' @param distribution distribution of the test statistics.
-##' Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (student's t distribution)
-##' @param correct logical. If true, returns the corrected level that should be used
-##' to obtain the expected coverage.
-##' @param ... arguments passed to lower level functions
+##' @param level [numeric 0-1] expected coverage.
+##' @param mu [numeric vector] the expectation of the joint distribution of the test statistics
+##' @param Sigma [matrix] the variance-covariance of the joint distribution of the test statistics.
+##' @param quantile.previous [numeric] significance quantile used at the previous step.
+##' @param df [interger > 0] the degree of freedom of the joint Student's t distribution.
+##' Only used when \code{distribution="pvmt"}.
+##' @param n [integer > 0] number of points for the numerical integration
+##' @param distribution [character] distribution of the test statistics.
+##' Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (Student's t distribution)
+##' @param correct [logical] if true, correct the level to account for previous testings.
+##' @param ... arguments passed to \code{\link{IntDensTri}}.  
 ##'
 ##' @details The number of tests at the current step (i.e. after selection) is assumed to be
 ##' one less than the number of tests at the previous step (i.e. before selection).
 ##'
 ##' Arguments \code{mu} and \code{Sigma} must contain the moments for the vector of test statistics
-##' after and before selection.
+##' befor and after selection (in that order).
 ##' 
-##' @return type 1 error (numeric)
+##' @return [numeric] the type 1 error.
 ##' @author Brice Ozenne
 ##' @examples
 ##' library(mvtnorm)
@@ -86,6 +86,7 @@
 ##'                         mu = mu, Sigma = Sigma, correct = FALSE)
 ##' }
 ##'
+##' @concept post-selection inference
 
 
 ## * calcType1postSelection

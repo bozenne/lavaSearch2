@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: feb  2 2018 (11:56) 
+## last-updated: feb  5 2018 (16:20) 
 ##           By: Brice Ozenne
-##     Update #: 293
+##     Update #: 300
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,15 +22,18 @@
 #' @name iidJack
 #' 
 #' @param object a object containing the model.
-#' @param data dataset used to perform the jacknife.
-#' @param grouping variable defining cluster of observations that will be simultaneously removed by the jackknife.
+#' @param data [data.frame] dataset used to perform the jacknife.
+#' @param grouping [vector] variable defining cluster of observations that will be simultaneously removed by the jackknife.
 #' @param ncpus [integer >0] the number of processors to use.
 #' If greater than 1, the fit of the model and the computation of the influence function for each jackknife sample is performed in parallel. 
-#' @param keep.warnings keep warning messages obtained when estimating the model with the jackknife samples.
-#' @param keep.error keep error messages obtained when estimating the model with the jackknife samples.
-#' @param initCpus [logical] should the processors for the parallel computation be initialized?
-#' @param trace should a progress bar be used to trace the execution of the function
-#' @param ... additional arguments.
+#' @param keep.warnings [logical] keep warning messages obtained when estimating the model with the jackknife samples.
+#' @param keep.error [logical]keep error messages obtained when estimating the model with the jackknife samples.
+#' @param init.cpus [logical] should the processors for the parallel computation be initialized?
+#' @param trace [logical] should a progress bar be used to trace the execution of the function
+#' @param ... [internal] only used by the generic method.
+#'
+#' @return A matrix with in row the samples and in columns the parameters.
+#' 
 #' @examples
 #' n <- 20
 #'
@@ -100,6 +103,8 @@
 #' iid3 <- iidJack(e2)
 #' apply(iid3,2,sd)
 #' }
+#'
+#' @concept iid decomposition
 #' @export
 iidJack <- function(object,...) UseMethod("iidJack")
 
@@ -108,7 +113,7 @@ iidJack <- function(object,...) UseMethod("iidJack")
 #' @export
 iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
                             keep.warnings=TRUE, keep.error=TRUE,
-                            initCpus=TRUE,trace=TRUE,...) {
+                            init.cpus=TRUE,trace=TRUE,...) {
     
     estimate.lvm <- lava_estimate.lvm
 
@@ -172,7 +177,7 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
     
     ## ** parallel computations: get jackknife coef
     if(ncpus>1){
-        if(initCpus){
+        if(init.cpus){
             test.package <- try(requireNamespace("doParallel"), silent = TRUE)
             if(inherits(test.package,"try-error")){
                 stop("There is no package \'doParallel\' \n",
@@ -240,7 +245,7 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
                                                      warper(Ugrouping[i])
                                                  })
     
-        if(initCpus){
+        if(init.cpus){
             parallel::stopCluster(cl)
         }
 

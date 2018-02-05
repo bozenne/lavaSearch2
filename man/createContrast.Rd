@@ -9,7 +9,7 @@
 \alias{createContrast.lvmfit}
 \alias{createContrast.list}
 \alias{createContrast.mmm}
-\title{Create Contrast matrix.}
+\title{Create Contrast matrix}
 \usage{
 createContrast(object, ...)
 
@@ -31,17 +31,17 @@ createContrast(object, ...)
   var.test = NULL, ...)
 }
 \arguments{
-\item{object}{an \code{ls.lvmfit} object.}
+\item{object}{a \code{ls.lvmfit} object.}
 
-\item{...}{Only used by the generic method.}
+\item{...}{[internal] Only used by the generic method.}
 
-\item{name.param}{[internal] the names of all the model parameters.}
+\item{name.param}{[internal] the names of all the model coefficients.}
 
 \item{add.rowname}{[internal] should a name be defined for each hypothesis.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested. See the examples section.}
 
-\item{add.variance}{[logical] should the variance parameters be considered as model parameters?
+\item{add.variance}{[logical] should the variance coefficients be considered as model coefficients?
 Required for lm, gls, and lme models.}
 
 \item{var.test}{[character] a regular expression that is used to identify the coefficients to be tested using \code{grep}. Each coefficient will be tested in a separate hypothesis. When this argument is used, the argument \code{par} is disregarded.}
@@ -53,17 +53,17 @@ A list containing
 \item{null} [vector] the right hand side of the linear hypotheses.
 \item{Q} [integer] the rank of the contrast matrix.
 \item{ls.contrast} [list, optional] the contrast matrix corresponding to each submodel.
-Only present when the argument object is a list of models.
+Only present when the \code{argument} object is a list of models.
 }
 }
 \description{
-Returns an contrast matrix corresponding an object.
-The contrast matrix will contains the hypotheses in rows and the model parameters in columns.
+Returns a contrast matrix corresponding an object.
+The contrast matrix will contains the hypotheses in rows and the model coefficients in columns.
 }
 \details{
-One can initialize an empty contrast matrix setting the argument par to \code{character(0)}. \cr \cr
+One can initialize an empty contrast matrix setting the argument\code{par} to \code{character(0)}. \cr \cr
 
-When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}.
+When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}. \cr
 When using \code{lavaSearch2::glht2} one should set the argument \code{add.variance} to \code{TRUE}.
 }
 \examples{
@@ -95,4 +95,7 @@ ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
 createContrast(ls.lvm, var.test = "Treatment")
 createContrast(ls.lvm, par = character(0))
 
+}
+\concept{
+small sample inference
 }

@@ -19,9 +19,9 @@ lTest(object, ...)
 \method{lTest}{lvmfit}(object, C = NULL, ...)
 }
 \arguments{
-\item{object}{a lvm object.}
+\item{object}{a \code{lvm} object.}
 
-\item{...}{arguments to be passed to lower level functions.}
+\item{...}{arguments to be passed to \code{compare2}.}
 
 \item{C}{[optional] a contrast matrix.}
 }

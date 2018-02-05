@@ -12,9 +12,13 @@
 
 \item{null}{[vector, optional] the right hand side of the linear hypotheses to be tested.}
 }
+\value{
+a character vector.
+}
 \description{
-Create rownames for a contrast matrix using the coefficients and the names of the parameters. The rownames will be [value * name] == null, e.g. [beta + 4*alpha] = 0.
+Create rownames for a contrast matrix using the coefficients and the names of the coefficients. The rownames will be [value * name] == null, e.g. [beta + 4*alpha] = 0.
 }
 \details{
-When argument NULL is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
+When argument \code{NULL} is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
 }
+\keyword{internal}

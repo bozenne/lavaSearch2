@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:50) 
+## Last-Updated: feb  5 2018 (17:26) 
 ##           By: Brice Ozenne
-##     Update #: 816
+##     Update #: 828
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,17 +20,22 @@
 #' @description Compute the residuals from a lvmfit object.
 #' @name residuals2
 #' 
-#' @param object a fitted latent variable model.
-#' @param p [optional] vector of parameters at which to evaluate the score.
-#' @param data [optional] data set.
-#' @param cluster [only required for gls objects] a vector indicating the clusters of observation that are iid.
+#' @param object a \code{lvmfit} object.
+#' @param p [numeric vector, optional] vector of coefficients at which to evaluate the score.
+#' @param data [dataa.frmae, optional] data set.
+#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' Only required for \code{gls} models with no correlation argument.
 #' @param bias.correct [logical] should the leverage-adjusted residuals be used to compute the score?
 #' Otherwise the raw residuals will be used.
-#' @param as.clubSandwich method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
-#' @param second.order should the terms relative to the third derivative of the likelihood be be pre-computed?
-#' @param return.vcov.param Should the variance covariance matrix of the parameters be included in the output?
-#' @param return.prepareScore2 should the quantities that have been pre-computed be returned?
-#' @param ... [internal] Only used by the generic method.
+#' @param as.clubSandwich [logical] method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.
+#' @param second.order [logical] should the terms relative to the third derivative of the likelihood be be pre-computed?
+#' @param return.vcov.param [logical]should the variance covariance matrix of the coefficients be included in the output?
+#' @param return.prepareScore2 [logical] should the quantities that have been pre-computed be returned?
+#' @param ... [internal] only used by the generic method.
+#'
+#' @return a matrix containing the residuals relative to each sample (in rows)
+#' and each endogenous variable (in column).
+#' Can also contain attributes like \code{prepareScore2} or \code{vcov.param}.
 #' 
 #' @examples
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
@@ -38,6 +43,7 @@
 #'
 #' e <- estimate(m,sim(m,1e2))
 #' residuals2(e)
+#' @concept small sample inference
 #' @export
 `residuals2` <-
     function(object, ...) UseMethod("residuals2")
@@ -51,7 +57,7 @@ residuals2.lm <- function(object,
 
 ### ** Extract information
 
-    ## *** parameters
+    ## *** coefficients
     p <- stats::coef(object)
     n <- NROW(object$model)
     name.param <- names(p)
@@ -140,7 +146,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
     }
     
 ### ** Extract information
-    ## *** parameters
+    ## *** coefficients
     pp <- .coef2(object)
     attr.param <- attributes(pp)
     attributes(pp) <- attr.param["names"]
@@ -178,12 +184,12 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
 ### ** Prepare
     
     
-    ## *** update parameters with user-specified values
+    ## *** update coefficients with user-specified values
     if(!is.null(p)){
         
         if(any(name.param %in% names(p)==FALSE)){
             stop("argument \'p\' is not correctly specified \n",
-                 "missing parameters: \"",paste(name.param[name.param %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
+                 "missing coefficients: \"",paste(name.param[name.param %in% names(p) == FALSE], collapse = "\" \""),"\"\n")
         }
         
         p <- p[attr.param$names]
@@ -225,7 +231,7 @@ residuals2.gls <- function(object, cluster = NULL, p = NULL, data = NULL,
                )
     })
    
-    ### ** compute variance covariance matrix (parameters)
+    ### ** compute variance covariance matrix (coefficients)
     if(bias.correct || return.vcov.param){        
         Info <- .information2(dmu.dtheta = OPS2$dmu.dtheta,
                               dOmega.dtheta = OPS2$dOmega.dtheta,
@@ -372,7 +378,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         matrix(0, ncol = NCOL(Omega), nrow = NROW(Omega), dimnames = dimnames(Omega))
     })
 
-    ### ** Compute variance covariance matrix (parameters)
+    ### ** Compute variance covariance matrix (coefficients)
     if(null.p){
         vcov.param <- stats::vcov(object)
         attr(vcov.param, "det") <- NULL
@@ -545,7 +551,7 @@ residuals2.lvmfit <- function(object, p = NULL, data = NULL,
         iN.cluster <- as.double(n.cluster - diag(df.mean))   
     }
 
-### ** compute information matrix for each pair of parameters
+### ** compute information matrix for each pair of coefficients
     Info <- matrix(0, nrow = n.param, ncol = n.param, dimnames = list(name.param,name.param))
     
     for(iP1 in 1:n.param){ # iP <- 1

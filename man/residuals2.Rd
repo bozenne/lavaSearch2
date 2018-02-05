@@ -26,25 +26,32 @@ residuals2(object, ...)
   return.vcov.param = FALSE, return.prepareScore2 = FALSE, ...)
 }
 \arguments{
-\item{object}{a fitted latent variable model.}
+\item{object}{a \code{lvmfit} object.}
 
-\item{...}{[internal] Only used by the generic method.}
+\item{...}{[internal] only used by the generic method.}
 
-\item{bias.correct}{[logical] should the leverage-adjusted residuals be used to compute the score? Otherwise the raw residuals will be used.}
+\item{bias.correct}{[logical] should the leverage-adjusted residuals be used to compute the score?
+Otherwise the raw residuals will be used.}
 
-\item{return.vcov.param}{Should the variance covariance matrix of the parameters be included in the output?}
+\item{return.vcov.param}{[logical]should the variance covariance matrix of the coefficients be included in the output?}
 
-\item{cluster}{[only required for gls objects] a vector indicating the clusters of observation that are iid.}
+\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
+Only required for \code{gls} models with no correlation argument.}
 
-\item{p}{[optional] vector of parameters at which to evaluate the score.}
+\item{p}{[numeric vector, optional] vector of coefficients at which to evaluate the score.}
 
-\item{data}{[optional] data set.}
+\item{data}{[dataa.frmae, optional] data set.}
 
-\item{as.clubSandwich}{method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.}
+\item{as.clubSandwich}{[logical] method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.}
 
-\item{second.order}{should the terms relative to the third derivative of the likelihood be be pre-computed?}
+\item{second.order}{[logical] should the terms relative to the third derivative of the likelihood be be pre-computed?}
 
-\item{return.prepareScore2}{should the quantities that have been pre-computed be returned?}
+\item{return.prepareScore2}{[logical] should the quantities that have been pre-computed be returned?}
+}
+\value{
+a matrix containing the residuals relative to each sample (in rows)
+and each endogenous variable (in column).
+Can also contain attributes like \code{prepareScore2} or \code{vcov.param}.
 }
 \description{
 Compute the residuals from a lvmfit object.
@@ -55,4 +62,7 @@ latent(m) <- ~eta
 
 e <- estimate(m,sim(m,1e2))
 residuals2(e)
+}
+\concept{
+small sample inference
 }

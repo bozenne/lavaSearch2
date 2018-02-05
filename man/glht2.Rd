@@ -18,18 +18,19 @@ glht2(model, ...)
 \item{model}{a \code{lvmfit} or \code{mmm} object.
 The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.}
 
-\item{...}{arguments passed to \code{glht}, \code{vcov}, and \code{compare2}.}
+\item{...}{[internal] Only used by the generic method.}
 
-\item{linfct}{[matrix or vector of character] the linear hypotheses to be tested. Same as the argument par of \code{\link{createContrast}}.}
+\item{linfct}{[matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.}
 
 \item{rhs}{[vector] the right hand side of the linear hypotheses to be tested.}
 
-\item{bias.correct}{[logical] small sample correction:
-should the leverage-adjusted residuals be used to compute the score?
-Otherwise the raw residuals will be used.}
+\item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
 
 \item{robust}{[logical] should robust standard error be used? 
 Otherwise rescale the influence function with the standard error obtained from the information matrix.}
+}
+\value{
+A \code{glht} object.
 }
 \description{
 Test general linear hypotheses and across latent variable models with small sample corrections.
@@ -78,4 +79,6 @@ summary(e.glht2)
 }
 \concept{
 multiple comparisons
+
+multiple comparison
 }

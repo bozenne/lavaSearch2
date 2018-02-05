@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: feb  2 2018 (11:46) 
+## last-updated: feb  5 2018 (16:20) 
 ##           By: Brice Ozenne
-##     Update #: 461
+##     Update #: 467
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' @param iid [matrix] zero-mean iid decomposition of the coefficient used to compute the statistic.
 #' @param iid.previous [matrix, EXPERIMENTAL] zero-mean iid decomposition of previously tested coefficient.
 #' @param quantile.compute [logical] should the rejection quantile be computed?
-#' @param quantile.previous [numeric, EXPERIMENTAL] rejection quantiles of the previously tested hypotheses. If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.previous.
+#' @param quantile.previous [numeric, EXPERIMENTAL] rejection quantiles of the previously tested hypotheses. If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument \code{iid.previous}.
 #' @param df [numeric] the degree of freedom defining the multivariate Student's t distribution.
 #' If \code{NULL} th multivariate Gaussian distribution will be used instead.
 #' @param method [character] the method used to compute the p-values.
@@ -34,7 +34,7 @@
 #' When the p-value is below, the corresponding link will be retained.
 #' @param ncpus [integer >0] the number of processors to use.
 #' If greater than 1, the computation of the p-value relative to each test is performed in parallel. 
-#' @param initCpus [logical] should the processors for the parallel computation be initialized?
+#' @param init.cpus [logical] should the processors for the parallel computation be initialized?
 #' @param n.sim [interger >0] the number of bootstrap simulations used to compute each p-values.
 #' Disregarded when the p-values are computed using numerical integration.
 #' @param n.repMax [integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
@@ -42,7 +42,7 @@
 #' Disregarded when the p-values are computed using numerical integration.
 #' @param trace [logical] should the execution of the function be traced?
 #'
-#' @return a list containing
+#' @return A list containing
 #' \itemize{
 #' \item p.adjust: the adjusted p-values.
 #' \item z: the rejection threshold.
@@ -78,7 +78,7 @@
 #'
 #' r4 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
 #'             method = "wild",
-#'             trace = FALSE, alpha = 0.05, initCpus = TRUE, n.sim = n.sim)
+#'             trace = FALSE, alpha = 0.05, init.cpus = TRUE, n.sim = n.sim)
 #' 
 #' rbind(integration = c(r1$p.adjust, quantile = r1$z),
 #'       bootNaive    = c(r2$p.adjust, quantile = r2$z),
@@ -112,7 +112,8 @@
 #'       bootResidual = c(r3c$p.adjust, quantile = r3c$z),
 #'       bootWild    = c(r4c$p.adjust, quantile = r4c$z))
 #' }
-#' 
+#' @concept modelsearch
+#' @concept post-selection inference
 
 
 ## * calcDistMaxIntegral
@@ -121,7 +122,7 @@
 calcDistMaxIntegral <- function(statistic, iid, df, 
                                 iid.previous = NULL, quantile.previous = NULL,
                                 quantile.compute = lava.options()$search.calc.quantile.int,
-                                alpha, ncpus = 1, initCpus = TRUE, trace){
+                                alpha, ncpus = 1, init.cpus = TRUE, trace){
 
     ## ** normalize arguments
     p.iid <- NCOL(iid)
@@ -181,7 +182,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values: ") }
     if(ncpus > 1){
         ## *** parallel computations
-        if(initCpus){
+        if(init.cpus){
             test.package <- try(requireNamespace("doParallel"), silent = TRUE)
             if(inherits(test.package,"try-error")){
                 stop("There is no package \'doParallel\' \n",
@@ -223,7 +224,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
                                          return(warperP(value))
                                      })
 
-        if(initCpus){
+        if(init.cpus){
             parallel::stopCluster(cl)
         }
             
@@ -253,7 +254,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
 #' @rdname calcDistMax
 #' @export
 calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.previous = NULL,
-                                 method, alpha, ncpus = 1, initCpus = TRUE, n.sim, trace, n.repMax = 100){
+                                 method, alpha, ncpus = 1, init.cpus = TRUE, n.sim, trace, n.repMax = 100){
 
     ## ** normalize arguments
     n <- NROW(iid)
@@ -282,7 +283,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
         n.simCpus <- rep(round(n.sim/ncpus),ncpus)
         n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
 
-        if(initCpus){
+        if(init.cpus){
             test.package <- try(requireNamespace("doParallel"), silent = TRUE)
             if(inherits(test.package,"try-error")){
                 stop("There is no package \'doParallel\' \n",
@@ -309,7 +310,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
                                                                           quantile.previous = quantile.previous, n.repMax = n.repMax))
                                                  })
 
-        if(initCpus){
+        if(init.cpus){
             parallel::stopCluster(cl)
         }
         

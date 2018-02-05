@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:08) 
 ## Version: 
-## Last-Updated: feb  4 2018 (13:55) 
+## Last-Updated: feb  5 2018 (17:17) 
 ##           By: Brice Ozenne
-##     Update #: 50
+##     Update #: 51
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -146,15 +146,10 @@ latent(m) <- ~eta1+eta2
 d <- sim(m, 5e1)
 e.lvm <- estimate(m,d)
 
-e.lvm2 <- e.lvm
-prepareScore2(e.lvm2) <- TRUE
-
 test_that("equivalence residuals2.lvm residuals.lvm", {
     test <- residuals2(e.lvm, bias.correct = FALSE)
-    test2 <- residuals2(e.lvm2, bias.correct = FALSE)    
     GS <- residuals(e.lvm)
     expect_equal(GS,test)
-    expect_equal(GS,test2)
 })
 
 ## * adjusted residuals

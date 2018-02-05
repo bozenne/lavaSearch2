@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (15:17) 
 ## Version: 
-## Last-Updated: feb  4 2018 (13:55) 
+## Last-Updated: feb  5 2018 (17:18) 
 ##           By: Brice Ozenne
-##     Update #: 68
+##     Update #: 70
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,22 +45,21 @@ dL <- dL[order(dL$Id),,drop=FALSE]
 
 ## ** lm
 e.lvm <- estimate(lvm(Y1~X1+X2), data = dW)
-e.lvm$prepareScore2 <- prepareScore2(e.lvm, second.order = TRUE, usefit = FALSE)
 e.gls <- gls(Y1~X1+X2, data = dW, method = "ML")
 
 test_that("linear regression: sCorrect",{
     ## lvm
     GS.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
     GS.gls <- sCorrect(e.gls, cluster = dW$Id, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.gls <- sCorrect(e.gls, cluster = dW$Id, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.gls, res.gls)
     
 })
@@ -87,23 +86,23 @@ expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 test_that("mixed model CS: sCorrect",{
     ## lvm
     GS.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
     GS.gls <- sCorrect(e.gls, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.gls <- sCorrect(e.gls, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.gls, res.gls)
 
     ## lme
     GS.lme <- sCorrect(e.lme, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lme <- sCorrect(e.lme, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.lme, res.lme)
 })
 
@@ -132,25 +131,25 @@ logLik(e.gls)
 test_that("mixed model UN: sCorrect",{
     ## lvm
     GS.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lvm <- sCorrect(e.lvm, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
 
     ## gls
     GS.gls <- sCorrect(e.gls, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.gls <- sCorrect(e.gls, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
 
     expect_equal(GS.gls, res.gls)
 
     ## lme
     ## pb: singular information matrix
     ## GS.lme <- sCorrect(e.lme, bias.correct = FALSE,
-    ##                  numericDerivative = TRUE)
+    ##                  numeric.derivative = TRUE)
     ## res.lme <- sCorrect(e.lme, bias.correct = FALSE,
-    ##                   numericDerivative = FALSE)
+    ##                   numeric.derivative = FALSE)
 })
 
 ## * latent variable model
@@ -171,10 +170,10 @@ regression(m) <- eta1~X1+X2
 e.lvm1F <- estimate(m,d)
 
 GS.lvm1F <- sCorrect(e.lvm1F, bias.correct = FALSE,
-                   numericDerivative = TRUE)
+                   numeric.derivative = TRUE)
 test_that("1 factor model: sCorrect",{    
     res.lvm1F <- sCorrect(e.lvm1F, bias.correct = FALSE,
-                        numericDerivative = FALSE)
+                        numeric.derivative = FALSE)
     expect_equal(GS.lvm1F, res.lvm1F)
     ## range(GS.lvm1F-res.lvm1F)
     ##    dfVariance(e.lvm1F)
@@ -189,11 +188,11 @@ latent(m) <- ~eta1+eta2
 e.lvm2F <- estimate(m,d)
 
 GS.lvm2F <- sCorrect(e.lvm2F, bias.correct = FALSE,
-                   numericDerivative = TRUE)
+                   numeric.derivative = TRUE)
 
 test_that("2 factor model: sCorrect",{
     res.lvm2F <- sCorrect(e.lvm2F, bias.correct = FALSE,
-                        numericDerivative = FALSE)
+                        numeric.derivative = FALSE)
     
     expect_equal(GS.lvm2F, res.lvm2F)
     ## range(GS.lvm2F-res.lvm2F)
@@ -212,9 +211,9 @@ e <- estimate(m,d)
 
 test_that("2 factor model (covariance between LV): sCorrect",{
     GS.lvm <- sCorrect(e, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lvm <- sCorrect(e, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     
     expect_equal(GS.lvm, res.lvm)
     ## range(GS.lvm2F-res.lvm2F)
@@ -230,9 +229,9 @@ e <- estimate(m,d)
 
 test_that("2 factor model (correlation between LV): sCorrect",{
     GS.lvm <- sCorrect(e, bias.correct = FALSE,
-                     numericDerivative = TRUE)
+                     numeric.derivative = TRUE)
     res.lvm <- sCorrect(e, bias.correct = FALSE,
-                      numericDerivative = FALSE)
+                      numeric.derivative = FALSE)
     expect_equal(GS.lvm, res.lvm)
     ## range(GS.lvm2F-res.lvm2F)
 })
@@ -248,9 +247,9 @@ e.lvmC <- estimate(m.sim,d)
 
 test_that("1 factor model: sCorrect",{    
     GS.lvmC <- sCorrect(e.lvmC, bias.correct = FALSE,
-                       numericDerivative = TRUE)
+                       numeric.derivative = TRUE)
     res.lvmC <- sCorrect(e.lvmC, bias.correct = FALSE,
-                        numericDerivative = FALSE)
+                        numeric.derivative = FALSE)
     expect_equal(GS.lvmC, res.lvmC)
 })
 

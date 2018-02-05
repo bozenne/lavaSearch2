@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:44) 
 ## Version: 
-## last-updated: feb  4 2018 (13:55) 
+## last-updated: feb  5 2018 (17:18) 
 ##           By: Brice Ozenne
-##     Update #: 67
+##     Update #: 74
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,7 +48,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -98,7 +98,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -140,7 +140,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression, covariance link (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -177,7 +177,7 @@ regression(m) <- eta1~X1+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -229,7 +229,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -271,7 +271,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model, covariance (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),
@@ -302,7 +302,7 @@ regression(m) <- eta1 ~ eta2+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model, correlation (at ML)",{
     test <- attr(score2(e, p = pars(e), indiv=TRUE, bias.correct = FALSE, return.vcov.param = TRUE),

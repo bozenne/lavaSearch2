@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:48) 
+## Last-Updated: feb  5 2018 (17:20) 
 ##           By: Brice Ozenne
-##     Update #: 238
+##     Update #: 256
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,17 +20,19 @@
 #' @description Compute the derivative of the information matrix.
 #' @name sCorrect
 #'
-#' @param object a gls, lme, or lvm object.
-#' @param x same as object.
-#' @param cluster the grouping variable relative to which the observations are iid.
-#'                Only required for gls models with no correlation argument.
-#' @param vcov.param the variance-covariance matrix of the estimates.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
-#' @param value same as bias.correct.
-#' @param numericDerivative If TRUE, the degree of freedom are computed using a numerical derivative.
-#' @param return.score [for internal use] export the score.
-#' @param ... [internal] Only used by the generic method.
+#' @param object,x a \code{gls}, \code{lme}, or \code{lvm} object.
+#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' Only required for \code{gls} models with no correlation argument.
+#' @param vcov.param [matrix] the variance-covariance matrix of the estimates.
+#' @param bias.correct,value [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param numeric.derivative [logical] should a numerical derivative be used to compute the first derivative of the information matrix?
+#' Otherwise an analytic formula is used.
+#' @param return.score [internal] export the score.
+#' @param ... [internal] only used by the generic method or by the <- methods.
 #'
+#' @concept small sample inference
+#' @concept derivative of the score equation
+#' 
 #' @export
 `sCorrect` <-
   function(object, ...) UseMethod("sCorrect")
@@ -81,7 +83,7 @@ sCorrect.lm <- function(object, bias.correct = FALSE,
 #' @rdname sCorrect
 #' @export
 sCorrect.gls <- function(object, cluster, vcov.param = NULL,
-                       bias.correct = FALSE, numericDerivative = FALSE,
+                       bias.correct = FALSE, numeric.derivative = FALSE,
                        return.score = FALSE, ...){
 
     p <- .coef2(object)
@@ -96,7 +98,7 @@ sCorrect.gls <- function(object, cluster, vcov.param = NULL,
     keep.param <- setdiff(name.param, attr(.coef2(object),"mean.coef"))
 
     ## ** pre-compute quantities
-    if(return.score || numericDerivative == FALSE){
+    if(return.score || numeric.derivative == FALSE){
         epsilonD2 <- residuals2(object, p = p, data = data, cluster = cluster,
                                 bias.correct = bias.correct,
                                 as.clubSandwich = as.clubSandwich,
@@ -105,7 +107,7 @@ sCorrect.gls <- function(object, cluster, vcov.param = NULL,
     }
     
     ### ** Compute the gradient
-    if(numericDerivative){
+    if(numeric.derivative){
         
         ### *** Define function to compute the variance-covariance matrix
         calcSigma <- function(iParam){ # x <- p.obj
@@ -128,7 +130,7 @@ sCorrect.gls <- function(object, cluster, vcov.param = NULL,
         test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
         if(inherits(test.package,"try-error")){
             stop("There is no package \'numDeriv\' \n",
-                 "This package is necessary when argument \'numericDerivative\' is TRUE \n")
+                 "This package is necessary when argument \'numeric.derivative\' is TRUE \n")
         }
         
         jac.param <- p[keep.param]        
@@ -196,7 +198,7 @@ sCorrect.lme <- sCorrect.gls
 #' @rdname sCorrect
 #' @export
 sCorrect.lvmfit <- function(object, vcov.param = NULL,
-                          bias.correct = TRUE, numericDerivative = FALSE,
+                          bias.correct = TRUE, numeric.derivative = FALSE,
                           return.score = FALSE, ...){
 
     detail <- NULL ## [:for CRAN check] subset
@@ -211,15 +213,15 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
 
     ## ** Pre-compute quantities
     if(is.null(object$prepareScore2)){
-        ## when using numerical derivative the score is computed for different sets of parameters
-        ## therefore the pre-computations should not use the estimated parameters
-        ## when using explicit formula for the derivative it is ok to use the estimated parameters in the pre-computations
+        ## when using numerical derivative the score is computed for different sets of coefficients
+        ## therefore the pre-computations should not use the estimated coefficients
+        ## when using explicit formula for the derivative it is ok to use the estimated coefficients in the pre-computations
         object$prepareScore2 <- prepareScore2(object,
                                               second.order = TRUE,
-                                              usefit = (numericDerivative==FALSE) )
+                                              usefit = (numeric.derivative==FALSE) )
     }
 
-    if(return.score || numericDerivative == FALSE){
+    if(return.score || numeric.derivative == FALSE){
         epsilonD2 <- residuals2(object, p = p, data = data,
                                 bias.correct = bias.correct,
                                 as.clubSandwich = as.clubSandwich,
@@ -235,7 +237,7 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
                          select = "originalLink", drop = TRUE)
     
     ### ** Compute the gradient 
-    if(numericDerivative){
+    if(numeric.derivative){
 
         ### *** Define function to compute the variance-covariance matrix
         if(bias.correct==FALSE){
@@ -269,7 +271,7 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
         test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
         if(inherits(test.package,"try-error")){
             stop("There is no package \'numDeriv\' \n",
-                 "This package is necessary when argument \'numericDerivative\' is TRUE \n")
+                 "This package is necessary when argument \'numeric.derivative\' is TRUE \n")
         }
         
         jac.param <- p[keep.param]
@@ -415,7 +417,7 @@ sCorrect.lvmfit2 <- function(object, ...){
         iN.cluster <- as.double(n.cluster - diag(df.mean))
     }
     
-    ### ** compute the derivative of the information matrix for each parameters
+    ### ** compute the derivative of the information matrix for each coefficients
     dInfo <-  array(0,
                     dim = c(n.param, n.param, length(name.deriv)),
                     dimnames = list(name.param, name.param, name.deriv))

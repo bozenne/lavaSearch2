@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: feb  2 2018 (11:57) 
+## last-updated: feb  5 2018 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 19
+##     Update #: 27
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,19 +15,24 @@
 ## 
 ### Code:
 
+## * var2dummy
 #' @title Convert Variable Names to Dummy Variables Names.
 #' @description When dealing with categorical variables, the \code{estimate} function convert the categorical variables into dummy variables.
 #' This function convert a set of variable names to their corresponding name in the model with dummy variables
 #' @name var2dummy
 #' 
-#' @param object a latent variable model.
-#' @param var the variable to be transformed.
-#' @param data dataset according to which the model should be updated.
-#' @param rm.first.factor should the first level of each categorical variable be ignored?
-#' @param ... additional arguments to be passed to lower levels functions.
+#' @param object a \code{lvm} object.
+#' @param var [character] the variable to be transformed.
+#' @param data [data.frame] dataset according to which the model should be updated.
+#' @param rm.first.factor [logical] should the first level of each categorical variable be ignored?
+#' @param ... [internal] additional arguments to be passed from \code{var2dummy.lvm} to \code{var2dummy.list}.
 #' 
 #' @examples
-#' library(lava)
+#'
+#' \dontrun{
+#' var2dummy <- lavaSearch2:::var2dummy
+#' var2dummy.list <- lavaSearch2:::var2dummy.list
+#' var2dummy.lvm <- lavaSearch2:::var2dummy.lvm
 #' 
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
@@ -37,10 +42,13 @@
 #' var2dummy(m, var = c("X1","X2"))
 #' categorical(m,labels=c("1","2","3")) <- ~X2
 #' var2dummy(m, var = c("X1","X2"))
-#' @export
+#' }
+#' 
+#' @keywords internal
 `var2dummy` <-
-  function(object,...) UseMethod("var2dummy")
+    function(object,...) UseMethod("var2dummy")
 
+## * var2dummy.list
 #' @rdname var2dummy
 #' @export
 var2dummy.list <- function(object, var, rm.first.factor = TRUE, ...){
@@ -61,6 +69,7 @@ var2dummy.list <- function(object, var, rm.first.factor = TRUE, ...){
     return(var)
 }
 
+## * var2dummy.lvm
 #' @rdname var2dummy
 #' @export
 var2dummy.lvm <- function(object, data = NULL, ...){

@@ -9,19 +9,21 @@ matrixPower(object, power, symmetric, tol = 1e-12)
 \arguments{
 \item{object}{a matrix.}
 
-\item{power}{power to be applied to the matrix.}
+\item{power}{[numeric] power to be applied to the matrix.}
 
-\item{symmetric}{is the matrix symmetric? Argument passed to the function \code{eigen}.}
+\item{symmetric}{[logical] is the matrix symmetric? Argument passed to the function \code{eigen}.}
 
-\item{tol}{the threshold under which the eigenvalues are set to 0.}
+\item{tol}{[numeric >0] the threshold under which the eigenvalues are set to 0.}
 }
 \value{
-a matrix.
+A matrix.
 }
 \description{
 Compute the power of a matrix.
 }
 \examples{
+matrixPower <- lavaSearch2:::matrixPower
+
 M <- matrix(rnorm(2e2),20,10)
 Sigma <- var(M)
 Sigma.half <- matrixPower(Sigma, power = 1/2, symmetric = FALSE)
@@ -31,3 +33,4 @@ Sigma.m1 <- matrixPower(Sigma, power = -1, symmetric = FALSE)
 round(Sigma.m1 \%*\% Sigma,5)
 
 }
+\keyword{internal}

@@ -15,13 +15,17 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, bias.correct = TRUE, ...)
+\method{compare2}{lm}(object, bias.correct = TRUE,
+  numeric.derivative = FALSE, ...)
 
-\method{compare2}{gls}(object, bias.correct = TRUE, ...)
+\method{compare2}{gls}(object, bias.correct = TRUE,
+  numeric.derivative = FALSE, cluster = NULL, ...)
 
-\method{compare2}{lme}(object, bias.correct = TRUE, ...)
+\method{compare2}{lme}(object, bias.correct = TRUE,
+  numeric.derivative = FALSE, ...)
 
-\method{compare2}{lvmfit}(object, bias.correct = TRUE, ...)
+\method{compare2}{lvmfit}(object, bias.correct = TRUE,
+  numeric.derivative = FALSE, ...)
 
 \method{compare2}{lm2}(object, ...)
 
@@ -32,16 +36,22 @@ compare2(object, ...)
 \method{compare2}{lvmfit2}(object, ...)
 
 .compare2(object, par = NULL, contrast = NULL, null = NULL,
-  as.lava = TRUE, level = 0.95, ...)
+  as.lava = TRUE, level = 0.95)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
 
-\item{...}{[internal] Only used by the generic method.
-One exception: for gls models \code{...} is passed to dVco2,
-this can be useful when the argument cluster is required.}
+\item{...}{[internal] Only used by the generic method.}
 
-\item{bias.correct}{[logical] should a small sample correction for the variance/influence function of the coefficients be performed ?}
+\item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
+
+\item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
+Otherwise an analytic formula is used.
+Argument passed to \code{sCorrect}.}
+
+\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
+Only required for \code{gls} models with no correlation argument.
+Argument passed to \code{sCorrect}.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}
@@ -54,6 +64,10 @@ See the examples section.}
 
 \item{level}{[numeric 0-1] the confidence level of the confidence interval.}
 }
+\value{
+If \code{as.lava=TRUE} an object of class \code{htest}.
+Otherwise a \code{data.frame} object.
+}
 \description{
 Test Linear Hypotheses using a Wald or an F statistic.
 Similar to \code{lava::compare} but with small sample correction.
@@ -63,14 +77,14 @@ A set of linear hypothesis can be written:
 \deqn{
   contrast \theta = null
 }
-The contrast matrix must contain as many columns as there are parameters in the model (mean and variance parameters).
+The contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
 Each hypothesis correspond to a row in the contrast matrix.
 So the null vector should contain as many elements as there are row in the contrast matrix.
 The method \code{createContrast} can help to initialize the contrast matrix.
 \cr \cr
 
 Instead of a contrast matrix, on can also use expressions encoded in a vector of characters via the argument \code{par}.
-For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model parameters.
+For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
 }
 \examples{
 #### simulate data ####
@@ -113,4 +127,7 @@ compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
 \seealso{
 \code{\link{createContrast}} to create contrast matrices. \cr
 \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
+}
+\concept{
+small sample inference
 }

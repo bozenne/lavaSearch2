@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: feb  2 2018 (11:56) 
+## last-updated: feb  5 2018 (15:51) 
 ##           By: Brice Ozenne
-##     Update #: 250
+##     Update #: 276
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,14 +17,32 @@
 
 ## * documentation - compareSearch
 #' @title Compare Methods to Identify Missing Local Dependencies in a LVM
-#' @description Compare methods to identify missing local dependencies in a LVM
+#' @description Compare methods to identify missing local dependencies in a LVM.
 #' @name compareSearch
 #' 
-#' @param object a lvm model.
+#' @param object a \code{lvm} model.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
 #' When the p-value is below, the corresponding link will be added to the model
 #' and the search will continue. Otherwise the search will stop.
-#' @inherit modelsearch2
+#' @param statistic [character] statistic used to perform the test.
+#' Can the likelihood ratio test (\code{"LR"}),
+#' the score (\code{"score"}),
+#' or the max statistic (\code{"max"}).
+#' @param method.p.adjust [character] the method used to adjust the p.values for multiple comparisons.
+#' Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).
+#' Ignored when using the max statistic.
+#' @param trace [logical] should the execution be traced?
+#' @param ... arguments passed to \code{\link{modelsearch2}}.
+#'
+#' @details This function calls the \code{\link{modelsearch2}} function
+#' to find the local dependencies.
+#' 
+#' @return A list containing:
+#' \itemize{
+#' \item newlink: a list containing for each \code{statistic}-\code{method.p.adjust} the local dependencies.
+#' \item table.coef: a \code{data.frame} object containig for each \code{statistic}-\code{method.p.adjust} the estimated coefficients.
+#' \item ls.search: a list containg for each \code{statistic}-\code{method.p.adjust} a \code{modelsearch2} object.
+#' }
 #' 
 #' @examples
 #' mSim <- lvm(Y~G+X1+X2)
@@ -40,7 +58,7 @@
 #'                      method.p.adjust = c("holm","fdr","max"))
 #' res
 #' }
-#' 
+#' @concept modelsearch
 
 ## * function - compareSearch
 #' @rdname compareSearch

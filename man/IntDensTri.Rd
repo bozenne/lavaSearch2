@@ -8,25 +8,33 @@ IntDensTri(mu, Sigma, df, n, x.min, z.max = NULL, type = "double",
   proba.min = 1e-06, prune = NULL, distribution = "pmvnorm")
 }
 \arguments{
-\item{mu}{vector of means.}
+\item{mu}{[numeric vector] the expectation of the joint distribution.}
 
-\item{Sigma}{variance-covariance matrix}
+\item{Sigma}{[matrix] the variance-covariance of the joint distribution.}
 
-\item{df}{degree of freedoms (only used for the student distribution).}
+\item{df}{[interger > 0] the degree of freedom of the joint Student's t distribution.
+Only used when \code{distribution="pvmt"}.}
 
-\item{n}{number of points in the x directions.}
+\item{n}{[integer > 0] number of points for the numerical integration.}
 
-\item{x.min}{the minimum value along the x axis}
+\item{x.min}{[numeric] the minimum value along the x axis.}
 
-\item{z.max}{the maximum value along the z axis. Define the dimension of Z.}
+\item{z.max}{[numeric vector, optional] the maximum value along the z axis.
+Define the dimension of Z.}
 
-\item{type}{the type of mesh to be used. Can be \"raw\", \"double\", or \"fine\".}
+\item{type}{[character] the type of mesh to be used.
+Can be \code{\"raw\"}, \code{\"double\"}, or \code{\"fine\"}.}
 
-\item{proba.min}{the probability used to find the maximum value along the x axis. Only used if \code{prune} is not specified.}
+\item{proba.min}{[numeric 0-1] the probability used to find the maximum value along the x axis.
+Only used if \code{prune} is not specified.}
 
-\item{prune}{number of standard deviations after which the domain ends along the x axis.}
+\item{prune}{[integer >0] number of standard deviations after which the domain ends along the x axis.}
 
-\item{distribution}{Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (student's t distribution)}
+\item{distribution}{[character] type of joint distribution.
+Can be \code{"pmvnorm"} (normal distribution) or \code{"pvmt"} (Student's t distribution)}
+}
+\value{
+A numeric.
 }
 \description{
 Consider a univariate random variable X,
@@ -103,6 +111,6 @@ res2$grid
 }
 
 }
-\author{
-Brice Ozenne
+\concept{
+post-selection inference
 }

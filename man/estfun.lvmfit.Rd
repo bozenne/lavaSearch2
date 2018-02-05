@@ -7,17 +7,17 @@
 \method{estfun}{lvmfit}(x, ...)
 }
 \arguments{
-\item{x}{an lvmfit object.}
+\item{x}{an \code{lvmfit} object.}
 
 \item{...}{arguments passed to methods.}
 }
 \description{
 Extract the empirical estimating functions of a lvmfit object.
-This function is for internal use.
+This function is for internal use but need to be public to enable its use by \code{multcomp::glht}.
 }
 \details{
-This function enables to use the glht function with lvmfit object.
-Otherwise when calling multcomp:::vcov.mmm then sandwich::sandwich and then sandwich::meat, sandwich::meat will complain that estfun is not defined for lvmfit objects.
+This function enables to use the \code{glht} function with lvmfit object.
+Otherwise when calling \code{multcomp:::vcov.mmm} then \code{sandwich::sandwich} and then \code{sandwich::meat}, \code{sandwich::meat} will complain that \code{estfun} is not defined for \code{lvmfit} objects.
 }
 \examples{
 library(multcomp)
@@ -52,4 +52,7 @@ resC <- createContrast(e.mmm, var.test = "Treatment", add.variance = FALSE)
 e.glht <- glht(e.mmm, linfct = resC$mlf)
 summary(e.glht)
 
+}
+\concept{
+multiple comparison
 }

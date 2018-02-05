@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: feb  4 2018 (13:55) 
+## last-updated: feb  5 2018 (13:48) 
 ##           By: Brice Ozenne
-##     Update #: 182
+##     Update #: 191
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,6 +42,7 @@ library(lme4)
 library(lmerTest)
 library(pbkrtest)
 lava.options(symbols = c("~","~~"))
+.coef2 <- lavaSearch2:::.coef2
 
 context("compare2")
 
@@ -93,7 +94,7 @@ test_that("linear regression: df",{
     n.param <- length(name.param)        
     df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
 
-    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    name.param <- names(.coef2(e.gls))
     n.param <- length(name.param)        
     df.lm <- compare2(e.lm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
 
@@ -120,7 +121,7 @@ test_that("linear regression: df adjusted",{
     df.adj.lvm <- compare2(e.lvm, par = name.param,
                            bias.correct = TRUE, as.lava = FALSE)[1:n.param,]
 
-    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    name.param <- names(.coef2(e.gls))
     n.param <- length(name.param)        
     df.adj.lm <- compare2(e.lm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:n.param,]
 
@@ -175,9 +176,9 @@ test_that("mixed model: Satterthwaite correction (Wald)",{
 
     name.param <- names(coef(e.lvm))
     n.param <- length(name.param)        
-    df1.lvm <- compare2(e.lvm, par = name.param, numericDerivative = FALSE,
+    df1.lvm <- compare2(e.lvm, par = name.param, numeric.derivative = FALSE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
-    df2.lvm <- compare2(e.lvm, par = name.param, numericDerivative = TRUE,
+    df2.lvm <- compare2(e.lvm, par = name.param, numeric.derivative = TRUE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
     expect_equal(df1.lvm,df2.lvm)
     expect_equal(as.double(GS$df),
@@ -185,20 +186,20 @@ test_that("mixed model: Satterthwaite correction (Wald)",{
     expect_equal(as.double(GS$tvalue),
                  as.double(df1.lvm[1:5,"statistic"]), tol = 1e-8) ## needed for CRAN
 
-    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    name.param <- names(.coef2(e.lme))
     n.param <- length(name.param)        
-    df1.lme <- compare2(e.lme, par = name.param, numericDerivative = FALSE,
+    df1.lme <- compare2(e.lme, par = name.param, numeric.derivative = FALSE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
-    df2.lme <- compare2(e.lme, par = name.param, numericDerivative = TRUE,
+    df2.lme <- compare2(e.lme, par = name.param, numeric.derivative = TRUE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
     expect_equal(df1.lme, df2.lme)
     expect_equivalent(df1.lme, df1.lvm)
 
-    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    name.param <- names(.coef2(e.gls))
     n.param <- length(name.param)        
-    df1.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
+    df1.gls <- compare2(e.gls, par = name.param, numeric.derivative = FALSE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
-    df2.gls <- compare2(e.gls, par = name.param, numericDerivative = TRUE,
+    df2.gls <- compare2(e.gls, par = name.param, numeric.derivative = TRUE,
                         bias.correct = FALSE, as.lava = FALSE)[1:n.param,]
     expect_equal(df1.gls, df2.gls)
     expect_equal(unlist(df1.gls[1:5,]), unlist(df1.lvm[1:5,]), tolerance = 1e-6)
@@ -224,18 +225,18 @@ test_that("mixed model: KR-like correction",{
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
     name.param <- names(coef(e.lvm))
     n.param <- length(name.param)        
-    df.adj.lvm <- compare2(e.lvm, par = name.param, numericDerivative = FALSE,
+    df.adj.lvm <- compare2(e.lvm, par = name.param, numeric.derivative = FALSE,
                            bias.correct = TRUE, as.lava = FALSE)
 
-    name.param <- names(lavaSearch2:::.coef2(e.lme))
+    name.param <- names(.coef2(e.lme))
     n.param <- length(name.param)        
-    df.adj.lme <- compare2(e.lme, par = name.param, numericDerivative = FALSE,
+    df.adj.lme <- compare2(e.lme, par = name.param, numeric.derivative = FALSE,
                            bias.correct = TRUE, as.lava = FALSE)
     expect_equivalent(df.adj.lvm, df.adj.lme)
 
-    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    name.param <- names(.coef2(e.gls))
     n.param <- length(name.param)        
-    df.adj.gls <- compare2(e.gls, par = name.param, numericDerivative = FALSE,
+    df.adj.gls <- compare2(e.gls, par = name.param, numeric.derivative = FALSE,
                            bias.correct = TRUE, as.lava = FALSE)
     expect_equal(unlist(df.adj.gls[1:5,]), unlist(df.adj.lvm[1:5,]), tolerance = 1e-6)
 })
@@ -267,17 +268,17 @@ test_that("UN mixed model: df",{
     name.param <- names(coef(e.lvm))
     n.param <- length(name.param)        
     df1.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE,
-                        numericDerivative = FALSE, as.lava = FALSE)
+                        numeric.derivative = FALSE, as.lava = FALSE)
     df2.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE,
-                        numericDerivative = TRUE, as.lava = FALSE)
+                        numeric.derivative = TRUE, as.lava = FALSE)
     expect_equal(df1.lvm, df2.lvm)
 
-    name.param <- names(lavaSearch2:::.coef2(e.gls))
+    name.param <- names(.coef2(e.gls))
     n.param <- length(name.param)        
     df1.gls <- compare2(e.gls, par = name.param, bias.correct = FALSE,
-                        numericDerivative = TRUE, as.lava = FALSE)
+                        numeric.derivative = TRUE, as.lava = FALSE)
     df2.gls <- compare2(e.gls, par = name.param, bias.correct = FALSE,
-                        numericDerivative = FALSE, as.lava = FALSE)
+                        numeric.derivative = FALSE, as.lava = FALSE)
     expect_equal(df1.gls,df2.gls)
 
 

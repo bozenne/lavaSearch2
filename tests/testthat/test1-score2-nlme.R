@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (11:40) 
 ## Version: 
-## last-updated: feb  4 2018 (13:55) 
+## last-updated: feb  5 2018 (13:48) 
 ##           By: Brice Ozenne
-##     Update #: 104
+##     Update #: 105
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,6 +24,7 @@ if(FALSE){ ## already called in test-all.R
 
 library(nlme)
 lava.options(symbols = c("~","~~"))
+.coef2 <- lavaSearch2:::.coef2
 
 context("iid2-nlme")
 

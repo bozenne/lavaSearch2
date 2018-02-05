@@ -12,7 +12,7 @@ setLink(object, ...)
 \arguments{
 \item{object}{a \code{lvm} object.}
 
-\item{...}{[internal] Only used by the generic method.}
+\item{...}{[internal] only used by the generic method.}
 
 \item{var1}{[character or formula] the exogenous variable of the new link or a formula describing the link to be added to the lvm.}
 
@@ -23,7 +23,7 @@ setLink(object, ...)
 \item{warnings}{[logical] should a warning be displayed if the link is not found in the \code{lvm} object.}
 }
 \description{
-Generic interface to set a value to a link in a lvm object.
+Generic interface to set a value to a link in a \code{lvm} object.
 }
 \examples{
 library(lava)
@@ -41,4 +41,8 @@ estimate(m1, lava::sim(m,1e2))
 
 m2 <- setLink(m, y1 ~ y2, value = 0.5)
 estimate(m2, lava::sim(m,1e2))
+
+}
+\concept{
+setter
 }

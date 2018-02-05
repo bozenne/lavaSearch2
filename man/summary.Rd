@@ -33,7 +33,8 @@ summary2(object, ...)
 \item{...}{arguments passed to the \code{summary} method of the object (when calling \code{summary})
 or to the \code{sCorrect} method (when calling \code{summary2}).}
 
-\item{bias.correct}{[logical] should a small sample correction for the standard errors of the coefficients be performed ? See \code{\link{sCorrect}} for more details.}
+\item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?
+See \code{\link{sCorrect}} for more details.}
 }
 \description{
 Summary with small sample correction.
@@ -76,4 +77,7 @@ summary(e.lvm)$coef
 }
 \seealso{
 \code{\link{sCorrect}} for more detail about the small sample correction.
+}
+\concept{
+small sample inference
 }

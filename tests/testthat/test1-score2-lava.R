@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 13 2017 (11:28) 
 ## Version: 
-## last-updated: feb  4 2018 (13:55) 
+## last-updated: feb  5 2018 (17:17) 
 ##           By: Brice Ozenne
-##     Update #: 190
+##     Update #: 197
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,7 +35,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("linear regression (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -84,7 +84,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -129,7 +129,7 @@ d <- sim(m,n)
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("multiple linear regression, covariance link (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -171,7 +171,7 @@ regression(m) <- eta1~X1+X2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("factor model (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -224,7 +224,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -271,7 +271,7 @@ latent(m) <- ~eta1+eta2
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model, covariance (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)
@@ -308,7 +308,7 @@ regression(m) <- eta1 ~ eta2+X2+X3
 
 e <- estimate(m,d)
 param <- coef(e)
-prepareScore2(e) <- FALSE
+## prepareScore2(e) <- FALSE
 
 test_that("2 factor model, correlation LV (at ML)",{
     test <- score2(e, indiv=TRUE, bias.correct = FALSE)

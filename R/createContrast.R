@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: feb  2 2018 (09:27) 
+## Last-Updated: feb  5 2018 (15:51) 
 ##           By: Brice Ozenne
-##     Update #: 176
+##     Update #: 195
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,24 +16,24 @@
 ### Code:
 
 ## * Documentation - createContrast
-#' @title Create Contrast matrix.
-#' @description Returns an contrast matrix corresponding an object.
-#' The contrast matrix will contains the hypotheses in rows and the model parameters in columns.
+#' @title Create Contrast matrix
+#' @description Returns a contrast matrix corresponding an object.
+#' The contrast matrix will contains the hypotheses in rows and the model coefficients in columns.
 #' @name createContrast
 #' 
-#' @param object an \code{ls.lvmfit} object.
+#' @param object a \code{ls.lvmfit} object.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested. See the examples section. 
-#' @param add.variance [logical] should the variance parameters be considered as model parameters?
+#' @param add.variance [logical] should the variance coefficients be considered as model coefficients?
 #' Required for lm, gls, and lme models.
 #' @param var.test [character] a regular expression that is used to identify the coefficients to be tested using \code{grep}. Each coefficient will be tested in a separate hypothesis. When this argument is used, the argument \code{par} is disregarded.
-#' @param name.param [internal] the names of all the model parameters.
+#' @param name.param [internal] the names of all the model coefficients.
 #' @param add.rowname [internal] should a name be defined for each hypothesis.
-#' @param ... Only used by the generic method.
+#' @param ... [internal] Only used by the generic method.
 #'
 #' @details
-#' One can initialize an empty contrast matrix setting the argument par to \code{character(0)}. \cr \cr
+#' One can initialize an empty contrast matrix setting the argument\code{par} to \code{character(0)}. \cr \cr
 #'
-#' When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}.
+#' When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}. \cr
 #' When using \code{lavaSearch2::glht2} one should set the argument \code{add.variance} to \code{TRUE}.
 #' 
 #' @return A list containing
@@ -42,7 +42,7 @@
 #' \item{null} [vector] the right hand side of the linear hypotheses.
 #' \item{Q} [integer] the rank of the contrast matrix.
 #' \item{ls.contrast} [list, optional] the contrast matrix corresponding to each submodel.
-#' Only present when the argument object is a list of models.
+#' Only present when the \code{argument} object is a list of models.
 #' }
 #' @examples
 #' ## Simulate data
@@ -73,6 +73,8 @@
 #' createContrast(ls.lvm, var.test = "Treatment")
 #' createContrast(ls.lvm, par = character(0))
 #'
+#' @concept small sample inference
+#' 
 #' @export
 `createContrast` <-
     function(object, ...) UseMethod("createContrast")
@@ -87,7 +89,7 @@ createContrast.character <- function(object, name.param, add.rowname = TRUE,
     
     n.hypo <- length(object)
     if(any(nchar(object)==0)){
-        stop("Argument contains empty character string(s) instead of an expression involving the model parameters \n")
+        stop("Argument contains empty character string(s) instead of an expression involving the model mean coefficients \n")
     }
     null <- rep(NA, n.hypo)
     contrast <- matrix(0, nrow = n.hypo, ncol = n.param,
@@ -284,14 +286,17 @@ createContrast.mmm <- createContrast.list
 
 ## * .contrast2name
 #' @title Create Rownames for a Contrast Matrix
-#' @description Create rownames for a contrast matrix using the coefficients and the names of the parameters. The rownames will be [value * name] == null, e.g. [beta + 4*alpha] = 0.
+#' @description Create rownames for a contrast matrix using the coefficients and the names of the coefficients. The rownames will be [value * name] == null, e.g. [beta + 4*alpha] = 0.
 #' @name contrast2name
 #'
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param null [vector, optional] the right hand side of the linear hypotheses to be tested.
 #'
-#' @details When argument NULL is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
+#' @details When argument \code{NULL} is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
+#'
+#' @return a character vector.
 #' 
+#' @keywords internal
 .contrast2name <- function(contrast, null = NULL){
 
     contrast.names <- colnames(contrast)

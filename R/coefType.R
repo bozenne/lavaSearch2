@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: feb  2 2018 (12:00) 
+## last-updated: feb  5 2018 (17:39) 
 ##           By: Brice Ozenne
-##     Update #: 467
+##     Update #: 501
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,17 +15,14 @@
 ## 
 ### Code:
 
-## * documentation - coefType
-#' @title Extract the Specific Coefficient Bames or Positions in a LVM
-#' @description Extract the specific coefficient names or positions in a latent varable model.
-#' 
+## * Documentation - coefType
+#' @title Extract the Type of Each Coefficient
+#' @description Extract the type of each coefficient of a \code{lvm} object.
 #' @name coefType
 #' 
-#' @param object a lvm model or a fitted lvm model 
-#' @param value should the name of the coefficient be returned? Else return the coefficients
-#' @param data [optional] the dataset. Help to identify the categor
-#' @param as.lava export the type of parameters mimicking lava:::coef.
-#' @param keep.var should the variance parameters be returned?
+#' @param object a \code{lvm} or \code{lvmfit} object. 
+#' @param data [data.frame, optional] the dataset. Help to identify the categorical variables.
+#' @param as.lava [logical] export the type of coefficients mimicking \code{lava:::coef}.
 #' @param ... arguments to be passed to \code{lava::coef}
 #'
 #' @details A lvm can be written as a measurement model:
@@ -44,7 +41,11 @@
 #' \item variance: diagonal of \eqn{\Sigma} and \eqn{\Psi}.
 #' }
 #'
-#' @return \code{coefType} either returns a data.frame:
+#' A link denotes a relationship between two variables.
+#' The coefficient are used to represent the strength of the association between two variable, i.e. the strength of a link.
+#' A coefficient may corresponds to the strength of one or several link.
+#'
+#' @return \code{coefType} returns a \code{data.frame} when \code{as.lava=FALSE}:
 #' \itemize{
 #' \item name: name of the link
 #' \item Y: outcome variable
@@ -54,9 +55,9 @@
 #' \item value: if TRUE, the value of the link is set and not estimated.
 #' \item marginal: if TRUE, the value of the link does not impact the estimation.
 #' \item detail: a more detailled decription of the type of link (see the details section)
-#' \item lava: name of the parameter in lava
+#' \item lava: name of the coefficient in lava
 #' }
-#' or a named vector containing the type of the links.
+#' When \code{as.lava=TRUE}, \code{coefType} returns a named vector containing the type of each coefficient.
 #' 
 #' @examples 
 #' #### regression ####
@@ -66,21 +67,6 @@
 #' coefType(m)
 #' coefType(e)
 #'
-#' coefCov(m)
-#' coefCov(m, value = TRUE)
-#'
-#' coefCov(m, keep.var = TRUE)
-#' coefCov(m, value = TRUE, keep.var = TRUE)
-#'
-#' coefIndexModel(m)
-#' coefIndexModel(e)
-#' 
-#' coefIntercept(m)
-#' coefIntercept(m, value = TRUE)
-#'
-#' coefReg(m)
-#' coefReg(m, value = TRUE)
-#' 
 #' #### LVM ####
 #' m <- lvm()
 #' regression(m) <- c(y1,y2,y3)~u
@@ -95,55 +81,31 @@
 #' coefType(m)
 #' coefType(e)
 #'
-#' coefCov(m)
-#' coefCov(m, value = TRUE) 
-#'
-#' coefCov(m, keep.var = TRUE)
-#' coefCov(m, value = TRUE, keep.var = TRUE)
-#' 
-#' coefExtra(m)
-#'
-#' coefIndexModel(m)
-#' coefIndexModel(e)
-#' 
+#' ## additional categorical variables 
 #' categorical(m, labels = as.character(1:3)) <- "X1"
-#' coefExtra(m)
-#' coefExtra(m, value = TRUE)
-#'
-#' categorical(m, labels = as.character(1:3)) <- "x1"
 #'
 #' coefType(m, as.lava = FALSE)
-#' 
-#' coefIntercept(m)
-#' coefIntercept(m, value = TRUE)
-#' coefIntercept(e)
-#'
-#' coefReg(e, value = TRUE)
 #'
 #' #### LVM with constrains ####
 #' m <- lvm(c(Y1~0+1*eta1,Y2~0+1*eta1,Y3~0+1*eta1,
 #'           Z1~0+1*eta2,Z2~0+1*eta2,Z3~0+1*eta2))
 #' latent(m) <- ~eta1 + eta2
 #' e <- estimate(m, sim(m,1e2))
+#' 
 #' coefType(m)
-#' coef(e, level = 9)
 #' coefType(e)
 #' 
 #' #### multigroup ####
 #' m <- lvm(Y~X1+X2)
 #' eG <- estimate(list(m,m), list(sim(m, 1e2),sim(m, 1e2)))
 #' coefType(eG)
-#' coef(eG)
-#' 
-#' coefIndexModel(eG)
-#' 
+#'
+#' @concept extractor
 #' @export
 `coefType` <-
   function(object,...) UseMethod("coefType")
 
-
-## * method - coefType
-## ** method - coefType.lvm
+## * coefType.lvm
 #' @rdname coefType
 #' @export
 coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
@@ -243,7 +205,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
         ls.marginal$covariance <- rep(FALSE, n.covariance)
     }
     
-    ## *** external parameters
+    ## *** external coefficients
     n.external <- length(object$expar)
     if(n.external>0){
         ls.name$external <- names(object$expar)
@@ -279,7 +241,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
     if(!is.null(object$attributes$ordinalparname)){
         resCar <- defineCategoricalLink(object, link = df.param$name, data = data)
         
-        ## normal parameters
+        ## normal coefficients
         resCar.Nexternal <- subset(resCar,
                                    subset = is.na(externalLink),
                                    select = c("link","type","factice","level","originalLink","externalLink"))
@@ -291,7 +253,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
         df.Nexternal <- merge(subset(df.param, subset = type != "external"),
                               resCar.Nexternal, by = "name")
 
-        ## external parameters
+        ## external coefficients
         resCar.external <- subset(resCar,
                                   subset = !is.na(externalLink),
                                   select = c("link", "endogenous", "exogenous", "type", "factice", "level", "originalLink", "externalLink"))
@@ -332,7 +294,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
 
     ## *** export
     if(as.lava){
-        ## add extra parameter as links
+        ## add extra mean as links
         vec.extra <- unique(stats::na.omit(df.param$externalLink))
         if(length(vec.extra)>0){
             df.extra <- data.frame(name = vec.extra, type = "extra",
@@ -352,7 +314,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
     }
 }
 
-## ** method - coefType.lvmfit
+## * coefType.lvmfit
 #' @rdname coefType
 #' @export
 coefType.lvmfit <- function(object, as.lava = TRUE, ...){ 
@@ -371,7 +333,7 @@ coefType.lvmfit <- function(object, as.lava = TRUE, ...){
     }
 }
 
-## ** method - coefType.multigroup
+## * coefType.multigroup
 #' @rdname coefType
 #' @export
 coefType.multigroup <- function(object, as.lava = TRUE, ...){
@@ -399,219 +361,6 @@ coefType.multigroup <- function(object, as.lava = TRUE, ...){
     }
 }
 
-## * method - coefCov
-#' @rdname coefType
-#' @export
-`coefCov` <-
-  function(object,...) UseMethod("coefCov")
-
-#' @rdname coefType
-#' @export
-coefCov.lvm <- function(object, value = FALSE, keep.var = FALSE, ...){
-
-    res <- retainType(type = coefType(object, ...),
-                      validType = c("covariance", if(keep.var){"variance"}else{NULL}),
-                      value = value)
-
-    return(res)
-}
-
-#' @rdname coefType
-#' @export
-coefCov.lvmfit <- coefCov.lvm
-
-#' @rdname coefType
-#' @export
-coefCov.multigroup <- coefCov.lvm
-
-## * method - coefExtra
-
-#' @rdname coefType
-#' @export
-`coefExtra` <-
-  function(object,...) UseMethod("coefExtra")
-
-#' @rdname coefType
-#' @export
-coefExtra.lvm <- function(object, value = FALSE, ...){
-    
-    res <- retainType(type = coefType(object, ...),
-                      validType = "extra",
-                      value = value) 
-    
-    return(res)    
-}
-
-#' @rdname coefType
-#' @export
-coefExtra.lvmfit <- coefExtra.lvm
-
-#' @rdname coefType
-#' @export
-coefExtra.multigroup <- coefExtra.lvm
-
-## * method - coefIndexModel
-#' @rdname coefType
-#' @export
-`coefIndexModel` <-
-  function(object,...) UseMethod("coefIndexModel")
-
-#' @rdname coefType
-#' @export
-coefIndexModel.lvm <- function(object, ...){
-    name.coef <- stats::coef(object)
-    index <- rep(1, length(name.coef))
-    names(index) <- name.coef
-    return(index)
-}
-
-#' @rdname coefType
-#' @export
-coefIndexModel.lvmfit <- function(object, ...){
-    name.coef <- names(stats::coef(object))
-    index <- rep(1, length(name.coef))
-    names(index) <- name.coef
-    return(index)
-}
-
-#' @rdname coefType
-#' @export
-coefIndexModel.multigroup <- function(object, ...){
-    n.model <- length(object$lvm)
-
-    ## new coef names
-    allCoef <- object$name
-    n.allCoef <- length(allCoef)
-    index.AllCoef <- object$coef
-  
-    index <- stats::setNames(rep(NA, n.allCoef), allCoef)
-  
-    for(iModel in 1:n.model){ # iModel <- 1
-        index[index.AllCoef[[iModel]]] <- iModel
-    }
-  
-    #### export
-    return(index)
-}
-
-#' @rdname coefType
-#' @export
-coefIndexModel.multigroupfit <- function(object, ...){
-    out <- coefIndexModel(object$model)
-    return(out[names(stats::coef(object))])
-}
-  
-## * method - coefIntercept
-
-#' @rdname coefType
-#' @export
-`coefIntercept` <-
-  function(object,...) UseMethod("coefIntercept")
-
-#' @rdname coefType
-#' @export
-coefIntercept.lvm <- function(object, value = FALSE, ...){ 
-
-    res <- retainType(type = coefType(object, ...),
-                      validType = "intercept",
-                      value = value)
-
-    return(res)
-}
-
-#' @rdname coefType
-#' @export
-coefIntercept.lvmfit <- coefIntercept.lvm
-
-#' @rdname coefType
-#' @export
-coefIntercept.multigroup <- coefIntercept.lvm
-
-## * method - coefRef
-#' @rdname coefType
-#' @export
-`coefRef` <-
-  function(object,...) UseMethod("coefRef")
-
-#' @rdname coefType
-#' @export
-coefRef.lvmfit <- function(object, value = FALSE, ...){
-    
-    res <- retainType(type = attr(coefType(object, ...), "reference"),
-                      validType = TRUE,
-                      value = value)
-
-    return(res)    
-}
-
-#' @rdname coefType
-#' @export
-`coefReg` <-
-  function(object,...) UseMethod("coefReg")
-
-#' @rdname coefType
-#' @export
-coefReg.lvm <- function(object, value = FALSE, ...){
-    
-     res <- retainType(type = coefType(object, ...),
-                      validType = "regression",
-                      value = value)
-
-     return(res)
-}
-
-#' @rdname coefType
-#' @export
-coefReg.lvmfit <- coefReg.lvm
-
-#' @rdname coefType
-#' @export
-coefReg.multigroup <- coefReg.lvm
-
-## * method - coefVar
-
-#' @rdname coefType
-#' @export
-`coefVar` <-
-  function(object,...) UseMethod("coefVar")
-
-#' @rdname coefType
-#' @export
-coefVar.lvm <- function(object, value = FALSE, ...){ 
-
-    res <- retainType(type = coefType(object, ...),
-                      validType = "variance",
-                      value = value)
-
-    return(res)
-}
-
-#' @rdname coefType
-#' @export
-coefVar.lvmfit <- coefVar.lvm
-
-#' @rdname coefType
-#' @export
-coefVar.multigroup <- coefVar.lvm
-
-
-#----------------------------------------------------------------------
-### coefType.R ends here
-
-## * retainType  (needed for coefCov/Latent/Ref)
-retainType <- function(type, validType, value){
-  index.var <- which(type %in% validType)
-  
-  if(length(index.var)>0){
-      if(value){
-          return(names(type)[index.var])
-      }else{
-          return(index.var)
-      }
-  }else{
-      return(NULL)
-  }
-}
 
 ## * detailName (needed for coefType)
 detailName <- function(object, name.coef, type.coef){
@@ -636,3 +385,7 @@ detailName <- function(object, name.coef, type.coef){
     }
     return(type.coef)
 }
+
+
+#----------------------------------------------------------------------
+### coefType.R ends here

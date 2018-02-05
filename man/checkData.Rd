@@ -14,10 +14,13 @@ checkData(object, data, trace)
 
 \item{data}{[data.frame] the dataset used to obtain the object.}
 
-\item{trace}{[logical] When \code{TRUE}, the outcome of the check will be displayed.}
+\item{trace}{[logical] when \code{TRUE}, the outcome of the check will be displayed.}
+}
+\value{
+Invisible  \code{TRUE} or \code{FALSE}.
 }
 \description{
-Check the validity of the dataset used to estimate a lvm.
+Check whether the dataset can be used to fit the \code{lvm} object.
 }
 \examples{
 m <- lvm()
@@ -33,4 +36,7 @@ checkData(m, d[,-4])
 
 try(checkData(m, d[,-(3:4)])) # return an error
 
+}
+\concept{
+diagnostic
 }

@@ -10,12 +10,18 @@
 \arguments{
 \item{object}{output of the function \code{IntDensTri}.}
 
-\item{coord.plot}{the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{IntDensTri}.}
+\item{coord.plot}{[character vector] the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{IntDensTri}.}
 
-\item{plot}{should the plot be displayed.}
+\item{plot}{[logical] should the plot be displayed?}
 
-\item{...}{additional argument that are ignored.}
+\item{...}{[internal] Only used by the generic method.}
+}
+\value{
+A \code{ggplot} object.
 }
 \description{
 2D-display of the domain used to compute the integral.
+}
+\seealso{
+\code{\link{IntDensTri}}
 }

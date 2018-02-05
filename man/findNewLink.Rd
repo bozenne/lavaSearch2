@@ -14,9 +14,9 @@ findNewLink(object, ...)
 \arguments{
 \item{object}{a \code{lvm} object.}
 
-\item{...}{[internal] Only used by the generic method.}
+\item{...}{[internal] only used by the generic method.}
 
-\item{data}{[optional] a dataset used to identify the categorical variables when not specified in the lvm object.}
+\item{data}{[optional] a dataset used to identify the categorical variables when not specified in the \code{lvm} object.}
 
 \item{exclude.var}{[character vector] all links related to these variables will be ignore.}
 
@@ -39,7 +39,7 @@ or bidirectional (\code{FALSE}, i.e. covariance link).
 }
 }
 \description{
-Find all new links between variables (copied from lava::modelsearch).
+Find all new links between variables (adapted from lava::modelsearch).
 }
 \examples{
 library(lava)
@@ -57,4 +57,8 @@ latent(m) <- ~u
 findNewLink(m, rm.endo = FALSE)
 findNewLink(m, rm.endo = TRUE)
 findNewLink(m, rm.endo = TRUE, output = "index")
+
+}
+\concept{
+modelsearch
 }

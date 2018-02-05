@@ -1,19 +1,19 @@
 ## * findNewLink
 ## ** doc findNewLink
 #' @title Find all New Links Between Variables
-#' @description Find all new links between variables (copied from lava::modelsearch).
+#' @description Find all new links between variables (adapted from lava::modelsearch).
 #' 
 #' @name findNewLink
 #' 
 #' @param object a \code{lvm} object.
-#' @param data [optional] a dataset used to identify the categorical variables when not specified in the lvm object.
+#' @param data [optional] a dataset used to identify the categorical variables when not specified in the \code{lvm} object.
 #' @param exclude.var [character vector] all links related to these variables will be ignore.
 #' @param rm.latent_latent [logical] should the links relating two latent variables be ignored?
 #' @param rm.endo_endo [logical] should the links relating two endogenous variables be ignored?
 #' @param rm.latent_endo [logical] should the links relating one endogenous variable and one latent variable be ignored?
 #' @param output [character] Specify \code{"names"} to return the names of the variables to link
 #' or specify \code{"index"} to return their position.
-#' @param ... [internal] Only used by the generic method.
+#' @param ... [internal] only used by the generic method.
 #'
 #' @return A list containing:
 #' \itemize{
@@ -39,6 +39,8 @@
 #' findNewLink(m, rm.endo = FALSE)
 #' findNewLink(m, rm.endo = TRUE)
 #' findNewLink(m, rm.endo = TRUE, output = "index")
+#' 
+#' @concept modelsearch
 #' @export
 `findNewLink` <-
   function(object, ...) UseMethod("findNewLink")
@@ -133,18 +135,20 @@ findNewLink.lvm <- function(object, data = NULL,
 ## ** doc addLink
 #' @title Add a New Link Between Two Variables in a LVM
 #' @rdname addLink
-#' @description Generic interface to add links to lvm objects.
+#' @description Generic interface to add links to \code{lvm} objects.
 #' 
 #' @param object a \code{lvm} object.
 #' @param var1 [character or formula] the exogenous variable of the new link or a formula describing the link to be added to the lvm.
 #' @param var2 [character] the endogenous variable of the new link. Disregarded if the argument \code{var1} is a formula.
-#' @param allVars [internal] a character vector containing all the variables of the \code{lvm} object.
-#' @param covariance [logical] is the link is bidirectional? Ignored if one of the variable non-stochastic (e.g. exogenous variables).
+#' @param all.vars [internal] a character vector containing all the variables of the \code{lvm} object.
+#' @param covariance [logical] is the link is bidirectional? Ignored if one of the variables non-stochastic (e.g. exogenous variables).
 #' @param warnings [logical] Should a warning be displayed when no link is added?
-#' @param ... [internal] Only used by the generic method and from addLink.lvm.reduced to addLink.lvm.
+#' @param ... [internal] only used by the generic method and from \code{addLink.lvm.reduced} to \code{addLink.lvm}.
 #'
 #' @details
-#' The argument allVars is useful for \code{lvm.reduce} object where the command \code{vars(object)} does not return all variables. The command \code{vars(object, xlp = TRUE)} must be used instead.
+#' The argument \code{all.vars} is useful for \code{lvm.reduce} object where the command \code{vars(object)} does not return all variables. The command \code{vars(object, xlp = TRUE)} must be used instead.
+#'
+#' Arguments \code{var1} and \code{var2} are passed to \code{initVarlink}.
 #'
 #' @examples
 #' library(lava)
@@ -164,6 +168,8 @@ findNewLink.lvm <- function(object, data = NULL,
 #' addLink(m2, "y1", "x1", covariance = FALSE)
 #' newM <- addLink(m, "y1", "y2", covariance = TRUE)
 #' coef(newM)
+#'
+#' @concept setter
 #' @export
 `addLink` <-
     function(object, ...) UseMethod("addLink")
@@ -175,7 +181,7 @@ addLink.lvm <- function(object,
                         var1,
                         var2,
                         covariance,
-                        allVars = vars(object),
+                        all.vars = vars(object),
                         warnings = FALSE,
                         ...){
 
@@ -186,7 +192,7 @@ addLink.lvm <- function(object,
     exogenous.object <- exogenous(object)
     latent.object <- latent(object)
     
-    if(var1 %in% allVars == FALSE){
+    if(var1 %in% all.vars == FALSE){
         if(warnings){
             warning("addLink.lvm: var1 does not match any variable in object, no link is added \n",
                     "var1: ",var1,"\n")
@@ -208,7 +214,7 @@ addLink.lvm <- function(object,
         }
         
         
-        ## if(var2 %in% allVars == FALSE){
+        ## if(var2 %in% all.vars == FALSE){
         ##     if(warnings){
         ##         warning("addLink.lvm: var2 does not match any variable in object, no link is added \n",
         ##                 "var2: ",var2,"\n")
@@ -247,21 +253,21 @@ addLink.lvm <- function(object,
 ## ** method addLink.lvm.reduced
 #' @rdname addLink
 addLink.lvm.reduced <- function(object, ...){
-  return(addLink.lvm(object, allVars = vars(object, lp = FALSE, xlp = TRUE) , ...))
+  return(addLink.lvm(object, all.vars = vars(object, lp = FALSE, xlp = TRUE) , ...))
 }
 
 ## * setLink
 ## ** Documentation - setLink
 #' @title Set a Link to a Value
 #' @name setLink
-#' @description Generic interface to set a value to a link in a lvm object.
+#' @description Generic interface to set a value to a link in a \code{lvm} object.
 #' 
 #' @param object a \code{lvm} object.
 #' @param var1 [character or formula] the exogenous variable of the new link or a formula describing the link to be added to the lvm.
 #' @param var2 [character] the endogenous variable of the new link. Disregarded if the argument \code{var1} is a formula.
 #' @param value [numeric] the value at which the link should be set.
 #' @param warnings [logical] should a warning be displayed if the link is not found in the \code{lvm} object.
-#' @param ... [internal] Only used by the generic method.
+#' @param ... [internal] only used by the generic method.
 #'  
 #' @examples
 #' library(lava)
@@ -279,6 +285,8 @@ addLink.lvm.reduced <- function(object, ...){
 #' 
 #' m2 <- setLink(m, y1 ~ y2, value = 0.5)
 #' estimate(m2, lava::sim(m,1e2))
+#'
+#' @concept setter
 #' @export
 `setLink` <-
   function(object, ...) UseMethod("setLink")

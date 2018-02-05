@@ -9,10 +9,10 @@
 calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
   quantile.previous = NULL,
   quantile.compute = lava.options()$search.calc.quantile.int, alpha,
-  ncpus = 1, initCpus = TRUE, trace)
+  ncpus = 1, init.cpus = TRUE, trace)
 
 calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
-  quantile.previous = NULL, method, alpha, ncpus = 1, initCpus = TRUE,
+  quantile.previous = NULL, method, alpha, ncpus = 1, init.cpus = TRUE,
   n.sim, trace, n.repMax = 100)
 }
 \arguments{
@@ -26,7 +26,7 @@ If \code{NULL} th multivariate Gaussian distribution will be used instead.}
 
 \item{iid.previous}{[matrix, EXPERIMENTAL] zero-mean iid decomposition of previously tested coefficient.}
 
-\item{quantile.previous}{[numeric, EXPERIMENTAL] rejection quantiles of the previously tested hypotheses. If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument iid.previous.}
+\item{quantile.previous}{[numeric, EXPERIMENTAL] rejection quantiles of the previously tested hypotheses. If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument \code{iid.previous}.}
 
 \item{quantile.compute}{[logical] should the rejection quantile be computed?}
 
@@ -36,7 +36,7 @@ When the p-value is below, the corresponding link will be retained.}
 \item{ncpus}{[integer >0] the number of processors to use.
 If greater than 1, the computation of the p-value relative to each test is performed in parallel.}
 
-\item{initCpus}{[logical] should the processors for the parallel computation be initialized?}
+\item{init.cpus}{[logical] should the processors for the parallel computation be initialized?}
 
 \item{trace}{[logical] should the execution of the function be traced?}
 
@@ -51,7 +51,7 @@ Only relevant when conditioning on a previous test.
 Disregarded when the p-values are computed using numerical integration.}
 }
 \value{
-a list containing
+A list containing
 \itemize{
 \item p.adjust: the adjusted p-values.
 \item z: the rejection threshold.
@@ -90,7 +90,7 @@ r3 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
 
 r4 <- calcDistMaxBootstrap(statistic = statistic, iid = X.iid,
             method = "wild",
-            trace = FALSE, alpha = 0.05, initCpus = TRUE, n.sim = n.sim)
+            trace = FALSE, alpha = 0.05, init.cpus = TRUE, n.sim = n.sim)
 
 rbind(integration = c(r1$p.adjust, quantile = r1$z),
       bootNaive    = c(r2$p.adjust, quantile = r2$z),
@@ -124,5 +124,9 @@ rbind(integration = c(r1c$p.adjust, quantile = r1c$z),
       bootResidual = c(r3c$p.adjust, quantile = r3c$z),
       bootWild    = c(r4c$p.adjust, quantile = r4c$z))
 }
+}
+\concept{
+modelsearch
 
+post-selection inference
 }

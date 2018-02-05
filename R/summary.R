@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:48) 
+## Last-Updated: feb  5 2018 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 172
+##     Update #: 173
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -62,7 +62,8 @@
 #' 
 #' sCorrect(e.lvm) <- TRUE ## small sample correction
 #' summary(e.lvm)$coef
-#'
+#' 
+#' @concept small sample inference
 
 ## * summary.gls2
 #' @rdname summary

@@ -21,15 +21,15 @@ sCorrect(object, ...)
   ...)
 
 \method{sCorrect}{gls}(object, cluster, vcov.param = NULL,
-  bias.correct = FALSE, numericDerivative = FALSE, return.score = FALSE,
+  bias.correct = FALSE, numeric.derivative = FALSE, return.score = FALSE,
   ...)
 
 \method{sCorrect}{lme}(object, cluster, vcov.param = NULL,
-  bias.correct = FALSE, numericDerivative = FALSE, return.score = FALSE,
+  bias.correct = FALSE, numeric.derivative = FALSE, return.score = FALSE,
   ...)
 
 \method{sCorrect}{lvmfit}(object, vcov.param = NULL, bias.correct = TRUE,
-  numericDerivative = FALSE, return.score = FALSE, ...)
+  numeric.derivative = FALSE, return.score = FALSE, ...)
 
 \method{sCorrect}{lvmfit2}(object, ...)
 
@@ -46,25 +46,27 @@ sCorrect(x, ...) <- value
 \method{sCorrect}{lvmfit2}(x, ...) <- value
 }
 \arguments{
-\item{object}{a gls, lme, or lvm object.}
+\item{object, x}{a \code{gls}, \code{lme}, or \code{lvm} object.}
 
-\item{...}{[internal] Only used by the generic method.}
+\item{...}{[internal] only used by the generic method or by the <- methods.}
 
-\item{bias.correct}{[logical] should a small sample correction for the standard errors of the coefficients be performed ?}
+\item{bias.correct, value}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
 
-\item{return.score}{[for internal use] export the score.}
+\item{return.score}{[internal] export the score.}
 
-\item{cluster}{the grouping variable relative to which the observations are iid.
-Only required for gls models with no correlation argument.}
+\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
+Only required for \code{gls} models with no correlation argument.}
 
-\item{vcov.param}{the variance-covariance matrix of the estimates.}
+\item{vcov.param}{[matrix] the variance-covariance matrix of the estimates.}
 
-\item{numericDerivative}{If TRUE, the degree of freedom are computed using a numerical derivative.}
-
-\item{x}{same as object.}
-
-\item{value}{same as bias.correct.}
+\item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
+Otherwise an analytic formula is used.}
 }
 \description{
 Compute the derivative of the information matrix.
+}
+\concept{
+small sample inference
+
+derivative of the score equation
 }

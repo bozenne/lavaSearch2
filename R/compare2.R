@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  4 2018 (14:50) 
+## Last-Updated: feb  5 2018 (17:22) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 239
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,13 @@
 #' @name compare2
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param numeric.derivative [logical] should a numerical derivative be used to compute the first derivative of the information matrix?
+#' Otherwise an analytic formula is used.
+#' Argument passed to \code{sCorrect}.
+#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' Only required for \code{gls} models with no correlation argument.
+#' Argument passed to \code{sCorrect}.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
@@ -30,25 +36,25 @@
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}.
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
 #' @param ...  [internal] Only used by the generic method.
-#' One exception: for gls models \code{...} is passed to dVco2,
-#' this can be useful when the argument cluster is required. 
 #'
 #' @details A set of linear hypothesis can be written:
 #' \deqn{
 #'   contrast \theta = null
 #' }
-#' The contrast matrix must contain as many columns as there are parameters in the model (mean and variance parameters).
+#' The contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
 #' Each hypothesis correspond to a row in the contrast matrix.
 #' So the null vector should contain as many elements as there are row in the contrast matrix.
 #' The method \code{createContrast} can help to initialize the contrast matrix.
 #' \cr \cr
 #' 
 #' Instead of a contrast matrix, on can also use expressions encoded in a vector of characters via the argument \code{par}.
-#' For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model parameters.
+#' For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
 #'
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
 #' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 #' 
+#' @return If \code{as.lava=TRUE} an object of class \code{htest}.
+#' Otherwise a \code{data.frame} object.
 #' 
 #' @examples
 #' #### simulate data ####
@@ -87,6 +93,7 @@
 #' e.lvm <- estimate(m, df.data)
 #' 
 #' compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
+#' @concept small sample inference
 #' @export
 `compare2` <-
   function(object, ...) UseMethod("compare2")
@@ -94,16 +101,16 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, bias.correct = TRUE, ...){
-    object$dVcov  <- sCorrect(object, bias.correct = bias.correct)
+compare2.lm <- function(object, bias.correct = TRUE, numeric.derivative = FALSE, ...){
+    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, numeric.derivative = numeric.derivative)
     return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, bias.correct = TRUE, ...){
-    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, ...)
+compare2.gls <- function(object, bias.correct = TRUE, numeric.derivative = FALSE, cluster = NULL, ...){
+    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, numeric.derivative = numeric.derivative, cluster = cluster)
     return(.compare2(object, ...))
 }
 
@@ -115,10 +122,7 @@ compare2.lme <- compare2.lm
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-compare2.lvmfit <- function(object, bias.correct = TRUE, ...){
-    object$dVcov  <- sCorrect(object, bias.correct = bias.correct)
-    return(.compare2(object, ...))
-}
+compare2.lvmfit <- compare2.lm
 
 ## * compare2.lm2
 #' @rdname compare2
@@ -275,7 +279,7 @@ compare2.lvmfit2 <- compare2.lm2
         df.estimate[,level.sup.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.sup, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
 
         out <- list(statistic = setNames(df.table["global","statistic"],"F-statistic"),
-                    parameter = setNames(round(df.table["global","df"],2), paste0("df1 = ",n.hypo,", df2")),
+                    parameter = setNames(round(df.table["global","df"],2), paste0("df1 = ",n.hypo,", df2")), ## NOTE: cannot not be change to coefficients because of lava
                     p.value = df.table["global","p-value"],
                     method = c("- Wald test -", "", "Null Hypothesis:", name.hypo),
                     estimate = df.estimate,
