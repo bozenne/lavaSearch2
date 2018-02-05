@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: feb  5 2018 (17:39) 
+## last-updated: feb  5 2018 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 501
+##     Update #: 505
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,7 @@
 #' where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
 #' and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
 #'
-#' \code{coefType} either returns the latin/greek letter corresponding to the coefficients
+#' \code{coefType} either returns the Latin/Greek letter corresponding to the coefficients
 #' or it groups them:
 #' \itemize{
 #' \item intercept: \eqn{\nu} and \eqn{\alpha}.
@@ -49,12 +49,12 @@
 #' \itemize{
 #' \item name: name of the link
 #' \item Y: outcome variable
-#' \item X: regression variable in the design matrix (could be a transformation of the original variables, e.g. dichotimization).
+#' \item X: regression variable in the design matrix (could be a transformation of the original variables, e.g. dichotomization).
 #' \item data: original variable
 #' \item type: type of link
 #' \item value: if TRUE, the value of the link is set and not estimated.
 #' \item marginal: if TRUE, the value of the link does not impact the estimation.
-#' \item detail: a more detailled decription of the type of link (see the details section)
+#' \item detail: a more detailed description of the type of link (see the details section)
 #' \item lava: name of the coefficient in lava
 #' }
 #' When \code{as.lava=TRUE}, \code{coefType} returns a named vector containing the type of each coefficient.
@@ -244,7 +244,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
         ## normal coefficients
         resCar.Nexternal <- subset(resCar,
                                    subset = is.na(externalLink),
-                                   select = c("link","type","factice","level","originalLink","externalLink"))
+                                   select = c("link","type","factitious","level","originalLink","externalLink"))
         ## rename according to the main data frame
         match.tempo <- match(c("link","type"),
                              names(resCar.Nexternal))
@@ -256,7 +256,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
         ## external coefficients
         resCar.external <- subset(resCar,
                                   subset = !is.na(externalLink),
-                                  select = c("link", "endogenous", "exogenous", "type", "factice", "level", "originalLink", "externalLink"))
+                                  select = c("link", "endogenous", "exogenous", "type", "factitious", "level", "originalLink", "externalLink"))
         resCar.external$X <- paste0(resCar.external$exogenous,
                                     resCar.external$level)
 
@@ -273,7 +273,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
         df.param <- rbind(resCar.external[,names(df.Nexternal),drop=FALSE],
                           df.Nexternal)
     }else{
-        df.param$factice <- FALSE
+        df.param$factitious <- FALSE
         df.param$level <- as.character(NA)
         df.param$externalLink <-  as.character(NA)
         df.param$originalLink <- df.param$name
@@ -283,7 +283,7 @@ coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
     coef.lava <- coef(object)
     name.coef <- names(coef.lava)
 
-    index.keep <- which(df.param$type!="external" & df.param$factice == FALSE & df.param$marginal == FALSE)
+    index.keep <- which(df.param$type!="external" & df.param$factitious == FALSE & df.param$marginal == FALSE)
     df.param$detail <- as.character(NA)
     df.param[index.keep, "detail"] <- detailName(object,
                                                  name.coef = df.param[index.keep, "name"],

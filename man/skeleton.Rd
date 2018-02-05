@@ -51,7 +51,7 @@ Otherwise uses the labels (when defined) of each coefficient.}
 
 \item{data}{[data.frame, optional] data set.}
 
-\item{df.param.all}{[data.frame] output of \code{\link{coefType}} contaning the type of each coefficient.}
+\item{df.param.all}{[data.frame] output of \code{\link{coefType}} containing the type of each coefficient.}
 
 \item{param2originalLink}{[named character vector] matching between the name of the coefficient in lava and their label.}
 

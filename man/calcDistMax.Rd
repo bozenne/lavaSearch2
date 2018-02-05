@@ -22,7 +22,7 @@ Each statistic correspond to a null hypothesis (i.e. a coefficient) that one wis
 \item{iid}{[matrix] zero-mean iid decomposition of the coefficient used to compute the statistic.}
 
 \item{df}{[numeric] the degree of freedom defining the multivariate Student's t distribution.
-If \code{NULL} th multivariate Gaussian distribution will be used instead.}
+If \code{NULL} the multivariate Gaussian distribution will be used instead.}
 
 \item{iid.previous}{[matrix, EXPERIMENTAL] zero-mean iid decomposition of previously tested coefficient.}
 

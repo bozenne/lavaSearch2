@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb  5 2018 (17:40) 
+## Last-Updated: feb  5 2018 (18:13) 
 ##           By: Brice Ozenne
-##     Update #: 717
+##     Update #: 719
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' @name skeleton
 #' 
 #' @param object a \code{lvm} object.
-#' @param df.param.all [data.frame] output of \code{\link{coefType}} contaning the type of each coefficient.
+#' @param df.param.all [data.frame] output of \code{\link{coefType}} containing the type of each coefficient.
 #' @param param2originalLink [named character vector] matching between the name of the coefficient in lava and their label.
 #' @param B,alpha.XGamma,Lambda,Psi [matrix] pre-computed matrix.
 #' @param OD [list] the pre-computed quantities for the second derivatives. 
@@ -363,12 +363,12 @@ skeletonDtheta.lvm <- function(object, data,
                                df.param.all, param2originalLink,
                                name.endogenous, name.latent, ...){
 
-    factice <- marginal <- param <- value <- X <- Y <- NULL ## [:for CRAN check] subset
+    factitious <- marginal <- param <- value <- X <- Y <- NULL ## [:for CRAN check] subset
 
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
 
-    df.param <- subset(df.param.all, subset = is.na(value) & marginal == FALSE & factice == FALSE)
+    df.param <- subset(df.param.all, subset = is.na(value) & marginal == FALSE & factitious == FALSE)
     Utype.by.detail <- tapply(df.param$detail, df.param$param, function(x){length(unique(x))})
     if(any(Utype.by.detail>1)){
         stop("cannot constrain two coefficients of different types to be equal \n")
@@ -593,9 +593,9 @@ skeletonDtheta.lvmfit <- function(object, data,
 skeletonDtheta2.lvm <- function(object, data, df.param.all,
                                 param2originalLink, name.latent, ...){
 
-    detail <- factice <- marginal <- param <- value <- Y <- NULL ## [:for CRAN check] subset
+    detail <- factitious <- marginal <- param <- value <- Y <- NULL ## [:for CRAN check] subset
     
-    df.param <- subset(df.param.all, is.na(value) & marginal == FALSE & factice == FALSE)
+    df.param <- subset(df.param.all, is.na(value) & marginal == FALSE & factitious == FALSE)
     n.latent <- length(name.latent)
     n.data <- NROW(data)
 

@@ -18,7 +18,7 @@ defineCategoricalLink(object, link, data)
 }
 \value{
 a \code{data.frame} with a description of each link in rows. \cr
-The column factice identify the links that will be replaced with other links
+The column factitious identify the links that will be replaced with other links
 (e.g. "Y1~X1" becomes "Y1~X1b" and "Y1~X1c"). \cr
 }
 \description{

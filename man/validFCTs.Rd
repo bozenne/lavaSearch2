@@ -85,7 +85,7 @@ validPath(value1, name1 = as.character(substitute(value1)), type,
 
 \item{refuse.values}{values that must not appear in the argument}
 
-\item{extension}{filter the files by the type of extention.}
+\item{extension}{filter the files by the type of extension.}
 
 \item{check.fsep}{display a warning when the separator is not correctly specified in}
 }

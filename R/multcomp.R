@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  5 2018 (16:16) 
+## Last-Updated: feb  5 2018 (18:16) 
 ##           By: Brice Ozenne
-##     Update #: 341
+##     Update #: 342
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -84,7 +84,7 @@ estfun.lvmfit <- function(x, ...){
 #' @param ... [internal] Only used by the generic method.
 #'
 #' @details
-#' Whenever the argument linfct is not a matrix, it is passed ot the function \code{createContrast} to generate the contrast matrix and, if not specified, rhs. \cr \cr
+#' Whenever the argument linfct is not a matrix, it is passed to the function \code{createContrast} to generate the contrast matrix and, if not specified, rhs. \cr \cr
 #'
 #' Since only one degree of freedom can be specify in a glht object and it must be an integer, the degree of freedom of the denominator of an F test simultaneously testing all hypotheses is retained, after rounding.
 #'

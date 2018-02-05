@@ -21,7 +21,7 @@ or the names of the variables (\code{format = "vars"})}
 See argument \code{format}.
 }
 \description{
-Return the reponse variable contained in the formula.
+Return the response variable contained in the formula.
 }
 \examples{
 

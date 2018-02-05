@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: feb  5 2018 (17:26) 
+## Last-Updated: feb  5 2018 (18:10) 
 ##           By: Brice Ozenne
-##     Update #: 828
+##     Update #: 830
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,7 @@
 #' 
 #' @param object a \code{lvmfit} object.
 #' @param p [numeric vector, optional] vector of coefficients at which to evaluate the score.
-#' @param data [dataa.frmae, optional] data set.
+#' @param data [data.frame, optional] data set.
 #' @param cluster [vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' @param bias.correct [logical] should the leverage-adjusted residuals be used to compute the score?

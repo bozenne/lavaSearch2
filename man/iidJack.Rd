@@ -3,7 +3,7 @@
 \name{iidJack}
 \alias{iidJack}
 \alias{iidJack.default}
-\title{Jacknife iid Decomposition from Model Object}
+\title{Jackknife iid Decomposition from Model Object}
 \usage{
 iidJack(object, ...)
 
@@ -16,7 +16,7 @@ iidJack(object, ...)
 
 \item{...}{[internal] only used by the generic method.}
 
-\item{data}{[data.frame] dataset used to perform the jacknife.}
+\item{data}{[data.frame] dataset used to perform the jackknife.}
 
 \item{grouping}{[vector] variable defining cluster of observations that will be simultaneously removed by the jackknife.}
 

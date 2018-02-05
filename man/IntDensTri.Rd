@@ -48,7 +48,7 @@ P[|Z1|<t2,...,|Zq|<t2,|X|>t1,|X]>|Y1|,...,|X]>|Yp|] if zmin is specified.
 Argument \code{type}: \itemize{
 \item \code{\"raw\"}: mesh with points inside the domain
 \item \code{\"double\"}: mesh with points outside the domain
-\item \code{\"fine\"}: mesh with points inside the domain plus additional rectangles trying to fill the mising domain.
+\item \code{\"fine\"}: mesh with points inside the domain plus additional rectangles trying to fill the missing domain.
 }
 
 Argument \code{Sigma} and \code{mu}:

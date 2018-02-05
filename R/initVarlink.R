@@ -131,7 +131,7 @@ initVarLinks <- function(var1, format = "list",...){
 
 ## * Documentation - selectResponse
 #' @title Response Variable of a Formula
-#' @description Return the reponse variable contained in the formula.
+#' @description Return the response variable contained in the formula.
 #' @name selectResponse
 #' 
 #' @param object a formula

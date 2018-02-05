@@ -7,7 +7,7 @@
 #' @param object the fitted model.
 #' @param design.matrix [logical] should the data be extracted after transformation (e.g. conversion of categorical variables to dummy variables)?
 #' Otherwise the original data will be returned.
-#' @param as.data.frame [logical] should the output be converted into a dataa.frame object?
+#' @param as.data.frame [logical] should the output be converted into a \code{data.frame} object?
 #'
 #' @return a dataset.
 #' 

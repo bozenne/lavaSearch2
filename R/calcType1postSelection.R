@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 31 2017 (16:42) 
 ## Version: 
-## last-updated: feb  5 2018 (15:51) 
+## last-updated: feb  5 2018 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 125
+##     Update #: 127
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,7 +24,7 @@
 ##' @param mu [numeric vector] the expectation of the joint distribution of the test statistics
 ##' @param Sigma [matrix] the variance-covariance of the joint distribution of the test statistics.
 ##' @param quantile.previous [numeric] significance quantile used at the previous step.
-##' @param df [interger > 0] the degree of freedom of the joint Student's t distribution.
+##' @param df [integer > 0] the degree of freedom of the joint Student's t distribution.
 ##' Only used when \code{distribution="pvmt"}.
 ##' @param n [integer > 0] number of points for the numerical integration
 ##' @param distribution [character] distribution of the test statistics.
@@ -36,7 +36,7 @@
 ##' one less than the number of tests at the previous step (i.e. before selection).
 ##'
 ##' Arguments \code{mu} and \code{Sigma} must contain the moments for the vector of test statistics
-##' befor and after selection (in that order).
+##' before and after selection (in that order).
 ##' 
 ##' @return [numeric] the type 1 error.
 ##' @author Brice Ozenne

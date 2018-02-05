@@ -39,7 +39,7 @@ The number of tests at the current step (i.e. after selection) is assumed to be
 one less than the number of tests at the previous step (i.e. before selection).
 
 Arguments \code{mu} and \code{Sigma} must contain the moments for the vector of test statistics
-befor and after selection (in that order).
+before and after selection (in that order).
 }
 \examples{
 library(mvtnorm)

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: feb  5 2018 (16:31) 
+## last-updated: feb  5 2018 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 490
+##     Update #: 492
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,7 +29,7 @@
 ##' 
 ##' @param mu [numeric vector] the expectation of the joint distribution.
 ##' @param Sigma [matrix] the variance-covariance of the joint distribution.
-##' @param df [interger > 0] the degree of freedom of the joint Student's t distribution.
+##' @param df [integer > 0] the degree of freedom of the joint Student's t distribution.
 ##' Only used when \code{distribution="pvmt"}.
 ##' @param n [integer > 0] number of points for the numerical integration.
 ##' @param x.min [numeric] the minimum value along the x axis.
@@ -46,7 +46,7 @@
 ##' Argument \code{type}: \itemize{
 ##' \item \code{\"raw\"}: mesh with points inside the domain
 ##' \item \code{\"double\"}: mesh with points outside the domain
-##' \item \code{\"fine\"}: mesh with points inside the domain plus additional rectangles trying to fill the mising domain.
+##' \item \code{\"fine\"}: mesh with points inside the domain plus additional rectangles trying to fill the missing domain.
 ##' }
 ##'
 ##' Argument \code{Sigma} and \code{mu}:

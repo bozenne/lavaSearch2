@@ -31,8 +31,8 @@ or the max statistic (\code{"max"}).}
 A list containing:
 \itemize{
 \item newlink: a list containing for each \code{statistic}-\code{method.p.adjust} the local dependencies.
-\item table.coef: a \code{data.frame} object containig for each \code{statistic}-\code{method.p.adjust} the estimated coefficients.
-\item ls.search: a list containg for each \code{statistic}-\code{method.p.adjust} a \code{modelsearch2} object.
+\item table.coef: a \code{data.frame} object containing for each \code{statistic}-\code{method.p.adjust} the estimated coefficients.
+\item ls.search: a list containing for each \code{statistic}-\code{method.p.adjust} a \code{modelsearch2} object.
 }
 }
 \description{

@@ -3,7 +3,7 @@
 #'
 #' @title Tools for Model Specification in the Latent Variable Framework
 #' @description
-#' The package contains three main functionalites:
+#' The package contains three main functionalities:
 #' \itemize{
 #' \item \code{\link{compare2}}: Wald tests/F-tests with improved control of the type 1 error in small samples.
 #' \item \code{\link{glht2}}: adjustment for multiple comparisons when doing inference for multiple latent variable models.

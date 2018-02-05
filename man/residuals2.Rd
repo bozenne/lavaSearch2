@@ -40,7 +40,7 @@ Only required for \code{gls} models with no correlation argument.}
 
 \item{p}{[numeric vector, optional] vector of coefficients at which to evaluate the score.}
 
-\item{data}{[dataa.frmae, optional] data set.}
+\item{data}{[data.frame, optional] data set.}
 
 \item{as.clubSandwich}{[logical] method to take the square root of a non symmetric matrix. If \code{TRUE} use a method implemented in the \code{clubSandwich} package.}
 

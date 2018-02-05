@@ -29,12 +29,12 @@ coefType(object, ...)
 \itemize{
 \item name: name of the link
 \item Y: outcome variable
-\item X: regression variable in the design matrix (could be a transformation of the original variables, e.g. dichotimization).
+\item X: regression variable in the design matrix (could be a transformation of the original variables, e.g. dichotomization).
 \item data: original variable
 \item type: type of link
 \item value: if TRUE, the value of the link is set and not estimated.
 \item marginal: if TRUE, the value of the link does not impact the estimation.
-\item detail: a more detailled decription of the type of link (see the details section)
+\item detail: a more detailed description of the type of link (see the details section)
 \item lava: name of the coefficient in lava
 }
 When \code{as.lava=TRUE}, \code{coefType} returns a named vector containing the type of each coefficient.
@@ -50,7 +50,7 @@ and a structural model:
 where \eqn{\Psi}   is the variance covariance matrix of the residuals \eqn{\zeta} \cr
 and   \eqn{\Sigma} is the variance covariance matrix of the residuals \eqn{\epsilon}. \cr \cr
 
-\code{coefType} either returns the latin/greek letter corresponding to the coefficients
+\code{coefType} either returns the Latin/Greek letter corresponding to the coefficients
 or it groups them:
 \itemize{
 \item intercept: \eqn{\nu} and \eqn{\alpha}.

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 26 2017 (16:35) 
 ## Version: 
-## last-updated: feb  5 2018 (17:36) 
+## last-updated: feb  5 2018 (18:17) 
 ##           By: Brice Ozenne
-##     Update #: 152
+##     Update #: 153
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' @param data [data.frame] the dataset that will be used to fit the model. If \code{NULL}, a simulated data will be generated from the model.
 #'
 #' @return a \code{data.frame} with a description of each link in rows. \cr
-#' The column factice identify the links that will be replaced with other links
+#' The column factitious identify the links that will be replaced with other links
 #' (e.g. "Y1~X1" becomes "Y1~X1b" and "Y1~X1c"). \cr
 #' 
 #' @examples
@@ -127,7 +127,7 @@ defineCategoricalLink.lvm <- function(object, link = NULL, data = NULL){
                              endogenous = Y.name.allcat,
                              exogenous = X.name.allcat,
                              type = "categorical",
-                             factice = FALSE,
+                             factitious = FALSE,
                              level = X.level.allcat,
                              originalLink = original.link.allcat,
                              externalLink = external.link.allcat,
@@ -143,13 +143,13 @@ defineCategoricalLink.lvm <- function(object, link = NULL, data = NULL){
         var.tempo <- initVarLinks(link.Ncat)
         Y.name.Ncat <- var.tempo$var1
         X.name.Ncat <- var.tempo$var2
-        test.factice <- X.name.Ncat %in% names(object$attributes$ordinalparname)
+        test.factitious <- X.name.Ncat %in% names(object$attributes$ordinalparname)
 
         df.Ncat <- data.frame(link = link.Ncat,
                               endogenous = Y.name.Ncat,
                               exogenous = X.name.Ncat,
                               type = "continuous",
-                              factice = test.factice,
+                              factitious = test.factitious,
                               level = NA,
                               originalLink = link.Ncat,
                               externalLink = NA,

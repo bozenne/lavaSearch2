@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: feb  5 2018 (16:20) 
+## last-updated: feb  5 2018 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 300
+##     Update #: 303
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,13 +16,13 @@
 ### Code:
 
 ## * documentation - iidJack
-#' @title Jacknife iid Decomposition from Model Object
+#' @title Jackknife iid Decomposition from Model Object
 #' @description Extract iid decomposition (i.e. influence function) from model object.
 #'
 #' @name iidJack
 #' 
 #' @param object a object containing the model.
-#' @param data [data.frame] dataset used to perform the jacknife.
+#' @param data [data.frame] dataset used to perform the jackknife.
 #' @param grouping [vector] variable defining cluster of observations that will be simultaneously removed by the jackknife.
 #' @param ncpus [integer >0] the number of processors to use.
 #' If greater than 1, the fit of the model and the computation of the influence function for each jackknife sample is performed in parallel. 

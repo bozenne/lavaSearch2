@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  5 2018 (16:06) 
+## Last-Updated: feb  5 2018 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 173
+##     Update #: 175
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' @name summary
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.
-#' @param digit [interger > 0] the number of digit to keep when diplaying the summary.
+#' @param digit [integer > 0] the number of digit to keep when displaying the summary.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' See \code{\link{sCorrect}} for more details.
 #' @param ... arguments passed to the \code{summary} method of the object (when calling \code{summary})

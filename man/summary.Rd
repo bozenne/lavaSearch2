@@ -28,7 +28,7 @@ summary2(object, ...)
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}
 
-\item{digit}{[interger > 0] the number of digit to keep when diplaying the summary.}
+\item{digit}{[interger > 0] the number of digit to keep when displaying the summary.}
 
 \item{...}{arguments passed to the \code{summary} method of the object (when calling \code{summary})
 or to the \code{sCorrect} method (when calling \code{summary2}).}

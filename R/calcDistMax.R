@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: feb  5 2018 (16:20) 
+## last-updated: feb  5 2018 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 467
+##     Update #: 469
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,7 +27,7 @@
 #' @param quantile.compute [logical] should the rejection quantile be computed?
 #' @param quantile.previous [numeric, EXPERIMENTAL] rejection quantiles of the previously tested hypotheses. If not \code{NULL} the values should correspond the variable in to the first column(s) of the argument \code{iid.previous}.
 #' @param df [numeric] the degree of freedom defining the multivariate Student's t distribution.
-#' If \code{NULL} th multivariate Gaussian distribution will be used instead.
+#' If \code{NULL} the multivariate Gaussian distribution will be used instead.
 #' @param method [character] the method used to compute the p-values.
 #' See the output of \code{lava.options()$search.calcMaxDist} for the possible values.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
@@ -35,7 +35,7 @@
 #' @param ncpus [integer >0] the number of processors to use.
 #' If greater than 1, the computation of the p-value relative to each test is performed in parallel. 
 #' @param init.cpus [logical] should the processors for the parallel computation be initialized?
-#' @param n.sim [interger >0] the number of bootstrap simulations used to compute each p-values.
+#' @param n.sim [integer >0] the number of bootstrap simulations used to compute each p-values.
 #' Disregarded when the p-values are computed using numerical integration.
 #' @param n.repMax [integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
 #' Only relevant when conditioning on a previous test.

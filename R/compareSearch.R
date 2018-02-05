@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: feb  5 2018 (15:51) 
+## last-updated: feb  5 2018 (18:09) 
 ##           By: Brice Ozenne
-##     Update #: 276
+##     Update #: 278
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,8 +40,8 @@
 #' @return A list containing:
 #' \itemize{
 #' \item newlink: a list containing for each \code{statistic}-\code{method.p.adjust} the local dependencies.
-#' \item table.coef: a \code{data.frame} object containig for each \code{statistic}-\code{method.p.adjust} the estimated coefficients.
-#' \item ls.search: a list containg for each \code{statistic}-\code{method.p.adjust} a \code{modelsearch2} object.
+#' \item table.coef: a \code{data.frame} object containing for each \code{statistic}-\code{method.p.adjust} the estimated coefficients.
+#' \item ls.search: a list containing for each \code{statistic}-\code{method.p.adjust} a \code{modelsearch2} object.
 #' }
 #' 
 #' @examples
