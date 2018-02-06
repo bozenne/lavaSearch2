@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  5 2018 (18:19) 
+## Last-Updated: feb  6 2018 (16:45) 
 ##           By: Brice Ozenne
-##     Update #: 175
+##     Update #: 180
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,7 +77,8 @@ summary.gls2 <- function(object,
     name.param <- names(coef(object))
     n.param <- length(name.param)
 
-    tTable <- compare2(object, par = name.param, as.lava = FALSE)[1:n.param,]
+    tTable.all <- compare2(object, par = name.param, as.lava = FALSE)
+    tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(tTable) <- list(name.param,
                              c("Value","Std.Error","t-value","p-value","df")
                              )
@@ -109,7 +110,9 @@ summary.lvmfit2 <- function(object, ...){
     param <- lava::pars(object)
     name.param <- names(param)
     n.param <- length(param)
-    table.coef <- compare2(object, par = name.param, as.lava = FALSE)[1:n.param,c(1:3,5,4)]
+
+    table.all <- compare2(object, par = name.param, as.lava = FALSE)
+    table.coef <- table.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(table.coef) <- list(name.param,
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")
                                  )
@@ -182,7 +185,7 @@ summary2.gls <- function(object, bias.correct, ...){
     return(summary(object))
 }
 
-## * summary2.gls
+## * summary2.lme
 #' @rdname summary
 #' @export
 summary2.lme <- summary2.gls
