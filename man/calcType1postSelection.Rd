@@ -26,7 +26,7 @@ Only used when \code{distribution="pvmt"}.}
 
 \item{correct}{[logical] if true, correct the level to account for previous testings.}
 
-\item{...}{arguments passed to \code{\link{IntDensTri}}.}
+\item{...}{arguments passed to \code{\link{intDensTri}}.}
 }
 \value{
 [numeric] the type 1 error.

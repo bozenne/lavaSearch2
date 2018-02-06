@@ -41,7 +41,7 @@ compare2(object, ...)
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
 
-\item{...}{[internal] Only used by the generic method.}
+\item{...}{[internal] only used by the generic method.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
 
@@ -60,7 +60,7 @@ See the examples section.}
 
 \item{null}{[vector] the right hand side of the linear hypotheses to be tested.}
 
-\item{as.lava}{[logical] should the output be similar to the one return by \code{lava::compare}.}
+\item{as.lava}{[logical] should the output be similar to the one return by \code{lava::compare}?}
 
 \item{level}{[numeric 0-1] the confidence level of the confidence interval.}
 }
@@ -73,18 +73,20 @@ Test Linear Hypotheses using a Wald or an F statistic.
 Similar to \code{lava::compare} but with small sample correction.
 }
 \details{
-A set of linear hypothesis can be written:
+The \code{par} argument or the arguments \code{contrast} and \code{null} specify the set of linear hypotheses to be tested. They can be written:
 \deqn{
-  contrast \theta = null
+  contrast * \theta = null
 }
-The contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
-Each hypothesis correspond to a row in the contrast matrix.
-So the null vector should contain as many elements as there are row in the contrast matrix.
-The method \code{createContrast} can help to initialize the contrast matrix.
-\cr \cr
+where \eqn{\theta} is the vector of the model coefficients. \cr
 
-Instead of a contrast matrix, on can also use expressions encoded in a vector of characters via the argument \code{par}.
+The \code{par} argument must contain expression(s) involving the model coefficients.
 For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
+A contrast matrix and the right hand side will be generated inside the function. \cr
+
+When directly specified, the contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
+Each hypothesis correspond to a row in the contrast matrix. \cr
+
+The null vector should contain as many elements as there are row in the contrast matrix. \cr
 }
 \examples{
 #### simulate data ####

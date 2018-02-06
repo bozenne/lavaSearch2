@@ -13,7 +13,7 @@ calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
 
 calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
   quantile.previous = NULL, method, alpha, ncpus = 1, init.cpus = TRUE,
-  n.sim, trace, n.repMax = 100)
+  n.sim, trace, n.repmax = 100)
 }
 \arguments{
 \item{statistic}{[numeric vector] the observed Wald statistic.
@@ -46,7 +46,7 @@ See the output of \code{lava.options()$search.calcMaxDist} for the possible valu
 \item{n.sim}{[integer >0] the number of bootstrap simulations used to compute each p-values.
 Disregarded when the p-values are computed using numerical integration.}
 
-\item{n.repMax}{[integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
+\item{n.repmax}{[integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
 Only relevant when conditioning on a previous test.
 Disregarded when the p-values are computed using numerical integration.}
 }
