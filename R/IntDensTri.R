@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 14 2017 (11:49) 
 ## Version: 
-## last-updated: feb  5 2018 (18:19) 
+## last-updated: feb  6 2018 (09:29) 
 ##           By: Brice Ozenne
-##     Update #: 492
+##     Update #: 493
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,9 +17,9 @@
 
 
 
-## * Documentation - IntDensTri
+## * Documentation - intDensTri
 ##' @title Integrate a Gaussian/Student Density over a Triangle
-##' @name IntDensTri
+##' @name intDensTri
 ##' @description Consider a univariate random variable X,
 ##' two multivariate random variables Y and Z,
 ##' and t1 and t2 two real numbers.
@@ -67,12 +67,12 @@
 ##' z2 <- qmvt(0.975, mean = mu, sigma = Sigma, df = 1e3)$quantile
 ##'
 ##' # compute integral
-##' IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min=0, type = "fine")$value-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, n=30, x.min=0, type = "raw")$value-1/2
-##' IntDensTri(mu = mu, Sigma = Sigma, n=50, x.min=0, type = "raw")$value-1/2
+##' intDensTri(mu = mu, Sigma = Sigma, n=5, x.min=0, type = "fine")$value-1/2
+##' intDensTri(mu = mu, Sigma = Sigma, n=30, x.min=0, type = "raw")$value-1/2
+##' intDensTri(mu = mu, Sigma = Sigma, n=50, x.min=0, type = "raw")$value-1/2
 ##'
-##' IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, x.min=0, distribution = "pmvt")$value-1/2
-##' res <- IntDensTri(mu = mu, Sigma = Sigma, df = 5, n=10, x.min=0, distribution = "pmvt")
+##' intDensTri(mu = mu, Sigma = Sigma, df = 5, n=5, x.min=0, distribution = "pmvt")$value-1/2
+##' res <- intDensTri(mu = mu, Sigma = Sigma, df = 5, n=10, x.min=0, distribution = "pmvt")
 ##' res$value-1/2
 ##' ggplot2::autoplot(res)
 ##' 
@@ -82,7 +82,7 @@
 ##' Sigma <- diag(p)
 ##' mu <- rep(0, p)
 ##'
-##' res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 0, z.max = 10)
+##' res2 <- intDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 0, z.max = 10)
 ##' ggplot2::autoplot(res2)
 ##' ggplot2::autoplot(res2, coord.plot = c("x","z1"))
 ##' res2
@@ -90,12 +90,12 @@
 ##' 
 ##' #### when the distribution is far from 0
 ##' \dontrun{
-##' eq1 <- IntDensTri(mu = c(10,0), Sigma = diag(1,2), 
+##' eq1 <- intDensTri(mu = c(10,0), Sigma = diag(1,2), 
 ##'                   x.min = 2, n=10)
 ##' eq1$value-1
 ##' ggplot2::autoplot(eq1)
 ##'
-##' eq2 <- IntDensTri(mu = c(10,0,0), Sigma = diag(1,3),
+##' eq2 <- intDensTri(mu = c(10,0,0), Sigma = diag(1,3),
 ##'                   x.min=2, z.max = 10, type = "raw",
 ##'                   n=10)
 ##' ggplot2::autoplot(eq2, coord.plot = c("y1","z1"))
@@ -106,16 +106,16 @@
 ##' Sigma <- diag(p)
 ##' mu <- rep(0, p)
 ##'
-##' res2 <- IntDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 1, z.max = c(2,2))
+##' res2 <- intDensTri(mu = mu, Sigma = Sigma, n=5, x.min = 1, z.max = c(2,2))
 ##' res2$grid
 ##' }
 ##'
 ##' @concept post-selection inference
 
-## * IntDensTri
-##' @rdname IntDensTri
+## * intDensTri
+##' @rdname intDensTri
 ##' @export 
-IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
+intDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
                        type = "double", proba.min = 1e-6, prune = NULL, distribution = "pmvnorm"){
 
      interior <- NULL ## [:for CRAN check] subset
@@ -192,25 +192,25 @@ IntDensTri <- function(mu, Sigma, df, n, x.min, z.max = NULL,
     out$prune <- prune
     out$type <- type
     out$grid <- grid
-    class(out) <- "IntDensTri"
+    class(out) <- "intDensTri"
     return(out)
 }
 
-## * autoplot.IntDensTri
+## * autoplot.intDensTri
 #' @title 2D-display of the Domain Used to Compute the Integral
 #' @description 2D-display of the domain used to compute the integral.
 #'
-#' @param object output of the function \code{IntDensTri}.
-#' @param coord.plot [character vector] the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{IntDensTri}.
+#' @param object output of the function \code{intDensTri}.
+#' @param coord.plot [character vector] the x and y coordinates. Can be \code{"x"}, \code{"y1"} to \code{"yd"}, \code{"z"} if \code{zmin} was specified when calling \code{intDensTri}.
 #' @param plot [logical] should the plot be displayed?
 #' @param ... [internal] Only used by the generic method.
 #'
 #' @return A \code{ggplot} object.
-#' @seealso \code{\link{IntDensTri}}
+#' @seealso \code{\link{intDensTri}}
 #' 
-#' @method autoplot IntDensTri
+#' @method autoplot intDensTri
 #' @export
-autoplot.IntDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...){
+autoplot.intDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...){
 
     if(length(coord.plot) != 2){
         stop("coord.plot must have length 2 \n")
@@ -251,10 +251,10 @@ autoplot.IntDensTri <- function(object, coord.plot=c("x","y1"), plot = TRUE, ...
 }
 
 
-## * print.IntDensTri
-#' @method print IntDensTri
+## * print.intDensTri
+#' @method print intDensTri
 #' @export
-print.IntDensTri <- function(x, ...){
+print.intDensTri <- function(x, ...){
     interior <- NULL
     
     x.min <- min(abs(x$grid$x.min))

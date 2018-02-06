@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  5 2018 (17:22) 
+## Last-Updated: feb  6 2018 (09:41) 
 ##           By: Brice Ozenne
-##     Update #: 239
+##     Update #: 246
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,22 +33,24 @@
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param null [vector] the right hand side of the linear hypotheses to be tested.
-#' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}.
+#' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
-#' @param ...  [internal] Only used by the generic method.
+#' @param ...  [internal] only used by the generic method.
 #'
-#' @details A set of linear hypothesis can be written:
+#' @details The \code{par} argument or the arguments \code{contrast} and \code{null} specify the set of linear hypotheses to be tested. They can be written:
 #' \deqn{
-#'   contrast \theta = null
+#'   contrast * \theta = null
 #' }
-#' The contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
-#' Each hypothesis correspond to a row in the contrast matrix.
-#' So the null vector should contain as many elements as there are row in the contrast matrix.
-#' The method \code{createContrast} can help to initialize the contrast matrix.
-#' \cr \cr
+#' where \eqn{\theta} is the vector of the model coefficients. \cr
 #' 
-#' Instead of a contrast matrix, on can also use expressions encoded in a vector of characters via the argument \code{par}.
+#' The \code{par} argument must contain expression(s) involving the model coefficients.
 #' For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
+#' A contrast matrix and the right hand side will be generated inside the function. \cr
+#' 
+#' When directly specified, the contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
+#' Each hypothesis correspond to a row in the contrast matrix. \cr
+#'
+#' The null vector should contain as many elements as there are row in the contrast matrix. \cr
 #'
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
 #' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.

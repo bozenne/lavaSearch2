@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: feb  5 2018 (18:19) 
+## last-updated: feb  6 2018 (09:27) 
 ##           By: Brice Ozenne
-##     Update #: 469
+##     Update #: 470
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 #' @param init.cpus [logical] should the processors for the parallel computation be initialized?
 #' @param n.sim [integer >0] the number of bootstrap simulations used to compute each p-values.
 #' Disregarded when the p-values are computed using numerical integration.
-#' @param n.repMax [integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
+#' @param n.repmax [integer >0] the maximum number of rejection for each bootstrap sample before switching to a new bootstrap sample.
 #' Only relevant when conditioning on a previous test.
 #' Disregarded when the p-values are computed using numerical integration.
 #' @param trace [logical] should the execution of the function be traced?
@@ -254,7 +254,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
 #' @rdname calcDistMax
 #' @export
 calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.previous = NULL,
-                                 method, alpha, ncpus = 1, init.cpus = TRUE, n.sim, trace, n.repMax = 100){
+                                 method, alpha, ncpus = 1, init.cpus = TRUE, n.sim, trace, n.repmax = 100){
 
     ## ** normalize arguments
     n <- NROW(iid)
@@ -307,7 +307,7 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
                                                                warperBoot(iid = iid.all, sigma = Sigma.statistic,
                                                                           n = n, method = method,
                                                                           index.new = index.new, index.previous = index.previous,
-                                                                          quantile.previous = quantile.previous, n.repMax = n.repMax))
+                                                                          quantile.previous = quantile.previous, n.repmax = n.repmax))
                                                  })
 
         if(init.cpus){
@@ -325,13 +325,13 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
             distMax <- pbapply::pbsapply(1:n.sim, warperBoot, method = method,
                                          iid = iid.all, sigma = Sigma.statistic, n = n,                                         
                                          index.new = index.new, index.previous = index.previous,
-                                         quantile.previous = quantile.previous, n.repMax = n.repMax)
+                                         quantile.previous = quantile.previous, n.repmax = n.repmax)
             
         }else{
             distMax <- sapply(1:n.sim, warperBoot, method = method,
                               iid = iid.all, sigma = Sigma.statistic, n = n,
                               index.new = index.new, index.previous = index.previous,
-                              quantile.previous = quantile.previous, n.repMax = n.repMax)
+                              quantile.previous = quantile.previous, n.repmax = n.repmax)
         }
         
     }
@@ -401,13 +401,13 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
 
 ## * .bootMaxDist: bootstrap simulation
 .bootMaxDist <- function(iid, sigma, n, method,
-                         index.new, index.previous, quantile.previous, n.repMax,
+                         index.new, index.previous, quantile.previous, n.repmax,
                          ...){
 
     iRep <- 0
     cv <- FALSE
 
-    while(iRep < n.repMax && cv == FALSE){
+    while(iRep < n.repmax && cv == FALSE){
 
         ## ** resample to obtain a new influence function
         if(method == "naive"){
