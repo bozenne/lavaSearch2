@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  6 2018 (16:45) 
+## Last-Updated: feb  6 2018 (16:56) 
 ##           By: Brice Ozenne
-##     Update #: 180
+##     Update #: 181
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -84,7 +84,7 @@ summary.gls2 <- function(object,
                              )
 
     ### ** get summary
-    class(object) <- setdiff(class(object),"gls2")
+    class(object) <- setdiff(class(object),c("gls2","lme2"))
     object.summary <- summary(object, digits = digit, ...)
     
     ### ** update summary
