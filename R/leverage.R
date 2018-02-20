@@ -1,11 +1,11 @@
-### residuals2.R --- 
+### leverage.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
-## Created: nov  8 2017 (09:05) 
+## Created: feb 19 2018 (17:58) 
 ## Version: 
 ## Last-Updated: feb 19 2018 (19:04) 
 ##           By: Brice Ozenne
-##     Update #: 911
+##     Update #: 21
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,23 +15,31 @@
 ## 
 ### Code:
 
-## * documentation - residuals2
-#' @title Extract Corrected Residuals
-#' @description Extract correct residuals from a gaussian linear model.
-#' @name residuals2
+## * documentation - leverage
+#' @title Extract Leverage Values
+#' @description Extract leverage values from a gaussian linear model. 
+#' @name leverage
 #' 
 #' @param object a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.
 #' @param param [optional] the fitted parameters.
 #' @param data [optional] the data set.
 #' @param ... arguments to be passed to \code{sCorrect}.
 #'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
-#'
-#' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals.
+#' @details The leverage are defined as the partial derivative of the fitted values with respect to the observations.
+#' \deqn{
+#' leverage_i = \frac{\partial \hat{Y}_i}{\partial Y_i}
+#' }
+#' See Wei et all (1998). \cr \cr
 #' 
-#' @return a matrix containing the residuals relative to each sample (in rows)
+#' If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals.
+#'
+#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#' 
+#' @return a matrix containing the leverage relative to each sample (in rows)
 #' and each endogenous variable (in column).
 #'
+#' @references Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Jounal of Statistics 25:1:25-37.
+#' 
 #' @examples
 #' ## simulate data
 #' set.seed(10)
@@ -43,25 +51,22 @@
 #' e.lm <- lm(Y1~Y2, data = d)
 #'
 #' sCorrect(e.lm) <- TRUE
-#' 
-#' sigma(e.lm)^2
-#' mean(residuals(e.lm)^2)
-#' mean(residuals2(e.lm)^2)
-#' 
+#' range(as.double(leverage(e.lm)) - influence(e.lm)$hat)
+#'
 #' ## latent variable model
 #' e.lvm <- estimate(m, data = d)
 #' sCorrect(e.lvm) <- TRUE
-#' mean(residuals2(e.lm)^2)
-#'
+#' leverage(e.lvm)
+#' 
 #' @concept small sample inference
 #' @export
-`residuals2` <-
-    function(object, ...) UseMethod("residuals2")
+`leverage` <-
+    function(object, ...) UseMethod("leverage")
 
-## * residuals2.lm
-#' @rdname residuals2
+## * leverage.lm2
+#' @rdname leverage
 #' @export
-residuals2.lm2 <- function(object, param = NULL, data = NULL, ...){
+leverage.lm2 <- function(object, param = NULL, data = NULL, ...){
 
     if(!is.null(param) || !is.null(data)){
         args <- object$sCorrect$args
@@ -71,24 +76,26 @@ residuals2.lm2 <- function(object, param = NULL, data = NULL, ...){
                                    args = c(list(object, param = param, data = data),
                                             args))
     }
-    return(object$sCorrect$epsilon)   
+    
+    return(object$sCorrect$leverage)   
 }
 
-## * residuals2.gls
-#' @rdname residuals2
+## * leverage.gls2
+#' @rdname leverage
 #' @export
-residuals2.gls2 <- residuals2.lm2
+leverage.gls2 <- leverage.lm2
 
-## * residuals2.lme
-#' @rdname residuals2
+## * leverage.lme2
+#' @rdname leverage
 #' @export
-residuals2.lme2 <- residuals2.lm2
+leverage.lme2 <- leverage.lm2
 
-## * residuals2.lvmfit
-#' @rdname residuals2
+## * leverage.lvmfit2
+#' @rdname leverage
 #' @export
-residuals2.lvmfit2 <- residuals2.lm2
+leverage.lvmfit2 <- leverage.lm2
+
 
 
 ##----------------------------------------------------------------------
-### residuals2.R ends here
+### leverage.R ends here

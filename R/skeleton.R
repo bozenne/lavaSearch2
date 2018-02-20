@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb  5 2018 (18:13) 
+## Last-Updated: feb 20 2018 (15:15) 
 ##           By: Brice Ozenne
-##     Update #: 719
+##     Update #: 738
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -259,96 +259,90 @@ skeleton.lvm <- function(object, as.lava,
 
 ## * skeleton.lvmfit
 #' @rdname skeleton
-skeleton.lvmfit <- function(object, as.lava,
-                            p, data,
+skeleton.lvmfit <- function(object, skeleton,
+                            param, data,
                             name.endogenous, name.latent,
                             ...){
- 
+    ## note: object is not used except for finding the appropriate skeleton method.
+    
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
     n.data <- NROW(data)
 
-    ### ** Compute skeleton
-    if(is.null(object$prepareScore2$skeleton)){
-        OS <- skeleton(lava::Model(object), as.lava = as.lava,
-                       name.endogenous = name.endogenous, name.latent = name.latent)
-    }else{
-        OS <- object$prepareScore2$skeleton
-    }
-
     ### ** Update skeleton with the current values
 
     ## *** nu
-    index.update <- which(!is.na(OS$skeleton$nu))
-    OS$value$nu[index.update] <- p[OS$skeleton$nu[index.update]]
+    index.update <- which(!is.na(skeleton$skeleton$nu))
+    skeleton$value$nu[index.update] <- param[skeleton$skeleton$nu[index.update]]
 
     ## *** K 
     for(iY in 1:n.endogenous){ # iY <- 3
-        if(length(OS$skeleton$K[[iY]])>0){
-            index.update <- which(!is.na(OS$skeleton$K[[iY]]))
-            OS$value$K[[iY]][index.update] <- p[OS$skeleton$K[[iY]][index.update]]
+        if(length(skeleton$skeleton$K[[iY]])>0){
+            index.update <- which(!is.na(skeleton$skeleton$K[[iY]]))
+            skeleton$value$K[[iY]][index.update] <- param[skeleton$skeleton$K[[iY]][index.update]]
         }
     }
 
     ## *** Lambda
     if(n.latent>0){
-        index.update <- which(!is.na(OS$skeleton$Lambda))
-        OS$value$Lambda[index.update] <- p[OS$skeleton$Lambda[index.update]]
+        index.update <- which(!is.na(skeleton$skeleton$Lambda))
+        skeleton$value$Lambda[index.update] <- param[skeleton$skeleton$Lambda[index.update]]
     }
     
     ## *** Sigma
-    index.update <- which(!is.na(OS$skeleton$Sigma))
-    OS$value$Sigma[index.update] <- p[OS$skeleton$Sigma[index.update]]
+    index.update <- which(!is.na(skeleton$skeleton$Sigma))
+    skeleton$value$Sigma[index.update] <- param[skeleton$skeleton$Sigma[index.update]]
 
     ## *** linear predictor
-    OS$value$nu.XK <- matrix(NA, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
+    skeleton$value$nu.XK <- matrix(NA, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
                              dimnames = list(NULL,name.endogenous))
     for(iY in 1:n.endogenous){ # iY <- 1
         iY2 <- name.endogenous[iY]
-        if(length(OS$value$K[[iY2]])>0){
-            OS$value$nu.XK[,iY2] <- OS$value$nu[iY2] + data[,OS$skeleton$XK[[iY2]],drop=FALSE] %*% OS$value$K[[iY2]]
+        if(length(skeleton$value$K[[iY2]])>0){
+            skeleton$value$nu.XK[,iY2] <- skeleton$value$nu[iY2] + data[,skeleton$skeleton$XK[[iY2]],drop=FALSE] %*% skeleton$value$K[[iY2]]
         }else{
-            OS$value$nu.XK[,iY2] <- OS$value$nu[iY2]
+            skeleton$value$nu.XK[,iY2] <- skeleton$value$nu[iY2]
         }
     }
         
     ### ** Structural model
     if(n.latent>0){
         ## *** alpha
-        index.update <- which(!is.na(OS$skeleton$alpha))
-        OS$value$alpha[index.update] <- p[OS$skeleton$alpha[index.update]]
+        index.update <- which(!is.na(skeleton$skeleton$alpha))
+        skeleton$value$alpha[index.update] <- param[skeleton$skeleton$alpha[index.update]]
 
         ## *** Gamma
         for(iLatent in 1:n.latent){
-            if(length(OS$skeleton$Gamma[[iLatent]])>0){
-                index.update <- which(!is.na(OS$skeleton$Gamma[[iLatent]]))
-                OS$value$Gamma[[iLatent]][index.update] <- p[OS$skeleton$Gamma[[iLatent]][index.update]]
+            if(length(skeleton$skeleton$Gamma[[iLatent]])>0){
+                index.update <- which(!is.na(skeleton$skeleton$Gamma[[iLatent]]))
+                skeleton$value$Gamma[[iLatent]][index.update] <- param[skeleton$skeleton$Gamma[[iLatent]][index.update]]
             }
         }
         
         ## *** B
-        index.update <- which(!is.na(OS$skeleton$B))
-        OS$value$B[index.update] <- p[OS$skeleton$B[index.update]]
+        index.update <- which(!is.na(skeleton$skeleton$B))
+        skeleton$value$B[index.update] <- param[skeleton$skeleton$B[index.update]]
 
         ## *** Psi
-        index.update <- which(!is.na(OS$skeleton$Psi))
-        OS$value$Psi[index.update] <- p[OS$skeleton$Psi[index.update]]
+        index.update <- which(!is.na(skeleton$skeleton$Psi))
+        skeleton$value$Psi[index.update] <- param[skeleton$skeleton$Psi[index.update]]
 
         ## *** linear predictor
-        OS$value$alpha.XGamma <- matrix(NA,nrow = n.data, ncol = n.latent, byrow = TRUE,
+        skeleton$value$alpha.XGamma <- matrix(NA,nrow = n.data, ncol = n.latent, byrow = TRUE,
                                         dimnames = list(NULL,name.latent))
         for(iLatent in 1:n.latent){
             iLatent2 <- name.latent[iLatent]
-            if(length(OS$value$Gamma[[iLatent2]])>0){
-                OS$value$alpha.XGamma[,iLatent2] <- OS$value$alpha[iLatent2] + data[,OS$skeleton$XGamma[[iLatent2]],drop=FALSE] %*% OS$value$Gamma[[iLatent2]]
+            if(length(skeleton$value$Gamma[[iLatent2]])>0){
+                skeleton$value$alpha.XGamma[,iLatent2] <- skeleton$value$alpha[iLatent2] + data[,skeleton$skeleton$XGamma[[iLatent2]],drop=FALSE] %*% skeleton$value$Gamma[[iLatent2]]
             }else{
-                OS$value$alpha.XGamma[,iLatent2] <- OS$value$alpha[iLatent2]
+                skeleton$value$alpha.XGamma[,iLatent2] <- skeleton$value$alpha[iLatent2]
             }
         }
     }
-    
+
+  
 ### ** Export
-    return(OS)
+    return(skeleton)
 }
 
 
@@ -384,11 +378,11 @@ skeletonDtheta.lvm <- function(object, data,
     
     mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
     vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
-    dmu.dtheta <- list()
-    dOmega.dtheta <- list()
-    dLambda.dtheta <- list()
-    dB.dtheta <- list()
-    dPsi.dtheta <- list()
+    dmu <- list()
+    dOmega <- list()
+    dLambda <- list()
+    dB <- list()
+    dPsi <- list()
 
     type <- stats::setNames(vector(mode = "character", n.param),name.originalLink)
     toUpdate <- stats::setNames(vector(mode = "logical", n.param),name.originalLink)
@@ -404,26 +398,26 @@ skeletonDtheta.lvm <- function(object, data,
         ## *** derivative regarding the mean        
         if(type[iName2] %in% mean.param){
             if(type[iName2]=="nu"){
-                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
+                dmu[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
                                                nrow = n.data, ncol = n.endogenous, byrow = TRUE,
                                                dimnames = list(NULL, name.endogenous))
                 toUpdate[iName2] <- FALSE
             }else if(type[iName2]=="K"){
-                dmu.dtheta[[iName2]] <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
+                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
                                                dimnames = list(NULL, name.endogenous))
                 for(Y.tempo in unique(iY)){
-                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
                 }
                 toUpdate[iName2] <- FALSE
             }else if(type[iName2]=="alpha"){
-                dmu.dtheta[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n.data, ncol = n.latent, byrow = TRUE,
+                dmu[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n.data, ncol = n.latent, byrow = TRUE,
                                                dimnames = list(NULL, name.latent))                
                 toUpdate[iName2] <- TRUE
             }else if(type[iName2]=="Gamma"){
-                dmu.dtheta[[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
                                                dimnames = list(NULL, name.latent))
                 for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
-                    dmu.dtheta[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
                 }
                 toUpdate[iName2] <- TRUE
             }
@@ -433,17 +427,17 @@ skeletonDtheta.lvm <- function(object, data,
         if(type[iName2] %in% vcov.param){
             
             if(type[iName2]=="Sigma_var"){
-                dOmega.dtheta[[iName2]] <- matrix(0,
+                dOmega[[iName2]] <- matrix(0,
                                                   nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
                                                   dimnames = list(name.endogenous, name.endogenous))
-                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
                 toUpdate[iName2] <- FALSE
             }else if(type[iName2]=="Sigma_cov"){
-                dOmega.dtheta[[iName2]] <- matrix(0,
+                dOmega[[iName2]] <- matrix(0,
                                                   nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
                                                   dimnames = list(name.endogenous, name.endogenous))
-                dOmega.dtheta[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
-                dOmega.dtheta[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
+                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                dOmega[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
                 toUpdate[iName2] <- FALSE
             }
             
@@ -451,40 +445,40 @@ skeletonDtheta.lvm <- function(object, data,
 
         ## *** matrices
         if(type[iName2]=="Lambda"){            
-            dLambda.dtheta[[iName2]] <- matrix(0,
+            dLambda[[iName2]] <- matrix(0,
                                                nrow = n.latent, ncol = n.endogenous, byrow = TRUE,
                                                dimnames = list(name.latent, name.endogenous))
-            dLambda.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
+            dLambda[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
             toUpdate[iName2] <- TRUE
         }else if(type[iName2]=="B"){
-            dB.dtheta[[iName2]] <- matrix(0,
+            dB[[iName2]] <- matrix(0,
                                           nrow = n.latent, ncol = n.latent, byrow = TRUE,
                                           dimnames = list(name.latent, name.latent))
-            dB.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            dB[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
             toUpdate[iName2] <- TRUE
         }else if(type[iName2]=="Psi_var"){
-            dPsi.dtheta[[iName2]] <- matrix(0,
+            dPsi[[iName2]] <- matrix(0,
                                             nrow = n.latent, ncol = n.latent, byrow = TRUE,
                                             dimnames = list(name.latent, name.latent))
-            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
             toUpdate[iName2] <- TRUE
         }else if(type[iName2]=="Psi_cov"){
-            dPsi.dtheta[[iName2]] <- matrix(0,
+            dPsi[[iName2]] <- matrix(0,
                                             nrow = n.latent, ncol = n.latent, byrow = TRUE,
                                             dimnames = list(name.latent, name.latent))
-            dPsi.dtheta[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            dPsi.dtheta[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
+            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            dPsi[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
             toUpdate[iName2] <- TRUE
         } 
     }
 
     ### ** export
     return(list(
-        dmu.dtheta = dmu.dtheta,
-        dOmega.dtheta = dOmega.dtheta,
-        dLambda.dtheta = dLambda.dtheta,
-        dB.dtheta = dB.dtheta,
-        dPsi.dtheta = dPsi.dtheta,
+        dmu = dmu,
+        dOmega = dOmega,
+        dLambda = dLambda,
+        dB = dB,
+        dPsi = dPsi,
         type = type,
         toUpdate = toUpdate
     ))
@@ -493,8 +487,7 @@ skeletonDtheta.lvm <- function(object, data,
 
 ## * skeletonDtheta.lvmfit
 #' @rdname skeleton
-skeletonDtheta.lvmfit <- function(object, data,
-                                  df.param.all, param2originalLink,
+skeletonDtheta.lvmfit <- function(object, dtheta,
                                   name.endogenous, name.latent,
                                   B, alpha.XGamma, Lambda, Psi,
                                   ...){
@@ -502,28 +495,15 @@ skeletonDtheta.lvmfit <- function(object, data,
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
 
-    ### ** Initialize partial derivatives
-    if(is.null(object$prepareScore2$dtheta)){
-        OD <- skeletonDtheta(object = lava::Model(object), data = data,
-                             df.param.all = df.param.all,
-                             param2originalLink = param2originalLink,
-                             name.endogenous = name.endogenous, 
-                             name.latent = name.latent)
-    }else{
-        OD <- object$prepareScore2$dtheta
-    }
-
 ### ** Update partial derivatives
-    
-    
-    if(any(OD$toUpdate)){
-        type2update <- OD$type[OD$toUpdate]
+    if(any(dtheta$toUpdate)){
+        type2update <- dtheta$type[dtheta$toUpdate]
         
-        OD$iIB <- solve(diag(1,n.latent,n.latent)-B)
-        OD$alpha.XGamma.iIB <- alpha.XGamma %*% OD$iIB
-        OD$iIB.Lambda <-  OD$iIB %*% Lambda    
-        OD$Psi.iIB <- Psi %*% OD$iIB
-        OD$tLambda.tiIB.Psi.iIB <- t(OD$iIB.Lambda) %*% OD$Psi.iIB
+        dtheta$iIB <- solve(diag(1,n.latent,n.latent)-B)
+        dtheta$alpha.XGamma.iIB <- alpha.XGamma %*% dtheta$iIB
+        dtheta$iIB.Lambda <-  dtheta$iIB %*% Lambda    
+        dtheta$Psi.iIB <- Psi %*% dtheta$iIB
+        dtheta$tLambda.tiIB.Psi.iIB <- t(dtheta$iIB.Lambda) %*% dtheta$Psi.iIB
         
         ## *** mean coefficients
         type.meanparam <- type2update[type2update %in% c("alpha","Lambda","Gamma","B")]
@@ -536,16 +516,16 @@ skeletonDtheta.lvmfit <- function(object, data,
                 iName <- name.meanparam[iP]
             
                 if(iType == "alpha"){
-                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda
+                    dtheta$dmu[[iName]] <- dtheta$dmu[[iName]] %*% dtheta$iIB.Lambda
                 }else if(iType == "Gamma"){
-                    OD$dmu.dtheta[[iName]] <- OD$dmu.dtheta[[iName]] %*% OD$iIB.Lambda 
+                    dtheta$dmu[[iName]] <- dtheta$dmu[[iName]] %*% dtheta$iIB.Lambda 
                 }else if(iType == "Lambda"){
-                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dLambda.dtheta[[iName]]
+                    dtheta$dmu[[iName]] <- dtheta$alpha.XGamma.iIB %*% dtheta$dLambda[[iName]]
                 }else if(iType == "B"){
-                    OD$dmu.dtheta[[iName]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
+                    dtheta$dmu[[iName]] <- dtheta$alpha.XGamma.iIB %*% dtheta$dB[[iName]] %*% dtheta$iIB.Lambda
                 }
 
-                colnames(OD$dmu.dtheta[[iName]]) <- name.endogenous
+                colnames(dtheta$dmu[[iName]]) <- name.endogenous
             }
         }
 
@@ -560,26 +540,26 @@ skeletonDtheta.lvmfit <- function(object, data,
                 iName <- name.vcovparam[iP]
         
                 if(iType %in% "Psi_var"){
-                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                    dtheta$dOmega[[iName]] <-  t(dtheta$iIB.Lambda) %*% dtheta$dPsi[[iName]] %*% dtheta$iIB.Lambda
                 }else if(iType %in% "Psi_cov"){
-                    OD$dOmega.dtheta[[iName]] <-  t(OD$iIB.Lambda) %*% OD$dPsi.dtheta[[iName]] %*% OD$iIB.Lambda
+                    dtheta$dOmega[[iName]] <-  t(dtheta$iIB.Lambda) %*% dtheta$dPsi[[iName]] %*% dtheta$iIB.Lambda
                 }else if(iType == "Lambda"){
-                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dLambda.dtheta[[iName]]
-                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                    dtheta$dOmega[[iName]] <- dtheta$tLambda.tiIB.Psi.iIB %*% dtheta$dLambda[[iName]]
+                    dtheta$dOmega[[iName]] <- dtheta$dOmega[[iName]] + t(dtheta$dOmega[[iName]])
                 }else if(iType == "B"){
-                    OD$dOmega.dtheta[[iName]] <- OD$tLambda.tiIB.Psi.iIB %*% OD$dB.dtheta[[iName]] %*% OD$iIB.Lambda
-                    OD$dOmega.dtheta[[iName]] <- OD$dOmega.dtheta[[iName]] + t(OD$dOmega.dtheta[[iName]])
+                    dtheta$dOmega[[iName]] <- dtheta$tLambda.tiIB.Psi.iIB %*% dtheta$dB[[iName]] %*% dtheta$iIB.Lambda
+                    dtheta$dOmega[[iName]] <- dtheta$dOmega[[iName]] + t(dtheta$dOmega[[iName]])
                 }
 
-                colnames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
-                rownames(OD$dOmega.dtheta[[iName]]) <- name.endogenous
+                colnames(dtheta$dOmega[[iName]]) <- name.endogenous
+                rownames(dtheta$dOmega[[iName]]) <- name.endogenous
             }
         }
         
     }
 
 ### ** Export
-    return(OD)
+    return(dtheta)
 
 }
 
@@ -662,15 +642,15 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
         })
         collapseGrid <- do.call(rbind, xx)
         name.tempo <- as.character(unique(collapseGrid[[1]]))
-        d2mu.dtheta2 <- lapply(name.tempo, function(x){
+        d2mu <- lapply(name.tempo, function(x){
             iIndex <- which(collapseGrid[[1]]==x)
             v <- vector(mode = "list", length(iIndex))
             names(v) <- collapseGrid[[2]][iIndex]
             return(v)
         })
-        names(d2mu.dtheta2) <- name.tempo
+        names(d2mu) <- name.tempo
     }else{
-        d2mu.dtheta2 <- list()
+        d2mu <- list()
     }
     
     if(any(unlist(n.vcov)>0)){
@@ -682,15 +662,15 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
         })
         collapseGrid <- do.call(rbind, xx)
         name.tempo <- as.character(unique(collapseGrid[[1]]))
-        d2Omega.dtheta2 <- lapply(name.tempo, function(x){
+        d2Omega <- lapply(name.tempo, function(x){
             iIndex <- which(collapseGrid[[1]]==x)
             v <- vector(mode = "list", length(iIndex))
             names(v) <- collapseGrid[[2]][iIndex]
             return(v)
         })
-        names(d2Omega.dtheta2) <- name.tempo
+        names(d2Omega) <- name.tempo
     }else{
-        d2Omega.dtheta2 <- list()
+        d2Omega <- list()
     }
     
     ## ** prepare alpha.B and alpha.Lambda
@@ -711,7 +691,7 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
             iName1 <- grid.mean$alpha.B[iP,"alpha"]
             iName2 <- grid.mean$alpha.B[iP,"B"]
             
-            d2mu.dtheta2[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
         }
     }
     if(n.mean$alpha.Lambda>0){
@@ -719,7 +699,7 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
             iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
             iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
             
-            d2mu.dtheta2[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
         }
     }
     
@@ -733,10 +713,10 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
             iX <- subset(df.param.all, subset = param %in% iName11, select = "X", drop = TRUE)
             iY <- subset(df.param.all, subset = param %in% iName11, select = "Y", drop = TRUE)
 
-            d2mu.dtheta2[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
                                                        dimnames = list(NULL, name.latent))
             for(Y.tempo in unique(iY)){
-                d2mu.dtheta2[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
             }
         }
     }
@@ -750,10 +730,10 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
             iX <- subset(df.param.all, subset = param %in% iName11, select = "X", drop = TRUE)
             iY <- subset(df.param.all, subset = param %in% iName11, select = "Y", drop = TRUE)
 
-            d2mu.dtheta2[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
                                                        dimnames = list(NULL, name.latent))
             for(Y.tempo in unique(iY)){
-                d2mu.dtheta2[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
             }
         }
     }
@@ -763,155 +743,141 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
                 n.mean = n.mean,                
                 grid.vcov = grid.vcov,
                 n.vcov = n.vcov,
-                d2mu.dtheta2 = d2mu.dtheta2,
-                d2Omega.dtheta2 = d2Omega.dtheta2,
+                d2mu = d2mu,
+                d2Omega = d2Omega,
                 toUpdate = any(unlist(c(n.mean,n.vcov))>0)
                 ))
 }
 
 ## * skeletonDtheta2.lvmfit
 #' @rdname skeleton
-skeletonDtheta2.lvmfit <- function(object, data, OD,
-                                   df.param.all, param2originalLink,
+skeletonDtheta2.lvmfit <- function(object, dtheta, d2theta,
                                    name.endogenous, name.latent,
                                    B, Lambda, Psi,
                                    ...){
-
     
     n.endogenous <- length(name.endogenous)
     n.data <- NROW(data)
-    
-    ### ** Initialize partial derivatives   
-    if(is.null(object$prepareScore2$dtheta2)){
-        OD2 <- skeletonDtheta2(lava::Model(object), data = data,
-                               df.param.all = df.param.all,
-                               param2originalLink = param2originalLink,
-                               name.latent = name.latent)
-    }else{
-        OD2 <- object$prepareScore2$dtheta2
-    }
 
-    
     ### ** second order partial derivatives
-    if(any(OD2$toUpdate)){
+    if(any(d2theta$toUpdate)){
         
         ## *** mean coefficients        
-        if(OD2$n.mean$alpha.B>0){
-            for(iP in 1:OD2$n.mean$alpha.B){ # iP <- 1
-                iName1 <- OD2$grid.mean$alpha.B[iP,"alpha"]
-                iName2 <- OD2$grid.mean$alpha.B[iP,"B"]
+        if(d2theta$n.mean$alpha.B>0){
+            for(iP in 1:d2theta$n.mean$alpha.B){ # iP <- 1
+                iName1 <- d2theta$grid.mean$alpha.B[iP,"alpha"]
+                iName2 <- d2theta$grid.mean$alpha.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
+                d2theta$d2mu[[iName1]][[iName2]] <- d2theta$d2mu[[iName1]][[iName2]] %*% dtheta$iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB.Lambda
             }
         }
         
-        if(OD2$n.mean$alpha.Lambda>0){
-            for(iP in 1:OD2$n.mean$alpha.Lambda){ # iP <- 1
-                iName1 <- OD2$grid.mean$alpha.Lambda[iP,"alpha"]
-                iName2 <- OD2$grid.mean$alpha.Lambda[iP,"Lambda"]
+        if(d2theta$n.mean$alpha.Lambda>0){
+            for(iP in 1:d2theta$n.mean$alpha.Lambda){ # iP <- 1
+                iName1 <- d2theta$grid.mean$alpha.Lambda[iP,"alpha"]
+                iName2 <- d2theta$grid.mean$alpha.Lambda[iP,"Lambda"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName2]]
+                d2theta$d2mu[[iName1]][[iName2]] <- d2theta$d2mu[[iName1]][[iName2]] %*% dtheta$iIB %*% dtheta$dLambda[[iName2]]
                 
             }
         }
 
-        if(OD2$n.mean$Gamma.B>0){
-            for(iP in 1:OD2$n.mean$Gamma.B){ # iP <- 1
-                iName1 <- OD2$grid.mean$Gamma.B[iP,"Gamma"]
-                iName2 <- OD2$grid.mean$Gamma.B[iP,"B"]
+        if(d2theta$n.mean$Gamma.B>0){
+            for(iP in 1:d2theta$n.mean$Gamma.B){ # iP <- 1
+                iName1 <- d2theta$grid.mean$Gamma.B[iP,"Gamma"]
+                iName2 <- d2theta$grid.mean$Gamma.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
+                d2theta$d2mu[[iName1]][[iName2]] <- d2theta$d2mu[[iName1]][[iName2]] %*% dtheta$iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB.Lambda
             }
         }        
 
-        if(OD2$n.mean$Gamma.Lambda>0){
-            for(iP in 1:OD2$n.mean$Gamma.Lambda){ # iP <- 1
-                iName1 <- OD2$grid.mean$Gamma.Lambda[iP,"Gamma"]
-                iName2 <- OD2$grid.mean$Gamma.Lambda[iP,"Lambda"]                
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD2$d2mu.dtheta2[[iName1]][[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName2]]
+        if(d2theta$n.mean$Gamma.Lambda>0){
+            for(iP in 1:d2theta$n.mean$Gamma.Lambda){ # iP <- 1
+                iName1 <- d2theta$grid.mean$Gamma.Lambda[iP,"Gamma"]
+                iName2 <- d2theta$grid.mean$Gamma.Lambda[iP,"Lambda"]                
+                d2theta$d2mu[[iName1]][[iName2]] <- d2theta$d2mu[[iName1]][[iName2]] %*% dtheta$iIB %*% dtheta$dLambda[[iName2]]
             }
         }        
 
-        if(OD2$n.mean$Lambda.B>0){
-            for(iP in 1:OD2$n.mean$Lambda.B){ # iP <- 1
-                iName1 <- OD2$grid.mean$Lambda.B[iP,"Lambda"]
-                iName2 <- OD2$grid.mean$Lambda.B[iP,"B"]
+        if(d2theta$n.mean$Lambda.B>0){
+            for(iP in 1:d2theta$n.mean$Lambda.B){ # iP <- 1
+                iName1 <- d2theta$grid.mean$Lambda.B[iP,"Lambda"]
+                iName2 <- d2theta$grid.mean$Lambda.B[iP,"B"]
 
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName1]]
+                d2theta$d2mu[[iName1]][[iName2]] <- dtheta$alpha.XGamma.iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB %*% dtheta$dLambda[[iName1]]
             }
         }
 
-        if(OD2$n.mean$B.B>0){
-            for(iP in 1:OD2$n.mean$B.B){ # iP <- 1
-                iName1 <- OD2$grid.mean$B.B[iP,"B1"]
-                iName2 <- OD2$grid.mean$B.B[iP,"B2"]
+        if(d2theta$n.mean$B.B>0){
+            for(iP in 1:d2theta$n.mean$B.B){ # iP <- 1
+                iName1 <- d2theta$grid.mean$B.B[iP,"B1"]
+                iName2 <- d2theta$grid.mean$B.B[iP,"B2"]
 
-                term1 <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dB.dtheta[[iName1]] %*% OD$iIB.Lambda
-                term2 <- OD$alpha.XGamma.iIB %*% OD$dB.dtheta[[iName1]] %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
-                OD2$d2mu.dtheta2[[iName1]][[iName2]] <- term1 + term2
+                term1 <- dtheta$alpha.XGamma.iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB %*% dtheta$dB[[iName1]] %*% dtheta$iIB.Lambda
+                term2 <- dtheta$alpha.XGamma.iIB %*% dtheta$dB[[iName1]] %*% dtheta$iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB.Lambda
+                d2theta$d2mu[[iName1]][[iName2]] <- term1 + term2
             }
         }
 
         ## *** variance-covariance coefficients
-        if(OD2$n.vcov$Psi.Lambda>0){
-            for(iP in 1:OD2$n.vcov$Psi.Lambda){ # iP <- 1
-                iName1 <- OD2$grid.vcov$Psi.Lambda[iP,"Psi"]
-                iName2 <- OD2$grid.vcov$Psi.Lambda[iP,"Lambda"]
+        if(d2theta$n.vcov$Psi.Lambda>0){
+            for(iP in 1:d2theta$n.vcov$Psi.Lambda){ # iP <- 1
+                iName1 <- d2theta$grid.vcov$Psi.Lambda[iP,"Psi"]
+                iName2 <- d2theta$grid.vcov$Psi.Lambda[iP,"Lambda"]
 
-                term1 <- t(OD$dLambda.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$dPsi.dtheta[[iName1]] %*% OD$iIB.Lambda                
-                OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1)
+                term1 <- t(dtheta$dLambda[[iName2]]) %*% t(dtheta$iIB) %*% dtheta$dPsi[[iName1]] %*% dtheta$iIB.Lambda                
+                d2theta$d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
             }
         }
 
-        if(OD2$n.vcov$Psi.B>0){
-            for(iP in 1:OD2$n.vcov$Psi.B){ # iP <- 1
-                iName1 <- OD2$grid.vcov$Psi.B[iP,"Psi"]
-                iName2 <- OD2$grid.vcov$Psi.B[iP,"B"]
+        if(d2theta$n.vcov$Psi.B>0){
+            for(iP in 1:d2theta$n.vcov$Psi.B){ # iP <- 1
+                iName1 <- d2theta$grid.vcov$Psi.B[iP,"Psi"]
+                iName2 <- d2theta$grid.vcov$Psi.B[iP,"B"]
 
-                term1 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$dPsi.dtheta[[iName1]] %*% OD$iIB.Lambda
-                OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1)
+                term1 <- t(dtheta$iIB.Lambda) %*% t(dtheta$dB[[iName2]]) %*% t(dtheta$iIB) %*% dtheta$dPsi[[iName1]] %*% dtheta$iIB.Lambda
+                d2theta$d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
             }
         }
 
-        if(OD2$n.vcov$Lambda.B>0){
-            for(iP in 1:OD2$n.vcov$Lambda.B){ # iP <- 1
-                iName1 <- OD2$grid.vcov$Lambda.B[iP,"Lambda"]
-                iName2 <- OD2$grid.vcov$Lambda.B[iP,"B"]
+        if(d2theta$n.vcov$Lambda.B>0){
+            for(iP in 1:d2theta$n.vcov$Lambda.B){ # iP <- 1
+                iName1 <- d2theta$grid.vcov$Lambda.B[iP,"Lambda"]
+                iName2 <- d2theta$grid.vcov$Lambda.B[iP,"B"]
 
-                term1 <- t(OD$dLambda.dtheta[[iName1]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% Psi %*% OD$iIB.Lambda
-                term2 <- t(OD$dLambda.dtheta[[iName1]]) %*% t(OD$iIB) %*% Psi %*% OD$iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB.Lambda
-                ## term2 <- OD$tLambda.tiIB.Psi.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% OD$dLambda.dtheta[[iName1]]                
-                OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2)
+                term1 <- t(dtheta$dLambda[[iName1]]) %*% t(dtheta$iIB) %*% t(dtheta$dB[[iName2]]) %*% t(dtheta$iIB) %*% Psi %*% dtheta$iIB.Lambda
+                term2 <- t(dtheta$dLambda[[iName1]]) %*% t(dtheta$iIB) %*% Psi %*% dtheta$iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB.Lambda
+                ## term2 <- dtheta$tLambda.tiIB.Psi.iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB %*% dtheta$dLambda[[iName1]]                
+                d2theta$d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2)
             }
         }
 
-        if(OD2$n.vcov$Lambda.Lambda>0){
-            for(iP in 1:OD2$n.vcov$Lambda.Lambda){ # iP <- 1
-                iName1 <- OD2$grid.vcov$Lambda.Lambda[iP,"Lambda1"]
-                iName2 <- OD2$grid.vcov$Lambda.Lambda[iP,"Lambda2"]
+        if(d2theta$n.vcov$Lambda.Lambda>0){
+            for(iP in 1:d2theta$n.vcov$Lambda.Lambda){ # iP <- 1
+                iName1 <- d2theta$grid.vcov$Lambda.Lambda[iP,"Lambda1"]
+                iName2 <- d2theta$grid.vcov$Lambda.Lambda[iP,"Lambda2"]
                 
-                term1 <- t(OD$dLambda.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% OD$dLambda.dtheta[[iName2]]
-                OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1)
+                term1 <- t(dtheta$dLambda[[iName1]]) %*% t(dtheta$iIB) %*% dtheta$Psi.iIB %*% dtheta$dLambda[[iName2]]
+                d2theta$d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
             }
         }
 
-        if(OD2$n.vcov$B.B>0){
-            for(iP in 1:OD2$n.vcov$B.B){ # iP <- 1
-                iName1 <- OD2$grid.vcov$B.B[iP,"B1"]
-                iName2 <- OD2$grid.vcov$B.B[iP,"B2"]
+        if(d2theta$n.vcov$B.B>0){
+            for(iP in 1:d2theta$n.vcov$B.B){ # iP <- 1
+                iName1 <- d2theta$grid.vcov$B.B[iP,"B1"]
+                iName2 <- d2theta$grid.vcov$B.B[iP,"B2"]
 
-                term1 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% Lambda
-                term2 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% t(OD$dB.dtheta[[iName2]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% Lambda
-                term3 <- t(OD$iIB.Lambda) %*% t(OD$dB.dtheta[[iName1]]) %*% t(OD$iIB) %*% OD$Psi.iIB %*% OD$dB.dtheta[[iName2]] %*% OD$iIB %*% Lambda
-                OD2$d2Omega.dtheta2[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
+                term1 <- t(dtheta$iIB.Lambda) %*% t(dtheta$dB[[iName2]]) %*% t(dtheta$iIB) %*% t(dtheta$dB[[iName1]]) %*% t(dtheta$iIB) %*% dtheta$Psi.iIB %*% Lambda
+                term2 <- t(dtheta$iIB.Lambda) %*% t(dtheta$dB[[iName1]]) %*% t(dtheta$iIB) %*% t(dtheta$dB[[iName2]]) %*% t(dtheta$iIB) %*% dtheta$Psi.iIB %*% Lambda
+                term3 <- t(dtheta$iIB.Lambda) %*% t(dtheta$dB[[iName1]]) %*% t(dtheta$iIB) %*% dtheta$Psi.iIB %*% dtheta$dB[[iName2]] %*% dtheta$iIB %*% Lambda
+                d2theta$d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
             }
         }
 
     }
-        
 
 ### ** Export
-    return(OD2)
+    return(d2theta)
 
 }
 

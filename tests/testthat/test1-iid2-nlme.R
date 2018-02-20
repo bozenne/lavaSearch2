@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: nov  6 2017 (12:57) 
 ## Version: 
-## last-updated: feb  4 2018 (13:55) 
+## last-updated: feb 13 2018 (16:47) 
 ##           By: Brice Ozenne
-##     Update #: 103
+##     Update #: 105
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -60,9 +60,12 @@ test_that("gls equivalent to lvm", {
 
 test_that("gls: HC0/HC1", {
     iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE, data = dL, cluster = dL$Id)
-    iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE, cluster = dL$Id)
+    iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
     expect_equal(unname(iid2HC0.gls[,index.coef]),unname(iid2HC0.lvm[,index.coef]))
-    
+
+    iid2HC0.gls <- residuals2(e.gls, bias.correct = FALSE, data = dL, cluster = dL$Id)
+    iid2HC0.lvm <- residuals2(e.lvm, bias.correct = FALSE)
+
     VsandwichHC0.gls <- crossprod(iid2HC0.gls)[index.coef,index.coef]
     VsandwichHC0.lvm <- crossprod(iid2HC0.lvm)[index.coef,index.coef]    
     expect_equal(unname(VsandwichHC0.gls), unname(VsandwichHC0.lvm), tolerance = 1e-10)    

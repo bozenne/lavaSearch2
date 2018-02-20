@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  6 2018 (16:56) 
+## Last-Updated: feb 20 2018 (11:54) 
 ##           By: Brice Ozenne
-##     Update #: 181
+##     Update #: 209
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,17 +15,16 @@
 ## 
 ### Code:
 
-## * Documentation - summary
+## * Documentation - summary2
 #' @title  Summary with Small Sample Correction
 #' @description Summary with small sample correction.
-#' @name summary
+#' @name summary2
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.
 #' @param digit [integer > 0] the number of digit to keep when displaying the summary.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' See \code{\link{sCorrect}} for more details.
-#' @param ... arguments passed to the \code{summary} method of the object (when calling \code{summary})
-#' or to the \code{sCorrect} method (when calling \code{summary2}). 
+#' @param ... arguments passed to the \code{summary} method of the object.
 #' 
 #' @seealso \code{\link{sCorrect}} for more detail about the small sample correction.
 #'
@@ -48,28 +47,52 @@
 #' e.gls <- gls(Y~X1+X2, data = d, method = "ML")
 #' summary(e.gls)$tTable
 #' sCorrect(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction
-#' summary(e.gls)$tTable
+#' summary2(e.gls)$tTable
 #' 
 #' sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE ## small sample correction
-#' summary(e.gls)$tTable
+#' summary2(e.gls)$tTable
 #' 
 #' ## lvm models
 #' e.lvm <- estimate(m, data = d)
 #' summary(e.lvm)$coef
 #' 
 #' sCorrect(e.lvm) <- FALSE ## no small sample correction
-#' summary(e.lvm)$coef
+#' summary2(e.lvm)$coef
 #' 
 #' sCorrect(e.lvm) <- TRUE ## small sample correction
-#' summary(e.lvm)$coef
+#' summary2(e.lvm)$coef
 #' 
 #' @concept small sample inference
-
-## * summary.gls2
-#' @rdname summary
-#' @method summary gls2
 #' @export
-summary.gls2 <- function(object, 
+`summary2` <-
+  function(object,...) UseMethod("summary2")
+
+## * summary2.gls
+#' @rdname summary2
+#' @export
+summary2.gls <- function(object, bias.correct = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster) <- bias.correct
+    return(summary2(object, ...))
+}
+
+## * summary2.lme
+#' @rdname summary
+#' @export
+summary2.lme <- function(object, bias.correct = TRUE, ...){
+    sCorrect(object) <- bias.correct
+    return(summary2(object, ...))
+}
+
+## * summary2.lvmfit
+#' @rdname summary
+#' @export
+summary2.lvmfit <- summary2.gls
+
+## * summary2.gls2
+#' @rdname summary2
+#' @method summary2 gls2
+#' @export
+summary2.gls2 <- function(object, 
                          digit = max(3, getOption("digit")),
                          ...){
     
@@ -94,17 +117,17 @@ summary.gls2 <- function(object,
     return(object.summary)
 }
 
-## * summary.lme2
-#' @rdname summary
-#' @method summary lme2
+## * summary2.lme2
+#' @rdname summary2
+#' @method summary2 lme2
 #' @export
-summary.lme2 <- summary.gls2
+summary2.lme2 <- summary2.gls2
 
-## * summary.lvmfit2
-#' @rdname summary
-#' @method summary lvmfit2
+## * summary2.lvmfit2
+#' @rdname summary2
+#' @method summary2 lvmfit2
 #' @export
-summary.lvmfit2 <- function(object, ...){
+summary2.lvmfit2 <- function(object, ...){
 
     ### ** perform Wald test
     param <- lava::pars(object)
@@ -116,7 +139,7 @@ summary.lvmfit2 <- function(object, ...){
     dimnames(table.coef) <- list(name.param,
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")
                                  )
-
+    
     ### ** get summary
     class(object) <- setdiff(class(object),"lvmfit2")
     object.summary <- summary(object, ...)
@@ -130,11 +153,21 @@ summary.lvmfit2 <- function(object, ...){
     object.summary$vcov <- attr(object$dVcov, "vcov.param")[name.param,name.param]    
 
     ### *** coef
+    lava.rownames <- rownames(object.summary$coef)
+    ## add rows corresponding to reference parameters
+    missing.rows <- setdiff(lava.rownames,rownames(table.coef))
+    if(length(missing.rows)>0){
+        addon <- object.summary$coef[missing.rows,c("Estimate","Std. Error","Z-value","P-value")]
+        colnames(addon)[3] <- "t-value"
+        table.coef <- rbind(table.coef, cbind(addon,df=NA))
+    }
     ## re-order table according to lava
-    table.coef <- table.coef[rownames(object.summary$coef),,drop=FALSE]
+    table.coef <- table.coef[intersect(lava.rownames,rownames(table.coef)),,drop=FALSE]
     ## remove unappropriate p.values
-    table.coef[is.na(object.summary$coef[,"P-value"]),"P-value"] <- NA
+    lava.NApvalue <- which(is.na(object.summary$coef[,"P-value"]))
+    table.coef[intersect(lava.rownames[lava.NApvalue],rownames(table.coef)),"P-value"] <- NA
     object.summary$coef <- table.coef
+    
     
     ### *** coefmat
     name.label0 <- trimws(rownames(CoefMat(object, labels = 0, level = 9)), which = "both")
@@ -161,7 +194,7 @@ summary.lvmfit2 <- function(object, ...){
     p2add <- gsub(" NA","",p2add)
     p2add[table.coef[,"P-value"] < 1e-12] <- "  <1e-12"
 
-    M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)
+    M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)    
     table.coefmat[match(rownames(table.coef), name.label0),] <- M2add
 
     table.coefmat[object.summary$coefma[,"P-value"]=="","P-value"] <- ""
@@ -171,32 +204,6 @@ summary.lvmfit2 <- function(object, ...){
     return(object.summary)    
 }
 
-## * summary2
-#' @rdname summary
-#' @export
-`summary2` <-
-  function(object,...) UseMethod("summary2")
-
-## * summary2.gls
-#' @rdname summary
-#' @export
-summary2.gls <- function(object, bias.correct, ...){
-    sCorrect(object, ...) <- bias.correct
-    return(summary(object))
-}
-
-## * summary2.lme
-#' @rdname summary
-#' @export
-summary2.lme <- summary2.gls
-
-## * summary2.lvmfit
-#' @rdname summary
-#' @export
-summary2.lvmfit <- function(object, bias.correct = TRUE, ...){
-    sCorrect(object, ...) <- bias.correct
-    return(summary(object))
-}
 
 
 ##----------------------------------------------------------------------

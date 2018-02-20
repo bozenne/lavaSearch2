@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: feb  5 2018 (15:51) 
+## Last-Updated: feb 19 2018 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 195
+##     Update #: 197
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -133,7 +133,7 @@ createContrast.character <- function(object, name.param, add.rowname = TRUE,
                     stop(txt.message)                    
                 }
 
-                test.sign <- length(grep("-",strsplit(names(iRh)[iCoef], split = iName)[[1]][1]))>0
+                test.sign <- length(grep("-",strsplit(iRh[iCoef], split = iName)[[1]][1]))>0
                 contrast[iH,iName] <- c(1,-1)[test.sign+1] * iFactor
             }
         }

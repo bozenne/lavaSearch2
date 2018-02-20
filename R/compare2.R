@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  6 2018 (09:41) 
+## Last-Updated: feb 19 2018 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 246
+##     Update #: 272
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,9 +23,6 @@
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
-#' @param numeric.derivative [logical] should a numerical derivative be used to compute the first derivative of the information matrix?
-#' Otherwise an analytic formula is used.
-#' Argument passed to \code{sCorrect}.
 #' @param cluster [vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' Argument passed to \code{sCorrect}.
@@ -103,28 +100,34 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, bias.correct = TRUE, numeric.derivative = FALSE, ...){
-    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, numeric.derivative = numeric.derivative)
+compare2.lm <- function(object, adjust.Omega = TRUE, ...){
+    sCorrect(object) <- adjust.Omega
     return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, bias.correct = TRUE, numeric.derivative = FALSE, cluster = NULL, ...){
-    object$dVcov  <- sCorrect(object, bias.correct = bias.correct, numeric.derivative = numeric.derivative, cluster = cluster)
+compare2.gls <- function(object, adjust.Omega = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster) <- adjust.Omega
     return(.compare2(object, ...))
 }
 
 ## * compare2.lme
 #' @rdname compare2
 #' @export
-compare2.lme <- compare2.lm
+compare2.lme <- function(object, adjust.Omega = TRUE, ...){
+    sCorrect(object) <- adjust.Omega
+    return(.compare2(object, ...))
+}
 
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-compare2.lvmfit <- compare2.lm
+compare2.lvmfit <- function(object, adjust.Omega = TRUE, ...){
+    sCorrect(object) <- adjust.Omega
+    return(.compare2(object, ...))
+}
 
 ## * compare2.lm2
 #' @rdname compare2
@@ -132,18 +135,27 @@ compare2.lvmfit <- compare2.lm
 compare2.lm2 <- function(object, ...){
     return(.compare2(object, ...))
 }
+
 ## * compare2.gls2
 #' @rdname compare2
 #' @export
-compare2.gls2 <- compare2.lm2
+compare2.gls2 <- function(object, ...){
+    return(.compare2(object, ...))
+}
+
 ## * compare2.lme2
 #' @rdname compare2
 #' @export
-compare2.lme2 <- compare2.lm2
+compare2.lme2 <- function(object, ...){
+    return(.compare2(object, ...))
+}
+
 ## * compare2.lvmfit2
 #' @rdname compare2
 #' @export
-compare2.lvmfit2 <- compare2.lm2
+compare2.lvmfit2 <- function(object, ...){
+    return(.compare2(object, ...))
+}
 
 ## * .compare2
 #' @rdname compare2
@@ -151,17 +163,17 @@ compare2.lvmfit2 <- compare2.lm2
                       as.lava = TRUE, level = 0.95){
 
     ## ** extract information
-    dVcov.dtheta <- object$dVcov
-    
-    p <- attr(dVcov.dtheta, "param")
-    vcov.param <- attr(dVcov.dtheta, "vcov.param")
-    warn <- attr(vcov.param, "warning")
-    attr(dVcov.dtheta, "vcov.param") <- NULL
-    keep.param <- dimnames(dVcov.dtheta)[[3]]
+    dVcov.param <- object$sCorrect$dVcov.param
 
-    n.param <- length(p)
-    name.param <- names(p)
-        
+    param <- object$sCorrect$param
+    vcov.param <- object$sCorrect$vcov.param
+    warn <- attr(vcov.param, "warning")
+    attr(vcov.param, "vcov.param") <- NULL
+    keep.param <- dimnames(dVcov.param)[[3]]
+
+    n.param <- length(param)
+    name.param <- names(param)
+
     ### ** normalize linear hypotheses
     if(!is.null(par)){
         
@@ -215,7 +227,7 @@ compare2.lvmfit2 <- compare2.lm2
         C.vcov.C <- rowSums(M.C %*% vcov.param * M.C)
     
         C.dVcov.C <- sapply(keep.param, function(x){
-            rowSums(M.C %*% dVcov.dtheta[,,x] * M.C)
+            rowSums(M.C %*% dVcov.param[,,x] * M.C)
         })
         numerator <- 2 *(C.vcov.C)^2
         denom <- rowSums(C.dVcov.C %*% vcov.param[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
@@ -225,7 +237,7 @@ compare2.lvmfit2 <- compare2.lm2
 
     ### *** Wald test
     ## statistic
-    C.p <- (contrast %*% p) - null
+    C.p <- (contrast %*% param) - null
     C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
     sd.C.p <- sqrt(diag(C.vcov.C))
     stat.Wald <- C.p/sd.C.p

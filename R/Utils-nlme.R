@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: feb  5 2018 (17:22) 
+## Last-Updated: feb 20 2018 (15:21) 
 ##           By: Brice Ozenne
-##     Update #: 182
+##     Update #: 245
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,11 +16,12 @@
 ### Code:
 
 ## * .coef2
-#' @title Export Mean and Variance Coefficients from a nlme Model
-#' @description Export mean and variance coefficients from a nlme model.
+#' @title Export Mean and Variance Coefficients
+#' @description Export mean and variance coefficients
+#' from a \code{lm}, \code{gls}, or \code{lme} object.
 #' @name coef2
 #'
-#' @param object a \code{gls} or \code{lme} object.
+#' @param object a \code{lm}, \code{gls} or \code{lme} object.
 #'  
 #' @details The variance coefficients that are exported are the residual variance of each outcome. 
 #' This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
@@ -37,20 +38,35 @@
 `.coef2` <-
     function(object) UseMethod(".coef2")
 
+## * .coef2.lm
+#' @rdname coef2
+.coef2.lm <- function(object){
+    coef.object <- coef(object)
+    p <- c(coef.object,sigma2=sigma(object)^2)
+    attr(p, "mean.coef") <- names(coef.object)
+    attr(p, "var.coef") <- "sigma2"
+    attr(p, "cor.coef") <- NULL
+    return(p)
+}
+
 ## * .coef2.gls
 #' @rdname coef2
-.coef2.gls <- function(object){
+.coef2.gls <- function(object, name.endogenous){
 
-     ## *** mean coefficients
+    if(missing(name.endogenous)){
+       name.endogenous <- all.vars(stats::update(.getFormula2(object), ".~1"))
+    }
+    
+    ## *** mean coefficients
     mean.coef <- stats::coef(object)
 
     ## *** variance coefficients
+    var.coef <- c(sigma2 = stats::sigma(object)^2)
     if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(sigma2 = stats::sigma(object),
-                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)
-                      )^2
-    }else{
-        var.coef <- c(sigma2 = stats::sigma(object)^2)
+        other.coef <- stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)^2
+        var.coef <- c(var.coef,
+                      setNames(other.coef, paste0(name.endogenous,names(other.coef)))
+                      )
     }
 
     ## *** covariance coefficients
@@ -73,16 +89,18 @@
 
 ## * .coef2.lme
 #' @rdname coef2
-.coef2.lme <- function(object){
+.coef2.lme <- function(object, name.endogenous){
 
      ## *** mean coefficients
     mean.coef <- nlme::fixef(object)
 
     ## *** variance coefficients
+    var.coef <- c(sigma2 = stats::sigma(object)^2)
     if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(sigma2 = stats::sigma(object),stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))^2
-    }else{
-        var.coef <- c(sigma2 = stats::sigma(object)^2)
+        other.coef <- stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)^2
+        var.coef <- c(var.coef,
+                      setNames(other.coef, paste0(name.endogenous,names(other.coef)))
+                      )
     }
 
     ## *** random effect coefficients
@@ -139,8 +157,7 @@
 #' \item cluster: the cluster index for each observation.
 #' \item n.cluster: the number of clusters.
 #' \item endogenous: to which endogenous variable each observation corresponds to.
-#' \item n.endogenous: the number of endogenous variables.
-#' \item index.obs: a vector to convert observations from the vector format to the matrix format.
+#' \item name.endogenous: the name of the endogenous variables.
 #' }
 #'
 #' @concept extractor
@@ -150,7 +167,7 @@
 
 ## * .getGroups2.gls
 #' @rdname getGroup2
-.getGroups2.gls <- function(object, cluster, data, ...){
+.getGroups2.gls <- function(object, cluster, data, name.endogenous, ...){
 
     ### ** get cluster
     cluster2 <- as.numeric(nlme::getGroups(object))
@@ -166,38 +183,45 @@
     }
     n.cluster <- length(unique(cluster2))
 
-    ### ** get outcome
-    if(!is.null(object$modelStruct$varStruct)){
-        name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
-        vec.rep <- attr(object$modelStruct$varStruct,"groups")        
-    }else if(!is.null(object$modelStruct$corStruct)){        
+    ### ** get endogenous variables
+    if(!is.null(object$modelStruct$varStruct)){ ## Warning: this needs to be consistent with the names in .coef2
+        level.groups <- attr(object$modelStruct$varStruct,"groupName")
+        groups <- attr(object$modelStruct$varStruct,"groups")
+        
+        name.endogenous <- paste0(name.endogenous, level.groups)        
+        vec.endogenous <- factor(groups,
+                                 levels = level.groups,
+                                 labels = name.endogenous)
+        
+    }else if(!is.null(object$modelStruct$corStruct)){
         vec.rep0 <- unlist(attr(object$modelStruct$corStruct,"covariate"))
         if(is.factor(vec.rep0)){
-            name.endogenous <- levels(vec.rep0)
+            level.vec.rep0 <- levels(vec.rep0)
         }else{
-            name.endogenous <- unique(vec.rep0)
+            level.vec.rep0 <- unique(vec.rep0)
         }
-        vec.rep <- vec.rep0[order(order(cluster2))]
-    }else{
-        vec.rep <- unlist(tapply(cluster2, cluster2, function(x){1:length(x)}))
-        # vec.rep <- rep("1",NROW(data))
-        name.endogenous <- unique(vec.rep)
-    }
-    vec.rep <- as.numeric(factor(vec.rep, levels = name.endogenous))
-    n.endogenous <- length(name.endogenous)
-    
-    ### ** convert observations from the vector format to the matrix format
-    index.obs <- cluster2+(vec.rep-1)*n.cluster
+        name.endogenous <- paste0(name.endogenous,level.vec.rep0)
+        vec.rep <- factor(vec.rep0,
+                           levels = level.vec.rep0,
+                           labels = name.endogenous)
 
-    ### ** export
+        vec.endogenous <- vec.rep[order(order(cluster2))]
+    }else if(any(duplicated(cluster2))){ ## several repetitions
+        vec.endogenous <- unname(unlist(tapply(cluster2, cluster2, function(x){
+            paste0(name.endogenous,1:length(x))
+        })))
+        name.endogenous <- unique(vec.endogenous)
+    }else{  ## one repetition      
+        vec.endogenous <- rep(name.endogenous, n.cluster) 
+    }
+    vec.endogenous <- as.numeric(factor(vec.endogenous, levels = name.endogenous))
     name.endogenous <- as.character(name.endogenous)
 
+    ### ** export
     return(list(cluster = cluster2,
                 n.cluster = n.cluster,
-                endogenous = vec.rep,
-                name.endogenous = name.endogenous,
-                n.endogenous = n.endogenous,
-                index.obs = index.obs))
+                endogenous = vec.endogenous,
+                name.endogenous = name.endogenous))
 }
 
 ## * .getGroups2.lme
@@ -212,38 +236,37 @@
     n.cluster <- length(unique(cluster))
 
     ## ** get outcome
-    if(!is.null(object$modelStruct$varStruct)){
-        name.endogenous <- attr(object$modelStruct$varStruct,"groupName")
-        vec.rep <- attr(object$modelStruct$varStruct,"groups")        
-    }else{
-        if(!is.null(object$modelStruct$corStruct)){        
-            vec.rep0 <- unlist(attr(object$modelStruct$corStruct,"covariate"))
-        }else{
-            vec.rep0 <- unlist(tapply(cluster,cluster,function(x){1:length(x)}))
-        }
-    
+    if(!is.null(object$modelStruct$varStruct)){ ## Warning: this needs to be consistent with the names in .coef2
+        level.groups <- attr(object$modelStruct$varStruct,"groupName")
+        groups <- attr(object$modelStruct$varStruct,"groups")
+        
+        name.endogenous <- paste0(name.endogenous, level.groups)        
+        vec.endogenous <- factor(groups,
+                                 levels = level.groups,
+                                 labels = name.endogenous)
+        
+    }else if(!is.null(object$modelStruct$corStruct)){
+        vec.rep0 <- unlist(attr(object$modelStruct$corStruct,"covariate"))
         if(is.factor(vec.rep0)){
-            name.endogenous <- levels(vec.rep0)
+            level.vec.rep0 <- levels(vec.rep0)
         }else{
-            name.endogenous <- unique(vec.rep0)
+            level.vec.rep0 <- unique(vec.rep0)
         }
-        vec.rep <- vec.rep0[order(order(cluster))]
-    }
-    vec.rep <- as.numeric(factor(vec.rep, levels = name.endogenous))
-    n.endogenous <- length(name.endogenous)
-    
-    ## ** convert observations from the vector format to the matrix format
-    index.obs <- cluster+(vec.rep-1)*n.cluster
+        name.endogenous <- paste0(name.endogenous,level.vec.rep0)
+        vec.rep <- factor(vec.rep0,
+                           levels = level.vec.rep0,
+                           labels = name.endogenous)
 
-### ** export
+        vec.endogenous <- vec.rep[order(order(cluster2))]
+    }
+    vec.endogenous <- as.numeric(factor(vec.endogenous, levels = name.endogenous))
     name.endogenous <- as.character(name.endogenous)
-    
+
+    ### ** export
     return(list(cluster = cluster,
                 n.cluster = n.cluster,
-                endogenous = vec.rep,
-                name.endogenous = name.endogenous,
-                n.endogenous = n.endogenous,
-                index.obs = index.obs))
+                endogenous = vec.endogenous,
+                name.endogenous = name.endogenous))
 }
 
 ## * .getVarCov2
@@ -285,9 +308,10 @@
 ## * .getVarCov2.gls
 #' @rdname getVarCov2
 .getVarCov2.gls <- function(object, param, attr.param,
-                            endogenous, name.endogenous, n.endogenous,
+                            endogenous, name.endogenous,
                             cluster, n.cluster, ...){
 
+    n.endogenous <- length(name.endogenous)
     var.coef <- param[attr.param$var.coef]
     cor.coef <- param[attr.param$cor.coef]
 
@@ -312,7 +336,7 @@
     dimnames(template) <- list(name.endogenous, name.endogenous)
     
     ## ** Index for each cluster    
-    ls.indexOmega <- tapply(endogenous, cluster, function(iRep){iRep})
+    ls.indexOmega <- tapply(endogenous, cluster, function(iRep){list(iRep)})
 
     ## ** export
     return(list(Omega = template,
@@ -321,14 +345,10 @@
 
 ## * .getVarCov2.lme
 #' @rdname getVarCov2
-.getVarCov2.lme <- function(object, param, attr.param,
-                            endogenous, name.endogenous, n.endogenous,
-                            cluster, n.cluster, ...){
+.getVarCov2.lme <- function(object, param, attr.param, ...){
 
     ## ** prepare with gls
-    out <- .getVarCov2.gls(object, param = param, attr.param = attr.param,
-                    endogenous = endogenous, name.endogenous = name.endogenous, n.endogenous = n.endogenous,
-                    cluster = cluster, n.cluster = n.cluster)
+    out <- .getVarCov2.gls(object, param = param, attr.param = attr.param, ...)
 
     ## ** add contribution of the random effect
     ran.coef <- param[attr.param$ran.coef]

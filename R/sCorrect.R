@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  5 2018 (17:20) 
+## Last-Updated: feb 20 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 256
+##     Update #: 594
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,160 +32,264 @@
 #'
 #' @concept small sample inference
 #' @concept derivative of the score equation
+#' n <- 5e1
+#' p <- 3
+#' X.name <- paste0("X",1:p)
+#' link.lvm <- paste0("Y~",X.name)
+#' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 #' 
+#' m <- lvm(formula.lvm)
+#' distribution(m,~Id) <- sequence.lvm(0)
+#' set.seed(10)
+#' d <- sim(m,n)
+#'
+#' ## linear model
+#' e.lm <- lm(formula.lvm,data=d)
+#' system.time(
+#' sCorrect(e.lm) <- TRUE
+#')
+#' 
+#' ## gls model
+#' library(nlme)
+#' e.gls <- gls(formula.lvm, data = d, method = "ML")
+#' sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE
+#' 
+#'
+#' ## latent variable model
+#' e.lvm <- estimate(lvm(formula.lvm),data=d)
+#' iid.tempo <- iid2(e.lvm, adjust.residuals = FALSE)
+#' range(iid.tempo-iid(e.lvm))
+#' ## difference due to the use of the observed info matrix vs. the expected one.
 #' @export
 `sCorrect` <-
   function(object, ...) UseMethod("sCorrect")
 
 
-## * dVcov.lm
+## * sCorrect.lm
 #' @rdname sCorrect
 #' @export
-sCorrect.lm <- function(object, bias.correct = FALSE,
-                      return.score = FALSE, ...){
-
-    ## ** extract information
-    X <- stats::model.matrix(object)
-        
-    epsilonD2 <- residuals2(object, bias.correct = bias.correct,
-                            return.vcov.param = TRUE)
-    p <- c(stats::coef(object), sigma2 = mean(stats::residuals(object)^2))
-    name.param <- names(p)
-    n.param <- length(p)
-    vcov.param <- attr(epsilonD2, "vcov.param")
-    sigma2.cor <- attr(epsilonD2, "sigma2")
-
-    dVcov.dtheta <- array(0,dim = c(n.param, n.param, 1),
-                          dimnames = list(name.param, name.param, "sigma2"))
-
-    dVcov.dtheta[setdiff(name.param,"sigma2"),setdiff(name.param,"sigma2"),"sigma2"] <- solve(t(X) %*% X)
-    dVcov.dtheta["sigma2","sigma2","sigma2"] <- 2*vcov.param["sigma2","sigma2"]/sigma2.cor
-
-    ## ** score
-    if(return.score){
-        attr(epsilonD2, "vcov.param") <- NULL
-        attr(epsilonD2, "sigma2") <- NULL
-        X <- stats::model.matrix(object)
-        out.score <- cbind(sweep(X, MARGIN = 1, FUN = "*",  STATS = epsilonD2) / sigma2.cor,
-                           -1/(2*sigma2.cor) + 1/(2*sigma2.cor^2) * epsilonD2^2)
-
-        attr(dVcov.dtheta, "score") <- out.score
-    }
+sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
+                        score = TRUE, df = TRUE, numeric.derivative = FALSE,
+                        param = NULL, data = NULL,
+                        tol = 1e-5, n.iter = 20, ...){
     
+    ## ** Extract quantities from object
+    name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
+    n.cluster <- nobs(object) + length(object$na.action)
+    
+    if(is.null(param)){
+        param <- .coef2(object)
+        model.param <- param
+    }else{
+        model.param <- .coef2(object)
+        if(any(names(param) %in% names(model.param) == FALSE)){
+            stop("Argument \'param\' have appropriate names: \"",
+                 paste(setdiff(names(param),names(model.param)), collapse = "\" \""),
+                 "\" \n")
+        }
+        model.param[names(param)] <- param
+    }
+    if(is.null(data)){
+        if(is.null(object$na.action)){
+            object.residuals <- cbind(residuals(object))
+            index.Omega <- NULL
+        }else{
+            object.residuals <- matrix(NA, nrow = n.cluster, ncol = 1,
+                                       dimnames = list(NULL, name.endogenous))
+            index.Omega <- setdiff(1:n.cluster, object$na.action)
+            object.residuals[index.Omega,]  <- residuals(object)            
+        }
+    }else{
+        object.residuals <- cbind(predict(object, newdata = data) - data[[name.endogenous]])
+    }
+    colnames(object.residuals) <- name.endogenous
+
+    
+    name.param <- names(model.param)
+    name.meanparam <- attr(model.param,"mean.coef")
+    name.varparam <- attr(model.param,"var.coef")
+    object.sigma2 <- matrix(mean(object.residuals^2), nrow = 1, ncol = 1,
+                            dimnames = list(name.endogenous, name.endogenous))
+    
+    ## ** Compute conditional moments
+    dMoments <- conditionalMoment(object, name.endogenous = name.endogenous,
+                                  second.order = df)
+
+    ## ** correction
+    if(df == FALSE){
+        derivative <- "none"
+    }else if(numeric.derivative){
+        derivative <- "numeric"
+    }else{
+        derivative <- "analytic"
+    }
+
+    out <- .sCorrect(object,
+                     param = model.param,
+                     epsilon = object.residuals,
+                     Omega = object.sigma2,
+                     dmu = dMoments$dmu,
+                     dOmega = dMoments$dOmega,
+                     d2mu = dMoments$d2mu,
+                     d2Omega = dMoments$d2Omega,
+                     name.param = name.param,
+                     name.meanparam = name.meanparam,
+                     name.varparam = name.varparam,
+                     name.endogenous = name.endogenous,
+                     name.3deriv = dMoments$name.3deriv,
+                     n.cluster = n.cluster,
+                     index.Omega = index.Omega,
+                     adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,
+                     tol = tol,
+                     n.iter = n.iter,
+                     score = score,
+                     derivative = derivative,
+                     ...)
     
     ## ** export
-    attr(dVcov.dtheta, "vcov.param") <- vcov.param
-    attr(dVcov.dtheta, "param") <- p
-    return(dVcov.dtheta)
-    
+    out$args <- list(adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,
+                     df = df,
+                     numeric.derivative = numeric.derivative,
+                     tol = tol, n.iter = n.iter)
+    return(out)    
 }
+
 ## * sCorrect.gls
 #' @rdname sCorrect
 #' @export
-sCorrect.gls <- function(object, cluster, vcov.param = NULL,
-                       bias.correct = FALSE, numeric.derivative = FALSE,
-                       return.score = FALSE, ...){
+sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
+                         score = TRUE, df = TRUE, numeric.derivative = FALSE, 
+                         param = NULL, data = NULL,
+                         tol = 1e-5, n.iter = 20,
+                         ...){
 
-    p <- .coef2(object)
-    data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
+    ### ** limitations
+    if(object$method!="ML"){
+        warning("Implemented for Maximum Likelihood estimation not for REML\n")
+    }
 
-    n.param <- length(p)
-    name.param <- names(p)
+    test.var <- !is.null(object$modelStruct$varStruct)
+    test.cor <- !is.null(object$modelStruct$corStruct)
 
-    as.clubSandwich <- 1
-
-    ## ** param with non-zero third derivative
-    keep.param <- setdiff(name.param, attr(.coef2(object),"mean.coef"))
-
-    ## ** pre-compute quantities
-    if(return.score || numeric.derivative == FALSE){
-        epsilonD2 <- residuals2(object, p = p, data = data, cluster = cluster,
-                                bias.correct = bias.correct,
-                                as.clubSandwich = as.clubSandwich,
-                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
-        pS2  <- attr(epsilonD2, "prepareScore2")
+    if(test.var){
+        validClass.var <- c("varIdent","varFunc")
+        if(any(class(object$modelStruct$varStruct) %in% validClass.var == FALSE)){
+            stop("can only handle varStruct of class \"varIdent\"\n")
+        }
+    }
+    if(test.cor){
+        validClass.cor <- c("corCompSymm","corSymm","corStruct")
+        if(any(class(object$modelStruct$corStruct) %in% validClass.cor == FALSE)){
+            stop("can only handle corStruct of class \"corCompSymm\" or \"corSymm\"\n")
+        }
     }
     
-    ### ** Compute the gradient
-    if(numeric.derivative){
-        
-        ### *** Define function to compute the variance-covariance matrix
-        calcSigma <- function(iParam){ # x <- p.obj
-            pp <- p
-            pp[names(iParam)] <- iParam
-            res.tempo <- residuals2(object, cluster = cluster, p = pp, data = data,
-                                    bias.correct = bias.correct,
-                                    as.clubSandwich = as.clubSandwich,
-                                    return.vcov.param = TRUE, second.order = FALSE)
-            vcov.tempo <- attr(res.tempo, "vcov.param")
-            attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
-            return(vcov.tempo)
+    ### ** Extract quantities from the model
+    ## *** parameters
+    model.param <- .coef2(object)
+    if(!is.null(param)){        
+        if(any(names(param) %in% names(model.param) == FALSE)){
+            stop("Argument \'param\' have appropriate names: \"",
+                 paste(setdiff(names(param),names(model.param)), collapse = "\" \""),
+                 "\" \n")
         }
-        
-        if(is.null(vcov.param)){
-            vcov.param <- calcSigma(p)
-        }
+        model.param[names(param)] <- param
+    }
+    if(is.null(data)){
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
+    }
+    name.param <- names(model.param)
+    name.meanparam <- attr(model.param,"mean.coef")
+    name.varparam <- c(attr(model.param,"var.coef"), attr(model.param,"cor.coef"))
 
-        ### *** numerical derivative
-        test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'numDeriv\' \n",
-                 "This package is necessary when argument \'numeric.derivative\' is TRUE \n")
-        }
-        
-        jac.param <- p[keep.param]        
-        res.tempo <- numDeriv::jacobian(calcSigma, x = jac.param, method = "Richardson")
+    ## *** endogenous variable
+    formula.object <- .getFormula2(object)
+    name.Y <- all.vars(stats::update(formula.object, ".~1"))
+    Y <- data[[name.Y]]
 
-        dVcov.dtheta <- array(res.tempo,
-                              dim = c(n.param,n.param,length(jac.param)),
-                              dimnames = list(name.param, name.param, keep.param))
+    ## *** group
+    resGroup <- .getGroups2(object,
+                            cluster = cluster,
+                            name.endogenous = name.Y,
+                            data = data)
 
-    }else{        
-        vcov.param  <- attr(epsilonD2, "vcov.param")
-        attr(vcov.param, "warning")  <- attr(epsilonD2, "warning")
-        
-        dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dmu.dtheta,
-                                       d2mu.dtheta2 = NULL,
-                                       dOmega.dtheta = pS2$dOmega.dtheta,
-                                       d2Omega.dtheta2 = pS2$d2Omega.dtheta2,
-                                       Omega = pS2$Omega,
-                                       ls.indexOmega = pS2$ls.indexOmega,
-                                       hat = pS2$hat,
-                                       n.param  = pS2$n.param,
-                                       name.param  = pS2$name.param,
-                                       name.deriv = keep.param,
-                                       n.cluster = pS2$n.cluster)
+    cluster <- resGroup$cluster
+    n.cluster <- resGroup$n.cluster
+    endogenous <- resGroup$endogenous
+    name.endogenous <- resGroup$name.endogenous
+    n.endogenous <- length(name.endogenous)
 
-        p3 <- dim(dInfo.dtheta)[3]
-        dVcov.dtheta <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
-        for(iP in 1:p3){
-            dVcov.dtheta[,,iP] <- - vcov.param %*% dInfo.dtheta[,,iP] %*% vcov.param
-        }
-        
+    ### ** Compute conditional moments and derivatives
+    dMoments <- conditionalMoment(object,
+                                  data = data,
+                                  formula = formula.object,
+                                  param = model.param,
+                                  attr.param = attributes(model.param)[-1],
+                                  second.order = df,
+                                  n.cluster = resGroup$n.cluster,
+                                  name.endogenous = resGroup$name.endogenous,
+                                  cluster = cluster)
+
+    ### ** Reconstruct variance covariance matrix (residuals)
+    ls.Omega <- .getVarCov2(object, param = model.param, attr.param = attributes(model.param)[-1],
+                           endogenous = endogenous, name.endogenous = name.endogenous,
+                           cluster = cluster, n.cluster = n.cluster)
+
+    ### ** Compute observed residuals
+    epsilon <- lapply(1:n.cluster, function(iC){ # iC <- 1
+        iIndex <- which(cluster == iC)
+        as.double(Y[iIndex] - dMoments$X[iIndex,,drop=FALSE] %*% model.param[name.meanparam])
+    })
+    ## stats::residuals(object)-unlist(epsilon)
+    
+    browser()
+    
+    
+    ## ** param with non-zero third derivative
+    name.3deriv <- name.varparam
+   
+    ## ** correction
+    if(df == FALSE){
+        derivative <- "none"
+    }else if(numeric.derivative){
+        derivative <- "numeric"
+    }else{
+        derivative <- "analytic"
     }
 
-    ## ** score
-    if(return.score){
-        attr(epsilonD2, "prepareScore2") <- NULL
-        attr(epsilonD2, "vcov.param") <- NULL
-        
-        out.score <- .score2(dmu.dtheta = pS2$dmu.dtheta,
-                             dOmega.dtheta = pS2$dOmega.dtheta,
-                             epsilon = epsilonD2,
-                             Omega = pS2$Omega,                         
-                             ls.indexOmega = pS2$ls.indexOmega,
-                             indiv = TRUE,
-                             name.param = pS2$name.param,
-                             n.param = pS2$n.param,
-                             n.cluster = pS2$n.cluster)
-         
-        attr(dVcov.dtheta, "score") <- out.score        
-    }
+    out <- .sCorrect(object,
+                     param = model.param,
+                     epsilon = epsilon,
+                     Omega = ls.Omega$Omega,
+                     dmu = dMoments$dmu,
+                     dOmega = dMoments$dOmega,
+                     d2mu = NULL,
+                     d2Omega = dMoments$d2Omega,
+                     name.param = name.param,
+                     name.meanparam = name.meanparam,
+                     name.varparam = name.varparam,
+                     name.endogenous = name.endogenous,
+                     name.3deriv = name.3deriv,
+                     n.cluster = n.cluster,
+                     index.Omega = ls.Omega$ls.indexOmega,
+                     adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,
+                     tol = tol,
+                     n.iter = n.iter,
+                     score = score,
+                     derivative = derivative,
+                     ...)
     
     ## ** export
-    attr(dVcov.dtheta, "vcov.param") <- vcov.param
-    attr(dVcov.dtheta, "param") <- p
-    return(dVcov.dtheta)      
+    out$args <- list(adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,                     
+                     df = df,
+                     cluster = cluster,
+                     numeric.derivative = numeric.derivative,
+                     tol = tol, n.iter = n.iter)
+    return(out)          
  
 }
 
@@ -197,140 +301,114 @@ sCorrect.lme <- sCorrect.gls
 ## * sCorrect.lvmfit
 #' @rdname sCorrect
 #' @export
-sCorrect.lvmfit <- function(object, vcov.param = NULL,
-                          bias.correct = TRUE, numeric.derivative = FALSE,
-                          return.score = FALSE, ...){
-
-    detail <- NULL ## [:for CRAN check] subset
+sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
+                            score = TRUE, df = TRUE, numeric.derivative = FALSE, 
+                            param = NULL, data = NULL,
+                            tol = 1e-5, n.iter = 20,
+                            ...){
     
-    p <- lava::pars(object)
-    data <- stats::model.frame(object)
- 
-    n.param <- length(p)
-    name.param <- names(p)
+    ## ** Extract quantities from object
+    name.endogenous <- endogenous(object)
+    n.cluster <- object$data$n
 
-    as.clubSandwich <- 1
-
-    ## ** Pre-compute quantities
-    if(is.null(object$prepareScore2)){
-        ## when using numerical derivative the score is computed for different sets of coefficients
-        ## therefore the pre-computations should not use the estimated coefficients
-        ## when using explicit formula for the derivative it is ok to use the estimated coefficients in the pre-computations
-        object$prepareScore2 <- prepareScore2(object,
-                                              second.order = TRUE,
-                                              usefit = (numeric.derivative==FALSE) )
+    model.param <- lava::pars(object)
+    if(!is.null(param)){
+        if(any(names(param) %in% names(model.param) == FALSE)){
+            stop("Argument \'param\' have appropriate names: \"",
+                 paste(setdiff(names(param),names(model.param)), collapse = "\" \""),
+                 "\" \n")
+        }
+        model.param[names(param)] <- param
     }
 
-    if(return.score || numeric.derivative == FALSE){
-        epsilonD2 <- residuals2(object, p = p, data = data,
-                                bias.correct = bias.correct,
-                                as.clubSandwich = as.clubSandwich,
-                                return.prepareScore2 = TRUE, return.vcov.param = TRUE, second.order = TRUE)
-        pS2  <- attr(epsilonD2, "prepareScore2")
+    if(is.null(data)){
+        data <- object$data$model.frame
     }
-        
-    ## ** param with non-zero third derivative
-    keep.type <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
-    tableType <- coefType(object, as.lava=FALSE)        
-    keep.param <- subset(tableType,
-                         subset = !is.na(lava) & detail %in% keep.type,
-                         select = "originalLink", drop = TRUE)
+
+    name.param <- names(model.param)
+
+    n.latent <- length(latent(object))
     
-    ### ** Compute the gradient 
-    if(numeric.derivative){
+    ### ** Compute conditional moments and derivatives
+    dMoments <- conditionalMoment(object, data = data, param = model.param,
+                                  second.order = df, usefit = TRUE)
+    name.meanparam <- names(dMoments$dmu)
+    name.varparam <- names(dMoments$dOmega)
 
-        ### *** Define function to compute the variance-covariance matrix
-        if(bias.correct==FALSE){
-            calcVcov <- function(iParam){ # x <- p.obj
-                pp <- p
-                pp[names(iParam)] <- iParam
-                Info <- information(object, p = pp)
-                return(chol2inv(chol(Info))) 
-                ## return(Info) ## [:DEBUG]
-            }                        
-        }else{            
-            calcVcov <- function(iParam){ # x <- p.obj
-                pp <- p
-                pp[names(iParam)] <- iParam
-                res.tempo <- residuals2(object, p = pp, data = data,
-                                        bias.correct = bias.correct,                                        
-                                        as.clubSandwich = as.clubSandwich,
-                                        return.vcov.param = TRUE)
-                vcov.tempo <- attr(res.tempo, "vcov.param")
-                attr(vcov.param, "warning")  <- attr(res.tempo, "warning")
-                return(vcov.tempo)
-            }
-        }
+    ### ** Compute residuals
+    epsilon <- .calcResidualsLVM(data = data, dMoments = dMoments,
+                                 n.latent = n.latent,
+                                 name.endogenous = name.endogenous)
 
-        if(is.null(vcov.param)){
-            vcov.param <- calcVcov(p)
-            dimnames(vcov.param) <- list(name.param, name.param)
-        }
-        
-        ### *** numerical derivative
-        test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'numDeriv\' \n",
-                 "This package is necessary when argument \'numeric.derivative\' is TRUE \n")
-        }
-        
-        jac.param <- p[keep.param]
-        res.tempo <- numDeriv::jacobian(calcVcov, x = jac.param, method = "Richardson")
+    ### ** Identify missing values
+    if(any(is.na(epsilon))){
+        index.Omega <- lapply(1:n.cluster,function(iC){which(!is.na(epsilon[iC,]))})
 
-        dVcov.dtheta <- array(res.tempo,
-                              dim = c(n.param,n.param,length(jac.param)),
-                              dimnames = list(name.param, name.param, keep.param))
-        
+        ## convert to list format to enable different number of observation per cluster
+        dMoments$dmu <- lapply(dMoments$dmu, function(x){
+            lapply(1:n.cluster,function(iC){x[iC,index.Omega[[iC]]]})
+        })
+        dMoments$d2mu <- lapply(dMoments$d2mu, function(x){
+            lapply(x, function(y){
+                lapply(1:n.cluster,function(iC){y[iC,index.Omega[[iC]]]})
+            })
+        })
+        epsilon <- lapply(1:n.cluster,function(iC){epsilon[iC,index.Omega[[iC]]]})
     }else{
-        vcov.param  <- attr(epsilonD2, "vcov.param")
-        attr(vcov.param, "warning")  <- attr(epsilonD2, "warning")
- 
-        dInfo.dtheta <- .dinformation2(dmu.dtheta = pS2$dtheta$dmu.dtheta,
-                                       d2mu.dtheta2 = pS2$dtheta2$d2mu.dtheta2,
-                                       dOmega.dtheta = pS2$dtheta$dOmega.dtheta,
-                                       d2Omega.dtheta2 = pS2$dtheta2$d2Omega.dtheta2,
-                                       Omega = pS2$Omega,
-                                       ls.indexOmega = pS2$ls.indexOmega,
-                                       hat = pS2$hat,
-                                       n.param  = pS2$n.param,
-                                       name.param  = pS2$name.param,
-                                       name.deriv = keep.param,
-                                       n.cluster = pS2$n.cluster)
-
-        p3 <- dim(dInfo.dtheta)[3]
-        dVcov.dtheta <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
-        for(iP in 1:p3){
-            dVcov.dtheta[,,iP] <- - vcov.param %*% dInfo.dtheta[,,iP] %*% vcov.param 
-            ## dVcov.dtheta[,,iP] <- dInfo.dtheta[,,iP] ## [:DEBUG]
-        }
-
+        index.Omega <- NULL
     }
 
-    ## ** score
-    if(return.score){
-        attr(epsilonD2, "prepareScore2") <- NULL
-        attr(epsilonD2, "vcov.param") <- NULL
-        out.score <- .score2(dmu.dtheta = pS2$dtheta$dmu.dtheta,
-                             dOmega.dtheta = pS2$dtheta$dOmega.dtheta,
-                             epsilon = epsilonD2,
-                             Omega = pS2$Omega,
-                             ls.indexOmega = NULL,
-                             indiv = TRUE,                         
-                             name.param = pS2$name.param,
-                             n.param = pS2$n.param,
-                             n.cluster = pS2$n.cluster)
-        attr(dVcov.dtheta, "score") <- out.score
+    ### ** Compute residual variance covariance matrix
+    Omega <- .calcOmegaLVM(dMoments, n.latent = n.latent)
+    
+    ## ** param with non-zero third derivative
+    type.3deriv <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov")
+    index.keep <- intersect(which(!is.na(dMoments$df.param$lava)),
+                            which(dMoments$df.param$detail %in% type.3deriv)
+                            )
+    
+    name.3deriv <- dMoments$df.param[index.keep, "originalLink"]
+
+    ## ** correction
+    if(df == FALSE){
+        derivative <- "none"
+    }else if(numeric.derivative){
+        derivative <- "numeric"
+    }else{
+        derivative <- "analytic"
     }
-  
+    
+    out <- .sCorrect(object,
+                     param = model.param,
+                     epsilon = epsilon,
+                     Omega = Omega,
+                     dmu = dMoments$dmu,
+                     dOmega = dMoments$dOmega,
+                     d2mu = dMoments$d2mu,
+                     d2Omega = dMoments$d2Omega,
+                     name.param = name.param,
+                     name.meanparam = name.meanparam,
+                     name.varparam = name.varparam,
+                     name.endogenous = name.endogenous,
+                     name.3deriv = name.3deriv,
+                     n.cluster = n.cluster,
+                     index.Omega = index.Omega,
+                     adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,
+                     tol = tol,
+                     n.iter = n.iter,
+                     score = score,
+                     derivative = derivative,
+                     ...)
+
     ## ** export
-    attr(dVcov.dtheta, "vcov.param") <- vcov.param
-    attr(dVcov.dtheta, "param") <- p
-    return(dVcov.dtheta)       
+    out$args <- list(adjust.Omega = adjust.Omega,
+                     adjust.n = adjust.n,                     
+                     df = df,
+                     numeric.derivative = numeric.derivative,
+                     tol = tol, n.iter = n.iter)
+    return(out)       
 }
-
-
-
-
 
 ## * sCorrect.lvmfit2
 #' @rdname sCorrect
@@ -338,6 +416,133 @@ sCorrect.lvmfit <- function(object, vcov.param = NULL,
 sCorrect.lvmfit2 <- function(object, ...){
     class(object) <- setdiff(class(object),"lvmfit2")
     return(sCorrect(object, ...))    
+}
+## * .sCorrect
+.sCorrect <- function(object, param, epsilon, Omega, dmu, dOmega, d2mu, d2Omega, 
+                      name.param, name.meanparam, name.varparam, name.endogenous, name.3deriv,
+                      n.cluster, index.Omega,
+                      adjust.Omega, adjust.n, tol, n.iter, score, derivative){
+
+    n.param <- length(param)
+    if(!is.null(index.Omega)){
+        n.endogenous.cluster <- lapply(index.Omega,length)
+    }else{
+        n.endogenous.cluster <- NULL
+    }
+    
+    ## ** corrected ML estimates
+    out  <- adjustEstimate(epsilon = epsilon,
+                           Omega = Omega,
+                           dmu = dmu,
+                           dOmega = dOmega,
+                           n.cluster = n.cluster,
+                           name.param = name.param,
+                           name.meanparam = name.meanparam,
+                           name.varparam = name.varparam,
+                           name.endogenous = name.endogenous,
+                           n.endogenous.cluster = n.endogenous.cluster, ## mode2
+                           index.Omega = index.Omega, ## mode2
+                           adjust.Omega = adjust.Omega,
+                           adjust.n = adjust.n,
+                           tol = tol, n.iter = n.iter)    
+    out$param <- param
+    
+    ## ** corrected score
+    if(score){
+        if(is.null(index.Omega)){
+            out$score <- .score2(epsilon = out$epsilon,
+                                 Omega = out$Omega,
+                                 OmegaM1 = out$OmegaM1,
+                                 dmu = dmu,
+                                 dOmega = dOmega,
+                                 name.param = name.param,
+                                 name.meanparam = name.meanparam,
+                                 name.varparam = name.varparam,
+                                 n.cluster = n.cluster,
+                                 indiv = TRUE)
+        }else{
+            out$score <- .score2Indiv(epsilon = out$epsilon,
+                                      Omega = out$Omega,
+                                      OmegaM1 = out$OmegaM1,
+                                      dmu = dmu,
+                                      dOmega = dOmega,
+                                      name.param = name.param,
+                                      name.meanparam = name.meanparam,
+                                      name.varparam = name.varparam,
+                                      n.cluster = n.cluster,
+                                      n.endogenous.cluster = n.endogenous.cluster,
+                                      index.Omega = index.Omega,
+                                      indiv = TRUE)
+        }
+    }
+
+    ## ** first derivative of the expected information matrix
+    if(derivative == "numeric"){
+        if(adjust.Omega || adjust.n){
+            warning("The numerical derivative of the information matrix is computed ignoring the small sample correction \n")
+        }
+        
+        ### *** direct computation of the variance-covariance matrix
+        calcVcov <- function(iParam){ # x <- p.obj
+            pp <- param
+            pp[names(iParam)] <- iParam
+
+            args <- object$sCorrect$args
+            args$df <- FALSE
+            args$score <- FALSE
+            vcov.param <- do.call(sCorrect,
+                                  args = c(list(object, param = pp), args))$vcov.param
+            
+            return(vcov.param)
+        }
+
+        ### *** numerical derivative
+        test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'numDeriv\' \n",
+                 "This package is necessary when argument \'numeric.derivative\' is TRUE \n")
+        }
+        jac.param <- param[name.3deriv]
+        res.numDeriv <- numDeriv::jacobian(calcVcov, x = jac.param, method = "Richardson")
+        
+        out$dVcov.param <- array(res.numDeriv,
+                                 dim = c(n.param,n.param,length(name.3deriv)),
+                                 dimnames = list(name.param, name.param, name.3deriv))
+        
+    }else if(derivative == "analytic"){
+        if(is.null(index.Omega)){
+            dInfo.dtheta <- .d2Information(dmu = dmu,
+                                           d2mu = d2mu,
+                                           dOmega = dOmega,
+                                           d2Omega = d2Omega,
+                                           Omega = out$Omega,
+                                           OmegaM1 = out$OmegaM1,
+                                           n.corrected = out$n.corrected,
+                                           name.param  = name.param,
+                                           name.3deriv = name.3deriv)
+        }else{
+            dInfo.dtheta <- .d2InformationIndiv(dmu = dmu,
+                                                d2mu = d2mu,
+                                                dOmega = dOmega,
+                                                d2Omega = d2Omega,
+                                                Omega = out$Omega,
+                                                OmegaM1 = out$OmegaM1,
+                                                n.corrected = out$n.corrected,
+                                                n.endogenous.cluster = n.endogenous.cluster,
+                                                index.Omega = index.Omega,
+                                                name.param  = name.param,
+                                                name.3deriv = name.3deriv)
+        }
+
+        p3 <- dim(dInfo.dtheta)[3]
+        out$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
+        for(iP in 1:p3){
+            out$dVcov.param[,,iP] <- - out$vcov.param %*% dInfo.dtheta[,,iP] %*% out$vcov.param 
+        }
+    }
+        
+    ## ** export
+    return(out)
 }
 
 ## * sCorrect<-
@@ -350,7 +555,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lm` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., bias.correct = value)
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lm2",class(x))
 
     return(x)
@@ -359,7 +564,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.gls` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., bias.correct = value)
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("gls2",class(x))
 
     return(x)
@@ -368,7 +573,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lme` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., bias.correct = value)
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lme2",class(x))
     
     return(x)
@@ -378,7 +583,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lvmfit` <- function(x, ..., value){
-    x$dVcov <- sCorrect(x, ..., bias.correct = value)
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lvmfit2",class(x))
 
     return(x)
@@ -390,217 +595,10 @@ sCorrect.lvmfit2 <- function(object, ...){
 `sCorrect<-.lvmfit2` <- function(x, ..., value){
 
     class(x) <- setdiff(class(x),"lvmfit2")
-    x$dVcov <- sCorrect(x, ..., bias.correct = value)
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lvmfit2",class(x))
     
     return(x)
-}
-
-## * .dinformation2
-.dinformation2 <- function(dmu.dtheta, d2mu.dtheta2,
-                           dOmega.dtheta, d2Omega.dtheta2,
-                           Omega, ls.indexOmega, hat,
-                           n.param, name.param, name.deriv,
-                           n.cluster){
-
-### ** prepare
-    index.deriv <- match(name.deriv, name.param)
-    clusterSpecific <- !is.null(ls.indexOmega)
-    iOmega <- chol2inv(chol(Omega))        
-
-    if(!clusterSpecific){
-        Omega.tempo <- Omega
-        iOmega.tempo <- iOmega
-
-        ## *** small sample correction               
-        df.mean <- Reduce("+",hat)
-        iN.cluster <- as.double(n.cluster - diag(df.mean))
-    }
-    
-    ### ** compute the derivative of the information matrix for each coefficients
-    dInfo <-  array(0,
-                    dim = c(n.param, n.param, length(name.deriv)),
-                    dimnames = list(name.param, name.param, name.deriv))
-    
-    for(iDeriv in index.deriv){ # iDeriv <- 4
-        for(iP1 in 1:n.param){ # iP1 <- 1
-            for(iP2 in iP1:n.param){ # iP2 <- 1
-                
-                iNameD <- name.param[iDeriv]
-                iName1 <- name.param[iP1]
-                iName2 <- name.param[iP2]
-
-                ##cat(iNameD," ",iName1,"",iName2,"\n")
-                
-                test.Omega1 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega2a <- !is.null(d2Omega.dtheta2[[iNameD]][[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega2b <- !is.null(d2Omega.dtheta2[[iName1]][[iNameD]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega3a <- !is.null(d2Omega.dtheta2[[iNameD]][[iName2]]) && !is.null(dOmega.dtheta[[iName1]])
-                test.Omega3b <- !is.null(d2Omega.dtheta2[[iName2]][[iNameD]]) && !is.null(dOmega.dtheta[[iName1]])
-                
-                test.mu1a <- !is.null(d2mu.dtheta2[[iNameD]][[iName1]]) && !is.null(dmu.dtheta[[iName2]])
-                test.mu1b <- !is.null(d2mu.dtheta2[[iName1]][[iNameD]]) && !is.null(dmu.dtheta[[iName2]])
-                test.mu2a <- !is.null(d2mu.dtheta2[[iNameD]][[iName2]]) && !is.null(dmu.dtheta[[iName1]])
-                test.mu2b <- !is.null(d2mu.dtheta2[[iName2]][[iNameD]]) && !is.null(dmu.dtheta[[iName1]])
-                test.mu3 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
-
-                ## *** Individual specific Omega (e.g. presence of missing values)
-                if(clusterSpecific){
-                    
-                    for(iC in 1:n.cluster){
-
-                        ## prepare
-                        Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        iOmega.tempo <- iOmega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        if(!is.null(dmu.dtheta[[iName1]])){
-                            dmu.1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dmu.dtheta[[iName2]])){
-                            dmu.2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.mu1a){
-                            d2mu.D1 <- d2mu.dtheta2[[iNameD]][[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.mu1b){
-                            d2mu.D1 <- d2mu.dtheta2[[iName1]][[iNameD]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.mu1a){
-                            d2mu.D <- d2mu.dtheta2[[iNameD]][[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.mu1b){
-                            d2mu.D <- d2mu.dtheta2[[iName2]][[iNameD]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iNameD]])){
-                            iOmega.dOmega.D <- iOmega.tempo %*% dOmega.dtheta[[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iName1]])){
-                            iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iName2]])){
-                            iOmega.dOmega.2 <- iOmega.tempo %*% dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.Omega2a){
-                            d2Omega.D1 <- d2Omega.dtheta2[[iNameD]][[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.Omega2b){
-                            d2Omega.D1 <- d2Omega.dtheta2[[iName1]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.Omega3a){
-                            d2Omega.D2 <- d2Omega.dtheta2[[iNameD]][[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }else{
-                            d2Omega.D2 <- d2Omega.dtheta2[[iName2]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-
-                        ## small sample correction  
-                        iW.cluster <- 1 -  diag(hat[[iC]])
-                        
-                        ## compute
-                        if(test.Omega1){                            
-                            iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
-                            iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iW.cluster + iDiag2 * iW.cluster)
-                        }
-                        
-                        if(test.Omega2a || test.Omega2b){
-                            iDiag <- diag(iOmega %*% d2Omega.D1 %*% iOmega.dOmega.2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
-                        }
-
-                        if(test.Omega3a || test.Omega3b){
-                            iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
-                        }
-
-                        if(test.mu1a || test.mu1b){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + d2mu.D1 %*% iOmega %*% t(dmu.2)
-                        }
-
-                        if(test.mu2a || test.mu2b){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + dmu.1 %*% iOmega %*% t(d2mu.D2)
-                        }
-
-                        if(test.mu3){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo %*% t(dmu.2)
-                        }
-                    
-                }
-            }
-            
-            ## *** Same for all individuals
-                if(clusterSpecific == FALSE){
-
-                    ## prepare
-                    if(!is.null(dmu.dtheta[[iName1]])){
-                        dmu.1 <- dmu.dtheta[[iName1]]
-                    }
-                    if(!is.null(dmu.dtheta[[iName2]])){
-                        dmu.2 <- dmu.dtheta[[iName2]]
-                    }
-                    if(test.mu1a){
-                        d2mu.D1 <- d2mu.dtheta2[[iNameD]][[iName1]]
-                    }else if(test.mu1b){
-                        d2mu.D1 <- d2mu.dtheta2[[iName1]][[iNameD]]
-                    }
-                    if(test.mu2a){
-                        d2mu.D2 <- d2mu.dtheta2[[iNameD]][[iName2]]
-                    }else if(test.mu2b){
-                        d2mu.D2 <- d2mu.dtheta2[[iName2]][[iNameD]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iNameD]])){
-                        iOmega.dOmega.D <- iOmega.tempo %*% dOmega.dtheta[[iNameD]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iName1]])){
-                        iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iName2]])){
-                        iOmega.dOmega.2 <- iOmega.tempo %*% dOmega.dtheta[[iName2]]
-                    }
-                    if(test.Omega2a){
-                        d2Omega.D1 <- d2Omega.dtheta2[[iNameD]][[iName1]]
-                    }else if(test.Omega2b){
-                        d2Omega.D1 <- d2Omega.dtheta2[[iName1]][[iNameD]]
-                    }
-                    if(test.Omega3a){
-                        d2Omega.D2 <- d2Omega.dtheta2[[iNameD]][[iName2]]
-                    }else{
-                        d2Omega.D2 <- d2Omega.dtheta2[[iName2]][[iNameD]]
-                    }
-
-                    ## compute
-                    if(test.Omega1){
-                        iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
-                        iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iN.cluster + iDiag2 * iN.cluster)
-                    }
-
-                    if(test.Omega2a || test.Omega2b){
-                        iDiag <- diag(iOmega %*% d2Omega.D1 %*% iOmega.dOmega.2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.cluster)
-                    }
-
-                    if(test.Omega3a || test.Omega3b){
-                        iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.cluster)
-                    }
-
-                    if(test.mu1a || test.mu1b){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(d2mu.D1 %*% iOmega * dmu.2)
-                    }
-
-                    if(test.mu2a || test.mu2b){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu.1 %*% iOmega * d2mu.D2)
-                    }
-
-                  
-                    if(test.mu3){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo * dmu.2)
-                    }
-            }
-            
-            }
-        }
-        dInfo[,,iNameD] <- dInfo[,,iNameD] + t(dInfo[,,iNameD]) - diag(diag(dInfo[,,iNameD]))
-    }
-
-    ### ** export
-    return(dInfo)
 }
 
 
@@ -610,3 +608,32 @@ sCorrect.lvmfit2 <- function(object, ...){
 
 
 
+
+
+
+## * .calcResidualsLVM
+.calcResidualsLVM <- function(data, dMoments, n.latent, name.endogenous){
+
+    ## ** fitted value
+    object.fitted <- dMoments$value$nu.XK
+    if(n.latent>0){
+        object.fitted <- object.fitted + dMoments$value$alpha.XGamma.iIB %*% dMoments$value$Lambda
+    }
+
+    ## ** residuals
+    out <- data[, name.endogenous] - object.fitted
+    
+    ## ** export
+    return(as.matrix(out))
+
+}
+
+## * .calcOmegaLVM
+.calcOmegaLVM <- function(dMoments, n.latent){
+    if(n.latent>0){
+        Omega <- dMoments$value$tLambda.tiIB.Psi.iIB %*% dMoments$value$Lambda + dMoments$value$Sigma
+    }else{
+        Omega <- dMoments$value$Sigma
+    }
+    return(Omega)
+}
