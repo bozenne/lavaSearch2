@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: feb 20 2018 (17:32) 
+## Last-Updated: feb 21 2018 (18:05) 
 ##           By: Brice Ozenne
-##     Update #: 45
+##     Update #: 50
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,41 +39,60 @@
     
     Info <- matrix(0, nrow = n.param, ncol = n.param,
                    dimnames = list(name.param,name.param))
-    
-    ### ** Information relative to the mean parameters
-    for(iG in 1:n.grid.meanparam){ # iG <- 1
-        iName1 <- grid.meanparam[iG,1]
-        iName2 <- grid.meanparam[iG,2]
-        iP1 <- param2index[iName1]
-        iP2 <- param2index[iName2]
-        if(test.global){
+
+    ### ** Global
+    if(test.global){
+        ### *** Information relative to the mean parameters
+        for(iG in 1:n.grid.meanparam){ # iG <- 1
+            iName1 <- grid.meanparam[iG,1]
+            iName2 <- grid.meanparam[iG,2]
+            iP1 <- param2index[iName1]
+            iP2 <- param2index[iName2]
+
             Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iName1]] %*% OmegaM1 * dmu[[iName2]])
-        }else{
-            for(iC in 1:n.cluster){
-                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iName1]][[iC]] %*% OmegaM1[index.Omega[[iC]],index.Omega[[iC]],drop=FALSE] * dmu[[iName2]][[iC]])            
-            }
         }
-    }
 
-    ### ** Information realtive to the variance parameters
-    for(iG in 1:n.grid.varparam){ # iG <- 1
-        iName1 <- grid.varparam[iG,1]
-        iName2 <- grid.varparam[iG,2]
-        iP1 <- param2index[iName1]
-        iP2 <- param2index[iName2]
+        ### *** Information realtive to the variance parameters
+        for(iG in 1:n.grid.varparam){ # iG <- 1
+            iName1 <- grid.varparam[iG,1]
+            iName2 <- grid.varparam[iG,2]
+            iP1 <- param2index[iName1]
+            iP2 <- param2index[iName2]
 
-        if(test.global){
             iDiag <- diag(OmegaM1 %*% dOmega[[iName1]] %*% OmegaM1 %*% dOmega[[iName2]])
             Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*n.corrected)
-        }else{
-            for(iC in 1:n.cluster){
-                iIndex <- index.Omega[[iC]]
-            
-                iDiag <- diag(OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iName1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iName2]][iIndex,iIndex,drop=FALSE])
-                Info[iP1,iP2] <- Info[iP1,iP2] + 1/2 * sum(iDiag * (1 - leverage[[iC]]))            
-            }
         }
+
     }
+    
+    ### ** Individual specific
+    if(!test.global){
+        for(iC in 1:n.cluster){ # iC <- 1
+            iIndex <- index.Omega[[iC]]
+
+            ### *** Information relative to the mean parameters
+            for(iG in 1:n.grid.meanparam){ # iG <- 1
+                iName1 <- grid.meanparam[iG,1]
+                iName2 <- grid.meanparam[iG,2]
+                iP1 <- param2index[iName1]
+                iP2 <- param2index[iName2]
+
+                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iName1]][iC,iIndex] %*% OmegaM1[iIndex,iIndex,drop=FALSE] * dmu[[iName2]][iC,iIndex])            
+            }
+
+            ### *** Information realtive to the variance parameters
+            for(iG in 1:n.grid.varparam){ # iG <- 1
+                iName1 <- grid.varparam[iG,1]
+                iName2 <- grid.varparam[iG,2]
+                iP1 <- param2index[iName1]
+                iP2 <- param2index[iName2]
+
+                iDiag <- diag(OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iName1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iName2]][iIndex,iIndex,drop=FALSE])
+                Info[iP1,iP2] <- Info[iP1,iP2] + 1/2 * sum(iDiag * (1 - leverage[iC,iIndex]))            
+            }
+        }        
+    }
+
 
     ### ** Make Info a symmetric matrix
     Info <- symmetrize(Info, update.upper = NULL)

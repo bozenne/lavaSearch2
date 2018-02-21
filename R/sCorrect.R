@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb 20 2018 (17:51) 
+## Last-Updated: feb 21 2018 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 594
+##     Update #: 628
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -169,24 +169,19 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(object$method!="ML"){
         warning("Implemented for Maximum Likelihood estimation not for REML\n")
     }
-
-    test.var <- !is.null(object$modelStruct$varStruct)
-    test.cor <- !is.null(object$modelStruct$corStruct)
-
-    if(test.var){
-        validClass.var <- c("varIdent","varFunc")
-        if(any(class(object$modelStruct$varStruct) %in% validClass.var == FALSE)){
-            stop("can only handle varStruct of class \"varIdent\"\n")
-        }
-    }
-    if(test.cor){
-        validClass.cor <- c("corCompSymm","corSymm","corStruct")
-        if(any(class(object$modelStruct$corStruct) %in% validClass.cor == FALSE)){
-            stop("can only handle corStruct of class \"corCompSymm\" or \"corSymm\"\n")
-        }
-    }
+    ## check valid class for corStruct and varStruct: see .getVarCov2
     
     ### ** Extract quantities from the model
+    ## *** data
+    if(is.null(data)){
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
+    }
+    
+    ## *** endogenous variable
+    formula.object <- .getFormula2(object)
+    name.Y <- all.vars(stats::update(formula.object, ".~1"))
+    Y <- data[[name.Y]]
+    
     ## *** parameters
     model.param <- .coef2(object)
     if(!is.null(param)){        
@@ -197,29 +192,36 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         }
         model.param[names(param)] <- param
     }
-    if(is.null(data)){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
-    }
     name.param <- names(model.param)
     name.meanparam <- attr(model.param,"mean.coef")
     name.varparam <- c(attr(model.param,"var.coef"), attr(model.param,"cor.coef"))
 
-    ## *** endogenous variable
-    formula.object <- .getFormula2(object)
-    name.Y <- all.vars(stats::update(formula.object, ".~1"))
-    Y <- data[[name.Y]]
-
     ## *** group
-    resGroup <- .getGroups2(object,
-                            cluster = cluster,
-                            name.endogenous = name.Y,
-                            data = data)
+    res.cluster <- .getCluster2(object,
+                                data = data,
+                                cluster = cluster)
 
-    cluster <- resGroup$cluster
-    n.cluster <- resGroup$n.cluster
-    endogenous <- resGroup$endogenous
-    name.endogenous <- resGroup$name.endogenous
-    n.endogenous <- length(name.endogenous)
+    ## *** repetition relative to each observation
+    res.index <- .getIndexOmega2(object,
+                                 param = model.param,
+                                 attr.param = attributes(model.param),
+                                 name.Y = name.Y,
+                                 cluster = res.cluster$cluster,
+                                 data = data)
+    index.Omega <- res.index$index.Omega
+    
+    ### ** Reconstruct variance covariance matrix (residuals)
+    Omega <- .getVarCov2.gls(object,
+                             param = model.param,
+                             attr.param = attributes(model.param),
+                             name.endogenous = res.index$name.endogenous,
+                             n.endogenous = res.index$n.endogenous,
+                             ref.group = res.index$ref.group)
+    
+    cluster <- res.cluster$cluster
+    n.cluster <- res.cluster$n.cluster
+    name.endogenous <- res.index$name.endogenous
+    n.endogenous <- res.index$n.endogenous
 
     ### ** Compute conditional moments and derivatives
     dMoments <- conditionalMoment(object,
@@ -227,25 +229,26 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                                   formula = formula.object,
                                   param = model.param,
                                   attr.param = attributes(model.param)[-1],
+                                  ref.group = res.index$ref.group,
                                   second.order = df,
-                                  n.cluster = resGroup$n.cluster,
-                                  name.endogenous = resGroup$name.endogenous,
-                                  cluster = cluster)
-
-    ### ** Reconstruct variance covariance matrix (residuals)
-    ls.Omega <- .getVarCov2(object, param = model.param, attr.param = attributes(model.param)[-1],
-                           endogenous = endogenous, name.endogenous = name.endogenous,
-                           cluster = cluster, n.cluster = n.cluster)
+                                  n.cluster = n.cluster,
+                                  cluster = cluster,
+                                  name.endogenous = name.endogenous,
+                                  index.Omega = index.Omega)
 
     ### ** Compute observed residuals
-    epsilon <- lapply(1:n.cluster, function(iC){ # iC <- 1
+    epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                      dimnames = list(NULL, name.endogenous))
+    for(iC in 1:n.cluster){
         iIndex <- which(cluster == iC)
-        as.double(Y[iIndex] - dMoments$X[iIndex,,drop=FALSE] %*% model.param[name.meanparam])
-    })
-    ## stats::residuals(object)-unlist(epsilon)
-    
-    browser()
-    
+        epsilon[iC,index.Omega[[iC]]] <- as.double(Y[iIndex] - dMoments$X[iIndex,,drop=FALSE] %*% model.param[name.meanparam])
+    }    
+    ## stats::residuals(object)-as.double(t(epsilon))
+
+    ## ** Check missing value
+    if(all(!is.na(epsilon))){
+        index.Omega <- NULL
+    }
     
     ## ** param with non-zero third derivative
     name.3deriv <- name.varparam
@@ -262,7 +265,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     out <- .sCorrect(object,
                      param = model.param,
                      epsilon = epsilon,
-                     Omega = ls.Omega$Omega,
+                     Omega = Omega,
                      dmu = dMoments$dmu,
                      dOmega = dMoments$dOmega,
                      d2mu = NULL,
@@ -273,7 +276,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                      name.endogenous = name.endogenous,
                      name.3deriv = name.3deriv,
                      n.cluster = n.cluster,
-                     index.Omega = ls.Omega$ls.indexOmega,
+                     index.Omega = index.Omega,
                      adjust.Omega = adjust.Omega,
                      adjust.n = adjust.n,
                      tol = tol,
@@ -440,42 +443,28 @@ sCorrect.lvmfit2 <- function(object, ...){
                            name.meanparam = name.meanparam,
                            name.varparam = name.varparam,
                            name.endogenous = name.endogenous,
-                           n.endogenous.cluster = n.endogenous.cluster, ## mode2
                            index.Omega = index.Omega, ## mode2
                            adjust.Omega = adjust.Omega,
                            adjust.n = adjust.n,
                            tol = tol, n.iter = n.iter)    
     out$param <- param
-    
+
+    browser()
     ## ** corrected score
     if(score){
-        if(is.null(index.Omega)){
-            out$score <- .score2(epsilon = out$epsilon,
-                                 Omega = out$Omega,
-                                 OmegaM1 = out$OmegaM1,
-                                 dmu = dmu,
-                                 dOmega = dOmega,
-                                 name.param = name.param,
-                                 name.meanparam = name.meanparam,
-                                 name.varparam = name.varparam,
-                                 n.cluster = n.cluster,
-                                 indiv = TRUE)
-        }else{
-            out$score <- .score2Indiv(epsilon = out$epsilon,
-                                      Omega = out$Omega,
-                                      OmegaM1 = out$OmegaM1,
-                                      dmu = dmu,
-                                      dOmega = dOmega,
-                                      name.param = name.param,
-                                      name.meanparam = name.meanparam,
-                                      name.varparam = name.varparam,
-                                      n.cluster = n.cluster,
-                                      n.endogenous.cluster = n.endogenous.cluster,
-                                      index.Omega = index.Omega,
-                                      indiv = TRUE)
-        }
+        out$score <- .score2(epsilon = out$epsilon,
+                             Omega = out$Omega,
+                             OmegaM1 = out$OmegaM1,
+                             dmu = dmu,
+                             dOmega = dOmega,
+                             name.param = name.param,
+                             name.meanparam = name.meanparam,
+                             name.varparam = name.varparam,
+                             index.Omega = index.Omega, ## mode2
+                             n.cluster = n.cluster,
+                             indiv = TRUE)
     }
-
+    
     ## ** first derivative of the expected information matrix
     if(derivative == "numeric"){
         if(adjust.Omega || adjust.n){

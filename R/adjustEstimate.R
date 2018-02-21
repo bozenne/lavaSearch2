@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb 20 2018 (17:43) 
+## Last-Updated: feb 21 2018 (17:53) 
 ##           By: Brice Ozenne
-##     Update #: 305
+##     Update #: 330
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,7 @@
 #' @keywords internal
 adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                            name.param, name.endogenous, name.meanparam, name.varparam,
-                           n.endogenous.cluster, index.Omega,
+                           index.Omega,
                            adjust.Omega, adjust.n, tol, n.iter){
 
     ## ** Prepare
@@ -43,27 +43,29 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
 
 
     if(is.null(index.Omega)){
-        n.endogenous.cluster <- rep(n.endogenous, n.cluster)
         n.corrected <- rep(n.cluster, n.endogenous)        
-        epsilon <- sapply(1:n.cluster, function(iC){list(epsilon[iC,])})
     }else{
         n.corrected <- NULL        
     }
 
     ls.Psi <- vector(mode = "list", length = n.cluster)
-    leverage <- vector(mode = "list", length = n.cluster)
+    leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                       dimnames = list(NULL, name.endogenous))
     ls.dmu <- vector(mode = "list", length = n.cluster)
     for(iC in 1:n.cluster){ # iC <- 1
-        ls.dmu[[iC]] <- matrix(0, nrow = n.param, ncol = n.endogenous.cluster[[iC]],
-                               dimnames = list(name.param, name.endogenous[index.Omega[[iC]]]))
         if(is.null(index.Omega)){
+            leverage[iC,] <- 0
+            ls.dmu[[iC]] <- matrix(0, nrow = n.param, ncol = n.endogenous,
+                                   dimnames = list(name.param, name.endogenous))
             ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu,function(x){x[iC,]}))
         }else{
-            ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu,function(x){x[[iC]]}))
-        }
-        leverage[[iC]] <- rep(0,n.endogenous.cluster[[iC]])
+            leverage[iC,index.Omega[[iC]]] <- 0
+            ls.dmu[[iC]] <- matrix(0, nrow = n.param, ncol = length(index.Omega[[iC]]),
+                                   dimnames = list(name.param, name.endogenous[index.Omega[[iC]]]))
+            ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu,function(x){x[iC,index.Omega[[iC]]]}))
+        }        
     }
-    
+
     ## ** Initialisation (i.e. first iteration without correction)
     Omega.adj <- Omega
     OmegaM1.adj <- chol2inv(chol(Omega.adj))
@@ -136,23 +138,22 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                     iOmega.adj.chol <- Omega.adj.chol[index.Omega[[iC]],index.Omega[[iC]]]
                     iIndex.Omega <- index.Omega[[iC]]
                 }
-                browser()
                 ## corrected epsilon
                 iH <- iOmega.adj.chol %*% solve(chol(crossprod(iOmega.adj) - iOmega.adj.chol %*% ls.Psi[[iC]] %*% iOmega.adj.chol)) %*% iOmega.adj.chol 
-                epsilon.adj[[iC]] <- epsilon[[iC]] %*% iH
+                epsilon.adj[iC,iIndex.Omega] <- epsilon[iC,iIndex.Omega] %*% iH
 
                 ## derivative of the score regarding Y
                 scoreY <- ls.dmu[[iC]] %*% iOmegaM1.adj
                 for(iP in 1:n.varparam){ ## iP <- 1
-                    scoreY[name.varparam[iP],] <- 2 * epsilon.adj[[iC]] %*% (iOmegaM1.adj %*% dOmega[[name.varparam[iP]]][iIndex.Omega,iIndex.Omega]  %*% iOmegaM1.adj)
+                    scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon.adj[iC,iIndex.Omega] %*% (iOmegaM1.adj %*% dOmega[[name.varparam[iP]]][iIndex.Omega,iIndex.Omega]  %*% iOmegaM1.adj)
                 }
                 ## leverage
-                leverage[[iC]] <- colSums(iVcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
+                leverage[iC,iIndex.Omega] <- colSums(iVcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
                 # same as
                 # diag(t(ls.dmu[[iC]])  %*% iVcov.param %*% scoreY)
             }
             if(is.null(index.Omega)){ ## corrected sample size                
-                n.corrected <- rep(n.cluster, n.endogenous) - Reduce("+",leverage)
+                n.corrected <- rep(n.cluster, n.endogenous) - colSums(leverage)
             }
         }
 
@@ -179,7 +180,6 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
         iTol <- norm(Omega.adj-Omega_save, type = "F")
         ## cat("Omega.adj: ",Omega.adj," | n:",n.corrected," | iTol:",iTol,"\n")
     }
-
     ## ** Post processing
     dimnames(OmegaM1.adj) <- list(name.endogenous, name.endogenous)
 
@@ -191,9 +191,8 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
     }
     dimnames(vcov.param) <- dimnames(iInfo)
 
-    if(is.null(index.Omega)){
-       leverage <- do.call(rbind,leverage)
-       epsilon.adj <- do.call(rbind,epsilon.adj)        
+    if(!is.null(index.Omega)){
+        n.corrected <- colSums(leverage, na.rm = TRUE)
     }
     
     ## ** Export    

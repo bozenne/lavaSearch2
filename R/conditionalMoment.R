@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: feb 20 2018 (15:28) 
+## last-updated: feb 21 2018 (17:39) 
 ##           By: Brice Ozenne
-##     Update #: 866
+##     Update #: 887
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,7 @@
 #' @param param,p [numeric vector] the fitted coefficients.
 #' @param attr.param [character vector] the type of each coefficient
 #' (e.g. mean or variance coefficient).
+#' @param ref.group [character vector] the levels of the variable defining the variance component in a generic covariance matrix.
 #' @param second.order [logical] should the terms relative to the third derivative of the likelihood be be pre-computed?
 #' @param n.cluster [integer >0] the number of i.i.d. observations.
 #' @param n.endogenous [integer >0] the number of outcomes.
@@ -80,9 +81,9 @@ conditionalMoment.lm <- function(object, name.endogenous, ...){
 #' @rdname conditionalMoment
 #' @export
 conditionalMoment.gls <- function(object, data, formula, 
-                                  param, attr.param,
+                                  param, attr.param, ref.group,
                                   second.order,
-                                  cluster, n.cluster, name.endogenous, 
+                                  index.Omega, cluster, n.cluster, name.endogenous, 
                                   ...){
     
     ### ** prepare
@@ -106,13 +107,15 @@ conditionalMoment.gls <- function(object, data, formula,
     attr(X,"contrasts") <- NULL
     
     ## *** variance terms
-    name.other <- setdiff(names(var.coef),"sigma2")
-    if("NULL" %in% class.var){            
-        sigma2.base <- stats::setNames(rep(var.coef["sigma2"],n.endogenous), name.endogenous)
+    if("NULL" %in% class.var == FALSE){
+        name.other <- setdiff(names(var.coef),"sigma2")
+        factor.varcoef <- setNames(c(1,var.coef[name.other]),
+                                   attr(object$modelStruct$varStruct,"groupNames"))
+        sigma2.base0 <- factor.varcoef[ref.group]        
     }else{
-        sigma2.base <- stats::setNames(var.coef["sigma2"]*c(1,var.coef[name.other]), name.endogenous)            
+        sigma2.base0 <- setNames(rep(1, n.endogenous), name.endogenous)
     }
-    sigma2.base0 <- sigma2.base/var.coef["sigma2"]
+    sigma2.base <- sigma2.base0 * var.coef["sigma2"]
 
     ## *** corelation terms
     if("NULL" %in% class.cor == FALSE){
@@ -129,20 +132,25 @@ conditionalMoment.gls <- function(object, data, formula,
         Msigma2.base0[index.lower.tri] <- apply(indexArr.lower.tri, 1, function(x){sqrt(prod(sigma2.base0[x]))})
         Msigma2.base0 <- symmetrize(Msigma2.base0)
     }
-    
+
     ### ** score - mean
     name.X <- colnames(X)
     dmu <- lapply(name.X, function(iCoef){ # iCoef <- name.X[1]
-        tapply(X[,iCoef],cluster,function(x){list(unname(x))})
+        dmu.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                            dimnames = list(NULL, name.endogenous))
+        for(iC in 1:n.cluster){
+            dmu.tempo[iC,index.Omega[[iC]]] <- X[cluster==iC,iCoef]
+        }
+        return(dmu.tempo)
     })
     names(dmu) <- name.X
 
     ### ** score - variance/covariance
     dOmega <- vector(mode = "list", length = n.corcoef + n.varcoef)
     names(dOmega) <- c(name.corcoef, name.varcoef)
-    
+
     ## *** dispersion coefficient
-    dOmega[["sigma2"]] <- diag(sigma2.base0[name.endogenous], nrow = n.endogenous, ncol = n.endogenous)
+    dOmega[["sigma2"]] <- diag(sigma2.base0, nrow = n.endogenous, ncol = n.endogenous)
    
     if("NULL" %in% class.cor == FALSE){
         dOmega[["sigma2"]][index.lower.tri] <- Msigma2.base0[index.lower.tri] * cor.coef[M.corcoef[index.lower.tri]]
@@ -152,13 +160,14 @@ conditionalMoment.gls <- function(object, data, formula,
 
     ## *** other variance coefficients
     if("NULL" %in% class.var == FALSE){
+
         for(iVar in name.other){ # iVar <- name.other
-            dOmega[[iVar]] <- var.coef["sigma2"]*diag(name.endogenous %in% iVar,
+            iTest.endogenous <- ref.group %in% iVar
+            dOmega[[iVar]] <- var.coef["sigma2"]*diag(iTest.endogenous,
                                                       nrow = n.endogenous, ncol = n.endogenous)
 
             if("NULL" %in% class.cor == FALSE){
-                iEndogenous <- which(name.endogenous==iVar)
-                index.iVar <- which(rowSums(indexArr.lower.tri==iEndogenous)>0)
+                index.iVar <- which(rowSums(indexArr.lower.tri==which(iTest.endogenous))>0)
 
                 ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2*x)
                 dOmega[[iVar]][index.lower.tri[index.iVar]] <- var.coef["sigma2"]*dOmega[["sigma2"]][index.lower.tri[index.iVar]]/(2*var.coef[iVar])
@@ -200,7 +209,7 @@ conditionalMoment.gls <- function(object, data, formula,
 
             for(iVar1 in name.other){ ## iVar <- name.other[1]
 
-                iIndex.var1 <- which(names(sigma2.base0) == iVar1)
+                iIndex.var1 <- which(name.varcoef == iVar1)
                 
                 ## var var
                 for(iVar2 in name.varcoef[iIndex.var1:n.varcoef]){
@@ -219,10 +228,7 @@ conditionalMoment.gls <- function(object, data, formula,
                     M.tempo[index.lower.tri[index0]] <- 0
                     M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
 
-                    ##
-                    ##if(iVar1==iVar2){
                     d2Omega[[iVar1]][[iVar2]] <- M.tempo
-                    ##}
                 }                
                 
                 ## var cor
