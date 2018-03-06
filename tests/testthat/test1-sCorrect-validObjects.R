@@ -1,0 +1,102 @@
+### test1-sCorrect-validObjects.R --- 
+##----------------------------------------------------------------------
+## Author: Brice Ozenne
+## Created: mar  6 2018 (10:42) 
+## Version: 
+## Last-Updated: mar  6 2018 (11:48) 
+##           By: Brice Ozenne
+##     Update #: 31
+##----------------------------------------------------------------------
+## 
+### Commentary: 
+## 
+### Change Log:
+##----------------------------------------------------------------------
+## 
+### Code:
+
+## * header
+if(FALSE){ ## already called in test-all.R
+    rm(list = ls())
+    library(testthat)
+    library(lavaSearch2)
+}
+
+library(lava.tobit)
+library(nlme)
+lava.options(symbols = c("~","~~"))
+context("sCorrect: warnings and errors for invalid objects/arguments")
+
+## * Simulation
+n <- 100
+m.sim <- lvm(Y~X1+X2,G~1)
+categorical(m.sim,K=3,label=c("a","b","c")) <- ~G+X2
+set.seed(10)
+d <- sim(m.sim,n,latent=FALSE)
+
+
+## * sCorrect for lvm objects
+
+## ** error for multigroup lvm
+## check in sCorrect.R 
+e <- estimate(list(lvm(Y~X1),lvm(Y~X1),lvm(Y~X1)), data = split(d,d$G))
+test_that("error for multigroup models", {
+    expect_error(sCorrect(e))
+})
+
+## ** error for tobit lvm
+## check in sCorrect.R
+e <- estimate(lvm(G~X1), data = d)
+test_that("error for tobit models", {
+    expect_error(sCorrect(e))
+})
+
+## ** error for lvm with transform variables
+## check in sCorrect.R
+m <- lvm(Y~X1)
+transform(m,Id~X1) <- function(x){1:NROW(x)}
+e <- estimate(m, sim(m, n))
+test_that("error when using transform", {
+    expect_error(sCorrect(e))
+})
+
+## * sCorrect for nlme objects
+
+## ** warning for the satterthwaite approx. with REML
+## check in sCorrect.R 
+e <- gls(Y~X1, data = d, correlation = corCompSymm(form =~1|G))
+test_that("warning when using nlme with REML and Satterthwaite", {
+    expect_warning(sCorrect(e, score = FALSE, df = FALSE, trace = 0) <- FALSE)
+})
+
+
+## ** error for the small sample correction estimated with REML
+## check in sCorrect.R
+e <- gls(Y~X1, data = d, correlation = corCompSymm(form =~1|G))
+test_that("warning when using nlme with REML and small sample correction", {
+    expect_warning(sCorrect(e, score = FALSE, df = FALSE, trace = 0) <- TRUE)
+})
+
+## ** error for more than one random effect
+## check in Utils-nlme.R (.getVarCov)
+e <- lme(Y~X1, random =~ 1|G / X2, data = d, method = "ML")
+test_that("error when using nlme with several random effects", {
+    expect_error(sCorrect(e, trace = 0))
+})
+
+## ** error for more non-standard correlation shape
+## check in Utils-nlme.R (.getIndexOmega2)
+e <- gls(Y~X1, data = d, correlation = corAR1(form =~1|G), method = "ML")
+test_that("error when using nlme with non standard correlation", {
+    expect_error(sCorrect(e, trace = 0))
+})
+
+## ** error for more non-standard variance shape
+## check in Utils-nlme.R (.getIndexOmega2)
+e <- gls(Y~X1, data = d, weight = varExp(form =~X1), method = "ML")
+test_that("error when using nlme with non standard variance", {
+    expect_error(sCorrect(e, cluster = 1:NROW(d), trace = 0))
+})
+
+##----------------------------------------------------------------------
+### test1-sCorrect-validObjects.R ends here

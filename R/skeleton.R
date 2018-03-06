@@ -330,6 +330,7 @@ skeleton.lvmfit <- function(object, skeleton,
         ## *** linear predictor
         skeleton$value$alpha.XGamma <- matrix(NA,nrow = n.data, ncol = n.latent, byrow = TRUE,
                                         dimnames = list(NULL,name.latent))
+        
         for(iLatent in 1:n.latent){
             iLatent2 <- name.latent[iLatent]
             if(length(skeleton$value$Gamma[[iLatent2]])>0){

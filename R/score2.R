@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb 21 2018 (18:10) 
+## last-updated: mar  6 2018 (13:23) 
 ##           By: Brice Ozenne
-##     Update #: 2233
+##     Update #: 2243
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,6 +14,113 @@
 #----------------------------------------------------------------------
 ## 
 ### Code:
+
+## * Documentation - score2
+#' @title  Extract The Individual Score
+#' @description  Extract The Individual Score from a gaussian linear model.
+#' @name score2
+#'
+#' @param object a linear model or a latent variable model
+#' @param param [optional] the fitted parameters.
+#' @param data [optional] the data set.
+#' @param value [logical, optional] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
+#' @param ... arguments to be passed to \code{sCorrect}.
+#'
+#' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
+#'
+#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#'
+#' @return A matrix containing the score relative to each sample (in rows)
+#' and each model coefficient (in columns).
+#' 
+#' @examples
+#' n <- 5e1
+#' p <- 3
+#' X.name <- paste0("X",1:p)
+#' link.lvm <- paste0("Y~",X.name)
+#' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
+#'
+#' m <- lvm(formula.lvm)
+#' distribution(m,~Id) <- sequence.lvm(0)
+#' set.seed(10)
+#' d <- sim(m,n)
+#'
+#' ## linear model
+#' e.lm <- lm(formula.lvm,data=d)
+#' score.tempo <- score2(e.lm, value = FALSE)
+#' colMeans(score.tempo)
+#'
+#' ## latent variable model
+#' e.lvm <- estimate(lvm(formula.lvm),data=d)
+#' score.tempo <- score2(e.lvm, value = FALSE)
+#' range(score.tempo-score(e.lvm, indiv = TRUE))
+#'
+#' @concept small sample inference
+#' @export
+`score2` <-
+  function(object, ...) UseMethod("score2")
+
+## * score2.lm
+#' @rdname score2
+#' @export
+score2.lm <- function(object, param = NULL, data = NULL, value, ...){
+
+    sCorrect(object, param = param, data = data,
+             score = TRUE, df = FALSE, ...) <- value
+
+    ### ** export
+    return(object$sCorrect$score)
+}
+
+## * score2.gls
+#' @rdname score2
+#' @export
+score2.gls <- score2.lm
+
+## * score2.lme
+#' @rdname score2
+#' @export
+score2.lme <- score2.lm
+
+## * score2.lvmfit
+#' @rdname score2
+#' @export
+score2.lvmfit <- score2.lm
+
+## * score2.lm2
+#' @rdname score2
+#' @export
+score2.lm2 <- function(object, param = NULL, data = NULL, ...){
+
+    ### ** compute the score
+    if(!is.null(param) || !is.null(data)){
+        args <- object$sCorrect$args
+        args$df <- FALSE
+        args$score <- TRUE
+        object$sCorrect <- do.call(sCorrect,
+                                   args = c(list(object, param = param, data = data),
+                                            args))
+    }
+
+    ### ** export
+    return(object$sCorrect$score)
+
+}
+
+## * score2.gls
+#' @rdname score2
+#' @export
+score2.gls2 <- score2.lm2
+
+## * score2.lme
+#' @rdname score2
+#' @export
+score2.lme2 <- score2.lm2
+
+## * score2.lvmfit
+#' @rdname score2
+#' @export
+score2.lvmfit2 <- score2.lm2
 
 ## * .score2
 #' @title Compute the Corrected Score.

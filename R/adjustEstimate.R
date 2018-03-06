@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb 21 2018 (17:53) 
+## Last-Updated: mar  6 2018 (11:44) 
 ##           By: Brice Ozenne
-##     Update #: 330
+##     Update #: 366
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,7 @@
 adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                            name.param, name.endogenous, name.meanparam, name.varparam,
                            index.Omega,
-                           adjust.Omega, adjust.n, tol, n.iter){
+                           adjust.Omega, adjust.n, tol, n.iter, trace){
 
     ## ** Prepare
     name.hybridparam <- intersect(name.meanparam, name.varparam)
@@ -65,11 +65,13 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
             ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu,function(x){x[iC,index.Omega[[iC]]]}))
         }        
     }
-
     ## ** Initialisation (i.e. first iteration without correction)
     Omega.adj <- Omega
     OmegaM1.adj <- chol2inv(chol(Omega.adj))
 
+    if(trace>0){
+        cat("* Reconstruct estimated information matrix ")
+    }
     iInfo <- .information2(dmu = dmu,
                            dOmega = dOmega,
                            Omega = Omega.adj,
@@ -86,17 +88,26 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                            param2index = param2index, n.param = n.param)
     iVcov.param <- solve(iInfo)
     epsilon.adj <- epsilon
+    if(trace>0){
+        cat("- done \n")
+    }
     
-    ## ** Loop
+    ## ** Loop    
     if(adjust.Omega || adjust.n){
+        if(trace>0){
+            cat("* iterative small sample correction: ")
+        }
         iIter <- 0
         iTol <- Inf
     }else{
         iIter <- Inf
         iTol <- -Inf
     }
-    
+
     while(iIter < n.iter & iTol > tol){
+        if(trace>0){
+            cat("*")
+        }
         Omega_save <- Omega.adj
 
         ## *** Step (ii-iii): compute individual bias and expected bias
@@ -123,7 +134,10 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
 
         ## *** Step (v): corrected sample size
         if(adjust.n){
-            Omega.adj.chol <- chol(Omega.adj)
+            ## symmetric square root.
+            Omega.adj.chol <- matrixPower(Omega.adj, symmetric = TRUE, power = 1/2)
+            ## Omega.adj.chol %*% Omega.adj.chol - Omega.adj
+            ## Omega.adj.chol %*% Omega.adj %*% Omega.adj.chol - Omega.adj %*% Omega.adj
             if(is.null(index.Omega)){
                 iOmega.adj <- Omega.adj
                 iOmegaM1.adj <- OmegaM1.adj
@@ -133,15 +147,16 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
             
             for(iC in 1:n.cluster){                 # iC <- 1
                 if(!is.null(index.Omega)){
-                    iOmega.adj <- Omega.adj[index.Omega[[iC]],index.Omega[[iC]]]
-                    iOmegaM1.adj <- OmegaM1.adj[index.Omega[[iC]],index.Omega[[iC]]]
-                    iOmega.adj.chol <- Omega.adj.chol[index.Omega[[iC]],index.Omega[[iC]]]
+                    iOmega.adj <- Omega.adj[index.Omega[[iC]],index.Omega[[iC]],drop=FALSE]
+                    iOmegaM1.adj <- OmegaM1.adj[index.Omega[[iC]],index.Omega[[iC]],drop=FALSE]
+                    iOmega.adj.chol <- Omega.adj.chol[index.Omega[[iC]],index.Omega[[iC]],drop=FALSE]
                     iIndex.Omega <- index.Omega[[iC]]
                 }
                 ## corrected epsilon
-                iH <- iOmega.adj.chol %*% solve(chol(crossprod(iOmega.adj) - iOmega.adj.chol %*% ls.Psi[[iC]] %*% iOmega.adj.chol)) %*% iOmega.adj.chol 
-                epsilon.adj[iC,iIndex.Omega] <- epsilon[iC,iIndex.Omega] %*% iH
-
+                iH <- matrixPower(iOmega.adj %*% iOmega.adj - iOmega.adj.chol %*% ls.Psi[[iC]] %*% iOmega.adj.chol,
+                                  symmetric = TRUE, power = -1/2)
+                ## Omega.adj.chol %*% iH %*% Omega.adj.chol %*% (iOmega.adj - ls.Psi[[iC]]) %*% Omega.adj.chol %*% iH %*% Omega.adj.chol - Omega.adj
+                epsilon.adj[iC,iIndex.Omega] <- epsilon[iC,iIndex.Omega] %*% iOmega.adj.chol %*% iH %*% iOmega.adj.chol
                 ## derivative of the score regarding Y
                 scoreY <- ls.dmu[[iC]] %*% iOmegaM1.adj
                 for(iP in 1:n.varparam){ ## iP <- 1
@@ -180,7 +195,24 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
         iTol <- norm(Omega.adj-Omega_save, type = "F")
         ## cat("Omega.adj: ",Omega.adj," | n:",n.corrected," | iTol:",iTol,"\n")
     }
+    
     ## ** Post processing
+    if(!is.infinite(iIter)){
+
+        if(iTol > tol){
+            warning("small sample correction did not reach convergence after ",iIter," iterations \n")
+
+            if(trace>0){
+                cat(" - incomplete \n")
+            }
+        }else{
+            if(trace>0){
+                cat(" - done \n")
+            }
+        }
+        
+    }
+
     dimnames(OmegaM1.adj) <- list(name.endogenous, name.endogenous)
 
     vcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)

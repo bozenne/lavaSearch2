@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: feb 19 2018 (19:04) 
+## Last-Updated: mar  6 2018 (12:00) 
 ##           By: Brice Ozenne
-##     Update #: 21
+##     Update #: 23
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-## * documentation - leverage
+## * documentation - leverage2
 #' @title Extract Leverage Values
 #' @description Extract leverage values from a gaussian linear model. 
 #' @name leverage
@@ -51,22 +51,22 @@
 #' e.lm <- lm(Y1~Y2, data = d)
 #'
 #' sCorrect(e.lm) <- TRUE
-#' range(as.double(leverage(e.lm)) - influence(e.lm)$hat)
+#' range(as.double(leverage2(e.lm)) - influence(e.lm)$hat)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(m, data = d)
 #' sCorrect(e.lvm) <- TRUE
-#' leverage(e.lvm)
+#' leverage2(e.lvm)
 #' 
 #' @concept small sample inference
 #' @export
-`leverage` <-
+`leverage2` <-
     function(object, ...) UseMethod("leverage")
 
 ## * leverage.lm2
 #' @rdname leverage
 #' @export
-leverage.lm2 <- function(object, param = NULL, data = NULL, ...){
+leverage2.lm2 <- function(object, param = NULL, data = NULL, ...){
 
     if(!is.null(param) || !is.null(data)){
         args <- object$sCorrect$args
@@ -83,17 +83,17 @@ leverage.lm2 <- function(object, param = NULL, data = NULL, ...){
 ## * leverage.gls2
 #' @rdname leverage
 #' @export
-leverage.gls2 <- leverage.lm2
+leverage2.gls2 <- leverage2.lm2
 
 ## * leverage.lme2
 #' @rdname leverage
 #' @export
-leverage.lme2 <- leverage.lm2
+leverage2.lme2 <- leverage2.lm2
 
 ## * leverage.lvmfit2
 #' @rdname leverage
 #' @export
-leverage.lvmfit2 <- leverage.lm2
+leverage2.lvmfit2 <- leverage2.lm2
 
 
 

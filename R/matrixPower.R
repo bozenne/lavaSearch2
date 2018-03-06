@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 23 2017 (16:52) 
 ## Version: 
-## last-updated: feb 16 2018 (14:59) 
+## last-updated: mar  5 2018 (16:18) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 45
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -55,13 +55,18 @@
 ##' @keywords internal
 matrixPower <- function(object, power, symmetric, tol = 1e-12){
     object.eigen <- eigen(object, symmetric = symmetric)
+
     if(power<0 && any(object.eigen$values<tol)){
         warning("negative eigenvalues are set to ",tol,"\n")
         object.eigen$values[object.eigen$values < tol] <- tol
     }
-    object.eigen$values <- object.eigen$values^power
 
-    return(object.eigen$vectors %*% diag(object.eigen$values) %*% solve(object.eigen$vectors))
+    if(symmetric){
+        return(object.eigen$vectors %*% diag(object.eigen$values^power) %*% t(object.eigen$vectors))
+    }else{
+        return(object.eigen$vectors %*% diag(object.eigen$values^power) %*% solve(object.eigen$vectors))
+    }
+
 }
 
 #----------------------------------------------------------------------
