@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb 20 2018 (11:54) 
+## Last-Updated: mar  7 2018 (11:35) 
 ##           By: Brice Ozenne
-##     Update #: 209
+##     Update #: 211
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,31 +70,31 @@
 ## * summary2.gls
 #' @rdname summary2
 #' @export
-summary2.gls <- function(object, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, cluster = cluster) <- bias.correct
+summary2.gls <- function(object, df = TRUE, value = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster, df = df) <- value
     return(summary2(object, ...))
 }
 
 ## * summary2.lme
 #' @rdname summary
 #' @export
-summary2.lme <- function(object, bias.correct = TRUE, ...){
-    sCorrect(object) <- bias.correct
+summary2.lme <- function(object, df = df, value = TRUE, ...){
+    sCorrect(object, value = value) <- value
     return(summary2(object, ...))
 }
 
 ## * summary2.lvmfit
 #' @rdname summary
 #' @export
-summary2.lvmfit <- summary2.gls
+summary2.lvmfit <- summary2.lme
 
 ## * summary2.gls2
 #' @rdname summary2
 #' @method summary2 gls2
 #' @export
 summary2.gls2 <- function(object, 
-                         digit = max(3, getOption("digit")),
-                         ...){
+                          digit = max(3, getOption("digit")),
+                          ...){
     
     ### ** perform Wald test
     name.param <- names(coef(object))

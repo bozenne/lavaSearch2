@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: mar  6 2018 (12:00) 
+## Last-Updated: mar  7 2018 (09:17) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 24
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -61,7 +61,7 @@
 #' @concept small sample inference
 #' @export
 `leverage2` <-
-    function(object, ...) UseMethod("leverage")
+    function(object, ...) UseMethod("leverage2")
 
 ## * leverage.lm2
 #' @rdname leverage

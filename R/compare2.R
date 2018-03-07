@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 19 2018 (17:52) 
+## Last-Updated: mar  7 2018 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 272
+##     Update #: 277
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -235,7 +235,7 @@ compare2.lvmfit2 <- function(object, ...){
         return(df)
     }
 
-    ### *** Wald test
+### ** Wald test
     ## statistic
     C.p <- (contrast %*% param) - null
     C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
@@ -243,31 +243,38 @@ compare2.lvmfit2 <- function(object, ...){
     stat.Wald <- C.p/sd.C.p
     
     ## df
-    df.Wald  <- calcDF(contrast)
-    
+    if(is.null(dVcov.param)){
+        df.Wald <- rep(Inf, n.hypo)
+    }else{
+        df.Wald  <- calcDF(contrast)
+    }
     ## store
     df.table$estimate <- as.numeric(C.p)
     df.table$std <- as.numeric(sd.C.p)
     df.table$statistic <- as.numeric(stat.Wald)
     df.table$df <- as.numeric(df.Wald)
     df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
-
+    
     ### *** F test
     i.C.vcov.C <- solve(C.vcov.C)
     stat.F <- t(C.p) %*% i.C.vcov.C %*% (C.p) / n.hypo
 
     ## df
-    svd.tempo <- eigen(i.C.vcov.C)
-    D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
-    P.svd <- svd.tempo$vectors
+    if(is.null(dVcov.param)){
+        df.F <- Inf
+    }else{
+        svd.tempo <- eigen(i.C.vcov.C)
+        D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
+        P.svd <- svd.tempo$vectors
      
-    C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
-    ## Fstat - crossprod(C.anova %*% p)/n.hypo
-    nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
+        C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
+        ## Fstat - crossprod(C.anova %*% p)/n.hypo
+        nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
     
-    EQ <- sum(nu_m/(nu_m-2))
-    df.F <- 2*EQ / (EQ - n.hypo)
-
+        EQ <- sum(nu_m/(nu_m-2))
+        df.F <- 2*EQ / (EQ - n.hypo)
+    }
+    
     ## store
     df.table <- rbind(df.table, global = rep(NA,5))
     df.table["global", "statistic"] <- as.numeric(stat.F)

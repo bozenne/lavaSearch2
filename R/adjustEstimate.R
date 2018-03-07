@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: mar  6 2018 (11:44) 
+## Last-Updated: mar  7 2018 (17:36) 
 ##           By: Brice Ozenne
-##     Update #: 366
+##     Update #: 407
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,6 +32,7 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
     n.meanparam <- length(name.meanparam)
     n.varparam <- length(name.varparam)
     n.hybridparam <- length(name.hybridparam)
+
     n.endogenous <- length(name.endogenous)
 
     grid.meanparam <- .combination(name.meanparam, name.meanparam)
@@ -66,16 +67,17 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
         }        
     }
     ## ** Initialisation (i.e. first iteration without correction)
-    Omega.adj <- Omega
-    OmegaM1.adj <- chol2inv(chol(Omega.adj))
+    if(any(eigen(Omega)$value<=0)){
+        stop("the residual variance-covariance matrix is not positive definite \n")
+    }
 
     if(trace>0){
         cat("* Reconstruct estimated information matrix ")
     }
     iInfo <- .information2(dmu = dmu,
                            dOmega = dOmega,
-                           Omega = Omega.adj,
-                           OmegaM1 = OmegaM1.adj,
+                           Omega = Omega,
+                           OmegaM1 = chol2inv(chol(Omega)),
                            n.corrected = n.corrected,
                            leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
                            grid.meanparam = grid.meanparam,
@@ -86,8 +88,9 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                            name.meanparam = name.meanparam,
                            name.varparam = name.varparam,
                            param2index = param2index, n.param = n.param)
-    iVcov.param <- solve(iInfo)
-    epsilon.adj <- epsilon
+    iVcov.param <- chol2inv(chol(iInfo))
+    Omega.adj <- Omega
+    OmegaM1.adj <- chol2inv(chol(Omega))
     if(trace>0){
         cat("- done \n")
     }
@@ -99,18 +102,21 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
         }
         iIter <- 0
         iTol <- Inf
+        Omega_save <- Omega
+        epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                              dimnames = list(NULL, name.endogenous))
     }else{
         iIter <- Inf
         iTol <- -Inf
+        epsilon.adj <- epsilon
     }
 
     while(iIter < n.iter & iTol > tol){
         if(trace>0){
             cat("*")
         }
-        Omega_save <- Omega.adj
 
-        ## *** Step (ii-iii): compute individual bias and expected bias
+        ## *** Step (i-ii): compute individual bias, expected bias
         Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
                       dimnames = list(name.endogenous, name.endogenous))
         for(iC in 1:n.cluster){
@@ -124,15 +130,8 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                 Psi[index.Omega[[iC]],index.Omega[[iC]]] <- Psi[index.Omega[[iC]],index.Omega[[iC]]] + ls.Psi[[iC]]/n.cluster
             }
         }
-
-        ## *** Step (iv): correct residual covariance matrix
-        if(adjust.Omega){
-            ## corrected residual covariance variance
-            Omega.adj <- Omega + Psi
-            OmegaM1.adj <- chol2inv(chol(Omega.adj))
-        }
-
-        ## *** Step (v): corrected sample size
+        
+        ## *** Step (iii): corrected sample size
         if(adjust.n){
             ## symmetric square root.
             Omega.adj.chol <- matrixPower(Omega.adj, symmetric = TRUE, power = 1/2)
@@ -172,8 +171,14 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
             }
         }
 
-      
-        ## *** Step (i): expected information matrix
+        ## *** Step (iv): correct residual covariance matrix
+        if(adjust.Omega){
+            ## corrected residual covariance variance
+            Omega.adj <- Omega + Psi
+            OmegaM1.adj <- chol2inv(chol(Omega.adj))
+        }
+
+        ## *** Step (v): expected information matrix
         iInfo <- .information2(dmu = dmu,
                                dOmega = dOmega,
                                Omega = Omega.adj,
@@ -188,11 +193,12 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
                                name.meanparam = name.meanparam,
                                name.varparam = name.varparam,
                                param2index = param2index, n.param = n.param)
-        iVcov.param <- solve(iInfo)
+        iVcov.param <- chol2inv(chol(iInfo))
         
         ## *** Update cv
         iIter <- iIter + 1
         iTol <- norm(Omega.adj-Omega_save, type = "F")
+        Omega_save <- Omega.adj
         ## cat("Omega.adj: ",Omega.adj," | n:",n.corrected," | iTol:",iTol,"\n")
     }
     
@@ -226,7 +232,7 @@ adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,
     if(!is.null(index.Omega)){
         n.corrected <- colSums(leverage, na.rm = TRUE)
     }
-    
+
     ## ** Export    
     return(list(Omega = Omega.adj,
                 OmegaM1 = OmegaM1.adj,

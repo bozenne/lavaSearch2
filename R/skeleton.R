@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb 20 2018 (15:15) 
+## Last-Updated: mar  7 2018 (11:12) 
 ##           By: Brice Ozenne
-##     Update #: 738
+##     Update #: 743
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -397,7 +397,7 @@ skeletonDtheta.lvm <- function(object, data,
         iX <- subset(df.param, subset = param %in% iName, select = X, drop = TRUE)
 
         ## *** derivative regarding the mean        
-        if(type[iName2] %in% mean.param){
+        if(type[iName2] %in% mean.param){            
             if(type[iName2]=="nu"){
                 dmu[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
                                                nrow = n.data, ncol = n.endogenous, byrow = TRUE,
@@ -908,7 +908,10 @@ skeletonDtheta2.lvmfit <- function(object, dtheta, d2theta,
     if(length(dots)!=2){
         stop("can only handle two vectors \n")
     }
-    
+    test.null <- unlist(lapply(dots,is.null))    
+    if(any(test.null)){
+        return(NULL)
+    }
     dots <- lapply(dots,unique)
 
     ## ** form all combinations

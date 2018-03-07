@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar  6 2018 (13:55) 
+## Last-Updated: mar  7 2018 (17:37) 
 ##           By: Brice Ozenne
-##     Update #: 717
+##     Update #: 755
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -73,7 +73,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                         param = NULL, data = NULL,
                         tol = 1e-5, n.iter = 20, trace = 1, ...){
     
-    ## ** Extract quantities from object
+### ** Extract quantities from object
     name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
     n.cluster <- nobs(object) + length(object$na.action)
 
@@ -94,7 +94,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.meanparam <- attr(model.param,"mean.coef")
     name.varparam <- attr(model.param,"var.coef")
 
-    ## ** Compute conditional moments
+### ** Compute conditional moments
     if(trace>0){
         cat("Compute conditional moments")
     }
@@ -127,7 +127,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     Omega <- matrix(param["sigma2"], nrow = 1, ncol = 1,
                     dimnames = list(name.endogenous, name.endogenous))
     if(trace>0){
-        cat("- done")
+        cat("- done \n")
     }
 
     ## ** correction
@@ -215,7 +215,9 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     }
     name.param <- names(model.param)
     name.meanparam <- attr(model.param,"mean.coef")
-    name.varparam <- c(attr(model.param,"var.coef"), attr(model.param,"cor.coef"))
+    name.varparam <- c(attr(model.param,"var.coef"),
+                       attr(model.param,"cor.coef"),
+                       attr(model.param,"ran.coef"))
 
     ## *** group
     if(trace>0){
@@ -250,17 +252,16 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("* Reconstruct estimated residual variance-covariance matrix ")
     }
     
-    Omega <- .getVarCov2.gls(object,
-                             param = model.param,
-                             attr.param = attributes(model.param),
-                             name.endogenous = res.index$name.endogenous,
-                             n.endogenous = res.index$n.endogenous,
-                             ref.group = res.index$ref.group)
+    Omega <- .getVarCov2(object,
+                         param = model.param,
+                         attr.param = attributes(model.param),
+                         name.endogenous = res.index$name.endogenous,
+                         n.endogenous = res.index$n.endogenous,
+                         ref.group = res.index$ref.group)
 
     if(trace>0){
         cat("- done \n")
     }
-    
     cluster <- res.cluster$cluster
     n.cluster <- res.cluster$n.cluster
     name.endogenous <- res.index$name.endogenous
@@ -317,7 +318,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     }else{
         derivative <- "analytic"
     }
-
     out <- .sCorrect(object,
                      param = model.param,
                      epsilon = epsilon,
@@ -463,7 +463,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     Omega <- .calcOmegaLVM(dMoments, n.latent = n.latent)
 
     if(trace>0){
-        cat("- done")
+        cat("- done \n")
     }
 
     ## ** param with non-zero third derivative
@@ -473,7 +473,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                             )
     
     name.3deriv <- dMoments$df.param[index.keep, "originalLink"]
-
+    
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -579,7 +579,11 @@ sCorrect.lvmfit2 <- function(object, ...){
     }
     
     ## ** first derivative of the expected information matrix
-    if(derivative == "numeric"){
+    if(length(name.3deriv)==0){
+        out$dVcov.param <- NULL
+    }else if(derivative == "none"){
+        out$dVcov.param <- NA
+    }else if(derivative == "numeric"){
         if(trace>0){
             cat("Compute first derivative of the information matrix using numerical differentiation ")
         }
@@ -621,30 +625,18 @@ sCorrect.lvmfit2 <- function(object, ...){
         if(trace>0){
             cat("* Compute first derivative of the information matrix using analytic formula ")
         }
-                
-        if(is.null(index.Omega)){
-            dInfo.dtheta <- .d2Information(dmu = dmu,
-                                           d2mu = d2mu,
-                                           dOmega = dOmega,
-                                           d2Omega = d2Omega,
-                                           Omega = out$Omega,
-                                           OmegaM1 = out$OmegaM1,
-                                           n.corrected = out$n.corrected,
-                                           name.param  = name.param,
-                                           name.3deriv = name.3deriv)
-        }else{
-            dInfo.dtheta <- .d2InformationIndiv(dmu = dmu,
-                                                d2mu = d2mu,
-                                                dOmega = dOmega,
-                                                d2Omega = d2Omega,
-                                                Omega = out$Omega,
-                                                OmegaM1 = out$OmegaM1,
-                                                n.corrected = out$n.corrected,
-                                                n.endogenous.cluster = n.endogenous.cluster,
-                                                index.Omega = index.Omega,
-                                                name.param  = name.param,
-                                                name.3deriv = name.3deriv)
-        }
+
+        dInfo.dtheta <- .d2Information(dmu = dmu,
+                                       d2mu = d2mu,
+                                       dOmega = dOmega,
+                                       d2Omega = d2Omega,
+                                       Omega = out$Omega,
+                                       OmegaM1 = out$OmegaM1,
+                                       n.corrected = out$n.corrected,
+                                       index.Omega = index.Omega,
+                                       leverage = out$leverage,
+                                       name.param  = name.param,
+                                       name.3deriv = name.3deriv)
 
         p3 <- dim(dInfo.dtheta)[3]
         out$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
@@ -717,16 +709,6 @@ sCorrect.lvmfit2 <- function(object, ...){
     return(x)
 }
 
-
-##----------------------------------------------------------------------
-### sCorrect.R ends here
-
-
-
-
-
-
-
 ## * .calcResidualsLVM
 .calcResidualsLVM <- function(data, dMoments, n.latent, name.endogenous){
 
@@ -753,3 +735,13 @@ sCorrect.lvmfit2 <- function(object, ...){
     }
     return(Omega)
 }
+
+##----------------------------------------------------------------------
+### sCorrect.R ends here
+
+
+
+
+
+
+

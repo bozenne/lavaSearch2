@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: feb 21 2018 (16:51) 
+## Last-Updated: mar  7 2018 (18:10) 
 ##           By: Brice Ozenne
-##     Update #: 425
+##     Update #: 444
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -262,16 +262,18 @@
     }
     
     ## ** Identify the index and name of the endogenous variables
-    if("NULL" %in% class.cor == FALSE){        
+    if("NULL" %in% class.cor == FALSE){
+
         ## endogenous variable relative to the observations within cluster
         if(length(varIndex.cor) == 0 && ("varIdent" %in% class.var || "corSymm" %in% class.cor)){
-            warning("The residuals covariance matrice is subset  based on the ordering of the data\n",
+            warning("The residuals covariance matrice is subset based on the ordering of the data\n",
                     "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in corStruct \n",
                     "e.g. correlation = corStruct(form = ~index|group) \n")
         }
         index.Omega <- attr(unclass(object$modelStruct$corStruct), "covariate")
         norm <- TRUE
     }else if("NULL" %in% class.var == FALSE){
+        
         if(length(varIndex.var)!=0){
             index.tempo <- data[[varIndex.var]]
             if(!is.numeric(index.tempo)){
@@ -280,10 +282,21 @@
             index.Omega <- tapply(index.tempo,cluster, function(iC){list(iC)})
             norm <- TRUE
         }else{
-            warning("The attribution of the repetition number is based on the ordering of the data\n",
-                    "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in varStruct \n",
-                    "e.g. correlation = varStruct(form = ~index|group) \n")
-            index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
+            groupNames <- attr(object$modelStruct$varStruct,"groupNames")
+            n.groupNames <- length(groupNames)
+            groupValue <- attr(object$modelStruct$varStruct,"groups")
+            test <- tapply(groupValue, cluster, function(iC){ # iC <- 1
+                (length(iC) == n.groupNames)*(all(groupNames %in% iC))
+            })
+            if(all(test==1)){
+                index.Omega <- tapply(as.numeric(factor(groupValue, levels = groupNames)),
+                                      cluster, function(iC){iC})
+            }else{
+                warning("The attribution of the repetition number is based on the ordering of the data\n",
+                        "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in varStruct \n",
+                        "e.g. correlation = varStruct(form = ~index|group) \n")
+                index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
+            }
             norm <- FALSE
         }        
     }else{
@@ -316,14 +329,14 @@
     }
 
     if("NULL" %in% class.var == FALSE){
-        n.obs <- length(vecIndex.Omega)
-        table.unique <- tapply(1:n.obs,vecIndex.Omega,function(x){
-            length(unique(attr(object$modelStruct$varStruct,"groups")[x]))
+        group.ordered <- attr(object$modelStruct$varStruct,"groups")#[order(cluster)]
+        table.unique <- tapply(1:length(vecIndex.Omega),vecIndex.Omega,function(x){
+            length(unique(group.ordered[x]))
         })
-        if(any(table.unique)!=1){
+        if(any(table.unique!=1)){
             stop("The residual covariance matrix should not differ between clusters \n")
-        }
-        ref.group <- attr(object$modelStruct$varStruct,"groups")[which(duplicated(vecIndex.Omega)==FALSE)]
+        }                
+        ref.group <- group.ordered[!duplicated(vecIndex.Omega)]
     }else{
         ref.group <- NULL
     }
@@ -481,7 +494,7 @@
 `getVarCov2` <-
     function(object, ...) UseMethod("getVarCov2")
 
-## * .getVarCov2.gls
+## * getVarCov2.gls
 #' @rdname getVarCov2
 #' @export
 getVarCov2.gls <- function(object, data = NULL, cluster){
@@ -498,18 +511,19 @@ getVarCov2.gls <- function(object, data = NULL, cluster){
     ## ** extractors   
     res.cluster <- .getCluster2(object, data = data, cluster = cluster)
     res.param <- .coef2(object)
+
     res.index <- .getIndexOmega2(object,
                                  param = res.param,
                                  attr.param = attributes(res.param),
                                  name.Y = name.Y,
                                  cluster = res.cluster$cluster,
                                  data = data)
-    res.Omega <- .getVarCov2.gls(object,
-                                 param = res.param,
-                                 attr.param = attributes(res.param),
-                                 name.endogenous = res.index$name.endogenous,
-                                 n.endogenous = res.index$n.endogenous,
-                                 ref.group = res.index$ref.group)
+    res.Omega <- .getVarCov2(object,
+                             param = res.param,
+                             attr.param = attributes(res.param),
+                             name.endogenous = res.index$name.endogenous,
+                             n.endogenous = res.index$n.endogenous,
+                             ref.group = res.index$ref.group)
 
     ## ** export
     return(c(res.cluster,
@@ -519,10 +533,10 @@ getVarCov2.gls <- function(object, data = NULL, cluster){
            )
 }
 
-## * .getVarCov2.lme
+## * getVarCov2.lme
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lme <- .getVarCov2.gls
+getVarCov2.lme <- getVarCov2.gls
 
 
 

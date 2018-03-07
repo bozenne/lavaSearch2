@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: feb 21 2018 (17:39) 
+## last-updated: mar  7 2018 (17:39) 
 ##           By: Brice Ozenne
-##     Update #: 887
+##     Update #: 898
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -133,12 +133,12 @@ conditionalMoment.gls <- function(object, data, formula,
         Msigma2.base0 <- symmetrize(Msigma2.base0)
     }
 
-    ### ** score - mean
+### ** score - mean
     name.X <- colnames(X)
     dmu <- lapply(name.X, function(iCoef){ # iCoef <- name.X[1]
         dmu.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                             dimnames = list(NULL, name.endogenous))
-        for(iC in 1:n.cluster){
+        for(iC in 1:n.cluster){ ## iC <- 1
             dmu.tempo[iC,index.Omega[[iC]]] <- X[cluster==iC,iCoef]
         }
         return(dmu.tempo)
@@ -318,9 +318,7 @@ conditionalMoment.lvmfit <- function(object, data, param, usefit, second.order, 
     name.latent <- latent(object)
     n.latent <- length(name.latent)
 
-    if(!is.matrix(data)){
-        data <- as.matrix(data)
-    }
+    data <- as.matrix(data[,lava::manifest(object),drop=FALSE])
 
     ### ** initialize
     out <- conditionalMoment(lava::Model(object), data = data,
