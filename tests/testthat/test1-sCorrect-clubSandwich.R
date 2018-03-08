@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: mar  7 2018 (18:13) 
+## Last-Updated: mar  8 2018 (11:26) 
 ##           By: Brice Ozenne
-##     Update #: 16
+##     Update #: 31
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,10 @@ if(FALSE){ ## already called in test-all.R
 lava.options(symbols = c("~","~~"))
 library(clubSandwich)
 library(nlme)
+calcFactor <- function(object){
+    return((object$dims$N - object$dims$p)/(object$dims$N - object$dims$p * (object$method == "REML")))
+}
+
 context("sCorrect: replicate clubSandwich results")
 
 ## * simulation
@@ -73,7 +77,7 @@ e.lvm <- estimate(lvm(Y1[mu:sigma1]~ beta1*X1 + beta2*X2,
                       Y3[mu:sigma3]~ beta1*X1 + beta2*X2),
                   data = d)
 
-factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
+factor <- calcFactor(e.gls)
 index.coef <- 1:3
 
 test_that("gls equivalent to lvm", {
@@ -84,7 +88,7 @@ test_that("gls equivalent to lvm", {
 iid2HC0.gls <- iid2(e.gls, value = FALSE, cluster = "Id")
 iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
 
-test_that("gls: HC0/HC1", {
+test_that("iid2.gls/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.gls[,index.coef]),
                  unname(iid2HC0.lvm[,index.coef]),
                  tol = 1e-5)
@@ -102,7 +106,7 @@ test_that("gls: HC0/HC1", {
 iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1, cluster = "Id")
 iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
 
-test_that("gls: HC2", {
+test_that("iid2.lm/iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.gls[,index.coef]),
                  unname(iid2HC2.lvm[,index.coef]),
                  tol = 1e-5)
@@ -135,16 +139,20 @@ test_that("lme/gls equivalent to lvm", {
     expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
 })
 
-factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
-
+factor <- calcFactor(e.gls)
+ 
 ## ** HC0/HC1
 iid2HC0.gls <- iid2(e.gls, value = FALSE)
 iid2HC0.lme <- iid2(e.lme, value = FALSE)
 iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
 
-test_that("gls: HC0/HC1", {
+test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.gls[,index.coef]),
                  unname(iid2HC0.lvm[,index.coef]),
+                 tol = 1e-5)
+
+    expect_equal(unname(iid2HC0.gls[,index.coef]),
+                 unname(iid2HC0.lme[,index.coef]),
                  tol = 1e-5)
     
     VHC0.gls <- crossprod(iid2HC0.gls)[index.coef,index.coef]
@@ -161,9 +169,13 @@ iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
 iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
 iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
 
-test_that("gls: HC2", {
+test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.gls[,index.coef]),
                  unname(iid2HC2.lvm[,index.coef]),
+                 tol = 1e-5)
+
+    expect_equal(unname(iid2HC2.gls[,index.coef]),
+                 unname(iid2HC2.lme[,index.coef]),
                  tol = 1e-5)
 
     VHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
@@ -171,8 +183,8 @@ test_that("gls: HC2", {
     expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-10)
 })
 
-
-## * mixed model: CS with different variances [lvm,gls,lme]
+## * mixed model: CS with different variances [lvm,gls]
+## ** model fit and sCorrect
 m <- lvm(c(Y1[0:sigma1]~1*eta,
            Y2[0:sigma2]~1*eta,
            Y3[0:sigma3]~1*eta,
@@ -191,52 +203,29 @@ e.gls <- nlme::gls(value ~ X1 + X2,
                    data = dLred, method = "ML")
 index.coef <- 1:length(coef(e.gls))
 
-test_that("lme/gls equivalent to lvm", {
+test_that("lme equivalent to lvm", {
     expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
     ## gls does not give the same likelihood
     ## expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
 })
-
-factor <- (e.gls$dims$N - e.gls$dims$p)/(e.gls$dims$N - e.gls$dims$p * (e.gls$method == "REML"))
 
 ## ** HC0/HC1
 iid2HC0.gls <- iid2(e.gls, value = FALSE)
 iid2HC0.lme <- iid2(e.lme, value = FALSE)
 iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
 
-iid2HC0.lvm-iid2HC0.lme
-coef(e.lvm)[1:3]-fixef(e.lme)
-
-e2.lme <- e.lme
-sCorrect(e2.lme) <- FALSE
-
-e2.gls <- e.gls
-sCorrect(e2.gls) <- FALSE
-
-e2.lvm <- e.lvm
-sCorrect(e2.lvm) <- FALSE
-
-e2.lvm$sCorrect$Omega
-e2.lme$sCorrect$Omega
-coef()
-
-iid2HC0.lvm[1:5,1:3]-iid2HC0.lme[1:5,1:3]
-## BUG IN sCorrect.lme ???
-
-test_that("gls: HC0/HC1", {
+test_that("iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.lme[,index.coef]),
                  unname(iid2HC0.lvm[,index.coef]),
                  tol = 1e-5)
 
-        VHC0.lvm <- crossprod(iid2HC0.lvm)[1:3,1:3]
-
     VHC0.lme <- crossprod(iid2HC0.lme)[index.coef,index.coef]
-    GS <- clubSandwich::vcovCR(e.lme, type = "CR0", cluster = dLred$Id) * factor^2
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR0", cluster = dLred$Id)
     expect_equal(as.double(GS),as.double(VHC0.lme), tolerance = 1e-10)
 
-    GS <- clubSandwich::vcovCR(e.gls, type = "CR1", cluster = dLred$Id) * factor^2
-    VHC1.gls <- VHC0.gls*n/(n-1)
-    expect_equal(as.double(GS),as.double(VHC1.gls), tolerance = 1e-10)
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR1", cluster = dLred$Id)
+    VHC1.lme <- VHC0.lme*n/(n-1)
+    expect_equal(as.double(GS),as.double(VHC1.lme), tolerance = 1e-10)
 })
 
 ## ** HC2
@@ -244,63 +233,37 @@ iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
 iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
 iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
 
-test_that("gls: HC2", {
-    expect_equal(unname(iid2HC2.gls[,index.coef]),
+test_that("iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
+    expect_equal(unname(iid2HC2.lme[,index.coef]),
                  unname(iid2HC2.lvm[,index.coef]),
                  tol = 1e-5)
 
-    VHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
-    GS <- clubSandwich::vcovCR(e.gls, type = "CR2", cluster = dLred$Id) * factor^2
-    expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-10)
+    VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
+    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-10)
 })
 
 
-test_that("lme/gls/lvm: HC0/HC1", {
-    iid2HC0.lme <- iid2(e.lme, data = dL, bias.correct = FALSE)
-    iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)    
-    expect_equal(unname(iid2HC0.lme[,index.coef]),unname(iid2HC0.lvm[,index.coef]), tol = 1e-6)
-
-    VsandwichHC0.lme <- crossprod(iid2HC0.lme)[index.coef,index.coef]
-    VsandwichHC0.lvm <- crossprod(iid2HC0.lvm)[index.coef,index.coef]
-    expect_equal(as.double(VsandwichHC0.lme), as.double(VsandwichHC0.lvm), tol = 1e-7)
-    GS <- clubSandwich::vcovCR(e.lme, type = "CR0", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC0.lme))
-    
-    GS <- clubSandwich::vcovCR(e.lme, type = "CR1", cluster = dL$Id)
-    VsandwichHC1.lme <-  VsandwichHC0.lme*n/(n-1)
-    expect_equal(as.double(GS),as.double(VsandwichHC1.lme))    
-})
-
-test_that("lme/gls/lvm: HC2", {
-    iid2HC2.lme <- iid2(e.lme, data = dL, bias.correct = TRUE, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, as.clubSandwich = 2)    
-    expect_equal(unname(iid2HC2.lme[,index.coef]),unname(iid2HC2.lvm[,index.coef]), tol = 1e-6)
-
-    VsandwichHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
-    VsandwichHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]
-    expect_equal(as.double(VsandwichHC2.lme), as.double(VsandwichHC2.lvm), tol = 1e-7)
-    GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dL$Id)
-    expect_equal(as.double(GS),as.double(VsandwichHC2.lme))
-})
-
-## * gls - Unstructured
-m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~1))
+## * mixed model: Unstructured
+## ** model fit and sCorrect
+m <- lvm(c(Y1~0+1*eta,
+           Y2~0+1*eta,
+           Y3~0+1*eta,
+           eta~X1+X2))
 covariance(m) <- Y1~Y2
 covariance(m) <- Y1~Y3
-e.lvm <- estimate(m, dW)
+e.lvm <- estimate(m, d)
 
-dataRed <- dL[dL$time!="Y4",]
-dataRed$time <- droplevels(dataRed$time)
-e.gls <- nlme::gls(value ~ time,
+e.gls <- nlme::gls(value ~ X1 + X2,
                    correlation = corSymm(form =~ 1| Id),
-                   weight = varIdent(form =~ 1|time),
-                   data = dataRed, method = "ML")
+                   weight = varIdent(form =~ 1|variable),
+                   data = dLred, method = "ML")
 
-e.lme <- nlme::lme(value ~ time,
+e.lme <- nlme::lme(value ~ X1 + X2,
                    random =~ 1|Id,
                    correlation = corSymm(),
-                   weight = varIdent(form =~ 1|time),
-                   data = dataRed, method = "ML")
+                   weight = varIdent(form =~ 1|variable),
+                   data = dLred, method = "ML")
 
 index.coef <- 1:length(coef(e.gls))
 
@@ -309,38 +272,46 @@ test_that("lme/gls equivalent to lvm", {
     expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
 })
 
+## ** HC0/HC1
+iid2HC0.gls <- iid2(e.gls, value = FALSE)
+iid2HC0.lme <- iid2(e.lme, value = FALSE)
+iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
 
-test_that("gls/lvm: HC0/HC1", {
-    iid2HC0.gls <- iid2(e.gls, data = dataRed, bias.correct = FALSE)
-    ## iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE) ## not invertible
-    iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
-    
+test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
+    expect_equal(unname(iid2HC0.gls[,index.coef]),
+                 unname(iid2HC0.lvm[,index.coef]),
+                 tol = 1e-5)
 
-    VsandwichHC0.gls <- crossprod(iid2HC0.gls)[index.coef,index.coef]
-    VsandwichHC0.lvm <- crossprod(iid2HC0.lvm)[index.coef,index.coef]    
-    expect_equal(as.double(VsandwichHC0.gls), as.double(VsandwichHC0.lvm), tol = 1e-7)
-    ## scoreX <- score2(e.lvm, bias.correct = FALSE)
-    ## colSums(scoreX)
-    GS <- clubSandwich::vcovCR(e.gls, type = "CR0", cluster = dataRed$Id)
-    ## VsandwichHC0.gls-GS
-    ## VsandwichHC0.lvm-GS
+    expect_equal(unname(iid2HC0.gls[,index.coef]),
+                 unname(iid2HC0.lme[,index.coef]),
+                 tol = 1e-5)
 
-    ## VsandwichHC0.gls-vcov(e.gls)
-    ## GS-vcov(e.gls)
+    VHC0.lme <- crossprod(iid2HC0.lme)[index.coef,index.coef]
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR0", cluster = dLred$Id)
+    expect_equal(as.double(GS),as.double(VHC0.lme), tolerance = 1e-10)
 
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR1", cluster = dLred$Id)
+    VHC1.lme <- VHC0.lme*n/(n-1)
+    expect_equal(as.double(GS),as.double(VHC1.lme), tolerance = 1e-10)
 })
 
-test_that("lme: HC2", {
-    iid2HC2.gls <- iid2(e.gls, data = dataRed, bias.correct = TRUE, as.clubSandwich = 2)
-    iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, as.clubSandwich = 2)    
+## ** HC2
+iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
+iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
+iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
 
-    VsandwichHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
-    VsandwichHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]    
-    expect_equal(as.double(VsandwichHC2.gls), as.double(VsandwichHC2.lvm), tol = 1e-7)
+test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
+    expect_equal(unname(iid2HC2.gls[,index.coef]),
+                 unname(iid2HC2.lvm[,index.coef]),
+                 tol = 1e-5)
 
-    ## VsandwichHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
-    ## GS <- clubSandwich::vcovCR(e.gls, type = "CR2", cluster = dL$Id)
-    ## expect_equal(as.double(GS),as.double(VsandwichHC2.gls))
+    expect_equal(unname(iid2HC2.gls[,index.coef]),
+                 unname(iid2HC2.lme[,index.coef]),
+                 tol = 1e-5)
+
+    VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
+    GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
+    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-10)
 })
 
 

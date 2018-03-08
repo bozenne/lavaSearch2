@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar  7 2018 (17:39) 
+## last-updated: mar  8 2018 (12:30) 
 ##           By: Brice Ozenne
-##     Update #: 898
+##     Update #: 904
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -279,20 +279,20 @@ conditionalMoment.lvm <- function(object, data, second.order,
                                   name.endogenous, name.latent,
                                   ...){
 
-    ### ** Initialize conditional moments   
+### ** Initialize conditional moments   
     skeleton <- skeleton(object,
                          name.endogenous = name.endogenous, 
                          name.latent = name.latent, 
                          as.lava = TRUE)
     
-    ### ** Initialize partial derivatives of the conditional moments
+### ** Initialize partial derivatives of the conditional moments
     dtheta <- skeletonDtheta(object, data = data,
                              df.param.all = skeleton$df.param,
                              param2originalLink = skeleton$param2originalLink,
                              name.endogenous = name.endogenous, 
                              name.latent = name.latent)
 
-    ### ** Initialize second order partial derivatives of the conditional moments
+### ** Initialize second order partial derivatives of the conditional moments
     if(second.order){
         d2theta <- skeletonDtheta2(object, data = data,
                                    df.param.all = skeleton$df.param,
@@ -302,7 +302,7 @@ conditionalMoment.lvm <- function(object, data, second.order,
         d2theta <- NULL
     }
     
-    ### ** Export
+### ** Export
     return(list(skeleton = skeleton, dtheta = dtheta, d2theta = d2theta))
 }
     
@@ -312,7 +312,7 @@ conditionalMoment.lvm <- function(object, data, second.order,
 #' @export
 conditionalMoment.lvmfit <- function(object, data, param, usefit, second.order, ...){
 
-    ### ** normalize arguments
+### ** normalize arguments
     name.endogenous <- endogenous(object)
     n.endogenous <- length(name.endogenous)
     name.latent <- latent(object)
@@ -320,15 +320,15 @@ conditionalMoment.lvmfit <- function(object, data, param, usefit, second.order, 
 
     data <- as.matrix(data[,lava::manifest(object),drop=FALSE])
 
-    ### ** initialize
+### ** initialize
     out <- conditionalMoment(lava::Model(object), data = data,
                              second.order = second.order,
                              name.endogenous = name.endogenous, name.latent = name.latent)
 
-    ### ** update according to the value of the model coefficients
+### ** update according to the value of the model coefficients
     if(usefit){
-    
-        ### ** Update skeleton 
+        
+### ** Update skeleton 
         out$skeleton <- skeleton(object, skeleton = out$skeleton,
                                  data = data, param = param,
                                  name.endogenous = name.endogenous, 

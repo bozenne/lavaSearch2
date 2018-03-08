@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar  7 2018 (17:37) 
+## Last-Updated: mar  8 2018 (11:09) 
 ##           By: Brice Ozenne
-##     Update #: 755
+##     Update #: 763
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -71,7 +71,7 @@
 sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                         score = TRUE, df = TRUE, numeric.derivative = FALSE,
                         param = NULL, data = NULL,
-                        tol = 1e-5, n.iter = 20, trace = 1, ...){
+                        tol = 1e-5, n.iter = 20, trace = 0, ...){
     
 ### ** Extract quantities from object
     name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
@@ -178,7 +178,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
 sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                          score = TRUE, df = TRUE, numeric.derivative = FALSE, 
                          param = NULL, data = NULL,
-                         tol = 1e-5, n.iter = 20, trace = 1,
+                         tol = 1e-5, n.iter = 20, trace = 0,
                          ...){
 
     ### ** limitations
@@ -364,7 +364,7 @@ sCorrect.lme <- sCorrect.gls
 sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                             score = TRUE, df = TRUE, numeric.derivative = FALSE, 
                             param = NULL, data = NULL,
-                            tol = 1e-5, n.iter = 20, trace = 1,
+                            tol = 1e-5, n.iter = 20, trace = 0,
                             ...){
 
     ## ** Check valid lvm object

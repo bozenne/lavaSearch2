@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:40) 
 ## Version: 
-## Last-Updated: mar  7 2018 (18:14) 
+## Last-Updated: mar  8 2018 (14:48) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 109
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,7 @@ set.seed(10)
 d <- sim(mSim, n = n, latent = FALSE)
 dL <- melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
            measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
-
+dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
 ## * linear regression [lm,gls,lvm]
 ## ** model fit and sCorrect
 e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
@@ -78,7 +78,7 @@ test_that("linear regression (at ML) internal consistency",{
 
     expect_equivalent(iid2(e2.gls), iid2(e2.lvm))    
     expect_equivalent(iid2(e2.lm), iid2(e2.lvm))    
-}
+})
 
 test_that("linear regression (at ML) compare to lava",{
 
@@ -195,7 +195,7 @@ test_that("linear regression: constrains",{
                  score(e, indiv = TRUE))
 })
 
-## * multiple linear regression [lvm]
+## * multiple linear regression [lvm,gls]
 ## ** model fit and sCorrect
 ls.lm <- list(lm(Y1~X1,d),lm(Y2~X2,d),lm(Y3~X1+X3,d))
 e.lvm <- estimate(lvm(Y1~X1,Y2~X2,Y3~X1+X3), data = d)
@@ -228,10 +228,12 @@ sCorrect(e2.gls, cluster = "Id") <- FALSE
 test_that("multiple linear regression (at ML) internal consistency",{
     param <- attr(e2.gls$sCorrect$param,"mean.coef")
 
-    expect_equivalent(e2.lvm2$sCorrect$Omega,
-                      e2.gls$sCorrect$Omega)
-    expect_equivalent(e2.lvm2$sCorrect$epsilon,
-                      e2.gls$sCorrect$epsilon)
+    expect_equal(unname(e2.lvm2$sCorrect$Omega),
+                 unname(e2.gls$sCorrect$Omega),
+                 tolerance = 1e-5)
+    expect_equal(unname(e2.lvm2$sCorrect$epsilon),
+                 unname(e2.gls$sCorrect$epsilon),
+                 tolerance = 1e-5)
     expect_equal(unname(e2.lvm2$sCorrect$score[,c("Y1","Y1~X1","Y1~X2")]),
                  unname(e2.gls$sCorrect$score[,c("(Intercept)","X1","X2")]),
                  tolerance = 1e-5)
@@ -310,7 +312,6 @@ test_that("multiple linear regressions: constrains",{
 })
 
 ## * multiple linear regression with covariance links [lvm]
-
 ## ** model fit and sCorrect
 e.lvm <- estimate(lvm(Y1~X1+X2,Y2~X3+X1,Y3~X2,Y1~~Y2),d)
 e2.lvm <- e.lvm
@@ -343,225 +344,490 @@ test_that("multiple linear regression, covariance link (not at ML: +1:p)",{
                  score(e.lvm, p = newcoef, indiv = TRUE))
 })
 
-## * mixed model: Compound symmetry
-## ** model fit
-m <- lvm(c(Y1[mu1:sigma]~1*eta,
-           Y2[mu2:sigma]~1*eta,
-           Y3[mu3:sigma]~1*eta,
-           eta~X1+Gender)) 
+## * mixed model: Compound symmetry [lvm,gls,lme]
+## ** model fit and sCorrect
+m <- lvm(Y1[mu1:sigma]~1*eta,
+         Y2[mu2:sigma]~1*eta,
+         Y3[mu3:sigma]~1*eta,
+         eta~X1+Gender)
 e.lvm <- estimate(m, d)
-
-e.lmer <- lmer(value ~ variable + X1 + Gender + (1|Id),
-               data = dL[dL$variable %in% c("Y1","Y2","Y3"),],
-               REML = FALSE)
 
 e.lme <- lme(value ~ variable + X1 + Gender,
              random =~ 1|Id,
-             data = dL[dL$variable %in% c("Y1","Y2","Y3"),],
+             data = dLred,
              method = "ML")
 
 e.gls <- gls(value ~ variable + X1 + Gender,
              correlation = corCompSymm(form=~ 1|Id),
-             data = dL[dL$variable %in% c("Y1","Y2","Y3"),],
+             data = dLred,
              method = "ML")
 
-expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
-expect_equal(as.double(logLik(e.lme)),as.double(logLik(e.lvm)))
-expect_equal(as.double(logLik(e.gls)),as.double(logLik(e.lvm)))
+test_that("compound symmetry: lme/gls equivalent to lvm",{
+    expect_equal(as.double(logLik(e.lme)),as.double(logLik(e.lvm)))
+    expect_equal(as.double(logLik(e.gls)),as.double(logLik(e.lvm)))
+})
 
-## * mixed model: Unstructured
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
 
-m <- lvm(c(Y1~eta,Y2~eta,Y3~eta,eta~G+Gender))
-e.lvm <- estimate(m, dW)
-e.lme <- lme(value ~ time + G + Gender,
-             random = ~ 1|Id,
+e2.lme <- e.lme
+sCorrect(e2.lme) <- FALSE
+
+e2.gls <- e.gls
+sCorrect(e2.gls) <- FALSE
+
+
+## ** check score, residuals, vcov at ML
+test_that("compound symmetry (at ML) internal consistency",{
+    param.nlme <- names(coef(e.gls))
+    param.lava <- c("eta","Y2","Y3","eta~X1","eta~GenderFemale")
+    
+    expect_equal(unname(e2.lvm$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-5)
+    expect_equal(unname(e2.lme$sCorrect$Omega),unname(e2.gls$sCorrect$Omega), tol = 1e-5)
+
+    expect_equal(unname(e2.lvm$sCorrect$vcov.param[param.lava,param.lava]),
+                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$vcov.param[param.nlme,param.nlme]),
+                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+    
+    expect_equal(unname(e2.lvm$sCorrect$score[,param.lava]),
+                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$score[,param.nlme]),
+                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-5)
+
+    expect_equivalent(e2.lvm$sCorrect$epsilon,e2.lme$sCorrect$epsilon)
+    expect_equivalent(e2.gls$sCorrect$epsilon,e2.lme$sCorrect$epsilon)
+
+    expect_equivalent(e2.lvm$sCorrect$dVcov.param[param.lava,param.lava,"Y1~~Y1"],
+                      e2.lme$sCorrect$dVcov.param[param.nlme,param.nlme,"sigma2"])
+
+    expect_equivalent(iid2(e2.gls)[,param.nlme], iid2(e2.lme)[,param.nlme])    
+    expect_equivalent(iid2(e2.lme)[,param.nlme], iid2(e2.lvm)[,param.lava])    
+})
+
+test_that("compound symmetry (at ML) compare to lava",{
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equal(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE),
+                 score(e.lvm, indiv = TRUE))
+    
+    expect_equal(e2.lvm$sCorrect$epsilon, residuals2(e2.lvm))
+    expect_true(all(leverage2(e2.lvm) == 0))
+})
+
+
+## * mixed model: CS with different variances [lvm,lme]
+## ** model fit and sCorrect
+m <- lvm(c(Y1[mu1:sigma1]~1*eta,
+           Y2[mu2:sigma2]~1*eta,
+           Y3[mu3:sigma3]~1*eta,
+           eta~X1+Gender))
+latent(m) <- ~eta
+e.lvm <- estimate(m, d)
+
+e.lme <- nlme::lme(value ~ variable + X1 + Gender,
+                   random =~1| Id,
+                   weights = varIdent(form =~ 1|variable),
+                   data = dLred, method = "ML")
+
+e.gls <- nlme::gls(value ~ variable + X1 + Gender,
+                   correlation = corCompSymm(form = ~1| Id),
+                   weights = varIdent(form =~ 1|variable),
+                   data = dLred, method = "ML")
+
+test_that("lme equivalent to lvm", {
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+    ## gls does not give the same likelihood
+    ## expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
+})
+
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
+
+e2.lme <- e.lme
+sCorrect(e2.lme) <- FALSE
+
+e2.gls <- e.gls
+sCorrect(e2.gls) <- FALSE
+
+## ** check score, residuals, vcov at ML
+test_that("compound symmetry with weights (at ML) internal consistency",{
+    param.nlme <- names(coef(e.gls))
+    param.lava <- c("eta","Y2","Y3","eta~X1","eta~GenderFemale")
+    
+    expect_equal(unname(e2.lvm$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-5)
+
+    expect_equal(unname(e2.lvm$sCorrect$vcov.param[param.lava,param.lava]),
+                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+    
+    expect_equal(unname(e2.lvm$sCorrect$score[,param.lava]),
+                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-5)
+
+    expect_equal(unname(e2.lvm$sCorrect$epsilon),
+                 unname(e2.lme$sCorrect$epsilon), tol = 1e-5)
+})
+
+test_that("compound symmetry with weights (at ML) compare to lava",{
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equal(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE),
+                 score(e.lvm, indiv = TRUE))
+    
+    expect_equal(e2.lvm$sCorrect$epsilon, residuals2(e2.lvm))
+    expect_true(all(leverage2(e2.lvm) == 0))
+})
+
+## * mixed model: Unstructured [lvm,gls,lme]
+## ** model fit and sCorrect
+m <- lvm(Y1[mu1:sigma]~1*eta,
+         Y2[mu2:sigma]~1*eta,
+         Y3[mu3:sigma]~1*eta,
+         eta~X1+Gender)
+covariance(m) <- Y1~Y2
+covariance(m) <- Y1~Y3
+e.lvm <- estimate(m, d)
+
+e.lme <- lme(value ~ variable + X1 + Gender,
+             random =~ 1|Id,
              correlation = corSymm(),
-             weight = varIdent(form = ~1|time),
-             data = dL, method = "ML")
-e.gls <- gls(value ~ time + G + Gender,
-             correlation = corSymm(form=~ 1|Id),
-             weight = varIdent(form = ~1|time),
-             data = dL, method = "ML")
-e.gls <- gls(value ~ 1,#time + G + Gender,
-             correlation = corSymm(form=~ 1|Id),
-             weight = varIdent(form = ~1|time),
-             data = dL, method = "ML")
+             ## weights = varIdent(form =~ 1|variable),
+             data = dLred,
+             method = "ML")
 
-logLik(e.lvm)
-logLik(e.lme)
-logLik(e.gls)
+e.gls <- gls(value ~ variable + X1 + Gender,
+             correlation = corSymm(form=~ 1|Id),
+             ## weights = varIdent(form =~ 1|variable),
+             data = dLred,
+             method = "ML")
 
+test_that("lme/gls equivalent to lvm", {
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+    expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
+})
+
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
+
+e2.lme <- e.lme
+sCorrect(e2.lme) <- FALSE
+
+e2.gls <- e.gls
+sCorrect(e2.gls) <- FALSE
+
+## ** check score, residuals, vcov at ML
+test_that("Unstructured (at ML) internal consistency",{
+
+    expect_equal(unname(e2.lvm$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-3)
+
+    expect_equal(unname(e2.lvm$sCorrect$vcov.param[param.lava,param.lava]),
+                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$vcov.param[param.nlme,param.nlme]),
+                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+    
+    expect_equal(unname(e2.lvm$sCorrect$score[,param.lava]),
+                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$score[,param.nlme]),
+                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-3)
+
+    expect_equal(unname(e2.lvm$sCorrect$epsilon),
+                 unname(e2.lme$sCorrect$epsilon), tol = 1e-5)
+    expect_equal(unname(e2.gls$sCorrect$epsilon),
+                 unname(e2.lme$sCorrect$epsilon), tol = 1e-5)
+})
+
+test_that("Unstructured (at ML) compare to lava",{
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+    
+})
+
+## * mixed model: Unstructured with weights [lvm,gls,lme]
+## ** model fit and sCorrect
+m <- lvm(Y1~1*eta,
+         Y2~1*eta,
+         Y3~1*eta,
+         eta~X1+Gender)
+covariance(m) <- Y1~Y2
+covariance(m) <- Y1~Y3
+e.lvm <- estimate(m, d)
+
+e.lme <- lme(value ~ variable + X1 + Gender,
+             random =~ 1|Id,
+             correlation = corSymm(),
+             weights = varIdent(form =~ 1|variable),
+             data = dLred,
+             method = "ML")
+
+e.gls <- gls(value ~ variable + X1 + Gender,
+             correlation = corSymm(form=~ 1|Id),
+             weights = varIdent(form =~ 1|variable),
+             data = dLred,
+             method = "ML")
+
+test_that("lme/gls equivalent to lvm", {
+    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.lme)))
+    expect_equal(as.double(logLik(e.gls)), as.double(logLik(e.lme)))
+})
+
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
+
+e2.lme <- e.lme
+## sCorrect(e2.lme) <- FALSE
+## does not work because the model is overparametrized
+
+e2.gls <- e.gls
+sCorrect(e2.gls) <- FALSE
+
+## ** check score, residuals, vcov at ML
+test_that("Unstructured (at ML) internal consistency",{
+
+    expect_equal(unname(e2.lvm$sCorrect$Omega),unname(e2.gls$sCorrect$Omega), tol = 1e-3)
+
+    expect_equal(unname(e2.lvm$sCorrect$vcov.param[param.lava,param.lava]),
+                 unname(e2.gls$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-3)
+    
+    expect_equal(unname(e2.lvm$sCorrect$score[,param.lava]),
+                 unname(e2.gls$sCorrect$score[,param.nlme]), tol = 1e-3)
+
+    expect_equal(unname(e2.lvm$sCorrect$epsilon),
+                 unname(e2.gls$sCorrect$epsilon), tol = 1e-3)
+
+})
+
+test_that("Unstructured (at ML) compare to lava",{
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+    
+})
 
 ## * LVM: factor model
+## ** model fit and sCorrect
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1))
 regression(m) <- eta1~X1+X2
 
-e <- estimate(m,d)
-param <- coef(e)
-## prepareScore2(e) <- FALSE
+e.lvm <- estimate(m,d)
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
 
-test_that("factor model (at ML)",{
-    test <- score2(e, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, indiv=TRUE)
-    expect_equal(test, GS)
-     
-    test <- score2(e, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+## ** check score, residuals, vcov at ML
+test_that("factor model (at ML) compared to lava",{
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+
 })
+
+## ** check score not at ML
+param <- coef(e.lvm)
+test <- score2(e.lvm, p = param+1, value = FALSE)
+GS <- score(e.lvm, p = param+1, indiv = TRUE)
+
 test_that("factor model (not at ML: +1)",{
-    test <- score2(e, p = param+1, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=TRUE)
     expect_equal(test, GS)
-
-    test <- score2(e, p = param+1, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
 })
 
+test <- score2(e.lvm, p = param+0.1*(1:length(param)), value = FALSE)
+GS <- score(e.lvm, p = param+0.1*(1:length(param)), indiv=TRUE)
 test_that("factor model (not at ML: +1:p)",{
-    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
     expect_equal(test, GS)
-
 })
 
-test_that("factor model: fixed coefficients",{
-    m <- lvm(Y1~1*eta+1*X2,Y2~1*eta,Y3~1*eta)
-    e <- estimate(m, d)
+## * LVM: factor model with constrains
+## ** model fit and sCorrect
+e.lvm <- estimate(lvm(Y1~1*eta+1*X2,Y2~1*eta,Y3~1*eta),
+                  data = d)
 
-    expect_equal(score2(e, bias.correct = FALSE),
-                 score(e, indiv = TRUE))
+
+e.lvm2 <- estimate(lvm(Y1~1*eta+X2,
+                       Y2~lambda*eta+X2,
+                       Y3~lambda*eta,
+                       eta ~ beta*X2+beta*X1),
+                   data = d)
+
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
+e2.lvm2 <- e.lvm2
+sCorrect(e2.lvm2) <- FALSE
+
+## ** check score at ML
+test_that("factor model: fixed coefficients",{
+    expect_equal(score2(e2.lvm, value = FALSE),
+                 score(e.lvm, indiv = TRUE))
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param,
+                      vcov(e.lvm))
 })
 
 test_that("factor model: constrains",{
-    m <- lvm(Y1~1*eta+X2,Y2~lambda*eta+X2,Y3~lambda*eta,eta ~ beta*X2+beta*X1)
-    e <- estimate(m, d)
+    expect_equal(score2(e2.lvm2, value = FALSE),
+                 score(e.lvm2, indiv = TRUE))
 
-    expect_equal(score2(e, bias.correct = FALSE),
-                 score(e, indiv = TRUE))
+    expect_equivalent(e2.lvm2$sCorrect$vcov.param,
+                      vcov(e.lvm2))
 })
 
 
 ## * LVM: 2 factor model
+## ** model fit and sCorrect
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta1~X1+X2
 latent(m) <- ~eta1+eta2
 
-e <- estimate(m,d)
-param <- coef(e)
-## prepareScore2(e) <- FALSE
+e.lvm <- estimate(m,d)
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
 
-test_that("2 factor model (at ML)",{
-    test <- score2(e, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, indiv=TRUE)
-    expect_equal(test, GS)
+## ** check score, residuals, vcov at ML
+test_that("2 factor model (at ML) compared to lava",{
 
-    test <- score2(e, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+
 })
+
+
+## ** check score not at ML
+param <- coef(e.lvm)
+test <- score2(e.lvm, p = param+1, value = FALSE)
+GS <- score(e.lvm, p = param+1, indiv = TRUE)
 
 test_that("2 factor model (not at ML: +1)",{
-    test <- score2(e, p = param+1, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=TRUE)
     expect_equal(test, GS)
-
-    test <- score2(e, p = param+1, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
 })
 
+test <- score2(e.lvm, p = param+0.1*(1:length(param)), value = FALSE)
+GS <- score(e.lvm, p = param+0.1*(1:length(param)), indiv=TRUE)
 test_that("2 factor model (not at ML: +1:p)",{
-    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
     expect_equal(test, GS)
-
 })
 
-test_that("2 factor model: constrains",{
-    m <- lvm(Y1~1*eta1+X2,Y2~lambda*eta1+X2,Y3~lambda*eta1,eta1 ~ beta*X2+beta*X1,
-             Z1~0+eta2,Z2~lambda*eta2,Z3~eta2)
-    e <- estimate(m, d)
+## * LVM: 2 factor model with constrains
+## ** model fit and sCorrect
+m <- lvm(Y1~1*eta1+X2,Y2~lambda*eta1+X2,Y3~lambda*eta1,eta1 ~ beta*X2+beta*X1,
+         Z1~0+eta2,Z2~lambda*eta2,Z3~eta2)
+e.lvm <- estimate(m, d)
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
 
-    expect_equal(score2(e, bias.correct = FALSE),
-                 score(e, indiv = TRUE))
+## ** check score at ML
+test_that("2 factor model: constrains",{
+    expect_equal(score2(e2.lvm, value = FALSE),
+                 score(e.lvm, indiv = TRUE))
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param,
+                      vcov(e.lvm))
 })
 
 ## * LVM: 2 factor model (covariance)
+## ** model fit and sCorrect
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 covariance(m) <- eta1 ~ eta2
-## covariance(m) <- Y1 ~ Z1
 latent(m) <- ~eta1+eta2
 
-e <- estimate(m,d)
-param <- coef(e)
-## prepareScore2(e) <- FALSE
+e.lvm <- estimate(m,d)
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
 
-test_that("2 factor model, covariance (at ML)",{
-    test <- score2(e, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, indiv=TRUE)
-    expect_equal(test, GS)
-    
-    test <- score2(e, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+## ** check score, residuals, vcov at ML
+test_that("2 factor model with covariance (at ML) compared to lava",{
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+
 })
 
-test_that("2 factor model, covariance (not at ML: +1)",{
-    test <- score2(e, p = param+1, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=TRUE)
-    expect_equal(test, GS)
+## ** check score not at ML
+param <- coef(e.lvm)
+test <- score2(e.lvm, p = param+1, value = FALSE)
+GS <- score(e.lvm, p = param+1, indiv = TRUE)
 
-    test <- score2(e, p = param+1, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+test_that("2 factor model with covariance (not at ML: +1)",{
+    expect_equal(test, GS)
 })
 
-test_that("2 factor model, covariance (not at ML: +1:p)",{
-    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+test <- score2(e.lvm, p = param+0.1*(1:length(param)), value = FALSE)
+GS <- score(e.lvm, p = param+0.1*(1:length(param)), indiv=TRUE)
+test_that("2 factor model with covariance (not at ML: +1:p)",{
     expect_equal(test, GS)
-
 })
 
 ## * LVM: 2 factor model (correlation LV)
+## ** model fit and sCorrect
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(m) <- eta2 ~ X1
 regression(m) <- eta1 ~ eta2+X2+X3
 
-e <- estimate(m,d)
-param <- coef(e)
-## prepareScore2(e) <- FALSE
+e.lvm <- estimate(m,d)
 
-test_that("2 factor model, correlation LV (at ML)",{
-    test <- score2(e, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, indiv=TRUE)
-    expect_equal(test, GS)
-    
-    test <- score2(e, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+e2.lvm <- e.lvm
+sCorrect(e2.lvm) <- FALSE
+
+## ** check score, residuals, vcov at ML
+test_that("2 factor model with correlation (at ML) compared to lava",{
+
+    expect_equivalent(e2.lvm$sCorrect$vcov.param, vcov(e.lvm))
+    expect_true(all(e2.lvm$sCorrect$leverage==0))
+    expect_true(all(e2.lvm$sCorrect$n.corrected==e.lvm$data$n))
+    expect_equivalent(e2.lvm$sCorrect$epsilon, residuals(e.lvm))
+    expect_equal(e2.lvm$sCorrect$param, coef(e.lvm))
+    expect_equal(e2.lvm$sCorrect$score, score(e.lvm, indiv = TRUE))
+    expect_equal(score2(e.lvm, value = FALSE), score(e.lvm, indiv = TRUE))
+
 })
 
-test_that("2 factor model, correlation LV (not at ML: +1)",{
-    test <- score2(e, p = param+1, indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=TRUE)
-    expect_equal(test, GS)
+## ** check score not at ML
+param <- coef(e.lvm)
+test <- score2(e.lvm, p = param+1, value = FALSE)
+GS <- score(e.lvm, p = param+1, indiv = TRUE)
 
-    test <- score2(e, p = param+1, indiv = FALSE, bias.correct = FALSE)
-    GS <- score(e, p = param+1, indiv=FALSE)
-    expect_equal(as.double(test),as.double(GS))
+test_that("2 factor model (not at ML: +1)",{
+    expect_equal(test, GS)
 })
 
-test_that("2 factor model, covariancecorrelation LV (not at ML: +1:p)",{
-    test <- score2(e, p = param+0.1*(1:length(param)), indiv=TRUE, bias.correct = FALSE)
-    GS <- score(e, p = param+0.1*(1:length(param)), indiv=TRUE)
+test <- score2(e.lvm, p = param+0.1*(1:length(param)), value = FALSE)
+GS <- score(e.lvm, p = param+0.1*(1:length(param)), indiv=TRUE)
+test_that("2 factor model (not at ML: +1:p)",{
     expect_equal(test, GS)
-
 })
 
 

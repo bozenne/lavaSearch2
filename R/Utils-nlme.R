@@ -1,11 +1,11 @@
-### coef2.R --- 
+### utils-nlme.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar  7 2018 (18:10) 
+## Last-Updated: mar  8 2018 (12:09) 
 ##           By: Brice Ozenne
-##     Update #: 444
+##     Update #: 506
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -228,6 +228,7 @@
                                 name.Y, cluster, data){
 
     class.cor <- class(object$modelStruct$corStruct)
+    class.re <- class(object$modelStruct$reStruct)
     if("NULL" %in% class.cor == FALSE){
         formula.cor <- attr(object$modelStruct$corStruct,"formula")
         varIndex.cor <- all.vars(getCovariateFormula(formula.cor))
@@ -239,6 +240,10 @@
     if("NULL" %in% class.var == FALSE){
         formula.var <- attr(object$modelStruct$varStruct,"formula")
         varIndex.var <- all.vars(getCovariateFormula(formula.var))
+        groupValue.var <- attr(object$modelStruct$varStruct,"groups")
+        if("NULL" %in% class.cor == FALSE || "NULL" %in% class.re == FALSE){ ## nlme automaticly sort data when corStruct or reSruct
+            groupValue.var <- groupValue.var[order(order(cluster))] ## undo automatic sort
+        } 
     }else{
         varIndex.var <- NULL
     }
@@ -262,46 +267,61 @@
     }
     
     ## ** Identify the index and name of the endogenous variables
-    if("NULL" %in% class.cor == FALSE){
-
-        ## endogenous variable relative to the observations within cluster
-        if(length(varIndex.cor) == 0 && ("varIdent" %in% class.var || "corSymm" %in% class.cor)){
-            warning("The residuals covariance matrice is subset based on the ordering of the data\n",
-                    "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in corStruct \n",
-                    "e.g. correlation = corStruct(form = ~index|group) \n")
-        }
-        index.Omega <- attr(unclass(object$modelStruct$corStruct), "covariate")
+    if("NULL" %in% class.var && "NULL" %in% class.cor){ ## basic lme models
+        ## order of the variables does not matter
+        index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
+        norm <- FALSE
+    }else if("NULL" %in% class.var && "corCompSymm" %in% class.cor){
+        ## order of the variables does not matter
+        index.Omega <- attr(object$modelStruct$corStruct, "covariate")
         norm <- TRUE
-    }else if("NULL" %in% class.var == FALSE){
-        
-        if(length(varIndex.var)!=0){
-            index.tempo <- data[[varIndex.var]]
-            if(!is.numeric(index.tempo)){
-                stop("The variable in the left hand side of the formula in varStruct must be numeric \n")
-            }
-            index.Omega <- tapply(index.tempo,cluster, function(iC){list(iC)})
-            norm <- TRUE
+    }else if(length(varIndex.cor)!=0){ 
+        ## order of the variables matters: use index variable in corStruct
+        index.Omega <- attr(object$modelStruct$corStruct, "covariate")
+        norm <- TRUE
+    }else if(length(varIndex.var)!=0){
+        ## order of the variables matters: using index variable in varStruct
+        index.tempo <- data[[varIndex.var]]
+        if(!is.numeric(index.tempo)){
+            stop("The variable in the left hand side of the formula in varStruct must be numeric \n")
+        }
+        index.Omega <- tapply(index.tempo, cluster, function(iC){list(iC)})
+        norm <- TRUE
+    }else{
+        ## order of the variables matters: check missing values
+        if("NULL" %in% class.var == FALSE){
+            test.duplicated <- unique(unlist(tapply(groupValue.var, cluster, duplicated)))
         }else{
-            groupNames <- attr(object$modelStruct$varStruct,"groupNames")
-            n.groupNames <- length(groupNames)
-            groupValue <- attr(object$modelStruct$varStruct,"groups")
-            test <- tapply(groupValue, cluster, function(iC){ # iC <- 1
-                (length(iC) == n.groupNames)*(all(groupNames %in% iC))
-            })
-            if(all(test==1)){
-                index.Omega <- tapply(as.numeric(factor(groupValue, levels = groupNames)),
-                                      cluster, function(iC){iC})
+            groupValue.cor <- attr(object$modelStruct$corStruct, "covariate")
+            ref.tempo <- unname(sort(groupValue.cor[[1]]))
+            test.identical <- unique(unlist(lapply(groupValue.cor,function(x){ # x <- groupValue.cor[[1]]
+                identical(unname(sort(x)),ref.tempo)
+            })))
+            test.duplicated <- TRUE
+        }
+
+        ## recover order
+        if(("NULL" %in% class.var == FALSE) && all(test.duplicated==FALSE)){
+            ## from varIdent when no missing values
+            tempo <- as.numeric(factor(groupValue.var, levels = attr(object$modelStruct$varStruct,"groupNames")))
+            index.Omega <- tapply(tempo, cluster, function(iC){iC})
+            norm <- FALSE
+        }else{
+            ## from the order of the data
+            index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
+            norm <- FALSE
+            if("NULL" %in% class.cor == FALSE){
+                if(any(test.identical == FALSE)){
+                    warning("The residuals covariance matrice is subset based on the ordering of the data\n",
+                            "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in corStruct \n",
+                            "e.g. correlation = corStruct(form = ~index|group) \n")
+                }
             }else{
                 warning("The attribution of the repetition number is based on the ordering of the data\n",
                         "It is safer to define the ordering within group by adding a variable in the left hand side of the formula in varStruct \n",
                         "e.g. correlation = varStruct(form = ~index|group) \n")
-                index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
             }
-            norm <- FALSE
-        }        
-    }else{
-        index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
-        norm <- FALSE
+        }
     }
 
     ## ** Normalize index.Omega
@@ -310,7 +330,7 @@
         convertion <- setNames(order(level.index), level.index)
         index.Omega <- lapply(index.Omega, function(x){as.double(convertion[as.character(x)])})
     }
-    
+
     ## ** Define the name and number of endogenous variables
     vecIndex.Omega <- unlist(index.Omega)
     n.endogenous <- max(vecIndex.Omega)
@@ -328,15 +348,15 @@
         }
     }
 
-    if("NULL" %in% class.var == FALSE){
-        group.ordered <- attr(object$modelStruct$varStruct,"groups")#[order(cluster)]
+    if("NULL" %in% class.var == FALSE){        
+        groupValue.var.ordered <- groupValue.var[order(cluster)] ## reorder by cluster
         table.unique <- tapply(1:length(vecIndex.Omega),vecIndex.Omega,function(x){
-            length(unique(group.ordered[x]))
+            length(unique(groupValue.var.ordered[x]))
         })
         if(any(table.unique!=1)){
             stop("The residual covariance matrix should not differ between clusters \n")
         }                
-        ref.group <- group.ordered[!duplicated(vecIndex.Omega)]
+        ref.group <- groupValue.var.ordered[!duplicated(vecIndex.Omega)]
     }else{
         ref.group <- NULL
     }
@@ -542,4 +562,4 @@ getVarCov2.lme <- getVarCov2.gls
 
 
 ##----------------------------------------------------------------------
-### coef2.R ends here
+### utils-nlme.R ends here
