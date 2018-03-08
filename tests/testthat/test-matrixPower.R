@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 24 2017 (09:21) 
 ## Version: 
-## last-updated: jan 15 2018 (22:03) 
+## last-updated: mar  8 2018 (14:51) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 15
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,7 @@ if(TRUE){ ## already called in test-all.R
 lava.options(symbols = c("~","~~"))
 
 context("matrixPower")
+matrixPower <- lavaSearch2:::matrixPower
 
 ## * tests
 M <- matrix(rnorm(2e2),20,10)

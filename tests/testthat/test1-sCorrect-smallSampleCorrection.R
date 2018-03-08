@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:21) 
 ## Version: 
-## Last-Updated: mar  7 2018 (13:39) 
+## Last-Updated: mar  8 2018 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 3
+##     Update #: 7
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,6 +14,47 @@
 ##----------------------------------------------------------------------
 ## 
 ### Code:
+
+## * header
+if(FALSE){ ## already called in test-all.R
+    rm(list = ls())
+    library(testthat)
+    library(lavaSearch2)
+}
+
+lava.options(symbols = c("~","~~"))
+context("sCorrect: small sample correction")
+
+## * simulation
+n <- 5e1
+mSim <- lvm(c(Y1~eta1,Y2~eta1+X2,Y3~eta1+X1,
+              Z1~eta2,Z2~eta2,Z3~eta2+X3))
+regression(mSim) <- eta1~X1+Gender
+latent(mSim) <- ~eta1+eta2
+categorical(mSim, labels = c("Male","Female")) <- ~Gender
+transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
+set.seed(10)
+d <- sim(mSim, n = n, latent = FALSE)
+dL <- melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
+           measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
+dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
+
+## * linear regression [lm,gls,lvm]
+## ** model fit and sCorrect
+e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
+e.lm <- lm(Y1~X1+X2+Gender, data = d)
+e.gls <- gls(Y1~X1+X2+Gender, data = d, method = "ML")
+
+e2.lvm <- e.lvm
+e2.gls <- e.gls
+e2.lm <- e.lm
+
+
+
+sCorrect(e2.lvm) <- FALSE
+sCorrect(e2.gls, cluster = 1:n) <- FALSE
+sCorrect(e2.lm) <- FALSE
+
 
 ## * adjusted residuals
 

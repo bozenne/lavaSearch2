@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:40) 
 ## Version: 
-## Last-Updated: mar  8 2018 (14:48) 
+## Last-Updated: mar  8 2018 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 109
+##     Update #: 111
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,6 +42,7 @@ d <- sim(mSim, n = n, latent = FALSE)
 dL <- melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
            measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
+
 ## * linear regression [lm,gls,lvm]
 ## ** model fit and sCorrect
 e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
@@ -147,11 +148,11 @@ p <- length(coef(e.lvm))
 S1 <- score2(e2.lvm, param = coef(e2.lvm)+1:p)
 S2 <- score2(e.lvm, param = coef(e.lvm)+1:p, value = FALSE)
 
-S3 <- score2(e2.lm, param = lavaSearch2:::.coef2(e2.gls)+1:p) ## not .coef2(e2.lm) because different estimate of the variance
-S4 <- score2(e.lm, param = lavaSearch2:::.coef2(e.gls)+1:p, value = FALSE)
+S3 <- score2(e2.lm, param = .coef2(e2.gls)+1:p) ## not .coef2(e2.lm) because different estimate of the variance
+S4 <- score2(e.lm, param = .coef2(e.gls)+1:p, value = FALSE)
 
-S5 <- score2(e2.gls, param = lavaSearch2:::.coef2(e2.gls)+1:p)
-S6 <- score2(e.gls, param = lavaSearch2:::.coef2(e.gls)+1:p, cluster = 1:n, value = FALSE)
+S5 <- score2(e2.gls, param = .coef2(e2.gls)+1:p)
+S6 <- score2(e.gls, param = .coef2(e.gls)+1:p, cluster = 1:n, value = FALSE)
 GS <- score(e.lvm, p = coef(e.lvm)+1:p, indiv = TRUE)
 
 test_that("linear regression (at ML + 1:p) compare to lava",{

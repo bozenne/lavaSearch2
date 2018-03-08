@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar  8 2018 (12:30) 
+## last-updated: mar  8 2018 (16:33) 
 ##           By: Brice Ozenne
-##     Update #: 904
+##     Update #: 914
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -321,10 +321,17 @@ conditionalMoment.lvmfit <- function(object, data, param, usefit, second.order, 
     data <- as.matrix(data[,lava::manifest(object),drop=FALSE])
 
 ### ** initialize
-    out <- conditionalMoment(lava::Model(object), data = data,
-                             second.order = second.order,
-                             name.endogenous = name.endogenous, name.latent = name.latent)
+    if(!is.null(object$conditionalMoment)){
+        out <- object$conditionalMoment
+    }else{
+        out <- conditionalMoment(lava::Model(object), data = data,
+                                 second.order = second.order,
+                                 name.endogenous = name.endogenous, name.latent = name.latent)
+    }
 
+    ## out2 <- conditionalMoment(lava::Model(object), data = data,
+    ##                              second.order = second.order,
+    ##                              name.endogenous = name.endogenous, name.latent = name.latent)
 ### ** update according to the value of the model coefficients
     if(usefit){
         

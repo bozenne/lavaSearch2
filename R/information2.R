@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: mar  7 2018 (11:48) 
+## Last-Updated: mar  8 2018 (15:39) 
 ##           By: Brice Ozenne
-##     Update #: 65
+##     Update #: 71
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -315,7 +315,7 @@
                         iW.cluster <- 1 -  diag(leverage[[iC]])
                         
                         ## compute
-                        if(test.Omega1){                            
+                        if(test.Omega1){
                             iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
                             iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
                             dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iW.cluster + iDiag2 * iW.cluster)

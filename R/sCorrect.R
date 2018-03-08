@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar  8 2018 (11:09) 
+## Last-Updated: mar  8 2018 (16:36) 
 ##           By: Brice Ozenne
-##     Update #: 763
+##     Update #: 797
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -130,6 +130,13 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("- done \n")
     }
 
+    ## ** args
+    args <- list(adjust.Omega = adjust.Omega,
+                 adjust.n = adjust.n,
+                 df = df,
+                 numeric.derivative = numeric.derivative,
+                 tol = tol, n.iter = n.iter)
+    
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -160,15 +167,11 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      n.iter = n.iter,
                      score = score,
                      derivative = derivative,
+                     args = args,
                      trace = trace,
                      ...)
     
     ## ** export
-    out$args <- list(adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,
-                     df = df,
-                     numeric.derivative = numeric.derivative,
-                     tol = tol, n.iter = n.iter)
     return(out)    
 }
 
@@ -309,7 +312,15 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     
     ## ** param with non-zero third derivative
     name.3deriv <- name.varparam
-   
+
+    ## ** args
+    args <- list(adjust.Omega = adjust.Omega,
+                 adjust.n = adjust.n,                     
+                 df = df,
+                 cluster = cluster,
+                 numeric.derivative = numeric.derivative,
+                 tol = tol, n.iter = n.iter)
+    
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -339,16 +350,11 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                      n.iter = n.iter,
                      score = score,
                      derivative = derivative,
+                     args = args,
                      trace = trace,
                      ...)
     
-    ## ** export
-    out$args <- list(adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,                     
-                     df = df,
-                     cluster = cluster,
-                     numeric.derivative = numeric.derivative,
-                     tol = tol, n.iter = n.iter)
+    ## ** export    
     return(out)          
  
 }
@@ -473,7 +479,14 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                             )
     
     name.3deriv <- dMoments$df.param[index.keep, "originalLink"]
-    
+
+    ## ** args
+    args <- list(adjust.Omega = adjust.Omega,
+                 adjust.n = adjust.n,                     
+                 df = df,
+                 numeric.derivative = numeric.derivative,
+                 tol = tol, n.iter = n.iter)
+
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -484,6 +497,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     }
 
     out <- .sCorrect(object,
+                     data = data,
                      param = model.param,
                      epsilon = epsilon,
                      Omega = Omega,
@@ -504,15 +518,11 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      n.iter = n.iter,
                      score = score,
                      derivative = derivative,
+                     args = args,
                      trace = trace,
                      ...)
 
     ## ** export
-    out$args <- list(adjust.Omega = adjust.Omega,
-                     adjust.n = adjust.n,                     
-                     df = df,
-                     numeric.derivative = numeric.derivative,
-                     tol = tol, n.iter = n.iter)
     return(out)       
 }
 
@@ -524,10 +534,10 @@ sCorrect.lvmfit2 <- function(object, ...){
     return(sCorrect(object, ...))    
 }
 ## * .sCorrect
-.sCorrect <- function(object, param, epsilon, Omega, dmu, dOmega, d2mu, d2Omega, 
+.sCorrect <- function(object, data, param, epsilon, Omega, dmu, dOmega, d2mu, d2Omega, 
                       name.param, name.meanparam, name.varparam, name.endogenous, name.3deriv,
                       n.cluster, index.Omega,
-                      adjust.Omega, adjust.n, tol, n.iter, score, derivative, trace){
+                      adjust.Omega, adjust.n, tol, n.iter, score, derivative, args, trace){
 
     n.param <- length(param)
     if(!is.null(index.Omega)){
@@ -590,18 +600,26 @@ sCorrect.lvmfit2 <- function(object, ...){
         if(adjust.Omega || adjust.n){
             warning("The numerical derivative of the information matrix is computed ignoring the small sample correction \n")
         }
-        
-        ### *** direct computation of the variance-covariance matrix
+
+        if("lvmfit" %in% class(object)){
+            object$conditionalMoment <- conditionalMoment(lava::Model(object), data = data,
+                                                          usefit = FALSE, second.order = FALSE,
+                                                          name.endogenous = endogenous(object),
+                                                          name.latent = latent(object))
+        }
+       
+        args.tempo <- args
+        args.tempo$df <- FALSE
+        args.tempo$score <- FALSE
+
+        ## *** direct computation of the variance-covariance matrix
         calcVcov <- function(iParam){ # x <- p.obj
             pp <- param
             pp[names(iParam)] <- iParam
 
-            args <- object$sCorrect$args
-            args$df <- FALSE
-            args$score <- FALSE
             vcov.param <- do.call(sCorrect,
-                                  args = c(list(object, param = pp), args))$vcov.param
-            
+                                  args = c(list(object, param = pp), args.tempo))$vcov.param
+
             return(vcov.param)
         }
 
@@ -637,9 +655,9 @@ sCorrect.lvmfit2 <- function(object, ...){
                                        leverage = out$leverage,
                                        name.param  = name.param,
                                        name.3deriv = name.3deriv)
-
         p3 <- dim(dInfo.dtheta)[3]
         out$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
+        
         for(iP in 1:p3){
             out$dVcov.param[,,iP] <- - out$vcov.param %*% dInfo.dtheta[,,iP] %*% out$vcov.param 
         }
@@ -650,6 +668,7 @@ sCorrect.lvmfit2 <- function(object, ...){
     }
        
     ## ** export
+    out$args <- args
     return(out)
 }
 
