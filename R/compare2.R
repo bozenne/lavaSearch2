@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar  7 2018 (11:40) 
+## Last-Updated: mar  8 2018 (16:46) 
 ##           By: Brice Ozenne
-##     Update #: 277
+##     Update #: 284
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -100,32 +100,32 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, adjust.Omega = TRUE, ...){
-    sCorrect(object) <- adjust.Omega
+compare2.lm <- function(object, value = TRUE, ...){
+    sCorrect(object) <- value
     return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, adjust.Omega = TRUE, cluster = NULL, ...){
-    sCorrect(object, cluster = cluster) <- adjust.Omega
+compare2.gls <- function(object, value = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster) <- value
     return(.compare2(object, ...))
 }
 
 ## * compare2.lme
 #' @rdname compare2
 #' @export
-compare2.lme <- function(object, adjust.Omega = TRUE, ...){
-    sCorrect(object) <- adjust.Omega
+compare2.lme <- function(object, value = TRUE, ...){
+    sCorrect(object) <- value
     return(.compare2(object, ...))
 }
 
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-compare2.lvmfit <- function(object, adjust.Omega = TRUE, ...){
-    sCorrect(object) <- adjust.Omega
+compare2.lvmfit <- function(object, value = TRUE, ...){
+    sCorrect(object) <- value
     return(.compare2(object, ...))
 }
 
