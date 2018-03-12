@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar  8 2018 (16:36) 
+## Last-Updated: mar 12 2018 (16:45) 
 ##           By: Brice Ozenne
-##     Update #: 797
+##     Update #: 798
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -616,10 +616,9 @@ sCorrect.lvmfit2 <- function(object, ...){
         calcVcov <- function(iParam){ # x <- p.obj
             pp <- param
             pp[names(iParam)] <- iParam
-
+            
             vcov.param <- do.call(sCorrect,
                                   args = c(list(object, param = pp), args.tempo))$vcov.param
-
             return(vcov.param)
         }
 

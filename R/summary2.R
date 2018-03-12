@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar  7 2018 (11:35) 
+## Last-Updated: mar 12 2018 (15:44) 
 ##           By: Brice Ozenne
-##     Update #: 211
+##     Update #: 222
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,26 +67,30 @@
 `summary2` <-
   function(object,...) UseMethod("summary2")
 
+## * summary2.lm
+#' @rdname summary
+#' @export
+summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
+    sCorrect(object, df = df) <- bias.correct
+    return(summary2(object, ...))
+}
 ## * summary2.gls
 #' @rdname summary2
 #' @export
-summary2.gls <- function(object, df = TRUE, value = TRUE, cluster = NULL, ...){
-    sCorrect(object, cluster = cluster, df = df) <- value
+summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster, df = df) <- bias.correct
     return(summary2(object, ...))
 }
 
 ## * summary2.lme
 #' @rdname summary
 #' @export
-summary2.lme <- function(object, df = df, value = TRUE, ...){
-    sCorrect(object, value = value) <- value
-    return(summary2(object, ...))
-}
+summary2.lme <- summary2.lm
 
 ## * summary2.lvmfit
 #' @rdname summary
 #' @export
-summary2.lvmfit <- summary2.lme
+summary2.lvmfit <- summary2.lm
 
 ## * summary2.gls2
 #' @rdname summary2

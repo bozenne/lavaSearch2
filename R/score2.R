@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: mar  7 2018 (09:42) 
+## last-updated: mar 12 2018 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 2246
+##     Update #: 2248
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,7 @@
 #' @param object a linear model or a latent variable model
 #' @param param [optional] the fitted parameters.
 #' @param data [optional] the data set.
-#' @param value [logical, optional] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
 #' @param ... arguments to be passed to \code{sCorrect}.
 #'
 #' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
@@ -47,12 +47,12 @@
 #'
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
-#' score.tempo <- score2(e.lm, value = FALSE)
+#' score.tempo <- score2(e.lm, bias.correct = FALSE)
 #' colMeans(score.tempo)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' score.tempo <- score2(e.lvm, value = FALSE)
+#' score.tempo <- score2(e.lvm, bias.correct = FALSE)
 #' range(score.tempo-score(e.lvm, indiv = TRUE))
 #'
 #' @concept small sample inference
@@ -63,10 +63,10 @@
 ## * score2.lm
 #' @rdname score2
 #' @export
-score2.lm <- function(object, param = NULL, data = NULL, value, ...){
+score2.lm <- function(object, param = NULL, data = NULL, bias.correct = TRUE, ...){
 
     sCorrect(object, param = param, data = data,
-             score = TRUE, df = FALSE, ...) <- value
+             score = TRUE, df = FALSE, ...) <- bias.correct
 
     ### ** export
     return(object$sCorrect$score)

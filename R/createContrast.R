@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: feb 19 2018 (17:46) 
+## Last-Updated: mar 12 2018 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 197
+##     Update #: 198
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -82,7 +82,8 @@
 ## * createContrast.character
 #' @rdname createContrast
 #' @export
-createContrast.character <- function(object, name.param, add.rowname = TRUE,
+createContrast.character <- function(object, name.param,
+                                     add.rowname = TRUE, rowname.rhs = TRUE,
                                      ...){
 
     n.param <- length(name.param)
@@ -139,7 +140,7 @@ createContrast.character <- function(object, name.param, add.rowname = TRUE,
         }
     
         if(add.rowname){
-            name.hypo <- .contrast2name(contrast, null = null)
+            name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL})
             rownames(contrast) <- name.hypo
             null <- setNames(null, name.hypo)
         }
