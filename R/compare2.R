@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar 12 2018 (15:46) 
+## Last-Updated: mar 12 2018 (17:29) 
 ##           By: Brice Ozenne
-##     Update #: 289
+##     Update #: 292
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * Documentation - compare2
 #' @title Test Linear Hypotheses with small sample correction
-#' @description Test Linear Hypotheses using a Wald or an F statistic.
+#' @description Test Linear Hypotheses using a multivariate Wald statistic.
 #' Similar to \code{lava::compare} but with small sample correction.
 #' @name compare2
 #'

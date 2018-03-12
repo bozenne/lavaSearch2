@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: mar  8 2018 (14:23) 
+## Last-Updated: mar 12 2018 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 796
+##     Update #: 798
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -778,7 +778,6 @@ skeletonDtheta2.lvmfit <- function(object, dtheta, d2theta,
                                    ...){
     
     n.endogenous <- length(name.endogenous)
-    n.data <- NROW(data)
 
 ### ** second order partial derivatives
     if(any(d2theta$toUpdate)){

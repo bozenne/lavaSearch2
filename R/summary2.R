@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 12 2018 (15:44) 
+## Last-Updated: mar 12 2018 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 222
+##     Update #: 224
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * Documentation - summary2
-#' @title  Summary with Small Sample Correction
+#' @title Summary with Small Sample Correction
 #' @description Summary with small sample correction.
 #' @name summary2
 #'
@@ -70,15 +70,15 @@
 ## * summary2.lm
 #' @rdname summary
 #' @export
-summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
-    sCorrect(object, df = df) <- bias.correct
+summary2.lm <- function(object, bias.correct = TRUE, ...){
+    sCorrect(object) <- bias.correct
     return(summary2(object, ...))
 }
 ## * summary2.gls
 #' @rdname summary2
 #' @export
-summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, cluster = cluster, df = df) <- bias.correct
+summary2.gls <- function(object, bias.correct = TRUE, cluster = NULL, ...){
+    sCorrect(object, cluster = cluster) <- bias.correct
     return(summary2(object, ...))
 }
 

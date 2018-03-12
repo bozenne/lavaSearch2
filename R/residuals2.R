@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: feb 19 2018 (19:04) 
+## Last-Updated: mar 12 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 911
+##     Update #: 912
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,7 +41,6 @@
 #'
 #' ## standard linear model
 #' e.lm <- lm(Y1~Y2, data = d)
-#'
 #' sCorrect(e.lm) <- TRUE
 #' 
 #' sigma(e.lm)^2
@@ -51,7 +50,7 @@
 #' ## latent variable model
 #' e.lvm <- estimate(m, data = d)
 #' sCorrect(e.lvm) <- TRUE
-#' mean(residuals2(e.lm)^2)
+#' mean(residuals2(e.lvm)^2)
 #'
 #' @concept small sample inference
 #' @export

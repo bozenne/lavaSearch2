@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: mar  8 2018 (15:39) 
+## Last-Updated: mar 12 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 71
+##     Update #: 77
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,14 +17,11 @@
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments
-#' @description Compute the expected information matrix from the conditional moments
-#' when there is no missing value.
-#'
-#' @param n.corrected [numeric >0] the number of independent epsilon.
-#' May not match the number of observations when a small sample correction is used.
-#'
+#' @description Compute the expected information matrix from the conditional moments.
+#' @name information2-internal
+#' 
 #' @details \code{.information2} will perform the computation individually when the
-#' argument \code{index.Omega} is null.
+#' argument \code{index.Omega} is not null.
 #' 
 #' @keywords internal
 .information2 <- function(dmu, dOmega,
@@ -103,8 +100,16 @@
     return(Info)
 }
 
-## * .d2Information
-.d2Information <- function(dmu, d2mu, dOmega, d2Omega,
+## * .dInformation2
+#' @title Compute the First Derivative of the Expected Information Matrix
+#' @description Compute the first derivative of the expected information matrix.
+#' @name dInformation2-internal
+#' 
+#' @details \code{.dInformation2} will perform the computation individually when the
+#' argument \code{index.Omega} is not null.
+#' 
+#' @keywords internal
+.dInformation2 <- function(dmu, d2mu, dOmega, d2Omega,
                            Omega, OmegaM1, n.corrected,
                            index.Omega, leverage, n.cluster,
                            name.param, name.3deriv){
@@ -215,218 +220,3 @@
 }
 
 
-## * .d2InformationIndiv
-.d2InformationIndiv <- function(dmu.dtheta, d2mu.dtheta2,
-                                dOmega.dtheta, d2Omega.dtheta2,
-                                Omega, ls.indexOmega, leverage,
-                                n.param, name.param, name.deriv,
-                                n.cluster){
-
-### ** prepare
-    index.deriv <- match(name.deriv, name.param)
-    clusterSpecific <- !is.null(ls.indexOmega)
-    iOmega <- chol2inv(chol(Omega))        
-
-    if(!clusterSpecific){
-        Omega.tempo <- Omega
-        iOmega.tempo <- iOmega
-
-        ## *** small sample correction               
-        df.mean <- Reduce("+",leverage)
-        iN.cluster <- as.double(n.cluster - diag(df.mean))
-    }
-    
-    ### ** compute the derivative of the information matrix for each coefficients
-    dInfo <-  array(0,
-                    dim = c(n.param, n.param, length(name.deriv)),
-                    dimnames = list(name.param, name.param, name.deriv))
-    
-    for(iDeriv in index.deriv){ # iDeriv <- 4
-        for(iP1 in 1:n.param){ # iP1 <- 1
-            for(iP2 in iP1:n.param){ # iP2 <- 1
-                
-                iNameD <- name.param[iDeriv]
-                iName1 <- name.param[iP1]
-                iName2 <- name.param[iP2]
-
-                ##cat(iNameD," ",iName1,"",iName2,"\n")
-                
-                test.Omega1 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dOmega.dtheta[[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega2a <- !is.null(d2Omega.dtheta2[[iNameD]][[iName1]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega2b <- !is.null(d2Omega.dtheta2[[iName1]][[iNameD]]) && !is.null(dOmega.dtheta[[iName2]])
-                test.Omega3a <- !is.null(d2Omega.dtheta2[[iNameD]][[iName2]]) && !is.null(dOmega.dtheta[[iName1]])
-                test.Omega3b <- !is.null(d2Omega.dtheta2[[iName2]][[iNameD]]) && !is.null(dOmega.dtheta[[iName1]])
-                
-                test.mu1a <- !is.null(d2mu.dtheta2[[iNameD]][[iName1]]) && !is.null(dmu.dtheta[[iName2]])
-                test.mu1b <- !is.null(d2mu.dtheta2[[iName1]][[iNameD]]) && !is.null(dmu.dtheta[[iName2]])
-                test.mu2a <- !is.null(d2mu.dtheta2[[iNameD]][[iName2]]) && !is.null(dmu.dtheta[[iName1]])
-                test.mu2b <- !is.null(d2mu.dtheta2[[iName2]][[iNameD]]) && !is.null(dmu.dtheta[[iName1]])
-                test.mu3 <- !is.null(dOmega.dtheta[[iNameD]]) && !is.null(dmu.dtheta[[iName1]]) && !is.null(dmu.dtheta[[iName2]])
-
-                if(test.Omega1 + test.Omega2a + test.Omega2b + test.Omega3a + test.Omega3b + test.mu1a + test.mu1b + test.mu2a + test.mu2b + test.mu3 == 0){
-                    next
-                }
-                
-                ## *** Individual specific Omega (e.g. presence of missing values)
-                if(clusterSpecific){
-                    
-                    for(iC in 1:n.cluster){
-
-                        ## prepare
-                        Omega.tempo <- Omega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        iOmega.tempo <- iOmega[ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        if(!is.null(dmu.dtheta[[iName1]])){
-                            dmu.1 <- dmu.dtheta[[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dmu.dtheta[[iName2]])){
-                            dmu.2 <- dmu.dtheta[[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.mu1a){
-                            d2mu.D1 <- d2mu.dtheta2[[iNameD]][[iName1]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.mu1b){
-                            d2mu.D1 <- d2mu.dtheta2[[iName1]][[iNameD]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.mu1a){
-                            d2mu.D <- d2mu.dtheta2[[iNameD]][[iName2]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.mu1b){
-                            d2mu.D <- d2mu.dtheta2[[iName2]][[iNameD]][iC,ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iNameD]])){
-                            iOmega.dOmega.D <- iOmega.tempo %*% dOmega.dtheta[[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iName1]])){
-                            iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(!is.null(dOmega.dtheta[[iName2]])){
-                            iOmega.dOmega.2 <- iOmega.tempo %*% dOmega.dtheta[[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.Omega2a){
-                            d2Omega.D1 <- d2Omega.dtheta2[[iNameD]][[iName1]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }else if(test.Omega2b){
-                            d2Omega.D1 <- d2Omega.dtheta2[[iName1]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-                        if(test.Omega3a){
-                            d2Omega.D2 <- d2Omega.dtheta2[[iNameD]][[iName2]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }else{
-                            d2Omega.D2 <- d2Omega.dtheta2[[iName2]][[iNameD]][ls.indexOmega[[iC]],ls.indexOmega[[iC]],drop=FALSE]
-                        }
-
-                        ## small sample correction  
-                        iW.cluster <- 1 -  diag(leverage[[iC]])
-                        
-                        ## compute
-                        if(test.Omega1){
-                            iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
-                            iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iW.cluster + iDiag2 * iW.cluster)
-                        }
-                        
-                        if(test.Omega2a || test.Omega2b){
-                            iDiag <- diag(iOmega %*% d2Omega.D1 %*% iOmega.dOmega.2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
-                        }
-
-                        if(test.Omega3a || test.Omega3b){
-                            iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D2)
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iW.cluster)
-                        }
-
-                        if(test.mu1a || test.mu1b){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + d2mu.D1 %*% iOmega %*% t(dmu.2)
-                        }
-
-                        if(test.mu2a || test.mu2b){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + dmu.1 %*% iOmega %*% t(d2mu.D2)
-                        }
-
-                        if(test.mu3){
-                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo %*% t(dmu.2)
-                        }
-                    
-                }
-            }
-            
-            ## *** Same for all individuals
-                if(clusterSpecific == FALSE){
-
-                    ## prepare
-                    if(!is.null(dmu.dtheta[[iName1]])){
-                        dmu.1 <- dmu.dtheta[[iName1]]
-                    }
-                    if(!is.null(dmu.dtheta[[iName2]])){
-                        dmu.2 <- dmu.dtheta[[iName2]]
-                    }
-                    if(test.mu1a){
-                        d2mu.D1 <- d2mu.dtheta2[[iNameD]][[iName1]]
-                    }else if(test.mu1b){
-                        d2mu.D1 <- d2mu.dtheta2[[iName1]][[iNameD]]
-                    }
-                    if(test.mu2a){
-                        d2mu.D2 <- d2mu.dtheta2[[iNameD]][[iName2]]
-                    }else if(test.mu2b){
-                        d2mu.D2 <- d2mu.dtheta2[[iName2]][[iNameD]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iNameD]])){
-                        iOmega.dOmega.D <- iOmega.tempo %*% dOmega.dtheta[[iNameD]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iName1]])){
-                        iOmega.dOmega.1 <- iOmega.tempo %*% dOmega.dtheta[[iName1]]
-                    }
-                    if(!is.null(dOmega.dtheta[[iName2]])){
-                        iOmega.dOmega.2 <- iOmega.tempo %*% dOmega.dtheta[[iName2]]
-                    }
-                    if(test.Omega2a){
-                        d2Omega.D1 <- d2Omega.dtheta2[[iNameD]][[iName1]]
-                    }else if(test.Omega2b){
-                        d2Omega.D1 <- d2Omega.dtheta2[[iName1]][[iNameD]]
-                    }
-                    if(test.Omega3a){
-                        d2Omega.D2 <- d2Omega.dtheta2[[iNameD]][[iName2]]
-                    }else{
-                        d2Omega.D2 <- d2Omega.dtheta2[[iName2]][[iNameD]]
-                    }
-
-                    ## compute
-                    if(test.Omega1){
-                        iDiag1 <- diag(iOmega.dOmega.D %*% iOmega.dOmega.1 %*% iOmega.dOmega.2)
-                        iDiag2 <- diag(iOmega.dOmega.1 %*% iOmega.dOmega.D %*% iOmega.dOmega.2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iN.cluster + iDiag2 * iN.cluster)
-                    }
-
-                    if(test.Omega2a || test.Omega2b){
-                        iDiag <- diag(iOmega %*% d2Omega.D1 %*% iOmega.dOmega.2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.cluster)
-                    }
-
-                    if(test.Omega3a || test.Omega3b){
-                        iDiag <- diag(iOmega.dOmega.1 %*% iOmega %*% d2Omega.D2)
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.cluster)
-                    }
-
-                    if(test.mu1a || test.mu1b){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(d2mu.D1 %*% iOmega * dmu.2)
-                    }
-
-                    if(test.mu2a || test.mu2b){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu.1 %*% iOmega * d2mu.D2)
-                    }
-
-                  
-                    if(test.mu3){
-                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu.1 %*% iOmega.dOmega.D %*% iOmega.tempo * dmu.2)
-                    }
-            }
-            
-            }
-        }
-        dInfo[,,iNameD] <- dInfo[,,iNameD] + t(dInfo[,,iNameD]) - diag(diag(dInfo[,,iNameD]))
-    }
-
-    ### ** export
-    return(dInfo)
-}
-
-
-
-##----------------------------------------------------------------------
-### information2.R ends here

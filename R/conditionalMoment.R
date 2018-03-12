@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar  8 2018 (16:33) 
+## last-updated: mar 12 2018 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 914
+##     Update #: 921
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,24 +21,25 @@
 #' @name conditionalMoment
 #' 
 #' @param object,x a latent variable model.
-#' @param X [matrix] the design matrix.
+#' @param data [data.frame] data set.
+#' @param formula [formula] two-sided linear formula.
 #' @param param,p [numeric vector] the fitted coefficients.
 #' @param attr.param [character vector] the type of each coefficient
 #' (e.g. mean or variance coefficient).
 #' @param ref.group [character vector] the levels of the variable defining the variance component in a generic covariance matrix.
 #' @param second.order [logical] should the terms relative to the third derivative of the likelihood be be pre-computed?
+#' @param cluster [ingeter vector] the grouping variable relative to which the observations are iid.
 #' @param n.cluster [integer >0] the number of i.i.d. observations.
 #' @param n.endogenous [integer >0] the number of outcomes.
 #' @param usefit,value [logical] If TRUE the coefficients estimated by the model are used to pre-compute quantities. Only for lvmfit objects.
-#' @param data [data.frame, optional] data set.
 #' @param name.endogenous [character vector, optional] name of the endogenous variables
 #' @param name.latent [character vector, optional] name of the latent variables
 #' @param ... [internal] only used by the generic method or by the <- methods.
 #' 
 #' @details For lvmfit objects, there are two levels of pre-computation:
 #' \itemize{
-#' \item a basic one that do no involve the model coefficient
-#' \item an advanced one that require the model coefficients. 
+#' \item a basic one that do no involve the model coefficient (\code{conditionalMoment.lvm}).
+#' \item an advanced one that require the model coefficients (\code{conditionalMoment.lvmfit}). 
 #' }
 #' 
 #' @examples
@@ -47,9 +48,21 @@
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
 #'
-#' e <- estimate(m, lava::sim(m,1e2))
-#' res <- conditionalMoment(e)
-#' res$skeleton$df.param
+#' d <- lava::sim(m,1e2)
+#' e <- estimate(m, d)
+#'
+#' ## basic pre-computation
+#' res1 <- conditionalMoment(e, data = d, second.order = FALSE,
+#'                          name.endogenous = endogenous(e),
+#'                          name.latent = latent(e), usefit = FALSE)
+#' res1$skeleton$Sigma
+#' 
+#' ## full pre-computation
+#' res2 <- conditionalMoment(e, param = coef(e), data = d, second.order = FALSE,
+#'                          name.endogenous = endogenous(e),
+#'                          name.latent = latent(e), usefit = TRUE
+#' )
+#' res2$value$Sigma
 #'
 #' @concept small sample inference
 #' @concept derivative of the score equation
@@ -354,7 +367,7 @@ conditionalMoment.lvmfit <- function(object, data, param, usefit, second.order, 
 
         ### ** Compute second order partial derivatives
         if(second.order){
-            out$d2theta <- skeletonDtheta2(object, 
+            out$d2theta <- skeletonDtheta2(object,
                                            dtheta = out$dtheta,
                                            d2theta = out$d2theta,
                                            name.endogenous = name.endogenous,

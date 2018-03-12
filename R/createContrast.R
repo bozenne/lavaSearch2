@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: mar 12 2018 (16:08) 
+## Last-Updated: mar 12 2018 (18:01) 
 ##           By: Brice Ozenne
-##     Update #: 198
+##     Update #: 200
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,7 @@
 #' @param var.test [character] a regular expression that is used to identify the coefficients to be tested using \code{grep}. Each coefficient will be tested in a separate hypothesis. When this argument is used, the argument \code{par} is disregarded.
 #' @param name.param [internal] the names of all the model coefficients.
 #' @param add.rowname [internal] should a name be defined for each hypothesis.
+#' @param rowname.rhs should the right hand side of the null hypothesis be added to the name.
 #' @param ... [internal] Only used by the generic method.
 #'
 #' @details

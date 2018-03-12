@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar  8 2018 (12:09) 
+## Last-Updated: mar 12 2018 (18:02) 
 ##           By: Brice Ozenne
-##     Update #: 506
+##     Update #: 512
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,7 @@
 #' @title Export Mean and Variance Coefficients
 #' @description Export mean and variance coefficients
 #' from a \code{lm}, \code{gls}, or \code{lme} object.
-#' @name coef2
+#' @name coef2-internal
 #'
 #' @param object a \code{lm}, \code{gls} or \code{lme} object.
 #' @param name.Y [character] the name of the endogenous variable. Used to name certain variance parameters.
@@ -40,7 +40,7 @@
     function(object) UseMethod(".coef2")
 
 ## * .coef2.lm
-#' @rdname coef2
+#' @rdname coef2-internal
 .coef2.lm <- function(object){
     coef.object <- coef(object)
     p <- c(coef.object,sigma2=sigma(object)^2)
@@ -51,7 +51,7 @@
 }
 
 ## * .coef2.gls
-#' @rdname coef2
+#' @rdname coef2-internal
 .coef2.gls <- function(object){
 
     ## *** mean coefficients
@@ -83,7 +83,7 @@
 
 
 ## * .coef2.lme
-#' @rdname coef2
+#' @rdname coef2-internal
 .coef2.lme <- function(object){
 
      ## *** mean coefficients
@@ -134,7 +134,7 @@
 ## * .getCluster2
 #' @title Reconstruct the Cluster Variable from a nlme Model
 #' @description Reconstruct the cluster variable from a nlme model.
-#' @name getCluster2
+#' @name getCluster2-internal
 #'
 #' @param object a \code{gls} or \code{lme} object.
 #' @param cluster [vector] the grouping variable relative to which the observations are iid.
@@ -154,7 +154,7 @@
     function(object, ...) UseMethod(".getCluster2")
 
 ## * .getCluster2.gls
-#' @rdname getCluster2
+#' @rdname getCluster2-internal
 .getCluster2.gls <- function(object, cluster, data, ...){
 
     ### ** get cluster
@@ -180,7 +180,7 @@
 }
 
 ## * .getCluster2.lme
-#' @name getCluster2
+#' @name getCluster2-internal
 .getCluster2.lme <- function(object, ...){
 
     ## ** get cluster
@@ -198,7 +198,7 @@
 ## * .getIndexOmega2
 #' @title Extract the name of the endogenous variables
 #' @description Extract the name of the endogenous variables from a nlme model.
-#' @name .getIndexOmega2
+#' @name getIndexOmega2-internal
 #'
 #' @param object a \code{gls} or \code{lme} object.
 #' @param param [numeric vector] the mean and variance coefficients.
@@ -224,6 +224,7 @@
     function(object, ...) UseMethod(".getIndexOmega2")
 
 ## * .getIndexOmega2.gls
+#' @rdname getIndexOmega2-internal
 .getIndexOmega2.gls <- function(object, param, attr.param,
                                 name.Y, cluster, data){
 
@@ -231,7 +232,7 @@
     class.re <- class(object$modelStruct$reStruct)
     if("NULL" %in% class.cor == FALSE){
         formula.cor <- attr(object$modelStruct$corStruct,"formula")
-        varIndex.cor <- all.vars(getCovariateFormula(formula.cor))
+        varIndex.cor <- all.vars(nlme::getCovariateFormula(formula.cor))
     }else{
         varIndex.cor <- NULL
     }
@@ -239,7 +240,7 @@
     class.var <- class(object$modelStruct$varStruct)
     if("NULL" %in% class.var == FALSE){
         formula.var <- attr(object$modelStruct$varStruct,"formula")
-        varIndex.var <- all.vars(getCovariateFormula(formula.var))
+        varIndex.var <- all.vars(nlme::getCovariateFormula(formula.var))
         groupValue.var <- attr(object$modelStruct$varStruct,"groups")
         if("NULL" %in% class.cor == FALSE || "NULL" %in% class.re == FALSE){ ## nlme automaticly sort data when corStruct or reSruct
             groupValue.var <- groupValue.var[order(order(cluster))] ## undo automatic sort
@@ -369,12 +370,13 @@
 }
 
 ## * .getIndexOmega2.lme
+#' @rdname getIndexOmega2-internal
 .getIndexOmega2.lme <- .getIndexOmega2.gls
 
 ## * .getVarCov2
 #' @title Reconstruct the Marginal Variance Covariance Matrix from a nlme Model
 #' @description Reconstruct the marginal variance covariance matrix from a nlme model.
-#' @name getVarCov2_internal
+#' @name getVarCov2-internal
 #'
 #' @param object a \code{gls} or \code{lme} object
 #' @param param [numeric vector] the mean and variance coefficients.
@@ -392,7 +394,7 @@
     function(object, ...) UseMethod(".getVarCov2")
 
 ## * .getVarCov2.gls
-#' @rdname getVarCov2_internal
+#' @rdname getVarCov2-internal
 .getVarCov2.gls <- function(object, param, attr.param,
                             name.endogenous, n.endogenous, ref.group, ...){
 
@@ -426,7 +428,7 @@
 }
 
 ## * .getVarCov2.lme
-#' @rdname getVarCov2_internal
+#' @rdname getVarCov2-internal
 .getVarCov2.lme <- function(object, param, attr.param, ...){
 
     ## ** prepare with gls
@@ -446,12 +448,13 @@
 #' @title Reconstruct the Marginal Variance Covariance Matrix from a nlme Model
 #' @description Reconstruct the marginal variance covariance matrix from a nlme model.
 #' Only compatible with specific correlation and variance structure. #' 
-#' @name getVarCov2_internal
+#' @name getVarCov2
 #'
 #' @param object a \code{gls} or \code{lme} object
 #' @param data [data.frame] the data set.
 #' @param cluster [vector] the grouping variable relative to which the observations are iid.
-#'
+#' @param ... [internal] only used by the generic method.
+#' 
 #' @details The marginal variance covariance matrix for gls model is of the form:
 #' 
 #' \tabular{cccc}{
@@ -517,7 +520,7 @@
 ## * getVarCov2.gls
 #' @rdname getVarCov2
 #' @export
-getVarCov2.gls <- function(object, data = NULL, cluster){
+getVarCov2.gls <- function(object, data = NULL, cluster, ...){
 
     ## ** data
     if(is.null(data)){

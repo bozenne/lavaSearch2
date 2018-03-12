@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: mar 12 2018 (16:43) 
+## last-updated: mar 12 2018 (17:47) 
 ##           By: Brice Ozenne
-##     Update #: 2248
+##     Update #: 2249
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -125,7 +125,8 @@ score2.lvmfit2 <- score2.lm2
 ## * .score2
 #' @title Compute the Corrected Score.
 #' @description Compute the corrected score when there is no missing value.
-#'
+#' @name score2-internal
+#' 
 #' @param n.cluster [interger >0] the number of observations.
 #' 
 #' @keywords internal

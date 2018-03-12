@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: mar 12 2018 (15:29) 
+## Last-Updated: mar 12 2018 (17:41) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 31
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * documentation - leverage2
 #' @title Extract Leverage Values
-#' @description Extract leverage values from a gaussian linear model. 
+#' @description Extract leverage values from a Gaussian linear model. 
 #' @name leverage2
 #' 
 #' @param object a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.
@@ -63,7 +63,7 @@
 `leverage2` <-
     function(object, ...) UseMethod("leverage2")
 
-## * score2.lm
+## * leverage2.lm
 #' @rdname leverage2
 #' @export
 leverage2.lm <- function(object, param = NULL, data = NULL, ...){
@@ -85,12 +85,12 @@ leverage2.gls <- leverage2.lm
 #' @export
 leverage2.lme <- leverage2.lm
 
-## * score2.lvmfit
+## * leverage2.lvmfit
 #' @rdname leverage2
 #' @export
 leverage2.lvmfit <- leverage2.lm
 
-## * leverage.lm2
+## * leverage2.lm2
 #' @rdname leverage2
 #' @export
 leverage2.lm2 <- function(object, param = NULL, data = NULL, ...){
@@ -107,17 +107,17 @@ leverage2.lm2 <- function(object, param = NULL, data = NULL, ...){
     return(object$sCorrect$leverage)   
 }
 
-## * leverage.gls2
+## * leverage2.gls2
 #' @rdname leverage2
 #' @export
 leverage2.gls2 <- leverage2.lm2
 
-## * leverage.lme2
+## * leverage2.lme2
 #' @rdname leverage2
 #' @export
 leverage2.lme2 <- leverage2.lm2
 
-## * leverage.lvmfit2
+## * leverage2.lvmfit2
 #' @rdname leverage2
 #' @export
 leverage2.lvmfit2 <- leverage2.lm2

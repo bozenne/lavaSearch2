@@ -14,7 +14,7 @@
 createContrast(object, ...)
 
 \method{createContrast}{character}(object, name.param, add.rowname = TRUE,
-  ...)
+  rowname.rhs = TRUE, ...)
 
 \method{createContrast}{lm}(object, par, add.variance, ...)
 

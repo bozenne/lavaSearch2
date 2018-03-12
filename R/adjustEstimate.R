@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: mar  8 2018 (12:08) 
+## Last-Updated: mar 12 2018 (17:27) 
 ##           By: Brice Ozenne
-##     Update #: 409
+##     Update #: 413
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,10 @@
 ### Code:
 
 ## * adjustEstimate
-#' @title Compute bias corrected quantities.
-#' @description Compute bias corrected quantities when there is no missing value.
+#' @title Compute Bias Corrected Quantities.
+#' @description Compute bias corrected residuals variance covariance matrix
+#' and information matrix.
+#' Also provides the leverage values and corrected sample size when adjust.n is set to TRUE.
 #' 
 #' @keywords internal
 adjustEstimate <- function(epsilon, Omega, dmu, dOmega, n.cluster,

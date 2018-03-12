@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 12 2018 (16:45) 
+## Last-Updated: mar 12 2018 (18:13) 
 ##           By: Brice Ozenne
-##     Update #: 798
+##     Update #: 810
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,13 +21,16 @@
 #' @name sCorrect
 #'
 #' @param object,x a \code{gls}, \code{lme}, or \code{lvm} object.
-#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' @param param [numeric vector, optional] the values of the parameters at which to perform the correction. 
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
-#' @param vcov.param [matrix] the variance-covariance matrix of the estimates.
-#' @param bias.correct,value [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param value [logical] value for the arguments \code{adjust.Omega} and \code{adjust.n}.
+#' @param df [logical] should the first derivative of the expected information matrix be computed. Required when computing the degrees of freedom of the test statistics.
+#' @param adjust.Omega [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param adjust.n [logical] should the correction for the degree of freedom be performed?
 #' @param numeric.derivative [logical] should a numerical derivative be used to compute the first derivative of the information matrix?
 #' Otherwise an analytic formula is used.
-#' @param return.score [internal] export the score.
+#' @param score [internal] export the score.
 #' @param ... [internal] only used by the generic method or by the <- methods.
 #'
 #' @concept small sample inference
@@ -53,13 +56,13 @@
 #' library(nlme)
 #' e.gls <- gls(formula.lvm, data = d, method = "ML")
 #' sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE
-#' 
+#' summary2(e.gls)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' iid.tempo <- iid2(e.lvm, adjust.residuals = FALSE)
-#' range(iid.tempo-iid(e.lvm))
-#' ## difference due to the use of the observed info matrix vs. the expected one.
+#' sCorrect(e.lvm) <- TRUE
+#' summary2(e.lvm)
+#' 
 #' @export
 `sCorrect` <-
   function(object, ...) UseMethod("sCorrect")
@@ -75,7 +78,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     
 ### ** Extract quantities from object
     name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
-    n.cluster <- nobs(object) + length(object$na.action)
+    n.cluster <- stats::nobs(object) + length(object$na.action)
 
     if(is.null(param)){
         param <- .coef2(object)
@@ -111,7 +114,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     if(is.null(data)){
         X <- model.matrix(object)
     }else{
-        X <- model.matrix(formula(object), d)
+        X <- model.matrix(formula(object), data)
     }
     Y <- object$residuals + object$fitted.values
     object.residuals <- Y - X %*% cbind(model.param[attr(model.param,"mean.coef")])    
@@ -643,7 +646,7 @@ sCorrect.lvmfit2 <- function(object, ...){
             cat("* Compute first derivative of the information matrix using analytic formula ")
         }
 
-        dInfo.dtheta <- .d2Information(dmu = dmu,
+        dInfo.dtheta <- .dInformation2(dmu = dmu,
                                        d2mu = d2mu,
                                        dOmega = dOmega,
                                        d2Omega = d2Omega,

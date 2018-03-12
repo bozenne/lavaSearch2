@@ -10,11 +10,11 @@ modelsearch2(object, ...)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
   statistic = "Wald", method.p.adjust = "max", typeSD = "information",
-  sCorrect = FALSE, bias.correct = FALSE, trace = TRUE, ...)
+  df = TRUE, bias.correct = TRUE, trace = TRUE, ...)
 
 \method{modelsearch2}{default}(object, link, data = NULL,
   statistic = "Wald", method.p.adjust = "max", typeSD = "information",
-  sCorrect = FALSE, bias.correct = FALSE, trace = TRUE, ...)
+  df = TRUE, bias.correct = TRUE, trace = TRUE, ...)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}
@@ -38,7 +38,7 @@ Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \c
 the type of standard error to be used to compute the Wald statistic.
 Can be \code{"information"}, \code{"robust"} or \code{"jackknife"}.}
 
-\item{sCorrect}{[logical]
+\item{df}{[logical]
 should the degree of freedom be computed using the Satterthwaite approximation?
 Only relevant when the argument \code{statistic} is set to \code{"Wald"}.}
 

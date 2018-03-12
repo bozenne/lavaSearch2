@@ -49,7 +49,7 @@ suppressPackageStartupMessages(library(lavaSearch2))
 *** Inference: single univariate Wald test
 
 **** Introductory example
-You may have notice that for simple linear regression, the p-values
+You may have noticed that for simple linear regression, the p-values
 of the Wald tests from =lm=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 ## simulate data
@@ -212,8 +212,6 @@ When using the Satterthwaite correction alone, the standard error are
 left unchanged compared to the original lava output. The only change
 is how the p-values are computed, i.e. based on the quantiles of a
 Student's t distribution instead of a Gaussian distribution. 
-
-\bigskip
 
 For each call to =summary2= the small sample size correction(s) will
 be recalculated. However the calculation of the sample correction(s)

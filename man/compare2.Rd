@@ -15,17 +15,13 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, bias.correct = TRUE,
-  numeric.derivative = FALSE, ...)
+\method{compare2}{lm}(object, bias.correct = TRUE, ...)
 
-\method{compare2}{gls}(object, bias.correct = TRUE,
-  numeric.derivative = FALSE, cluster = NULL, ...)
+\method{compare2}{gls}(object, bias.correct = TRUE, cluster = NULL, ...)
 
-\method{compare2}{lme}(object, bias.correct = TRUE,
-  numeric.derivative = FALSE, ...)
+\method{compare2}{lme}(object, bias.correct = TRUE, ...)
 
-\method{compare2}{lvmfit}(object, bias.correct = TRUE,
-  numeric.derivative = FALSE, ...)
+\method{compare2}{lvmfit}(object, bias.correct = TRUE, ...)
 
 \method{compare2}{lm2}(object, ...)
 
@@ -44,10 +40,6 @@ compare2(object, ...)
 \item{...}{[internal] only used by the generic method.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
-
-\item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
-Otherwise an analytic formula is used.
-Argument passed to \code{sCorrect}.}
 
 \item{cluster}{[vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models with no correlation argument.
@@ -69,7 +61,7 @@ If \code{as.lava=TRUE} an object of class \code{htest}.
 Otherwise a \code{data.frame} object.
 }
 \description{
-Test Linear Hypotheses using a Wald or an F statistic.
+Test Linear Hypotheses using a multivariate Wald statistic.
 Similar to \code{lava::compare} but with small sample correction.
 }
 \details{

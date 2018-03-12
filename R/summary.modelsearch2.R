@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: jan 18 2018 (17:35) 
+## last-updated: mar 12 2018 (17:53) 
 ##           By: Brice Ozenne
-##     Update #: 68
+##     Update #: 70
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,6 +16,9 @@
 ### Code:
 
 ## * method summary.modelsearch2
+#' @title summary Method for modelsearch2 Objects
+#' @description summary method for modelsearch2 objects.
+#' 
 #' @method summary modelsearch2
 #' @export
 summary.modelsearch2 <- function(object, display = TRUE, ...){

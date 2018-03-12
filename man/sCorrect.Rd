@@ -17,19 +17,21 @@
 \usage{
 sCorrect(object, ...)
 
-\method{sCorrect}{lm}(object, bias.correct = FALSE, return.score = FALSE,
-  ...)
+\method{sCorrect}{lm}(object, adjust.Omega = TRUE, adjust.n = TRUE,
+  score = TRUE, df = TRUE, numeric.derivative = FALSE, param = NULL,
+  data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
 
-\method{sCorrect}{gls}(object, cluster, vcov.param = NULL,
-  bias.correct = FALSE, numeric.derivative = FALSE, return.score = FALSE,
-  ...)
+\method{sCorrect}{gls}(object, cluster, adjust.Omega = TRUE,
+  adjust.n = TRUE, score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
 
-\method{sCorrect}{lme}(object, cluster, vcov.param = NULL,
-  bias.correct = FALSE, numeric.derivative = FALSE, return.score = FALSE,
-  ...)
+\method{sCorrect}{lme}(object, cluster, adjust.Omega = TRUE,
+  adjust.n = TRUE, score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
 
-\method{sCorrect}{lvmfit}(object, vcov.param = NULL, bias.correct = TRUE,
-  numeric.derivative = FALSE, return.score = FALSE, ...)
+\method{sCorrect}{lvmfit}(object, adjust.Omega = TRUE, adjust.n = TRUE,
+  score = TRUE, df = TRUE, numeric.derivative = FALSE, param = NULL,
+  data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
 
 \method{sCorrect}{lvmfit2}(object, ...)
 
@@ -50,17 +52,17 @@ sCorrect(x, ...) <- value
 
 \item{...}{[internal] only used by the generic method or by the <- methods.}
 
-\item{bias.correct, value}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
-
-\item{return.score}{[internal] export the score.}
+\item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
+Otherwise an analytic formula is used.}
 
 \item{cluster}{[vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models with no correlation argument.}
 
 \item{vcov.param}{[matrix] the variance-covariance matrix of the estimates.}
 
-\item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
-Otherwise an analytic formula is used.}
+\item{bias.correct, value}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
+
+\item{return.score}{[internal] export the score.}
 }
 \description{
 Compute the derivative of the information matrix.
@@ -69,4 +71,31 @@ Compute the derivative of the information matrix.
 small sample inference
 
 derivative of the score equation
+n <- 5e1
+p <- 3
+X.name <- paste0("X",1:p)
+link.lvm <- paste0("Y~",X.name)
+formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
+
+m <- lvm(formula.lvm)
+distribution(m,~Id) <- sequence.lvm(0)
+set.seed(10)
+d <- sim(m,n)
+
+## linear model
+e.lm <- lm(formula.lvm,data=d)
+system.time(
+sCorrect(e.lm) <- TRUE
+)
+
+## gls model
+library(nlme)
+e.gls <- gls(formula.lvm, data = d, method = "ML")
+sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE
+summary2(e.gls)
+
+## latent variable model
+e.lvm <- estimate(lvm(formula.lvm),data=d)
+sCorrect(e.lvm) <- TRUE
+summary2(e.lvm)
 }
