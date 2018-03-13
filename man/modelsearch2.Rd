@@ -45,7 +45,7 @@ Only relevant when the argument \code{statistic} is set to \code{"Wald"}.}
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?
 Only relevant when the argument \code{statistic} is set to \code{"Wald"}.}
 
-\item{trace}{[logical] should the execution be traced?}
+\item{trace}{[logical] should the execution of the function be traced?}
 }
 \value{
 A list containing:

@@ -52,17 +52,32 @@ sCorrect(x, ...) <- value
 
 \item{...}{[internal] only used by the generic method or by the <- methods.}
 
+\item{adjust.Omega}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
+
+\item{adjust.n}{[logical] should the correction for the degree of freedom be performed?}
+
+\item{score}{[internal] export the score.}
+
+\item{df}{[logical] should the first derivative of the expected information matrix be computed. Required when computing the degrees of freedom of the test statistics.}
+
 \item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
 Otherwise an analytic formula is used.}
 
-\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
+\item{param}{[numeric vector, optional] the values of the parameters at which to perform the correction.}
+
+\item{data}{[data.frame, optional] the dataset relative to which the correction should be performed.}
+
+\item{tol}{[numeric >0] the minimum absolute difference between two estimation of the small sample bias.
+Below this value, the algorithm used to estimate the bias stop.}
+
+\item{n.iter}{[integer >0] the maximum number of iterations used to estimate the small sample bias of the residual variance-covariance matrix.}
+
+\item{trace}{[logical] should the execution of the function be traced.}
+
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models with no correlation argument.}
 
-\item{vcov.param}{[matrix] the variance-covariance matrix of the estimates.}
-
-\item{bias.correct, value}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
-
-\item{return.score}{[internal] export the score.}
+\item{value}{[logical] value for the arguments \code{adjust.Omega} and \code{adjust.n}.}
 }
 \description{
 Compute the derivative of the information matrix.

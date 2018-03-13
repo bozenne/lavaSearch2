@@ -41,9 +41,8 @@ compare2(object, ...)
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
 
-\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
-Only required for \code{gls} models with no correlation argument.
-Argument passed to \code{sCorrect}.}
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
+Only required for \code{gls} models without correlation structure.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}

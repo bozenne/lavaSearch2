@@ -21,7 +21,7 @@
 #' Only relevant when the argument \code{statistic} is set to \code{"Wald"}.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' Only relevant when the argument \code{statistic} is set to \code{"Wald"}.
-#' @param trace [logical] should the execution be traced?
+#' @param trace [logical] should the execution of the function be traced?
 #' @param ... additional arguments to be passed to \code{\link{findNewLink}} and \code{.modelsearch2}, see details.
 #' 
 #' @details

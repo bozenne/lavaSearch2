@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:29) 
+## Last-Updated: mar 13 2018 (09:41) 
 ##           By: Brice Ozenne
-##     Update #: 292
+##     Update #: 295
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,9 +23,8 @@
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
-#' @param cluster [vector] the grouping variable relative to which the observations are iid.
-#' Only required for \code{gls} models with no correlation argument.
-#' Argument passed to \code{sCorrect}.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
+#' Only required for \code{gls} models without correlation structure.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.

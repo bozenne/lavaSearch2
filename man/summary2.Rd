@@ -26,6 +26,9 @@ summary2(object, ...)
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?
 See \code{\link{sCorrect}} for more details.}
 
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
+Only required for \code{gls} models without correlation structure.}
+
 \item{digit}{[integer > 0] the number of digit to keep when displaying the summary.}
 }
 \description{

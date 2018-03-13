@@ -19,7 +19,7 @@
 
 \item{...}{[internal] Only used by the generic method.}
 
-\item{cluster}{[vector] the grouping variable relative to which the observations are iid.
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models with no correlation argument.}
 
 \item{data}{[data.frame] the data set.}

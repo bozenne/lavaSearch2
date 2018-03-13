@@ -8,16 +8,18 @@
 \usage{
 getVarCov2(object, ...)
 
-\method{getVarCov2}{gls}(object, data = NULL, cluster)
+\method{getVarCov2}{gls}(object, data = NULL, cluster, ...)
 
-\method{getVarCov2}{lme}(object, data = NULL, cluster)
+\method{getVarCov2}{lme}(object, data = NULL, cluster, ...)
 }
 \arguments{
 \item{object}{a \code{gls} or \code{lme} object}
 
+\item{...}{[internal] only used by the generic method.}
+
 \item{data}{[data.frame] the data set.}
 
-\item{cluster}{[vector] the grouping variable relative to which the observations are iid.}
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 }
 \value{
 A list containing the residual variance-covariance matrix in the element Omega.

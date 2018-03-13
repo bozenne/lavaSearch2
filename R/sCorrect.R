@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 12 2018 (18:13) 
+## Last-Updated: mar 13 2018 (09:49) 
 ##           By: Brice Ozenne
-##     Update #: 810
+##     Update #: 813
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,15 +21,20 @@
 #' @name sCorrect
 #'
 #' @param object,x a \code{gls}, \code{lme}, or \code{lvm} object.
-#' @param param [numeric vector, optional] the values of the parameters at which to perform the correction. 
+#' @param param [numeric vector, optional] the values of the parameters at which to perform the correction.
+#' @param data [data.frame, optional] the dataset relative to which the correction should be performed.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' @param value [logical] value for the arguments \code{adjust.Omega} and \code{adjust.n}.
 #' @param df [logical] should the first derivative of the expected information matrix be computed. Required when computing the degrees of freedom of the test statistics.
 #' @param adjust.Omega [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param adjust.n [logical] should the correction for the degree of freedom be performed?
+#' @param tol [numeric >0] the minimum absolute difference between two estimation of the small sample bias.
+#' Below this value, the algorithm used to estimate the bias stop.
+#' @param n.iter [integer >0] the maximum number of iterations used to estimate the small sample bias of the residual variance-covariance matrix. 
 #' @param numeric.derivative [logical] should a numerical derivative be used to compute the first derivative of the information matrix?
 #' Otherwise an analytic formula is used.
+#' @param trace [logical] should the execution of the function be traced.
 #' @param score [internal] export the score.
 #' @param ... [internal] only used by the generic method or by the <- methods.
 #'

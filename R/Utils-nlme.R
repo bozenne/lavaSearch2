@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 12 2018 (18:02) 
+## Last-Updated: mar 13 2018 (09:40) 
 ##           By: Brice Ozenne
-##     Update #: 512
+##     Update #: 513
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,7 +137,7 @@
 #' @name getCluster2-internal
 #'
 #' @param object a \code{gls} or \code{lme} object.
-#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' @param data [data.frame] the data set.
 #' @param ... [internal] Only used by the generic method.
@@ -204,7 +204,7 @@
 #' @param param [numeric vector] the mean and variance coefficients.
 #' @param attr.param [character vector] the type of each coefficients (mean or variance).
 #' @param name.Y [character] name of the endogenous variable.
-#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' @param data [data.frame] the data set.
 #' @param ... [internal] Only used by the generic method.
@@ -452,7 +452,7 @@
 #'
 #' @param object a \code{gls} or \code{lme} object
 #' @param data [data.frame] the data set.
-#' @param cluster [vector] the grouping variable relative to which the observations are iid.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param ... [internal] only used by the generic method.
 #' 
 #' @details The marginal variance covariance matrix for gls model is of the form:

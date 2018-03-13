@@ -39,6 +39,8 @@ createContrast(object, ...)
 
 \item{add.rowname}{[internal] should a name be defined for each hypothesis.}
 
+\item{rowname.rhs}{should the right hand side of the null hypothesis be added to the name.}
+
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested. See the examples section.}
 
 \item{add.variance}{[logical] should the variance coefficients be considered as model coefficients?

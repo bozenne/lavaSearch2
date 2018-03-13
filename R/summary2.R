@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:52) 
+## Last-Updated: mar 13 2018 (09:41) 
 ##           By: Brice Ozenne
-##     Update #: 224
+##     Update #: 228
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,6 +24,8 @@
 #' @param digit [integer > 0] the number of digit to keep when displaying the summary.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' See \code{\link{sCorrect}} for more details.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
+#' Only required for \code{gls} models without correlation structure.
 #' @param ... arguments passed to the \code{summary} method of the object.
 #' 
 #' @seealso \code{\link{sCorrect}} for more detail about the small sample correction.

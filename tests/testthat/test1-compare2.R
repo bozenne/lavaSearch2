@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: mar  8 2018 (18:01) 
+## last-updated: mar 13 2018 (09:53) 
 ##           By: Brice Ozenne
-##     Update #: 205
+##     Update #: 208
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,6 +43,8 @@ library(pbkrtest)
 lava.options(symbols = c("~","~~"))
 
 .coef2 <- lavaSearch2:::.coef2
+.coef2.gls <- lavaSearch2:::.coef2.gls
+.coef2.lme <- lavaSearch2:::.coef2.lme
 context("compare2")
 
 ## * simulation
@@ -76,11 +78,11 @@ cS.df
 ### ** compare2
 test_that("linear regression: df",{
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     
     name.param <- names(.coef2(e.gls))
-    df.lm <- compare2(e.lm, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
-    df.gls <- compare2(e.gls, par = name.param, cluster = 1:n, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.lm <- compare2(e.lm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, cluster = 1:n, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     
     ## test equivalence
     expect_equivalent(df.lvm,df.gls)
@@ -99,11 +101,11 @@ test_that("linear regression: df",{
 
 test_that("linear regression: df adjusted",{
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
     
     name.param <- names(.coef2(e.gls))
-    df.lm <- compare2(e.lm, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
-    df.gls <- compare2(e.gls, par = name.param, cluster = 1:n, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.lm <- compare2(e.lm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, cluster = 1:n, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
 
     ## test equivalence
     expect_equivalent(df.lvm,df.gls)
@@ -129,22 +131,22 @@ e.lvm <- estimate(lvm(Y1~X1,Y2~X2,Y3~X1+X3), data = d)
 ##                        Y2[mu:sigma2]~ beta1*X1 + beta2*X2,
 ##                        Y3[mu:sigma3]~ beta1*X1 + beta2*X2),
 ##                        data = d)
-e.gls <- gls(value ~ X1 + X2,
-             data = dLred,
-             weight = varIdent(form = ~1|variable),
-             method = "ML")
+## e.gls <- gls(value ~ X1 + X2,
+##              data = dLred,
+##              weight = varIdent(form = ~1|variable),
+##              method = "ML")
 
-test_that("gls equivalent to lvm", {
-    expect_equal(as.double(logLik(e.lvm2)), as.double(logLik(e.gls)))
-})
+## test_that("gls equivalent to lvm", {
+##     expect_equal(as.double(logLik(e.lvm2)), as.double(logLik(e.gls)))
+## })
 
 ## ** compare2
 test_that("multiple linear regression: df",{
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     
     name.param <- names(.coef2(e.gls))
-    df.gls <- compare2(e.gls, par = name.param, cluster = "Id", value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, cluster = "Id", bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
 
     ## 
     sigma2 <- list(coef(e.lvm)["Y1~~Y1"],
@@ -173,10 +175,10 @@ test_that("multiple linear regression: df",{
 
 test_that("multiple linear regression: df adjusted",{
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
     
     name.param <- names(.coef2(e.gls))
-    df.gls <- compare2(e.gls, par = name.param, cluster = "Id", value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, cluster = "Id", bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
 
     ## 
     X <- list(as.matrix(cbind(1,d[,c("X1")])),
@@ -237,19 +239,19 @@ test_that("mixed model: Satterthwaite ",{
     GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")
 
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(as.double(GS$df),
                  as.double(df.lvm[1:5,"df"]), tol = 1e-4) ## needed for CRAN
     expect_equal(as.double(GS$tvalue),
                  as.double(df.lvm[1:5,"statistic"]), tol = 1e-8) ## needed for CRAN
 
     name.param <- names(.coef2(e.lme))
-    df.lme <- compare2(e.lme, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.lme <- compare2(e.lme, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.lme$statistic, df.lvm$statistic, tol = 1e-5)
     expect_equal(df.lme$df, df.lvm$df, tol = 1e-5)
 
     name.param <- names(.coef2(e.gls))
-    df.gls <- compare2(e.gls, par = name.param, value = FALSE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.gls$statistic[1:5], df.lvm$statistic[1:5], tol = 1e-5)
     expect_equal(df.gls$df[1:5], df.lvm$df[1:5], tol = 1e-5)
 })
@@ -262,16 +264,16 @@ test_that("mixed model: KR-like correction",{
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
 
 
     name.param <- names(.coef2(e.lme))
-    df.lme <- compare2(e.lme, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.lme <- compare2(e.lme, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.lme$statistic, df.lvm$statistic, tol = 1e-5)
     expect_equal(df.lme$df, df.lvm$df, tol = 1e-5)
 
     name.param <- names(.coef2(e.gls))
-    df.gls <- compare2(e.gls, par = name.param, value = TRUE, as.lava = FALSE)[1:length(name.param),]
+    df.gls <- compare2(e.gls, par = name.param, bias.correct = TRUE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.gls$statistic[1:5], df.lvm$statistic[1:5], tol = 1e-5)
     expect_equal(df.gls$df[1:5], df.lvm$df[1:5], tol = 1e-5)
 })
@@ -309,14 +311,14 @@ test_that("UN mixed model: df",{
     ## df.adj.lme <- compare2(e.lme,
     ##                          robust = FALSE, bias.correct = FALSE)
     name.param <- names(coef(e.lvm))
-    df.lvm <- compare2(e.lvm, par = name.param, value = FALSE, as.lava = FALSE)
+    df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)
 
     ## overparametrized model
     ## name.param <- names(.coef2(e.lme))
-    ## df.lme <- compare2(e.lme, par = name.param, value = FALSE, as.lava = FALSE)
+    ## df.lme <- compare2(e.lme, par = name.param, bias.correct = FALSE, as.lava = FALSE)
 
     name.param <- names(.coef2(e.gls))
-    df.gls <- compare2(e.gls, par = name.param, value = FALSE, as.lava = FALSE)
+    df.gls <- compare2(e.gls, par = name.param, bias.correct = FALSE, as.lava = FALSE)
 })
 
 
