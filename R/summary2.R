@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 13 2018 (09:41) 
+## Last-Updated: mar 13 2018 (17:25) 
 ##           By: Brice Ozenne
-##     Update #: 228
+##     Update #: 230
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,6 +24,7 @@
 #' @param digit [integer > 0] the number of digit to keep when displaying the summary.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' See \code{\link{sCorrect}} for more details.
+#' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models without correlation structure.
 #' @param ... arguments passed to the \code{summary} method of the object.
@@ -100,13 +101,14 @@ summary2.lvmfit <- summary2.lm
 #' @export
 summary2.gls2 <- function(object, 
                           digit = max(3, getOption("digit")),
+                          robust = FALSE,
                           ...){
     
     ### ** perform Wald test
     name.param <- names(coef(object))
     n.param <- length(name.param)
 
-    tTable.all <- compare2(object, par = name.param, as.lava = FALSE)
+    tTable.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
     tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(tTable) <- list(name.param,
                              c("Value","Std.Error","t-value","p-value","df")
@@ -133,14 +135,14 @@ summary2.lme2 <- summary2.gls2
 #' @rdname summary2
 #' @method summary2 lvmfit2
 #' @export
-summary2.lvmfit2 <- function(object, ...){
+summary2.lvmfit2 <- function(object, robust = FALSE, ...){
 
     ### ** perform Wald test
     param <- lava::pars(object)
     name.param <- names(param)
     n.param <- length(param)
 
-    table.all <- compare2(object, par = name.param, as.lava = FALSE)
+    table.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
     table.coef <- table.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(table.coef) <- list(name.param,
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")

@@ -32,7 +32,7 @@ compare2(object, ...)
 \method{compare2}{lvmfit2}(object, ...)
 
 .compare2(object, par = NULL, contrast = NULL, null = NULL,
-  as.lava = TRUE, level = 0.95)
+  robust = FALSE, as.lava = TRUE, level = 0.95)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
@@ -50,6 +50,8 @@ See the examples section.}
 \item{contrast}{[matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.}
 
 \item{null}{[vector] the right hand side of the linear hypotheses to be tested.}
+
+\item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
 
 \item{as.lava}{[logical] should the output be similar to the one return by \code{lava::compare}?}
 

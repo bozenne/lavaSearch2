@@ -12,11 +12,13 @@ summary2(object, ...)
 
 \method{summary2}{gls}(object, bias.correct = TRUE, cluster = NULL, ...)
 
-\method{summary2}{gls2}(object, digit = max(3, getOption("digit")), ...)
+\method{summary2}{gls2}(object, digit = max(3, getOption("digit")),
+  robust = FALSE, ...)
 
-\method{summary2}{lme2}(object, digit = max(3, getOption("digit")), ...)
+\method{summary2}{lme2}(object, digit = max(3, getOption("digit")),
+  robust = FALSE, ...)
 
-\method{summary2}{lvmfit2}(object, ...)
+\method{summary2}{lvmfit2}(object, robust = FALSE, ...)
 }
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}
@@ -30,6 +32,8 @@ See \code{\link{sCorrect}} for more details.}
 Only required for \code{gls} models without correlation structure.}
 
 \item{digit}{[integer > 0] the number of digit to keep when displaying the summary.}
+
+\item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
 }
 \description{
 Summary with small sample correction.

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar 13 2018 (09:41) 
+## Last-Updated: mar 13 2018 (17:35) 
 ##           By: Brice Ozenne
-##     Update #: 295
+##     Update #: 304
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,7 @@
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
+#' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
 #' @param null [vector] the right hand side of the linear hypotheses to be tested.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
@@ -67,7 +68,7 @@
 #' e.lm <- lm(Y~X1+X2, data = df.data)
 #' anova(e.lm)
 #' compare2(e.lm, par = c("X1b=0","X1c=0"))
-#'
+#' 
 #' ## or first compute the derivative of the information matrix
 #' sCorrect(e.lm) <- TRUE
 #' 
@@ -153,15 +154,20 @@ compare2.lvmfit2 <- function(object, ...){
 ## * .compare2
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
+                      robust = FALSE,
                       as.lava = TRUE, level = 0.95){
 
     ## ** extract information
     dVcov.param <- object$sCorrect$dVcov.param
 
     param <- object$sCorrect$param
-    vcov.param <- object$sCorrect$vcov.param
-    warn <- attr(vcov.param, "warning")
-    attr(vcov.param, "vcov.param") <- NULL
+    if(robust){
+        vcov.param <- crossprod(iid2(object))
+    }else{
+        vcov.param <- object$sCorrect$vcov.param
+        attr(vcov.param, "warning") <- NULL
+    }
+    warn <- attr(object$sCorrect$vcov.param, "warning")
     keep.param <- dimnames(dVcov.param)[[3]]
 
     n.param <- length(param)
@@ -215,48 +221,32 @@ compare2.lvmfit2 <- function(object, ...){
                                                      c("estimate","std","statistic","df","p-value"))
                                      ))
 
-    ### ** Compute degrees of freedom
-    calcDF <- function(M.C){ # M.C <- C
-        C.vcov.C <- rowSums(M.C %*% vcov.param * M.C)
-    
-        C.dVcov.C <- sapply(keep.param, function(x){
-            rowSums(M.C %*% dVcov.param[,,x] * M.C)
-        })
-        numerator <- 2 *(C.vcov.C)^2
-        denom <- rowSums(C.dVcov.C %*% vcov.param[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
-        df <- numerator/denom
-        return(df)
-    }
+### ** Compute degrees of freedom
 
-### ** Wald test
-    ## statistic
-    C.p <- (contrast %*% param) - null
-    C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
-    sd.C.p <- sqrt(diag(C.vcov.C))
-    stat.Wald <- C.p/sd.C.p
-    
-    ## df
     if(is.null(dVcov.param)){
         df.Wald <- rep(Inf, n.hypo)
-    }else{
-        df.Wald  <- calcDF(contrast)
-    }
-    ## store
-    df.table$estimate <- as.numeric(C.p)
-    df.table$std <- as.numeric(sd.C.p)
-    df.table$statistic <- as.numeric(stat.Wald)
-    df.table$df <- as.numeric(df.Wald)
-    df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
-    
-    ### *** F test
-    i.C.vcov.C <- solve(C.vcov.C)
-    stat.F <- t(C.p) %*% i.C.vcov.C %*% (C.p) / n.hypo
-
-    ## df
-    if(is.null(dVcov.param)){
         df.F <- Inf
     }else{
-        svd.tempo <- eigen(i.C.vcov.C)
+        vcov.tempo <- object$sCorrect$vcov.param
+        attr(vcov.tempo, "warning") <- NULL
+
+        calcDF <- function(M.C){ # M.C <- C
+            C.vcov.C <- rowSums(M.C %*% vcov.tempo * M.C)
+    
+            C.dVcov.C <- sapply(keep.param, function(x){
+                rowSums(M.C %*% dVcov.param[,,x] * M.C)
+            })
+            numerator <- 2 *(C.vcov.C)^2
+            denom <- rowSums(C.dVcov.C %*% vcov.tempo[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
+            df <- numerator/denom
+            return(df)
+        }
+
+        ## univariate
+        df.Wald  <- calcDF(contrast)
+
+        ## multivariate
+        svd.tempo <- eigen(solve(contrast %*% vcov.tempo %*% t(contrast)))
         D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
         P.svd <- svd.tempo$vectors
      
@@ -266,8 +256,27 @@ compare2.lvmfit2 <- function(object, ...){
     
         EQ <- sum(nu_m/(nu_m-2))
         df.F <- 2*EQ / (EQ - n.hypo)
+
     }
+
+### ** Wald test
+    ## statistic
+    C.p <- (contrast %*% param) - null
+    C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
+    sd.C.p <- sqrt(diag(C.vcov.C))
+    stat.Wald <- C.p/sd.C.p
     
+    ## store
+    df.table$estimate <- as.numeric(C.p)
+    df.table$std <- as.numeric(sd.C.p)
+    df.table$statistic <- as.numeric(stat.Wald)
+    df.table$df <- as.numeric(df.Wald)
+    df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
+    
+### ** multivariate F test
+    ## statistic
+    stat.F <- t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo
+     
     ## store
     df.table <- rbind(df.table, global = rep(NA,5))
     df.table["global", "statistic"] <- as.numeric(stat.F)
