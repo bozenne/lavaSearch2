@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: mar 13 2018 (13:25) 
+## Last-Updated: mar 13 2018 (23:12) 
 ##           By: Brice Ozenne
-##     Update #: 37
+##     Update #: 39
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -274,7 +274,8 @@ test_that("lme/gls equivalent to lvm", {
 
 ## ** HC0/HC1
 iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE)
-iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE)
+## iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE)
+## does not work because the model is overparametrized
 iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
@@ -282,22 +283,19 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
                  unname(iid2HC0.lvm[,index.coef]),
                  tol = 1e-5)
 
-    expect_equal(unname(iid2HC0.gls[,index.coef]),
-                 unname(iid2HC0.lme[,index.coef]),
-                 tol = 1e-5)
-
-    VHC0.lme <- crossprod(iid2HC0.lme)[index.coef,index.coef]
+    VHC0.lvm <- crossprod(iid2HC0.lvm)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR0", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC0.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VHC0.lvm), tolerance = 1e-5)
 
     GS <- clubSandwich::vcovCR(e.lme, type = "CR1", cluster = dLred$Id)
-    VHC1.lme <- VHC0.lme*n/(n-1)
-    expect_equal(as.double(GS),as.double(VHC1.lme), tolerance = 1e-10)
+    VHC1.lvm <- VHC0.lvm*n/(n-1)
+    expect_equal(as.double(GS),as.double(VHC1.lvm), tolerance = 1e-5)
 })
 
 ## ** HC2
 iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1)
-iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+## iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+## does not work because the model is overparametrized
 iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
@@ -305,13 +303,9 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
                  unname(iid2HC2.lvm[,index.coef]),
                  tol = 1e-5)
 
-    expect_equal(unname(iid2HC2.gls[,index.coef]),
-                 unname(iid2HC2.lme[,index.coef]),
-                 tol = 1e-5)
-
-    VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
+    VHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-5)
+    expect_equal(as.double(GS),as.double(VHC2.lvm), tolerance = 1e-5)
 })
 
 

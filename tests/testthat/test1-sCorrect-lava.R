@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:40) 
 ## Version: 
-## Last-Updated: mar 13 2018 (13:25) 
+## Last-Updated: mar 13 2018 (23:04) 
 ##           By: Brice Ozenne
-##     Update #: 119
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -515,8 +515,9 @@ test_that("lme/gls equivalent to lvm", {
 e2.lvm <- e.lvm
 sCorrect(e2.lvm) <- FALSE
 
-e2.lme <- e.lme
-sCorrect(e2.lme) <- FALSE
+## e2.lme <- e.lme
+## sCorrect(e2.lme) <- FALSE
+## does not work because the model is overparametrized
 
 e2.gls <- e.gls
 sCorrect(e2.gls) <- FALSE
@@ -526,23 +527,16 @@ test_that("Unstructured (at ML) internal consistency",{
     param.nlme <- names(coef(e.gls))
     param.lava <- c("eta","Y2","Y3","eta~X1","eta~GenderFemale")
 
-    expect_equal(unname(e2.lvm$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-5)
-    expect_equal(unname(e2.gls$sCorrect$Omega),unname(e2.lme$sCorrect$Omega), tol = 1e-3)
+    expect_equal(unname(e2.gls$sCorrect$Omega),unname(e2.lvm$sCorrect$Omega), tol = 1e-4)
 
     expect_equal(unname(e2.lvm$sCorrect$vcov.param[param.lava,param.lava]),
-                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
-    expect_equal(unname(e2.gls$sCorrect$vcov.param[param.nlme,param.nlme]),
-                 unname(e2.lme$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-5)
+                 unname(e2.gls$sCorrect$vcov.param[param.nlme,param.nlme]), tol = 1e-4)
     
     expect_equal(unname(e2.lvm$sCorrect$score[,param.lava]),
-                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-5)
-    expect_equal(unname(e2.gls$sCorrect$score[,param.nlme]),
-                 unname(e2.lme$sCorrect$score[,param.nlme]), tol = 1e-3)
-
+                 unname(e2.gls$sCorrect$score[,param.nlme]), tol = 1e-4)
+    
     expect_equal(unname(e2.lvm$sCorrect$epsilon),
-                 unname(e2.lme$sCorrect$epsilon), tol = 1e-5)
-    expect_equal(unname(e2.gls$sCorrect$epsilon),
-                 unname(e2.lme$sCorrect$epsilon), tol = 1e-5)
+                 unname(e2.gls$sCorrect$epsilon), tol = 1e-4)
 })
 
 test_that("Unstructured (at ML) compare to lava",{
