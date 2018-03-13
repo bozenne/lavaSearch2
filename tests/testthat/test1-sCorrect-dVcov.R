@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  8 2018 (14:56) 
 ## Version: 
-## Last-Updated: mar  8 2018 (16:37) 
+## Last-Updated: mar 13 2018 (14:48) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 44
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * header
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
-    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
 }
@@ -29,15 +29,15 @@ context("sCorrect: first derivative of the information matrix")
 ## * simulation
 n <- 5e1
 mSim <- lvm(c(Y1~eta1,Y2~eta1+X2,Y3~eta1+X1,
-           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+              Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(mSim) <- eta1~X1+Gender
 latent(mSim) <- ~eta1+eta2
 categorical(mSim, labels = c("Male","Female")) <- ~Gender
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
 d <- sim(mSim, n = n, latent = FALSE)
-dL <- melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
-           measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
+dL <- reshape2::melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
+                     measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
 
 ## * linear regression [lm,gls,lvm]
@@ -82,7 +82,6 @@ test_that("linear regression: Satterthwaite + small sample correction", {
 
     test.lm <- sCorrect(e.lm, adjust.Omega = TRUE, adjust.n = TRUE, numeric.derivative = FALSE, score = FALSE)$dVcov.param
     expect_equal(as.double(test.lm), as.double(GS), tol = 1e-5)
-
     test.gls <- sCorrect(e.gls, adjust.Omega = TRUE, adjust.n = TRUE, numeric.derivative = FALSE, score = FALSE, cluster = "Id")$dVcov.param
     expect_equal(as.double(test.gls), as.double(GS), tol = 1e-5)
 })

@@ -260,7 +260,8 @@ modelsearch2.default <- function(object, link, data = NULL,
 
     ## ** get data
     if(is.null(data)){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)        
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
+                            envir = parent.env(environment()))        
     }
    
     ## ** normalize the links

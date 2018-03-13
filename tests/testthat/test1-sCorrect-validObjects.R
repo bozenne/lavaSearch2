@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: mar  6 2018 (11:48) 
+## Last-Updated: mar 13 2018 (13:22) 
 ##           By: Brice Ozenne
-##     Update #: 31
+##     Update #: 35
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * header
-if(FALSE){ ## already called in test-all.R
-    rm(list = ls())
+rm(list = ls())
+if(FALSE){ ## already called in test-all.R    
     library(testthat)
     library(lavaSearch2)
 }
@@ -55,7 +55,8 @@ test_that("error for tobit models", {
 ## check in sCorrect.R
 m <- lvm(Y~X1)
 transform(m,Id~X1) <- function(x){1:NROW(x)}
-e <- estimate(m, sim(m, n))
+d.tempo <- sim(m, n)
+e <- estimate(m, data = d.tempo)
 test_that("error when using transform", {
     expect_error(sCorrect(e))
 })

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 13 2018 (09:40) 
+## Last-Updated: mar 13 2018 (14:34) 
 ##           By: Brice Ozenne
-##     Update #: 513
+##     Update #: 516
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -157,12 +157,15 @@
 #' @rdname getCluster2-internal
 .getCluster2.gls <- function(object, cluster, data, ...){
 
-    ### ** get cluster
+### ** get cluster
     if(is.null(object$modelStruct$corStruct)){
         if(missing(cluster)){
             stop("cluster must be specified for gls object with no correlation structure \n")
         }        
         if(length(cluster) == 1 && is.character(cluster)){
+            if(cluster %in% names(data) == FALSE){
+                stop("Variable \"",cluster,"\" not in data \n")
+            }
             cluster <- as.numeric(as.factor(data[[cluster]]))
         }else if(length(cluster)==NROW(data)){
             cluster <- as.numeric(as.factor(cluster))
@@ -524,7 +527,8 @@ getVarCov2.gls <- function(object, data = NULL, cluster, ...){
 
     ## ** data
     if(is.null(data)){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
+                            envir = parent.env(environment()))
     }
 
     ## ** endogenous variable

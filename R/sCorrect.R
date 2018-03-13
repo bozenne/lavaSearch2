@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 13 2018 (09:49) 
+## Last-Updated: mar 13 2018 (16:35) 
 ##           By: Brice Ozenne
-##     Update #: 813
+##     Update #: 839
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,6 +155,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     }
 
     out <- .sCorrect(object,
+                     data = data,
                      param = model.param,
                      epsilon = object.residuals,
                      Omega = Omega,
@@ -192,7 +193,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                          tol = 1e-5, n.iter = 20, trace = 0,
                          ...){
 
-    ### ** limitations
+### ** limitations
     if(object$method!="ML"){
         if(adjust.Omega==TRUE || adjust.n == TRUE){
             warning("Small sample corrections were derived for ML not for REML\n")
@@ -202,11 +203,12 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     }
     
     ## check valid class for corStruct and varStruct: see .getVarCov2
-    
-    ### ** Extract quantities from the model
+### ** Extract quantities from the model
     ## *** data
     if(is.null(data)){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE)
+        ## browser()
+        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
+                            envir = parent.env(environment()))
     }
     
     ## *** endogenous variable
@@ -245,7 +247,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("* Relate observations to endogenous variables ")
     }
-    
+
     res.index <- .getIndexOmega2(object,
                                  param = model.param,
                                  attr.param = attributes(model.param),
@@ -338,6 +340,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         derivative <- "analytic"
     }
     out <- .sCorrect(object,
+                     data = data,
                      param = model.param,
                      epsilon = epsilon,
                      Omega = Omega,
@@ -615,8 +618,8 @@ sCorrect.lvmfit2 <- function(object, ...){
                                                           name.endogenous = endogenous(object),
                                                           name.latent = latent(object))
         }
-       
         args.tempo <- args
+        args.tempo$data <- data
         args.tempo$df <- FALSE
         args.tempo$score <- FALSE
 

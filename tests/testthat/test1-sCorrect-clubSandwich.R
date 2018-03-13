@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: mar  8 2018 (11:26) 
+## Last-Updated: mar 13 2018 (13:25) 
 ##           By: Brice Ozenne
-##     Update #: 31
+##     Update #: 37
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * header
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
-    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
 }
@@ -54,7 +54,7 @@ e.lm <- lm(Y1~X1+X2, data = d)
 test_that("iid2.lm/iid2.lvm matches clubSandwich", {
     V.GS <- clubSandwich::vcovCR(e.lm, type = "CR2", cluster = d$Id)
 
-    eHC2.iid2.lm <- iid2(e.lm, value = TRUE)
+    eHC2.iid2.lm <- iid2(e.lm, bias.correct = TRUE)
     V.lm <- crossprod(eHC2.iid2.lm)
 
     expect_equal(as.matrix(V.GS),
@@ -85,8 +85,8 @@ test_that("gls equivalent to lvm", {
 })
  
 ## ** HC0/HC1
-iid2HC0.gls <- iid2(e.gls, value = FALSE, cluster = "Id")
-iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
+iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE, cluster = "Id")
+iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
 
 test_that("iid2.gls/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.gls[,index.coef]),
@@ -103,17 +103,17 @@ test_that("iid2.gls/iid2.lvm matches clubSandwich (HC0-HC1)", {
 })
 
 ## ** HC2
-iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1, cluster = "Id")
-iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
+iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1, cluster = "Id")
+iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
-test_that("iid2.lm/iid2.lvm matches clubSandwich (HC2)", {
+test_that("iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.gls[,index.coef]),
                  unname(iid2HC2.lvm[,index.coef]),
                  tol = 1e-5)
 
     VHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.gls, type = "CR2", cluster = dLred$Id) * factor^2
-    expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-5)
 })
 
 ## * mixed model: CS [lvm,gls,lme]
@@ -142,9 +142,9 @@ test_that("lme/gls equivalent to lvm", {
 factor <- calcFactor(e.gls)
  
 ## ** HC0/HC1
-iid2HC0.gls <- iid2(e.gls, value = FALSE)
-iid2HC0.lme <- iid2(e.lme, value = FALSE)
-iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
+iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE)
+iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE)
+iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.gls[,index.coef]),
@@ -165,9 +165,9 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
 })
 
 ## ** HC2
-iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
-iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
-iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
+iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.gls[,index.coef]),
@@ -210,9 +210,9 @@ test_that("lme equivalent to lvm", {
 })
 
 ## ** HC0/HC1
-iid2HC0.gls <- iid2(e.gls, value = FALSE)
-iid2HC0.lme <- iid2(e.lme, value = FALSE)
-iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
+iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE)
+iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE)
+iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
 
 test_that("iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.lme[,index.coef]),
@@ -229,9 +229,9 @@ test_that("iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
 })
 
 ## ** HC2
-iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
-iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
-iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
+iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
 test_that("iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.lme[,index.coef]),
@@ -240,7 +240,7 @@ test_that("iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-5)
 })
 
 
@@ -273,9 +273,9 @@ test_that("lme/gls equivalent to lvm", {
 })
 
 ## ** HC0/HC1
-iid2HC0.gls <- iid2(e.gls, value = FALSE)
-iid2HC0.lme <- iid2(e.lme, value = FALSE)
-iid2HC0.lvm <- iid2(e.lvm, value = FALSE)
+iid2HC0.gls <- iid2(e.gls, bias.correct = FALSE)
+iid2HC0.lme <- iid2(e.lme, bias.correct = FALSE)
+iid2HC0.lvm <- iid2(e.lvm, bias.correct = FALSE)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
     expect_equal(unname(iid2HC0.gls[,index.coef]),
@@ -296,9 +296,9 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
 })
 
 ## ** HC2
-iid2HC2.gls <- iid2(e.gls, value = TRUE, n.iter = 1)
-iid2HC2.lme <- iid2(e.lme, value = TRUE, n.iter = 1)
-iid2HC2.lvm <- iid2(e.lvm, value = TRUE, n.iter = 1)
+iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
 test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
     expect_equal(unname(iid2HC2.gls[,index.coef]),
@@ -311,7 +311,7 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-10)
+    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-5)
 })
 
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: mar 13 2018 (09:53) 
+## last-updated: mar 13 2018 (16:36) 
 ##           By: Brice Ozenne
-##     Update #: 208
+##     Update #: 212
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,8 +30,8 @@
 ### Code:
 
 ## * header
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
-    rm(list = ls())
     library(testthat)
     library(lavaSearch2)
 }
@@ -50,15 +50,15 @@ context("compare2")
 ## * simulation
 n <- 5e1
 mSim <- lvm(c(Y1~eta1,Y2~eta1+X2,Y3~eta1+X1,
-           Z1~eta2,Z2~eta2,Z3~eta2+X3))
+              Z1~eta2,Z2~eta2,Z3~eta2+X3))
 regression(mSim) <- eta1~X1+Gender
 latent(mSim) <- ~eta1+eta2
 categorical(mSim, labels = c("Male","Female")) <- ~Gender
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
 d <- sim(mSim, n = n, latent = FALSE)
-dL <- melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
-           measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
+dL <- reshape2::melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
+                     measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
 
 ## * linear regression [lm,gls,lvm]
