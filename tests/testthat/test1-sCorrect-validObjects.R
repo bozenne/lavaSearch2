@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: mar 13 2018 (13:22) 
+## Last-Updated: mar 14 2018 (09:21) 
 ##           By: Brice Ozenne
-##     Update #: 35
+##     Update #: 37
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@ if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
 }
-
+library(data.table)
 library(lava.tobit)
 library(nlme)
 lava.options(symbols = c("~","~~"))
@@ -101,3 +101,11 @@ test_that("error when using nlme with non standard variance", {
 
 ##----------------------------------------------------------------------
 ### test1-sCorrect-validObjects.R ends here
+
+## * sCorrect with data.table
+
+e <- estimate(lvm(Y~X1+X2+G), data = as.data.table(d))
+test_that("ok for data.table objects", {
+    sCorrect(e) <- FALSE
+    sCorrect(e) <- TRUE
+})

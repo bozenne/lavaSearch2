@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar 13 2018 (17:35) 
+## Last-Updated: mar 14 2018 (11:11) 
 ##           By: Brice Ozenne
-##     Update #: 304
+##     Update #: 310
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -275,16 +275,21 @@ compare2.lvmfit2 <- function(object, ...){
     
 ### ** multivariate F test
     ## statistic
-    stat.F <- t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo
+    stat.F <- try(t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo, silent = TRUE)
      
     ## store
     df.table <- rbind(df.table, global = rep(NA,5))
-    df.table["global", "statistic"] <- as.numeric(stat.F)
-    df.table["global", "df"] <- df.F
-    df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
-                                                   df1 = n.hypo,
-                                                   df2 = df.table["global", "df"])
-
+    if(!inherits(stat.F,"try-error")){
+        df.table["global", "statistic"] <- as.numeric(stat.F)
+        df.table["global", "df"] <- df.F
+        df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
+                                                       df1 = n.hypo,
+                                                       df2 = df.table["global", "df"])
+        error <- NULL
+    }else{
+        error <- df.table
+    }
+    
     ## ** export
     if(as.lava == TRUE){
         level.inf <- (1-level)/2
@@ -318,6 +323,8 @@ compare2.lvmfit2 <- function(object, ...){
         attr(out, "warning") <- warn
         attr(out, "contrast") <- contrast
     }
+
+    attr(out,"error") <- error
     return(out)
 }
 

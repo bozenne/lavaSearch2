@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 13 2018 (16:35) 
+## Last-Updated: mar 14 2018 (09:15) 
 ##           By: Brice Ozenne
-##     Update #: 839
+##     Update #: 840
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -416,7 +416,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     }
 
     if(is.null(data)){
-        data <- object$data$model.frame
+        data <- as.data.frame(object$data$model.frame)
     }
 
     name.param <- names(model.param)

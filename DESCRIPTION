@@ -30,6 +30,7 @@ Imports:
     utils
 Suggests:
     clubSandwich,
+    data.table,
     doParallel,
     foreach,
     lava.tobit,

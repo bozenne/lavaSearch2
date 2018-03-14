@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 13 2018 (17:25) 
+## Last-Updated: mar 14 2018 (09:55) 
 ##           By: Brice Ozenne
-##     Update #: 230
+##     Update #: 236
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -181,8 +181,10 @@ summary2.lvmfit2 <- function(object, robust = FALSE, ...){
     name.label0 <- trimws(rownames(CoefMat(object, labels = 0, level = 9)), which = "both")
     index.titleVariance <- which(name.label0=="Residual Variances:")
     if(length(index.titleVariance)>0){
-        index.titleVariance <- (index.titleVariance+1):length(name.label0)
-        name.label0[index.titleVariance] <- paste0(name.label0[index.titleVariance],lava.options()$symbols[2],name.label0[index.titleVariance])
+        ## rename variance parameters from Y to Y~~Y
+        index.vcov <- (index.titleVariance+1):length(name.label0)
+        index.var <- setdiff(index.vcov,grep("~~",name.label0,fixed=TRUE)) ## exclude covariance parameters that are already correctly named
+        name.label0[index.var] <- paste0(name.label0[index.var],lava.options()$symbols[2],name.label0[index.var])
     }
 
     table.coefmat <- object.summary$coefmat
@@ -202,7 +204,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, ...){
     p2add <- gsub(" NA","",p2add)
     p2add[table.coef[,"P-value"] < 1e-12] <- "  <1e-12"
 
-    M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)    
+    M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)
     table.coefmat[match(rownames(table.coef), name.label0),] <- M2add
 
     table.coefmat[object.summary$coefma[,"P-value"]=="","P-value"] <- ""
