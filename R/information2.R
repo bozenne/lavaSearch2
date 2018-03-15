@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:51) 
+## Last-Updated: mar 15 2018 (17:51) 
 ##           By: Brice Ozenne
-##     Update #: 77
+##     Update #: 152
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@
 #' 
 #' @keywords internal
 .information2 <- function(dmu, dOmega,
-                          Omega, OmegaM1, n.corrected,
+                          Omega, n.corrected,
                           index.Omega, leverage, n.cluster,
                           grid.meanparam, n.grid.meanparam,
                           grid.varparam, n.grid.varparam,
@@ -34,6 +34,13 @@
 
 ### ** Prepare
     test.global <- is.null(index.Omega)
+    if(!test.global){
+        OmegaM1 <- lapply(1:n.cluster, function(iC){
+            return(chol2inv(chol(Omega[index.Omega[[iC]],index.Omega[[iC]]])))
+        })
+    }else{
+        OmegaM1 <- chol2inv(chol(Omega))
+    }
     
     Info <- matrix(0, nrow = n.param, ncol = n.param,
                    dimnames = list(name.param,name.param))
@@ -47,8 +54,8 @@
     }else{
         index.varparam <- NULL
     } 
-    
-### ** Global
+
+### ** Global    
     if(test.global){
         ## *** Information relative to the mean parameters
         for(iG in index.meanparam){ # iG <- 1
@@ -67,36 +74,35 @@
             Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*n.corrected)
         }
     }
-    
+
 ### ** Individual specific
     if(!test.global){
         ## *** Information relative to the mean parameters
         for(iC in 1:n.cluster){ # iC <- 1
             iIndex <- index.Omega[[iC]]
 
-            for(iG in index.varparam){ # iG <- 1
+            for(iG in index.meanparam){ # iG <- 1
                 iP1 <- grid.meanparam[iG,1]
                 iP2 <- grid.meanparam[iG,2]
 
-                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iP1]][iC,iIndex] %*% OmegaM1[iIndex,iIndex,drop=FALSE] * dmu[[iP2]][iC,iIndex])            
+                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iP1]][iC,iIndex] %*% OmegaM1[[iC]] * dmu[[iP2]][iC,iIndex])            
             }
 
-            ## *** Information realtive to the variance parameters
+            ## *** Information relative to the variance parameters
             for(iG in index.varparam){ # iG <- 1
                 iP1 <- grid.varparam[iG,1]
                 iP2 <- grid.varparam[iG,2]
 
-                iDiag <- diag(OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[iIndex,iIndex,drop=FALSE] %*% dOmega[[iP2]][iIndex,iIndex,drop=FALSE])
+                iDiag <- diag(OmegaM1[[iC]] %*% dOmega[[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP2]][iIndex,iIndex,drop=FALSE])
                 Info[iP1,iP2] <- Info[iP1,iP2] + 1/2 * sum(iDiag * (1 - leverage[iC,iIndex]))            
             }
         }        
     }
 
-
-    ### ** Make Info a symmetric matrix
+### ** Make Info a symmetric matrix
     Info <- symmetrize(Info, update.upper = NULL)
-    
-    ### ** export
+        
+### ** export
     return(Info)
 }
 
@@ -113,16 +119,21 @@
                            Omega, OmegaM1, n.corrected,
                            index.Omega, leverage, n.cluster,
                            name.param, name.3deriv){
-
-    ### ** prepare
     n.param <- length(name.param)
     index.deriv <- match(name.3deriv, name.param)
-        
+
+### ** prepare
+    test.global <- is.null(index.Omega)
+    if(!test.global){
+        M.template <- Omega
+        M.template[] <- 0
+    }
+    
     dInfo <-  array(0,
                     dim = c(n.param, n.param, length(name.3deriv)),
                     dimnames = list(name.param, name.param, name.3deriv))
-
-    ## ** loop
+    
+### ** loop
     for(iDeriv in index.deriv){ # iDeriv <- 4
         for(iP1 in 1:n.param){ # iP1 <- 1
             for(iP2 in iP1:n.param){ # iP2 <- 1
@@ -148,8 +159,8 @@
                 if((test.Omega1 + test.Omega2a + test.Omega2b + test.Omega3a + test.Omega3b + test.mu1a + test.mu1b + test.mu2a + test.mu2b + test.mu3) == 0){
                     next
                 }
-                
-                ## *** extract quantities for computations
+
+                ## *** extract quantities for computations 
                 if(test.mu1a){
                     d2mu.D1 <- d2mu[[iNameD]][[iName1]]
                 }else if(test.mu1b){
@@ -159,15 +170,6 @@
                     d2mu.D2 <- d2mu[[iNameD]][[iName2]]
                 }else if(test.mu2b){
                     d2mu.D2 <- d2mu[[iName2]][[iNameD]]
-                }
-                if(!is.null(dOmega[[iNameD]])){
-                    OmegaM1.dOmega.D <- OmegaM1 %*% dOmega[[iNameD]]
-                }
-                if(!is.null(dOmega[[iName1]])){
-                    OmegaM1.dOmega.1 <- OmegaM1 %*% dOmega[[iName1]]
-                }
-                if(!is.null(dOmega[[iName2]])){
-                    OmegaM1.dOmega.2 <- OmegaM1 %*% dOmega[[iName2]]
                 }
                 if(test.Omega2a){
                     d2Omega.D1 <- d2Omega[[iNameD]][[iName1]]
@@ -179,37 +181,91 @@
                 }else{
                     d2Omega.D2 <- d2Omega[[iName2]][[iNameD]]
                 }
+                
+                if(test.global){
+                    ## *** Global: extract quantities for computations
+                    if(!is.null(dOmega[[iNameD]])){
+                        OmegaM1.dOmega.D <- OmegaM1 %*% dOmega[[iNameD]]
+                    }
+                    if(!is.null(dOmega[[iName1]])){
+                        OmegaM1.dOmega.1 <- OmegaM1 %*% dOmega[[iName1]]
+                    }
+                    if(!is.null(dOmega[[iName2]])){
+                        OmegaM1.dOmega.2 <- OmegaM1 %*% dOmega[[iName2]]
+                    }                    
 
-                ## *** Compute terms
-                if(test.Omega1){
-                    iDiag1 <- diag(OmegaM1.dOmega.D %*% OmegaM1.dOmega.1 %*% OmegaM1.dOmega.2)
-                    iDiag2 <- diag(OmegaM1.dOmega.1 %*% OmegaM1.dOmega.D %*% OmegaM1.dOmega.2)
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * n.corrected + iDiag2 * n.corrected)
-                }
+                    ## *** Global: compute
+                    if(test.Omega1){
+                        iDiag1 <- diag(OmegaM1.dOmega.D %*% OmegaM1.dOmega.1 %*% OmegaM1.dOmega.2)
+                        iDiag2 <- diag(OmegaM1.dOmega.1 %*% OmegaM1.dOmega.D %*% OmegaM1.dOmega.2)
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * n.corrected + iDiag2 * n.corrected)
+                    }
 
-                if(test.Omega2a || test.Omega2b){
-                    iDiag <- diag(OmegaM1 %*% d2Omega.D1 %*% OmegaM1.dOmega.2)
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * n.corrected)
-                }
+                    if(test.Omega2a || test.Omega2b){
+                        iDiag <- diag(OmegaM1 %*% d2Omega.D1 %*% OmegaM1.dOmega.2)
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * n.corrected)
+                    }
 
-                if(test.Omega3a || test.Omega3b){
-                    iDiag <- diag(OmegaM1.dOmega.1 %*% OmegaM1 %*% d2Omega.D2)
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * n.corrected)
-                }
+                    if(test.Omega3a || test.Omega3b){
+                        iDiag <- diag(OmegaM1.dOmega.1 %*% OmegaM1 %*% d2Omega.D2)
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * n.corrected)
+                    }
 
-                if(test.mu1a || test.mu1b){
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(d2mu.D1 %*% OmegaM1 * dmu[[iName2]])
-                }
+                    if(test.mu1a || test.mu1b){
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(d2mu.D1 %*% OmegaM1 * dmu[[iName2]])
+                    }
 
-                if(test.mu2a || test.mu2b){
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu[[iName1]] %*% OmegaM1 * d2mu.D2)
-                }
+                    if(test.mu2a || test.mu2b){
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu[[iName1]] %*% OmegaM1 * d2mu.D2)
+                    }
+                    if(test.mu3){
+                        dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu[[iName1]] %*% OmegaM1.dOmega.D %*% OmegaM1 * dmu[[iName2]])
+                    }
+                    
+                }else{
+                    for(iC in 1:n.cluster){ # iC <- 1
+                        iIndex <- index.Omega[[iC]]
+                        
+                        if(!is.null(dOmega[[iNameD]])){
+                            OmegaM1.dOmega.D <- OmegaM1[[iC]] %*% dOmega[[iNameD]][iIndex,iIndex]
+                        }
+                        if(!is.null(dOmega[[iName1]])){
+                            OmegaM1.dOmega.1 <- OmegaM1[[iC]] %*% dOmega[[iName1]][iIndex,iIndex]
+                        }
+                        if(!is.null(dOmega[[iName2]])){
+                            OmegaM1.dOmega.2 <- OmegaM1[[iC]] %*% dOmega[[iName2]][iIndex,iIndex]
+                        }
 
-                  
-                if(test.mu3){
-                    dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu[[iName1]] %*% OmegaM1.dOmega.D %*% OmegaM1 * dmu[[iName2]])
+                        if(test.Omega1){
+                            iDiag1 <- diag(OmegaM1.dOmega.D %*% OmegaM1.dOmega.1 %*% OmegaM1.dOmega.2)
+                            iDiag2 <- diag(OmegaM1.dOmega.1 %*% OmegaM1.dOmega.D %*% OmegaM1.dOmega.2)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum((iDiag1+iDiag2) * (1 - leverage[iC,iIndex]))
+                        }
+                        if(test.Omega2a || test.Omega2b){
+                            iDiag <- diag(OmegaM1[[iC]] %*% d2Omega.D1[iIndex,iIndex] %*% OmegaM1.dOmega.2)
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * (1 - leverage[iC,iIndex]))
+                        }
+
+                        if(test.Omega3a || test.Omega3b){
+                            iDiag <- diag(OmegaM1.dOmega.1 %*% OmegaM1[[iC]] %*% d2Omega.D2[iIndex,iIndex])
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * (1 - leverage[iC,iIndex]))
+                        }
+
+                        if(test.mu1a || test.mu1b){
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(d2mu.D1[iC,iIndex] %*% OmegaM1[[iC]] * dmu[[iName2]][iC,iIndex])
+                        }
+                        
+                        if(test.mu2a || test.mu2b){
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + sum(dmu[[iName1]][iC,iIndex] %*% OmegaM1[[iC]] * d2mu.D2[iC,iIndex])
+                        }
+                        
+                        if(test.mu3){                            
+                            dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu[[iName1]][iC,iIndex] %*% OmegaM1.dOmega.D %*% OmegaM1[[iC]] * dmu[[iName2]][iC,iIndex])
+                        }
+                    }
                 }
             }
+            
         }
         ## *** Symmetrize
         dInfo[,,iNameD] <- symmetrize(dInfo[,,iNameD], update.upper = NULL)

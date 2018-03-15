@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: mar 12 2018 (17:47) 
+## last-updated: mar 15 2018 (14:45) 
 ##           By: Brice Ozenne
-##     Update #: 2249
+##     Update #: 2250
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -162,9 +162,7 @@ score2.lvmfit2 <- score2.lm2
 
         for(iC in 1:n.cluster){
             iIndex <- index.Omega[[iC]]
-            
-            iOmegaM1 <- chol2inv(chol(Omega[iIndex,iIndex,drop=FALSE]))
-            iEpsilon.OmegaM1 <- iOmegaM1 %*% cbind(epsilon[iC,iIndex])
+            iEpsilon.OmegaM1 <- OmegaM1[[iC]] %*% cbind(epsilon[iC,iIndex])
 
 
             ## *** Compute score relative to the mean coefficients
@@ -174,7 +172,7 @@ score2.lvmfit2 <- score2.lm2
 
             ## *** Compute score relative to the variance-covariance coefficients
             for(iP in name.varparam){ # iP <- name.varparam[1]
-                term2 <- - 1/2 * tr(iOmegaM1 %*% dOmega[[iP]][iIndex,iIndex,drop=FALSE])
+                term2 <- - 1/2 * tr(OmegaM1[[iC]] %*% dOmega[[iP]][iIndex,iIndex,drop=FALSE])
                 term3 <- 1/2 * sum(iEpsilon.OmegaM1 * dOmega[[iP]][iIndex,iIndex,drop=FALSE] %*% iEpsilon.OmegaM1)
                 out.score[iC,iP] <- out.score[iC,iP] + as.double(term2) + term3 
             }

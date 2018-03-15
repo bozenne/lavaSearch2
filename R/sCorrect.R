@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 14 2018 (09:15) 
+## Last-Updated: mar 15 2018 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 840
+##     Update #: 931
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -206,7 +206,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
 ### ** Extract quantities from the model
     ## *** data
     if(is.null(data)){
-        ## browser()
         data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
                             envir = parent.env(environment()))
     }
@@ -253,6 +252,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                                  attr.param = attributes(model.param),
                                  name.Y = name.Y,
                                  cluster = res.cluster$cluster,
+                                 levels.cluster = res.cluster$levels.cluster,
                                  data = data)
     index.Omega <- res.index$index.Omega
 
@@ -280,7 +280,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     name.endogenous <- res.index$name.endogenous
     n.endogenous <- res.index$n.endogenous
 
-    ### ** Compute conditional moments and derivatives
+### ** Compute conditional moments and derivatives
     if(trace>0){
         cat("* Compute conditional moments ")
     }
@@ -298,8 +298,8 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("- done \n")
     }
-
-    ### ** Compute observed residuals
+    
+### ** Compute observed residuals
     if(trace>0){
         cat("* Extract residuals ")
     }
@@ -403,7 +403,6 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     
     ## ** Extract quantities from object
     name.endogenous <- endogenous(object)
-    n.cluster <- object$data$n
 
     model.param <- lava::pars(object)
     if(!is.null(param)){
@@ -422,7 +421,21 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.param <- names(model.param)
 
     n.latent <- length(latent(object))
+
+    ### ** number of samples
+    test.NNA <- rowSums(is.na(data[,name.endogenous,drop=FALSE]))==0    
+    if(any(test.NNA==FALSE) && !inherits(object,"lvm.missing")){ ## complete case analysis
+        if(trace>0){
+            cat("* Exclude missing values and recompute moments and residuals ")
+        }        
+        data <- data[which(test.NNA),,drop=FALSE]
+        if(trace>0){
+            cat("- done \n")
+        }        
+    }
     
+    n.cluster <- NROW(data)
+
     ### ** Compute conditional moments and derivatives
     if(trace>0){
         cat("* Compute conditional moments ")
@@ -436,7 +449,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.meanparam <- names(dMoments$dmu)
     name.varparam <- names(dMoments$dOmega)
 
-    ### ** Compute residuals
+    #### ** Compute residuals
     if(trace>0){
         cat("* Extract residuals ")
     }
@@ -447,27 +460,15 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("- done \n")
     }
 
-    ### ** Identify missing values
-    if(any(is.na(epsilon))){
-        if(trace>0){
-            cat("* Identify missing values ")
-        }
-
-        index.Omega <- lapply(1:n.cluster,function(iC){which(!is.na(epsilon[iC,]))})
-
-        ## convert to list format to enable different number of observation per cluster
-        dMoments$dmu <- lapply(dMoments$dmu, function(x){
-            lapply(1:n.cluster,function(iC){x[iC,index.Omega[[iC]]]})
-        })
-        dMoments$d2mu <- lapply(dMoments$d2mu, function(x){
-            lapply(x, function(y){
-                lapply(1:n.cluster,function(iC){y[iC,index.Omega[[iC]]]})
-            })
-        })
-        epsilon <- lapply(1:n.cluster,function(iC){epsilon[iC,index.Omega[[iC]]]})
-        if(trace>0){
-            cat("- done \n")
-        }
+### ** Identify missing values
+    if(any(test.NNA==FALSE) && inherits(object,"lvm.missing")){ ## full information
+            if(trace>0){
+                cat("* Identify missing values ")
+            }
+            index.Omega <- lapply(1:n.cluster,function(iC){which(!is.na(epsilon[iC,]))})
+            if(trace>0){
+                cat("- done \n")
+            }        
     }else{
         index.Omega <- NULL
     }
@@ -476,7 +477,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("* Reconstruct residual variance-covariance matrix ")
     }
-    
+
     Omega <- .calcOmegaLVM(dMoments, n.latent = n.latent)
 
     if(trace>0){
@@ -507,7 +508,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         derivative <- "analytic"
     }
 
-    out <- .sCorrect(object,
+   out <- .sCorrect(object,
                      data = data,
                      param = model.param,
                      epsilon = epsilon,
@@ -552,10 +553,28 @@ sCorrect.lvmfit2 <- function(object, ...){
 
     n.param <- length(param)
     if(!is.null(index.Omega)){
-        n.endogenous.cluster <- lapply(index.Omega,length)
+        n.endogenous.cluster <- lapply(index.Omega,length)        
     }else{
         n.endogenous.cluster <- NULL
     }
+    ## ** order param names
+    name.meanparam <- as.character(sort(factor(name.meanparam, levels = name.param)))
+    if(any(is.na(name.meanparam))){
+        stop("An element in name.meanparam is not in name.param. \n")
+    }
+    if(length(name.meanparam)>0 && !identical(sort(name.meanparam),sort(names(dmu)))){
+        stop("Mismatch first derivative of the conditional mean and name.meanparam \n")
+    }
+    dmu <- dmu[name.meanparam]    
+
+    name.varparam <- as.character(sort(factor(name.varparam, levels = name.param)))
+    if(any(is.na(name.varparam))){
+        stop("An element in name.varparam is not in name.param. \n")
+    }
+    if(length(name.varparam)>0 && !identical(sort(name.varparam),sort(names(dOmega)))){
+        stop("Mismatch first derivative of the conditional variance and name.varparam \n")
+    }
+    dOmega <- dOmega[name.varparam]
 
     ## ** corrected ML estimates
     out  <- adjustEstimate(epsilon = epsilon,
@@ -573,7 +592,7 @@ sCorrect.lvmfit2 <- function(object, ...){
                            tol = tol, n.iter = n.iter,
                            trace = trace)    
     out$param <- param
-    
+
     ## ** corrected score
     if(score){
         if(trace>0){
@@ -661,6 +680,7 @@ sCorrect.lvmfit2 <- function(object, ...){
                                        Omega = out$Omega,
                                        OmegaM1 = out$OmegaM1,
                                        n.corrected = out$n.corrected,
+                                       n.cluster = n.cluster,
                                        index.Omega = index.Omega,
                                        leverage = out$leverage,
                                        name.param  = name.param,
@@ -720,7 +740,14 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lvmfit` <- function(x, ..., value){
-    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
+    x$sCorrect <-  try(sCorrect(x, ..., adjust.Omega = value, adjust.n = value), silent = TRUE)
+    if(value == TRUE && inherits(x$sCorrect,"try-error")){
+        warn <- x$sCorrect
+        x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = FALSE)
+        attr(x$sCorrect,"warning") <- warn
+        warning("sCorrect failed and has been re-run setting the argument \'adjust.n\' to FALSE \n",
+                "see the attribute \"warning\" of object$sCorrect for the error message \n")
+    }
     class(x) <- append("lvmfit2",class(x))
 
     return(x)

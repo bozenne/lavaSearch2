@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: mar 14 2018 (09:21) 
+## Last-Updated: mar 15 2018 (18:11) 
 ##           By: Brice Ozenne
-##     Update #: 37
+##     Update #: 38
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,7 +65,8 @@ test_that("error when using transform", {
 
 ## ** warning for the satterthwaite approx. with REML
 ## check in sCorrect.R 
-e <- gls(Y~X1, data = d, correlation = corCompSymm(form =~1|G))
+e <- gls(Y~X1, data = d, correlation = corCompSymm(form =~1|G),
+         method = "REML")
 test_that("warning when using nlme with REML and Satterthwaite", {
     expect_warning(sCorrect(e, score = FALSE, df = FALSE, trace = 0) <- FALSE)
 })

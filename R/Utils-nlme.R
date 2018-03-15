@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 13 2018 (14:34) 
+## Last-Updated: mar 15 2018 (18:11) 
 ##           By: Brice Ozenne
-##     Update #: 516
+##     Update #: 539
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -177,8 +177,13 @@
     }
     n.cluster <- length(unique(cluster))
 
-    ### ** export
+### ** reorder cluster according to the data ordering
+    levels.cluster <- unique(cluster)
+    cluster <- as.numeric(factor(cluster, levels = levels.cluster))
+
+### ** export
     return(list(cluster = cluster,
+                levels.cluster = levels.cluster,
                 n.cluster = n.cluster))
 }
 
@@ -186,15 +191,20 @@
 #' @name getCluster2-internal
 .getCluster2.lme <- function(object, ...){
 
-    ## ** get cluster
+### ** get cluster
     if(NCOL(object$groups)!=1){
         stop("cannot only handle one random effect \n")
     }
     cluster <- as.numeric(nlme::getGroups(object))
     n.cluster <- length(unique(cluster))
 
-    ### ** export
+### ** reorder cluster according to the data ordering
+    levels.cluster <- unique(cluster)
+    cluster <- as.numeric(factor(cluster, levels = levels.cluster))
+
+### ** export
     return(list(cluster = cluster,
+                levels.cluster = levels.cluster,
                 n.cluster = n.cluster))
 }
 
@@ -228,8 +238,8 @@
 
 ## * .getIndexOmega2.gls
 #' @rdname getIndexOmega2-internal
-.getIndexOmega2.gls <- function(object, param, attr.param,
-                                name.Y, cluster, data){
+.getIndexOmega2.gls <- function(object, param, attr.param, 
+                                name.Y, cluster, levels.cluster, data){
 
     class.cor <- class(object$modelStruct$corStruct)
     class.re <- class(object$modelStruct$reStruct)
@@ -328,7 +338,11 @@
         }
     }
 
+    attr(object$modelStruct$varStruct,"groupNames")
+    attr(object$modelStruct$varStruct,"groups")
+
     ## ** Normalize index.Omega
+    index.Omega <- index.Omega[levels.cluster]
     if(norm){
         level.index <- unique(unlist(index.Omega))
         convertion <- setNames(order(level.index), level.index)
