@@ -51,7 +51,7 @@ The leverage are defined as the partial derivative of the fitted values with res
 \deqn{
 leverage_i = \frac{\partial \hat{Y}_i}{\partial Y_i}
 }
-See Wei et all (1998). \cr \cr
+See Wei et al. (1998). \cr \cr
 
 If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals.
 }
@@ -75,7 +75,7 @@ leverage2(e.lvm)
 
 }
 \references{
-Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Jounal of Statistics 25:1:25-37.
+Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Journal of Statistics 25:1:25-37.
 }
 \seealso{
 \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.

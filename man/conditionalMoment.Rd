@@ -45,7 +45,7 @@ conditionalMoment(object, ...)
 
 \item{second.order}{[logical] should the terms relative to the third derivative of the likelihood be be pre-computed?}
 
-\item{cluster}{[ingeter vector] the grouping variable relative to which the observations are iid.}
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
 \item{n.cluster}{[integer >0] the number of i.i.d. observations.}
 

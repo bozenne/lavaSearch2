@@ -9,7 +9,7 @@
   name.varparam, index.Omega, n.cluster, indiv)
 }
 \arguments{
-\item{n.cluster}{[interger >0] the number of observations.}
+\item{n.cluster}{[integer >0] the number of observations.}
 }
 \description{
 Compute the corrected score when there is no missing value.

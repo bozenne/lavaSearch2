@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar 15 2018 (18:03) 
+## last-updated: mar 16 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 929
+##     Update #: 930
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@
 #' (e.g. mean or variance coefficient).
 #' @param ref.group [character vector] the levels of the variable defining the variance component in a generic covariance matrix.
 #' @param second.order [logical] should the terms relative to the third derivative of the likelihood be be pre-computed?
-#' @param cluster [ingeter vector] the grouping variable relative to which the observations are iid.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param n.cluster [integer >0] the number of i.i.d. observations.
 #' @param n.endogenous [integer >0] the number of outcomes.
 #' @param usefit,value [logical] If TRUE the coefficients estimated by the model are used to pre-compute quantities. Only for lvmfit objects.

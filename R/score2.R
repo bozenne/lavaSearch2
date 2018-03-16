@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: mar 15 2018 (14:45) 
+## last-updated: mar 16 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 2250
+##     Update #: 2251
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -127,7 +127,7 @@ score2.lvmfit2 <- score2.lm2
 #' @description Compute the corrected score when there is no missing value.
 #' @name score2-internal
 #' 
-#' @param n.cluster [interger >0] the number of observations.
+#' @param n.cluster [integer >0] the number of observations.
 #' 
 #' @keywords internal
 .score2 <- function(epsilon, Omega, OmegaM1, dmu, dOmega,                    

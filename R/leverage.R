@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:41) 
+## Last-Updated: mar 16 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 31
+##     Update #: 34
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,7 +29,7 @@
 #' \deqn{
 #' leverage_i = \frac{\partial \hat{Y}_i}{\partial Y_i}
 #' }
-#' See Wei et all (1998). \cr \cr
+#' See Wei et al. (1998). \cr \cr
 #' 
 #' If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals.
 #'
@@ -38,7 +38,7 @@
 #' @return a matrix containing the leverage relative to each sample (in rows)
 #' and each endogenous variable (in column).
 #'
-#' @references Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Jounal of Statistics 25:1:25-37.
+#' @references Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Journal of Statistics 25:1:25-37.
 #' 
 #' @examples
 #' ## simulate data

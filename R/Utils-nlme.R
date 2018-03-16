@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 15 2018 (18:11) 
+## Last-Updated: mar 16 2018 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 539
+##     Update #: 540
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -226,7 +226,7 @@
 #' \itemize{
 #' \item index.Omega: [list of integer vector] For each cluster of observations,
 #' the index of the endogenous variable relative to each observation.
-#' \item n.endogenous: [interger] the number of endogenous variables.
+#' \item n.endogenous: [integer] the number of endogenous variables.
 #' \item name.endogenous: [character vector] the name of the endogenous variables.
 #' \item ref.group: [character vector] the levels of the variable defining the variance component in a generic covariance matrix.
 #' }
