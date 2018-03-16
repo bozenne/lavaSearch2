@@ -251,7 +251,7 @@ createContrast.list <- function(object, par = NULL, add.variance, var.test = NUL
     }
 
     ## ** create contrast matrix relative to each model
-    out$mlf <- lapply(name.model, function(iModel){ ## x <- name.model[1]        
+    out$mlf <- lapply(name.model, function(iModel){ ## iModel <- name.model[1]        
         ## only keep columns corresponding to coefficients belonging the the current model
         iContrast <- out$contrast[,ls.object.coefname[[iModel]],drop=FALSE]
 
@@ -259,9 +259,12 @@ createContrast.list <- function(object, par = NULL, add.variance, var.test = NUL
         colnames(iContrast) <- ls.coefname[[iModel]]
 
         ## remove lines in the contrast matrix containing only 0
-        index.n0 <- which(rowSums(iContrast!=0)!=0)
-        return(iContrast[index.n0,,drop=FALSE])
-        ## return(iContrast)
+        if(NROW(iContrast)>0){
+          index.n0 <- which(rowSums(iContrast!=0)!=0)
+          return(iContrast[index.n0,,drop=FALSE])
+        }else{
+          return(iContrast)
+        }
     })
     names(out$mlf) <- name.model    
     class(out$mlf) <- "mlf"
