@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 15 2018 (18:15) 
+## Last-Updated: mar 23 2018 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 931
+##     Update #: 935
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -387,6 +387,9 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     ## ** Check valid lvm object
     if("multigroupfit" %in% class(object)){
         stop("sCorrect does not handle multigroup models \n")
+    }
+    if(!is.null(object$cluster)){
+        stop("sCorrect does not handle lvmfit object with cluster \n")
     }
    
     if(length(object$model$attributes$ordinal)>0){
