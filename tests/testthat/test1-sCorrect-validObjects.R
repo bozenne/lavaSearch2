@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: mar 23 2018 (17:38) 
+## Last-Updated: mar 26 2018 (17:34) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 45
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,7 @@ n <- 100
 m.sim <- lvm(Y~X1+X2,G~1)
 categorical(m.sim,K=3,label=c("a","b","c")) <- ~G+X2
 set.seed(10)
-d <- sim(m.sim,n,latent=FALSE)
+d <- lava::sim(m.sim,n,latent=FALSE)
 
 
 ## * sCorrect for lvm objects
@@ -55,7 +55,7 @@ test_that("error for tobit models", {
 ## check in sCorrect.R
 m <- lvm(Y~X1)
 transform(m,Id~X1) <- function(x){1:NROW(x)}
-d.tempo <- sim(m, n)
+d.tempo <- lava::sim(m, n)
 e <- estimate(m, data = d.tempo)
 test_that("error when using transform", {
     expect_error(sCorrect(e))

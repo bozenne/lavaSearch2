@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  8 2018 (14:56) 
 ## Version: 
-## Last-Updated: mar 13 2018 (14:48) 
+## Last-Updated: mar 26 2018 (17:34) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 45
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,7 +35,7 @@ latent(mSim) <- ~eta1+eta2
 categorical(mSim, labels = c("Male","Female")) <- ~Gender
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-d <- sim(mSim, n = n, latent = FALSE)
+d <- lava::sim(mSim, n = n, latent = FALSE)
 dL <- reshape2::melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
                      measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]

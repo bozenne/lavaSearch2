@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: mar 13 2018 (16:36) 
+## last-updated: mar 26 2018 (17:55) 
 ##           By: Brice Ozenne
-##     Update #: 212
+##     Update #: 216
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -56,7 +56,7 @@ latent(mSim) <- ~eta1+eta2
 categorical(mSim, labels = c("Male","Female")) <- ~Gender
 transform(mSim, Id~Y1) <- function(x){1:NROW(x)}
 set.seed(10)
-d <- sim(mSim, n = n, latent = FALSE)
+d <- lava::sim(mSim, n = n, latent = FALSE)
 dL <- reshape2::melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
                      measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
@@ -215,8 +215,8 @@ m <- lvm(c(Y1[mu1:sigma]~1*eta,
 e.lvm <- estimate(m, d)
 ## compare2(e.lvm)
 
-e.lmer <- lme4::lmer(value ~ variable + X1 + Gender + (1|Id),
-                     data = dLred, REML = FALSE)
+e.lmer <- lmerTest::lmer(value ~ variable + X1 + Gender + (1|Id),
+                         data = dLred, REML = FALSE)
 
 e.lme <- nlme::lme(value ~ variable + X1 + Gender, random = ~ 1|Id,
                    data = dLred, method = "ML")
@@ -235,15 +235,19 @@ expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
 test_that("mixed model: Satterthwaite ",{
     ## does not work when running test
-    ## GS <- summary(e.lmer, ddf = "Satterthwaite")$coef[,"df"]
-    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Satterthwaite")
+    ## GS <- summary(e.lmer)$coef[,"df"]
+    GS <- do.call(rbind,lapply(1:5, function(x){ ## x <- 3
+        C <- rep(0,5) ; C[x] <- 1;
+        tempo <- lmerTest::contestMD(e.lmer, L = C, rhs = 0, ddf = "Satterthwaite")
+        return(data.frame(df = tempo[["DenDF"]], statistic = sqrt(tempo[["F value"]])))
+    }))
 
     name.param <- names(coef(e.lvm))
     df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(as.double(GS$df),
                  as.double(df.lvm[1:5,"df"]), tol = 1e-4) ## needed for CRAN
-    expect_equal(as.double(GS$tvalue),
-                 as.double(df.lvm[1:5,"statistic"]), tol = 1e-8) ## needed for CRAN
+    expect_equal(as.double(GS$statistic),
+                 as.double(abs(df.lvm[1:5,"statistic"])), tol = 1e-8) ## needed for CRAN
 
     name.param <- names(.coef2(e.lme))
     df.lme <- compare2(e.lme, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
@@ -254,12 +258,20 @@ test_that("mixed model: Satterthwaite ",{
     df.gls <- compare2(e.gls, par = name.param, bias.correct = FALSE, as.lava = FALSE)[1:length(name.param),]
     expect_equal(df.gls$statistic[1:5], df.lvm$statistic[1:5], tol = 1e-5)
     expect_equal(df.gls$df[1:5], df.lvm$df[1:5], tol = 1e-5)
+
+    ## F test
+    GS <- lmerTest::contestMD(e.lmer, L = diag(1,5,5), rhs = 0, ddf = "Satterthwaite")
+    name.param <- names(coef(e.lvm))    
+    df.F <- compare2(e.lvm, par = name.param[1:5], bias.correct = FALSE, as.lava = FALSE)["global",]
+    expect_equal(GS[["DenDF"]], df.F$df, tol = 1e-5)
+    expect_equal(GS[["F value"]], df.F$statistic, tol = 1e-8)
 })
 
 test_that("mixed model: KR-like correction",{
     ## does not work when running test
     ## GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
-    GS <- lmerTest:::calcSummary(e.lmer, ddf = "Kenward-Roger")
+    GS <- contestMD(update(e.lmer, REML = TRUE),
+                    L = c(0,1,0,0,0), rhs = 0, ddf = "Kenward-Roger")
 
     ## get_Lb_ddf(e.lmer, c(0,1,0,0,0))
     ## get_Lb_ddf(e.lmer, c(0,0,0,1,0))
