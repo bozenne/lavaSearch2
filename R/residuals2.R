@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (09:05) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:51) 
+## Last-Updated: mar 26 2018 (17:11) 
 ##           By: Brice Ozenne
-##     Update #: 912
+##     Update #: 913
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 #' set.seed(10)
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
-#' d <- sim(m,20, latent = FALSE)
+#' d <- lava::sim(m,20, latent = FALSE)
 #'
 #' ## standard linear model
 #' e.lm <- lm(Y1~Y2, data = d)

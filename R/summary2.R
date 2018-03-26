@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 15 2018 (12:23) 
+## Last-Updated: mar 26 2018 (17:10) 
 ##           By: Brice Ozenne
-##     Update #: 241
+##     Update #: 242
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,7 +40,7 @@
 #' @examples
 #' m <- lvm(Y~X1+X2)
 #' set.seed(10)
-#' d <- sim(m, 2e1)
+#' d <- lava::sim(m, 2e1)
 #'
 #' ## Gold standard
 #' summary(lm(Y~X1+X2, d))$coef

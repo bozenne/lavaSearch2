@@ -48,7 +48,7 @@ using \code{sCorrect} and then call \code{summary}.
 \examples{
 m <- lvm(Y~X1+X2)
 set.seed(10)
-d <- sim(m, 2e1)
+d <- lava::sim(m, 2e1)
 
 ## Gold standard
 summary(lm(Y~X1+X2, d))$coef

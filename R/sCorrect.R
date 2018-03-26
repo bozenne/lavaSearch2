@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 23 2018 (10:48) 
+## Last-Updated: mar 26 2018 (17:11) 
 ##           By: Brice Ozenne
-##     Update #: 935
+##     Update #: 944
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -49,7 +49,7 @@
 #' m <- lvm(formula.lvm)
 #' distribution(m,~Id) <- sequence.lvm(0)
 #' set.seed(10)
-#' d <- sim(m,n)
+#' d <- lava::sim(m,n)
 #'
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
@@ -107,7 +107,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("Compute conditional moments")
     }
     dMoments <- conditionalMoment(object, name.endogenous = name.endogenous,
-                                  second.order = df)
+                                  first.order = TRUE, second.order = df)
     if(trace>0){
         cat(" - done \n")
     }
@@ -444,7 +444,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("* Compute conditional moments ")
     }
     dMoments <- conditionalMoment(object, data = data, param = model.param,
-                                  second.order = df, usefit = TRUE)
+                                  first.order = TRUE, second.order = df, usefit = TRUE)
     if(trace>0){
         cat("- done \n")
     }
@@ -636,7 +636,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 
         if("lvmfit" %in% class(object)){
             object$conditionalMoment <- conditionalMoment(lava::Model(object), data = data,
-                                                          usefit = FALSE, second.order = FALSE,
+                                                          first.order = TRUE, second.order = FALSE, usefit = FALSE, 
                                                           name.endogenous = endogenous(object),
                                                           name.latent = latent(object))
         }

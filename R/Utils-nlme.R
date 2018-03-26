@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 16 2018 (11:46) 
+## Last-Updated: mar 26 2018 (17:18) 
 ##           By: Brice Ozenne
-##     Update #: 540
+##     Update #: 569
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -528,6 +528,12 @@
 #'                     data = dL, method = "ML")
 #' getVarCov2(e4.gls)$Omega
 #'
+#' #### lvm model ####
+#' m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
+#' latent(m) <- ~eta
+#' e <- estimate(m, dW)
+#' getVarCov2(e)
+#' 
 #' @concept extractor
 #' 
 #' @export
@@ -579,7 +585,30 @@ getVarCov2.gls <- function(object, data = NULL, cluster, ...){
 #' @export
 getVarCov2.lme <- getVarCov2.gls
 
+## * getVarCov2.lvmfit
+#' @rdname getVarCov2
+#' @export
+getVarCov2.lvmfit <- function(object, ...){
 
+    name.endogenous <- endogenous(object)
+    name.latent <- latent(object)
+    n.latent <- length(name.latent)
+    object.coef <- coef(object)
+    object.data <- as.data.frame(object$data$model.frame)
+
+    object.values <- conditionalMoment(object,
+                                       data = object.data,
+                                       param = object.coef,
+                                       name.endogenous = name.endogenous,
+                                       name.latent = name.latent,
+                                       first.order = FALSE,
+                                       second.order = FALSE,
+                                       usefit = TRUE)
+    object.values$value
+    Omega <- .calcOmegaLVM(object.values, n.latent = n.latent)
+    
+    return(Omega)
+}
 
 
 ##----------------------------------------------------------------------

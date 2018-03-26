@@ -19,11 +19,11 @@ conditionalMoment(object, ...)
 
 \method{conditionalMoment}{lme}(object, attr.param, name.endogenous, ...)
 
-\method{conditionalMoment}{lvm}(object, data, second.order, name.endogenous,
-  name.latent, ...)
+\method{conditionalMoment}{lvm}(object, data, first.order, second.order,
+  name.endogenous, name.latent, ...)
 
-\method{conditionalMoment}{lvmfit}(object, data, param, usefit, second.order,
-  ...)
+\method{conditionalMoment}{lvmfit}(object, data, param, first.order,
+  second.order, usefit, ...)
 }
 \arguments{
 \item{object, x}{a latent variable model.}
@@ -66,8 +66,6 @@ For lvmfit objects, there are two levels of pre-computation:
 }
 }
 \examples{
-conditionalMoment <- lavaSearch2:::conditionalMoment
-
 m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 latent(m) <- ~eta
 
@@ -75,13 +73,15 @@ d <- lava::sim(m,1e2)
 e <- estimate(m, d)
 
 ## basic pre-computation
-res1 <- conditionalMoment(e, data = d, second.order = FALSE,
+res1 <- conditionalMoment(e, data = d,
+                         first.order = FALSE, second.order = FALSE,
                          name.endogenous = endogenous(e),
                          name.latent = latent(e), usefit = FALSE)
 res1$skeleton$Sigma
 
 ## full pre-computation
-res2 <- conditionalMoment(e, param = coef(e), data = d, second.order = FALSE,
+res2 <- conditionalMoment(e, param = coef(e), data = d,
+                         first.order = FALSE, second.order = FALSE,
                          name.endogenous = endogenous(e),
                          name.latent = latent(e), usefit = TRUE
 )

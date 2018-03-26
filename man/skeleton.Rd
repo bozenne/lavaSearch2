@@ -75,7 +75,7 @@ skeleton.lvmfit <- lavaSearch2::skeleton.lvmfit
 m <- lvm(Y1~X1+X2+eta,Y2~X3+eta,Y3~eta)
 latent(m) <- ~eta
 
-e <- estimate(m,sim(m,1e2))
+e <- estimate(m, lava::sim(m,1e2))
 M.data <- as.matrix(model.frame(e))
 
 skeleton(e$model, as.lava = TRUE,
@@ -89,7 +89,7 @@ skeleton(e, data = M.data, p = pars(e), as.lava = TRUE,
 
 ## with constrains
 m <- lvm(Y[mu:sigma] ~ beta*X1+X2)
-e <- estimate(m, sim(m,1e2))
+e <- estimate(m, lava::sim(m,1e2))
 M.data <- as.matrix(model.frame(e))
 
 skeleton(e$model, as.lava = TRUE,

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: mar 12 2018 (17:59) 
+## Last-Updated: mar 26 2018 (17:19) 
 ##           By: Brice Ozenne
-##     Update #: 798
+##     Update #: 804
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,7 +46,7 @@
 #' m <- lvm(Y1~X1+X2+eta,Y2~X3+eta,Y3~eta)
 #' latent(m) <- ~eta
 #' 
-#' e <- estimate(m,sim(m,1e2))
+#' e <- estimate(m, lava::sim(m,1e2))
 #' M.data <- as.matrix(model.frame(e))
 #'
 #' skeleton(e$model, as.lava = TRUE,
@@ -60,7 +60,7 @@
 #'
 #' ## with constrains
 #' m <- lvm(Y[mu:sigma] ~ beta*X1+X2)
-#' e <- estimate(m, sim(m,1e2))
+#' e <- estimate(m, lava::sim(m,1e2))
 #' M.data <- as.matrix(model.frame(e))
 #'
 #' skeleton(e$model, as.lava = TRUE,
@@ -272,9 +272,11 @@ skeleton.lvmfit <- function(object, skeleton,
     ### ** Update skeleton with the current values
 
     ## *** nu
-    index.update <- which(!is.na(skeleton$skeleton$nu))
-    skeleton$value$nu[index.update] <- param[skeleton$skeleton$nu[index.update]]
-
+    if(length(skeleton$skeleton$nu)>0){
+        index.update <- which(!is.na(skeleton$skeleton$nu))
+        skeleton$value$nu[index.update] <- param[skeleton$skeleton$nu[index.update]]
+    }
+    
     ## *** K 
     for(iY in 1:n.endogenous){ # iY <- 3
         if(length(skeleton$skeleton$K[[iY]])>0){
@@ -284,18 +286,20 @@ skeleton.lvmfit <- function(object, skeleton,
     }
 
     ## *** Lambda
-    if(n.latent>0){
+    if(length(skeleton$skeleton$Lambda)>0){
         index.update <- which(!is.na(skeleton$skeleton$Lambda))
         skeleton$value$Lambda[index.update] <- param[skeleton$skeleton$Lambda[index.update]]
     }
     
     ## *** Sigma
-    index.update <- which(!is.na(skeleton$skeleton$Sigma))
-    skeleton$value$Sigma[index.update] <- param[skeleton$skeleton$Sigma[index.update]]
-
+    if(length(skeleton$skeleton$Sigma)>0){
+        index.update <- which(!is.na(skeleton$skeleton$Sigma))
+        skeleton$value$Sigma[index.update] <- param[skeleton$skeleton$Sigma[index.update]]
+    }
+    
     ## *** linear predictor
     skeleton$value$nu.XK <- matrix(NA, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
-                             dimnames = list(NULL,name.endogenous))
+                                   dimnames = list(NULL,name.endogenous))
     for(iY in 1:n.endogenous){ # iY <- 1
         iY2 <- name.endogenous[iY]
         if(length(skeleton$value$K[[iY2]])>0){
@@ -305,12 +309,14 @@ skeleton.lvmfit <- function(object, skeleton,
         }
     }
         
-    ### ** Structural model
+### ** Structural model
     if(n.latent>0){
         ## *** alpha
-        index.update <- which(!is.na(skeleton$skeleton$alpha))
-        skeleton$value$alpha[index.update] <- param[skeleton$skeleton$alpha[index.update]]
-
+        if(length(skeleton$skeleton$alpha)>0){
+            index.update <- which(!is.na(skeleton$skeleton$alpha))
+            skeleton$value$alpha[index.update] <- param[skeleton$skeleton$alpha[index.update]]
+        }
+        
         ## *** Gamma
         for(iLatent in 1:n.latent){
             if(length(skeleton$skeleton$Gamma[[iLatent]])>0){
@@ -320,16 +326,20 @@ skeleton.lvmfit <- function(object, skeleton,
         }
         
         ## *** B
-        index.update <- which(!is.na(skeleton$skeleton$B))
-        skeleton$value$B[index.update] <- param[skeleton$skeleton$B[index.update]]
-
+        if(length(skeleton$skeleton$B)>0){
+            index.update <- which(!is.na(skeleton$skeleton$B))
+            skeleton$value$B[index.update] <- param[skeleton$skeleton$B[index.update]]
+        }
+        
         ## *** Psi
-        index.update <- which(!is.na(skeleton$skeleton$Psi))
-        skeleton$value$Psi[index.update] <- param[skeleton$skeleton$Psi[index.update]]
-
+        if(length(skeleton$skeleton$Psi)>0){
+            index.update <- which(!is.na(skeleton$skeleton$Psi))
+            skeleton$value$Psi[index.update] <- param[skeleton$skeleton$Psi[index.update]]
+        }
+        
         ## *** linear predictor
         skeleton$value$alpha.XGamma <- matrix(NA,nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                        dimnames = list(NULL,name.latent))
+                                              dimnames = list(NULL,name.latent))
         
         for(iLatent in 1:n.latent){
             iLatent2 <- name.latent[iLatent]

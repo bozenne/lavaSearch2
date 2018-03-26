@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: mar 23 2018 (10:48) 
+## Last-Updated: mar 23 2018 (17:38) 
 ##           By: Brice Ozenne
-##     Update #: 43
+##     Update #: 44
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,7 +63,7 @@ test_that("error when using transform", {
 
 ## ** error for lvm with cluster
 m <- lvm(Y~X1)
-e <- estimate(m, data = d.tempo, cluster = 1:NROW(d))
+e <- estimate(m, data = d, cluster = 1:NROW(d))
 test_that("error when using cluster", {
     expect_error(sCorrect(e))
 })
