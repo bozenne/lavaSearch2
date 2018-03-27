@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: mar 28 2017 (17:25) 
+## Last-Updated: mar 27 2018 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 651
+##     Update #: 654
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -311,6 +311,13 @@
 `.adjustMoment` <-
     function(object, ...) UseMethod(".adjustMoment")
 
+## * .adjustMoment.lm
+.adjustMoment.lm <- function(object, Omega){
+
+    object$conditionalMoment$param["sigma2"] <- as.double(Omega)
+    return(object$conditionalMoment)
+    
+}
 ## * .adjustMoment.lvmfit
 
 .adjustMoment.lvmfit <- function(object, Omega){

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 28 2017 (17:08) 
+## Last-Updated: mar 27 2018 (17:57) 
 ##           By: Brice Ozenne
-##     Update #: 1023
+##     Update #: 1037
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -83,7 +83,6 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     
 ### ** Extract quantities from object
     name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
-    n.cluster <- stats::nobs(object) + length(object$na.action)
 
     if(is.null(param)){
         param <- .coef2(object)
@@ -102,12 +101,30 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.meanparam <- attr(model.param,"mean.coef")
     name.varparam <- attr(model.param,"var.coef")
 
+    if(is.null(data)){
+      data <- model.frame(object)
+    }
+
+### ** Number of samples
+    test.NNA <- sum(is.na(data[[name.endogenous]]))==0
+    if(any(test.NNA==FALSE)){ ## complete case analysis
+        if(trace>0){
+            cat("* Exclude missing values and recompute moments and residuals ")
+        }        
+        data <- data[which(test.NNA),,drop=FALSE]
+        if(trace>0){
+            cat("- done \n")
+        }        
+    }
+    
+    n.cluster <- NROW(data)
+    
 ### ** Compute conditional moments
     if(trace>0){
         cat("Compute conditional moments")
     }
-    dMoments <- conditionalMoment(object, name.endogenous = name.endogenous,
-                                  first.order = TRUE, second.order = df)
+    object$conditionalMoment <- conditionalMoment(object, data = data, param = model.param,
+                                                  name.endogenous = name.endogenous)
     if(trace>0){
         cat(" - done \n")
     }
@@ -116,36 +133,20 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("* Extract residuals ")
     }
-    if(is.null(data)){
-        X <- model.matrix(object)
-    }else{
-        X <- model.matrix(formula(object), data)
-    }
-    Y <- object$residuals + object$fitted.values
-    object.residuals <- Y - X %*% cbind(model.param[attr(model.param,"mean.coef")])    
+    object.residuals <- data[[name.endogenous]] - object$conditionalMoment$mu    
     dimnames(object.residuals) <- list(NULL, name.endogenous)
     if(trace>0){
         cat("- done \n")
     }
-    
-    ## ** Compute residual variance
-    if(trace>0){
-        cat("* Reconstruct estimated residual variance ")
-    }
-    Omega <- matrix(param["sigma2"], nrow = 1, ncol = 1,
-                    dimnames = list(name.endogenous, name.endogenous))
-    if(trace>0){
-        cat("- done \n")
-    }
 
-    ## ** args
+### ** args
     args <- list(adjust.Omega = adjust.Omega,
                  adjust.n = adjust.n,
                  df = df,
                  numeric.derivative = numeric.derivative,
                  tol = tol, n.iter = n.iter)
     
-    ## ** correction
+### ** correction
     if(df == FALSE){
         derivative <- "none"
     }else if(numeric.derivative){
@@ -158,16 +159,8 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      data = data,
                      param = model.param,
                      epsilon = object.residuals,
-                     Omega = Omega,
-                     dmu = dMoments$dmu,
-                     dOmega = dMoments$dOmega,
-                     d2mu = NULL,
-                     d2Omega = NULL,
                      name.param = name.param,
-                     name.meanparam = name.meanparam,
-                     name.varparam = name.varparam,
                      name.endogenous = name.endogenous,
-                     name.3deriv = dMoments$name.3deriv,
                      n.cluster = n.cluster,
                      index.Omega = NULL,
                      score = score,

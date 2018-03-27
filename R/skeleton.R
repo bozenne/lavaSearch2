@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: mar 28 2017 (17:10) 
+## Last-Updated: mar 27 2018 (17:59) 
 ##           By: Brice Ozenne
-##     Update #: 907
+##     Update #: 910
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -656,6 +656,11 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
 #' @rdname skeleton
 `skeletonDtheta2` <-
     function(object, ...) UseMethod("skeletonDtheta2")
+
+## * skeletonDtheta2.lm
+skeletonDtheta2.lm <- function(object, ...){
+    return(list(d2mu = NULL, d2Omega = NULL))    
+}
 
 ## * skeletonDtheta2.lvm
 #' @rdname skeleton

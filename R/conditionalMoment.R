@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar 27 2018 (15:48) 
+## last-updated: mar 27 2018 (17:56) 
 ##           By: Brice Ozenne
-##     Update #: 1019
+##     Update #: 1024
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -76,18 +76,33 @@
 ## * conditionalMoment.lm
 #' @rdname conditionalMoment
 #' @export
-conditionalMoment.lm <- function(object, name.endogenous, ...){
+conditionalMoment.lm <- function(object, data, param,
+                                 name.endogenous, ...){
 
-    X <- model.matrix(object)
+    ## design matrix
+    X <- model.matrix(formula(object), data)
+
+    ## linear predictor
+    mu <- X %*% param[colnames(X)]
+    
+    ## residuals variance
+    Omega <- matrix(param["sigma2"], nrow = 1, ncol = 1,
+                    dimnames = list(name.endogenous, name.endogenous))
+    
+    ## first order
     dmu <- lapply(1:NCOL(X), function(i){
         M <- X[,i,drop=FALSE]
         colnames(M) <- name.endogenous
         return(M)
     })
     names(dmu) <- colnames(X)
-    
-    return(list(dmu = dmu,
-                dOmega = list(sigma2 = matrix(1)),
+    dOmega = list(sigma2 = matrix(1))
+
+    return(list(param = param,
+                mu = mu,
+                Omega = Omega,
+                dmu = dmu,
+                dOmega = dOmega,
                 name.3deriv = "sigma2"))
 }
 

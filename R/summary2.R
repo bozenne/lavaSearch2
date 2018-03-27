@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:10) 
+## Last-Updated: mar 27 2018 (18:03) 
 ##           By: Brice Ozenne
-##     Update #: 242
+##     Update #: 247
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,6 +95,36 @@ summary2.lme <- summary2.lm
 #' @export
 summary2.lvmfit <- summary2.lm
 
+## * summary2.lm2
+#' @rdname summary2
+#' @method summary2 lm2
+#' @export
+summary2.lm2 <- function(object, 
+                          digit = max(3, getOption("digit")),
+                          robust = FALSE,
+                          ...){
+
+### ** perform Wald test
+    name.param <- names(coef(object))
+    n.param <- length(name.param)
+
+    tTable.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
+    tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
+    dimnames(tTable) <- list(name.param,
+                             c("Value","Std.Error","t-value","p-value","df")
+                             )
+
+### ** get summary
+    class(object) <- setdiff(class(object),c("lm2"))
+    object.summary <- summary(object, digits = digit, ...)
+    
+### ** update summary
+    object.summary$coefficients <- tTable
+
+### ** export
+    return(object.summary)
+
+}
 ## * summary2.gls2
 #' @rdname summary2
 #' @method summary2 gls2
