@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: mar 27 2018 (17:59) 
+## Last-Updated: mar 28 2018 (15:37) 
 ##           By: Brice Ozenne
-##     Update #: 654
+##     Update #: 724
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -160,20 +160,26 @@
         
         ## *** Step (iii): compute leverage
         if(adjust.n){
-            res.tempo <- .calcLeverage(Omega = Omega.adj,
-                                       ls.Psi = ls.Psi,
-                                       epsilon = epsilon,
-                                       ls.dmu = ls.dmu,
-                                       dOmega = dOmega,
-                                       vcov.param = iVcov.param,
-                                       index.Omega = index.Omega,
-                                       name.endogenous = name.endogenous,
-                                       n.endogenous = n.endogenous,
-                                       name.varparam = name.varparam,
-                                       n.varparam = n.varparam,
-                                       n.cluster = n.cluster)
-            leverage <- res.tempo$leverage
-            epsilon.adj <- res.tempo$residuals
+            epsilon.adj <- .adjustResiduals(Omega = Omega.adj,
+                                            Psi = Psi,
+                                            epsilon = epsilon,
+                                            index.Omega = index.Omega,
+                                            name.endogenous = name.endogenous,
+                                            n.endogenous = n.endogenous,
+                                            n.cluster = n.cluster)
+
+            leverage <- .adjustLeverage(Omega = Omega.adj,
+                                        epsilon = epsilon.adj,
+                                        ls.dmu = ls.dmu,
+                                        dOmega = dOmega,
+                                        vcov.param = iVcov.param,
+                                        index.Omega = index.Omega,
+                                        name.endogenous = name.endogenous,
+                                        n.endogenous = n.endogenous,
+                                        name.varparam = name.varparam,
+                                        n.varparam = n.varparam,
+                                        n.cluster = n.cluster)
+
             n.corrected <- rep(n.cluster, n.endogenous) - colSums(leverage, na.rm = TRUE)
         }
         
@@ -253,58 +259,82 @@
     return(object)
 }
 
-## * .calcLeverage
-.calcLeverage <- function(Omega, ls.Psi, epsilon, ls.dmu, dOmega, vcov.param,
-                          index.Omega,
-                          name.endogenous, n.endogenous, name.varparam, n.varparam, n.cluster){
+## * .adjustResiduals
+.adjustResiduals <- function(Omega, Psi, epsilon,
+                             index.Omega,
+                             name.endogenous, n.endogenous, n.cluster){
 
-    leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                       dimnames = list(NULL, name.endogenous))
-    epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                          dimnames = list(NULL, name.endogenous))
-    
-    ## ** symmetric square root.
-    ## Omega.adj.chol %*% Omega.adj.chol - Omega.adj
-    ## Omega.adj.chol %*% Omega.adj %*% Omega.adj.chol - Omega.adj %*% Omega.adj
-    if(is.null(index.Omega)){
-        iOmega <- Omega
-        iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
-        iOmegaM1 <- chol2inv(iOmega.chol)
-        iIndex.Omega <- 1:n.endogenous
-    }
-            
-    for(iC in 1:n.cluster){                 # iC <- 1
-        if(!is.null(index.Omega)){
-            iIndex.Omega <- index.Omega[[iC]]
-            iOmega <- Omega[iIndex.Omega,iIndex.Omega,drop=FALSE]
-            iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
-            iOmegaM1 <- chol2inv(iOmega.chol)
-        }
-        ## corrected epsilon
-        H <- iOmega %*% iOmega - iOmega.chol %*% ls.Psi[[iC]] %*% iOmega.chol
-        ## iH <- matrixPower(H, symmetric = TRUE, power = -1/2)
-        iH <- tryCatch(matrixPower(H, symmetric = TRUE, power = -1/2), warning = function(w){w})
-        if(inherits(iH,"warning")){
+    if(is.null(index.Omega)){ ## no missing values
+        
+        Omega.chol <- matrixPower(Omega, symmetric = TRUE, power = 1/2)
+        H <- Omega %*% Omega - Omega.chol %*% Psi %*% Omega.chol
+        HM1 <- tryCatch(matrixPower(H, symmetric = TRUE, power = -1/2), warning = function(w){w})
+        if(inherits(HM1,"warning")){
             stop("Cannot compute the adjusted residuals \n",
                  "Estimated bias too large compared to the estimated variance-covariance matrix \n",
                  "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
         }
-        ## Omega.adj.chol %*% iH %*% Omega.adj.chol %*% (iOmega.adj - ls.Psi[[iC]]) %*% Omega.adj.chol %*% iH %*% Omega.adj.chol - Omega.adj
-        epsilon.adj[iC,iIndex.Omega] <- epsilon[iC,iIndex.Omega] %*% iOmega.chol %*% iH %*% iOmega.chol
+        epsilon.adj <- epsilon %*% Omega.chol %*% HM1 %*% Omega.chol
+
+    }else{ ## missing values
+        
+        epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                              dimnames = list(NULL, name.endogenous))
+
+        for(iC in 1:n.cluster){
+            iIndex <- index.Omega[[iC]]
+            iOmega <- Omega[iIndex,iIndex,drop=FALSE]
+            iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
+            iH <- iOmega %*% iOmega - iOmega.chol %*% Psi[iIndex,iIndex,drop=FALSE] %*% iOmega.chol
+            iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
+            if(inherits(iHM1,"warning")){
+                stop("Cannot compute the adjusted residuals \n",
+                     "Estimated bias too large compared to the estimated variance-covariance matrix \n",
+                     "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
+            }
+            epsilon.adj[iC,iIndex] <- epsilon[iC,iIndex] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
+        }
+        
+    }
+    
+    return(epsilon.adj)
+}
+
+## * .adjustLeverage
+.adjustLeverage <- function(Omega, epsilon, ls.dmu, dOmega, vcov.param,
+                            index.Omega,
+                            name.endogenous, n.endogenous, name.varparam, n.varparam, n.cluster){
+
+    ## ** prepare
+    leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                       dimnames = list(NULL, name.endogenous))
+
+    if(is.null(index.Omega)){
+        iIndex.Omega <- 1:n.endogenous
+        iOmegaM1 <- chol2inv(chol(Omega)) ## solve(Omega)
+        iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x %*% iOmegaM1})
+    }
+
+    ## ** compute
+    for(iC in 1:n.cluster){                 # iC <- 1
+        if(!is.null(index.Omega)){
+            iIndex <- index.Omega[[iC]]
+            iOmegaM1 <- chol2inv(chol(Omega[iIndex,iIndex,drop=FALSE]))
+            iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iIndex,iIndex] %*% iOmegaM1})
+        }
 
         ## derivative of the score regarding Y
         scoreY <- ls.dmu[[iC]] %*% iOmegaM1
         for(iP in 1:n.varparam){ ## iP <- 1
-            scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon.adj[iC,iIndex.Omega] %*% (iOmegaM1 %*% dOmega[[name.varparam[iP]]][iIndex.Omega,iIndex.Omega]  %*% iOmegaM1)
+            scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon[iC,iIndex] %*% iOmegaM1.dOmega.OmegaM1[[name.varparam[iP]]]
         }
         ## leverage
-        leverage[iC,iIndex.Omega] <- colSums(vcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
+        leverage[iC,iIndex] <- colSums(vcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
                                         # same as
                                         # diag(t(ls.dmu[[iC]])  %*% iVcov.param %*% scoreY)
     }
 
-    return(list(leverage = leverage,
-                residuals = epsilon.adj))            
+    return(leverage)            
 }
 
 ## * .adjustMoment
@@ -318,6 +348,75 @@
     return(object$conditionalMoment)
     
 }
+
+## * .adjustMoment.gls
+.adjustMoment.gls <- function(object, Omega){
+
+    ## ** extract information
+    class.cor <- object$conditionalMoment$adjustMoment$class.cor
+    class.var <- object$conditionalMoment$adjustMoment$class.var
+    name.varcoef <- object$conditionalMoment$adjustMoment$name.varcoef
+    name.other <- object$conditionalMoment$adjustMoment$name.other
+    ref.group <- object$conditionalMoment$adjustMoment$ref.group
+    
+    ## ** identify parameters
+    if(class.cor == "NULL" && class.var == "NULL"){
+        object$conditionalMoment$param["sigma2"] <- as.double(Omega)
+    }else if(class.cor == "NULL"){
+        av.value <- tapply(diag(Omega),ref.group,mean)
+        object$conditionalMoment$param["sigma2"] <- av.value[ref.group[1]]
+        object$conditionalMoment$param[name.other] <- av.value[ref.group[-1]]/av.value[ref.group[1]]        
+    }else if(class.cor == "corCompSymm"){
+        if(class.var == "NULL"){
+            object$conditionalMoment$param[name.varcoef] <- as.double(Omega)
+            object$conditionalMoment$param[name.varcoef] <- as.double(Omega)
+        }
+        browser()        
+    }else if(class.cor == "corCompSymm"){
+        if(class.var == "NULL"){
+        }
+        browser()
+    } 
+
+    
+    ## names(object$conditionalMoment)
+    ## object$conditionalMoment$param["sigma2"] <- as.double(Omega)
+    return(object$conditionalMoment)
+    
+}
+
+## * .adjustMoment.lme
+.adjustMoment.lme <- function(object, Omega){
+
+    ## ** extract information
+    class.cor <- object$conditionalMoment$adjustMoment$class.cor
+    class.var <- object$conditionalMoment$adjustMoment$class.var
+
+    ## **
+    if(class.cor == "NULL" && class.var == "NULL"){
+        if(class.var == "NULL"){
+        }else{
+        }
+        browser()
+    }else if(class.cor == "corCompSymm"){
+        if(class.var == "NULL"){
+        }else{
+        }
+        
+    }else if(class.cor == "corCompSymm"){
+        if(class.var == "NULL"){
+        }else{
+        }
+        
+    } 
+    browser()
+    
+    ## names(object$conditionalMoment)
+    ## object$conditionalMoment$param["sigma2"] <- as.double(Omega)
+    return(object$conditionalMoment)
+    
+}
+        
 ## * .adjustMoment.lvmfit
 
 .adjustMoment.lvmfit <- function(object, Omega){
@@ -331,8 +430,13 @@
     A <- object$conditionalMoment$adjustMoment$A
     name.var <- object$conditionalMoment$adjustMoment$name.var
     n.rhs <- object$conditionalMoment$adjustMoment$n.rhs
+    index.LambdaB <- object$conditionalMoment$adjustMoment$index.LambdaB
+    name.endogenous <- object$conditionalMoment$adjustMoment$name.endogenous
+    name.latent <- object$conditionalMoment$adjustMoment$name.latent
+    
+    skeleton <- object$conditionalMoment$skeleton
 
-    Psi <- object$conditionalMoment$skeleton$Psi
+    param <- object$conditionalMoment$param
     Lambda <- object$conditionalMoment$value$Lambda
     iIB <- object$conditionalMoment$value$iIB
     iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
@@ -345,7 +449,7 @@
     ## ** left hand side of the equation
     if(NROW(index.Psi)>0){
         n.index.Psi <- NROW(index.Psi)
-        n.latent <- NROW(Psi)        
+        n.latent <- NROW(skeleton$Psi)        
         Z <- iIB %*% Lambda
 
         ## A = t(Z) Psi Z + Sigma
@@ -356,62 +460,41 @@
             for(iPsi in 1:n.index.Psi){
                 iRowPsi <- index.Psi[iPsi,"row"]
                 iColPsi <- index.Psi[iPsi,"col"]
-                A[iIndex,Psi[iRowPsi,iColPsi]] <- A[iIndex,Psi[iRowPsi,iColPsi]] + Z[iRowPsi,iRow]*Z[iColPsi,iCol]
+                A[iIndex,skeleton$Psi[iRowPsi,iColPsi]] <- A[iIndex,skeleton$Psi[iRowPsi,iColPsi]] + Z[iRowPsi,iRow]*Z[iColPsi,iCol]
             }
         }
     }
-    
+
     ## ** solve equation
     asvd <- svd(A)
     if(any(abs(asvd$d) < .Machine$double.eps ^ 0.5)){
         stop("Singular matrix: cannot update the estimates \n")
     }
+
+    ## ** update parameters in conditional moments
     object$conditionalMoment$param[name.var] <- setNames(as.double(asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs),
                                                          name.var)
     
 
     ## ** update conditional moments
-    ## *** Sigma
-    if(length(object$conditionalMoment$skeleton$Sigma)>0){
-        index.update <- which(!is.na(object$conditionalMoment$skeleton$Sigma))
-        object$conditionalMoment$value$Sigma[index.update] <- object$conditionalMoment$param[object$conditionalMoment$skeleton$Sigma[index.update]]
-    }
-
-    ## *** Psi
-    if(length(object$conditionalMoment$skeleton$Psi)>0){
-        index.update <- which(!is.na(object$conditionalMoment$skeleton$Psi))
-        object$conditionalMoment$value$Psi[index.update] <- object$conditionalMoment$param[object$conditionalMoment$skeleton$Psi[index.update]]
-
-         object$conditionalMoment$value$tLambda.tiIB.Psi.iIB <- t(Lambda) %*% t(iIB) %*% object$conditional$value$Psi %*% iIB    
-    }
+    object$conditionalMoment$skeleton$toUpdate <- object$conditionalMoment$adjustMoment$toUpdate
+    object$conditionalMoment$value <- skeleton.lvmfit(object,
+                                                      param = param,
+                                                      data = NULL,
+                                                      name.endogenous = name.endogenous,
+                                                      name.latent = name.latent)
+    object$conditionalMoment$Omega <- Omega
+    
 
     ## ** update first derivative of the conditional variance
-    ## only Lambda and B
-    name.vcovparam <- names(object$conditionalMoment$dOmega)
-    type.vcovparam <- df.param[match(name.vcovparam,df.param$name),"detail"]
+    if(length(index.LambdaB)>0){
+        object$conditionalMoment$dMoment.init$toUpdate[] <- FALSE
+        object$conditionalMoment$dMoment.init$toUpdate[index.LambdaB] <- TRUE
 
-    indexUpdate <- which(type.vcovparam %in% c("Lambda","B"))
-    name2update <- name.vcovparam[indexUpdate]
-    type2update <- type.vcovparam[indexUpdate]
-    n.update <- length(type2update)
-
-    if(n.update>0){
-
-        for(iP in 1:n.update){ # iP <- 1
-            iType <- type2update[iP]
-            iName <- name2update[iP]
-
-            if(iType == "Lambda"){
-                object$conditionalMoment$dOmega[[iName]] <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB %*% dLambda[[iName]]
-                object$conditionalMoment$dOmega[[iName]] <- object$conditionalMoment$dOmega[[iName]] + t(object$conditionalMoment$dOmega[[iName]])
-            }else if(iType == "B"){
-                object$conditionalMoment$dOmega[[iName]] <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB %*% dB[[iName]] %*% iIB.Lambda
-                object$conditionalMoment$dOmega[[iName]] <- object$conditionalMoment$dOmega[[iName]] + t(object$conditionalMoment$dOmega[[iName]])
-            }
-
-        }
+        object$conditionalMoment$dOmega <- skeletonDtheta.lvmfit(object,
+                                                                name.endogenous = name.endogenous,
+                                                                name.latent = name.latent)$dOmega
     }
-    
     ## ** export
     return(object$conditionalMoment)
 }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 27 2018 (17:57) 
+## Last-Updated: mar 28 2018 (16:16) 
 ##           By: Brice Ozenne
-##     Update #: 1037
+##     Update #: 1098
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -124,7 +124,8 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("Compute conditional moments")
     }
     object$conditionalMoment <- conditionalMoment(object, data = data, param = model.param,
-                                                  name.endogenous = name.endogenous)
+                                                  name.endogenous = name.endogenous,
+                                                  first.order = TRUE, second.order = FALSE)
     if(trace>0){
         cat(" - done \n")
     }
@@ -173,6 +174,13 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     return(out)    
 }
 
+## * sCorrect.lm2
+#' @rdname sCorrect
+#' @export
+sCorrect.lm2 <- function(object, ...){
+    class(object) <- setdiff(class(object),"lm2")
+    return(sCorrect(object, ...))    
+}
 ## * sCorrect.gls
 #' @rdname sCorrect
 #' @export
@@ -227,91 +235,77 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     res.cluster <- .getCluster2(object,
                                 data = data,
                                 cluster = cluster)
+    n.cluster <- res.cluster$n.cluster
+    cluster <- res.cluster$cluster
     if(trace>0){
         cat("- done \n")
     }
-    
+
     ## *** repetition relative to each observation
     if(trace>0){
         cat("* Relate observations to endogenous variables ")
     }
-
+    
     res.index <- .getIndexOmega2(object,
                                  param = model.param,
                                  attr.param = attributes(model.param),
                                  name.Y = name.Y,
-                                 cluster = res.cluster$cluster,
+                                 cluster = cluster,
                                  levels.cluster = res.cluster$levels.cluster,
                                  data = data)
-    index.Omega <- res.index$index.Omega
-
-    if(trace>0){
-        cat("- done \n")
-    }
-
-    ### ** Reconstruct residuals variance covariance matrix
-    if(trace>0){
-        cat("* Reconstruct estimated residual variance-covariance matrix ")
-    }
-    
-    Omega <- .getVarCov2(object,
-                         param = model.param,
-                         attr.param = attributes(model.param),
-                         name.endogenous = res.index$name.endogenous,
-                         n.endogenous = res.index$n.endogenous,
-                         ref.group = res.index$ref.group)
-
-    if(trace>0){
-        cat("- done \n")
-    }
-    cluster <- res.cluster$cluster
-    n.cluster <- res.cluster$n.cluster
     name.endogenous <- res.index$name.endogenous
     n.endogenous <- res.index$n.endogenous
+    index.Omega <- res.index$index.Omega
+    vec.OmegaMat <- unlist(sapply(1:n.cluster, function(iC){
+        index.Omega[[iC]]+n.endogenous*(iC-1)
+    }))
+    
+    if(trace>0){
+        cat("- done \n")
+    }
 
 ### ** Compute conditional moments and derivatives
     if(trace>0){
         cat("* Compute conditional moments ")
     }
-    dMoments <- conditionalMoment(object,
-                                  data = data,
-                                  formula = formula.object,
-                                  param = model.param,
-                                  attr.param = attributes(model.param)[-1],
-                                  ref.group = res.index$ref.group,
-                                  second.order = df,
-                                  n.cluster = n.cluster,
-                                  cluster = cluster,
-                                  name.endogenous = name.endogenous,
-                                  index.Omega = index.Omega)
+    object$conditionalMoment <- conditionalMoment(object,
+                                                  data = data,
+                                                  formula = formula.object,
+                                                  param = model.param,
+                                                  attr.param = attributes(model.param)[-1],
+                                                  ref.group = res.index$ref.group,
+                                                  first.order = TRUE,
+                                                  second.order = FALSE,
+                                                  n.cluster = n.cluster,
+                                                  cluster = cluster,
+                                                  name.endogenous = name.endogenous,
+                                                  n.endogenous = n.endogenous,
+                                                  index.Omega = index.Omega,
+                                                  vec.OmegaMat = vec.OmegaMat)
     if(trace>0){
         cat("- done \n")
     }
-    
+   
 ### ** Compute observed residuals
     if(trace>0){
         cat("* Extract residuals ")
     }
-    epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                      dimnames = list(NULL, name.endogenous))
-    for(iC in 1:n.cluster){
-        iIndex <- which(cluster == iC)
-        epsilon[iC,index.Omega[[iC]]] <- as.double(Y[iIndex] - dMoments$X[iIndex,,drop=FALSE] %*% model.param[name.meanparam])
-    }
-
+    epsilon <- t(matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                        dimnames = list(NULL, name.endogenous)))
+    ## transpose necessary because of the way index.OmegaMat was computed
+    epsilon[vec.OmegaMat] <- Y - t(object$conditionalMoment$mu)[vec.OmegaMat]
+    epsilon <- t(epsilon)
+    
     if(trace>0){
         cat("- done \n")
     }
-    ## stats::residuals(object)-as.double(t(epsilon))
-
+    ## stats::residuals(object)-na.omit(as.double(t(epsilon)))
+    
     ## ** Check missing value
     if(all(!is.na(epsilon))){
         index.Omega <- NULL
     }
     
-    ## ** param with non-zero third derivative
-    name.3deriv <- name.varparam
-
     ## ** args
     args <- list(adjust.Omega = adjust.Omega,
                  adjust.n = adjust.n,                     
@@ -328,20 +322,13 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     }else{
         derivative <- "analytic"
     }
+
     out <- .sCorrect(object,
                      data = data,
                      param = model.param,
                      epsilon = epsilon,
-                     Omega = Omega,
-                     dmu = dMoments$dmu,
-                     dOmega = dMoments$dOmega,
-                     d2mu = NULL,
-                     d2Omega = dMoments$d2Omega,
                      name.param = name.param,
-                     name.meanparam = name.meanparam,
-                     name.varparam = name.varparam,
                      name.endogenous = name.endogenous,
-                     name.3deriv = name.3deriv,
                      n.cluster = n.cluster,
                      index.Omega = index.Omega,
                      score = score,
@@ -355,10 +342,24 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
  
 }
 
+## * sCorrect.gls2
+#' @rdname sCorrect
+#' @export
+sCorrect.gls2 <- function(object, ...){
+    class(object) <- setdiff(class(object),"gls2")
+    return(sCorrect(object, ...))    
+}
 ## * sCorrect.lme
 #' @rdname sCorrect
 #' @export
 sCorrect.lme <- sCorrect.gls
+## * sCorrect.lme2
+#' @rdname sCorrect
+#' @export
+sCorrect.lme2 <- function(object, ...){
+    class(object) <- setdiff(class(object),"lme2")
+    return(sCorrect(object, ...))    
+}
 
 ## * sCorrect.lvmfit
 #' @rdname sCorrect
@@ -529,7 +530,7 @@ sCorrect.lvmfit2 <- function(object, ...){
     if(length(name.meanparam)>0 && !identical(sort(name.meanparam),sort(names(object$conditionalMoment$dmu)))){
         stop("Mismatch first derivative of the conditional mean and name.meanparam \n")
     }
-    
+
     name.varparam <- names(object$conditionalMoment$dOmega)
     name.varparam <- as.character(sort(factor(name.varparam, levels = name.param)))
     if(any(is.na(name.varparam))){
@@ -586,12 +587,12 @@ sCorrect.lvmfit2 <- function(object, ...){
             cat("- done \n")
         }
     }
-    
+
     ## ** first derivative of the expected information matrix
     if(length(name.3deriv)==0){
-        out$dVcov.param <- NULL
+        object$dVcov$dVcov.param <- NULL
     }else if(derivative == "none"){
-        out$dVcov.param <- NA
+        object$dVcov$dVcov.param <- NA
     }else if(derivative == "numeric"){
         if(trace>0){
             cat("Compute first derivative of the information matrix using numerical differentiation ")
@@ -682,7 +683,13 @@ sCorrect.lvmfit2 <- function(object, ...){
 `sCorrect<-.lm` <- function(x, ..., value){
     x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lm2",class(x))
-
+    return(x)
+}    
+## * sCorrect<-.lm2
+#' @rdname sCorrect
+#' @export
+`sCorrect<-.lm2` <- function(x, ..., value){
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     return(x)
 }    
 ## * sCorrect<-.gls
@@ -691,7 +698,13 @@ sCorrect.lvmfit2 <- function(object, ...){
 `sCorrect<-.gls` <- function(x, ..., value){
     x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("gls2",class(x))
-
+    return(x)
+}    
+## * sCorrect<-.gls2
+#' @rdname sCorrect
+#' @export
+`sCorrect<-.gls2` <- function(x, ..., value){
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     return(x)
 }    
 ## * sCorrect<-.lme
@@ -700,10 +713,15 @@ sCorrect.lvmfit2 <- function(object, ...){
 `sCorrect<-.lme` <- function(x, ..., value){
     x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
     class(x) <- append("lme2",class(x))
-    
     return(x)
 }    
-
+## * sCorrect<-.lme2
+#' @rdname sCorrect
+#' @export
+`sCorrect<-.lme2` <- function(x, ..., value){
+    x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
+    return(x)
+}    
 ## * sCorrect<-.lvmfit
 #' @rdname sCorrect
 #' @export
@@ -733,11 +751,7 @@ sCorrect.lvmfit2 <- function(object, ...){
 #' @rdname sCorrect
 #' @export
 `sCorrect<-.lvmfit2` <- function(x, ..., value){
-
-    class(x) <- setdiff(class(x),"lvmfit2")
     x$sCorrect <- sCorrect(x, ..., adjust.Omega = value, adjust.n = value)
-    class(x) <- append("lvmfit2",class(x))
-    
     return(x)
 }
 

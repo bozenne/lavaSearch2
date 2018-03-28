@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 27 2018 (09:55) 
+## Last-Updated: mar 28 2018 (10:09) 
 ##           By: Brice Ozenne
-##     Update #: 572
+##     Update #: 577
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -281,7 +281,7 @@
     }
     
     ## ** Identify the index and name of the endogenous variables
-    if("NULL" %in% class.var && "NULL" %in% class.cor){ ## basic lme models
+    if("NULL" %in% class.var && "NULL" %in% class.cor){ ## basic lme models or lm-ish models
         ## order of the variables does not matter
         index.Omega <- tapply(cluster,cluster,function(iC){list(1:length(iC))})
         norm <- FALSE

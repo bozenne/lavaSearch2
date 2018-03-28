@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: feb  4 2016 (16:55) 
+## last-updated: mar 28 2018 (15:44) 
 ##           By: Brice Ozenne
-##     Update #: 222
+##     Update #: 223
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -230,7 +230,7 @@ expect_equal(logLik(e.lmer),logLik(e.lme))
 coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dLred$Id)
 ## strange that same type of coef have very different degrees of freedom
 
-## ** compare - ok
+## ** compare 
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
 test_that("mixed model: Satterthwaite ",{

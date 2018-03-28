@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: mar 27 2018 (17:59) 
+## Last-Updated: mar 28 2018 (15:09) 
 ##           By: Brice Ozenne
-##     Update #: 910
+##     Update #: 980
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -100,11 +100,11 @@ skeleton.lvm <- function(object, as.lava,
         param2originalLink <- subset(df.param.all, subset = !is.na(lava), select = "param", drop = TRUE)
         param2originalLink <- stats::setNames(param2originalLink, param2originalLink)
     }
-    df.param.detail <- subset(df.param.all, subset = !is.na(detail))
+    df.param.detail <- subset(df.param.all, subset = !is.na(detail)) ## important cannot be lava because we need to keep track of the constrained parameters
     
     skeleton <- list()
     value <- list()
-    skeleton$type <- setNames(df.param.detail$detail, df.param.detail$name)
+    skeleton$type <- setNames(df.param.all[!is.na(df.param.all$lava),"detail"], df.param.all[!is.na(df.param.all$lava),"name"])
     skeleton$toUpdate <- stats::setNames(c(rep(FALSE,8),TRUE,TRUE,TRUE,TRUE),
                                          c("nu","K","Lambda","Sigma","alpha","Gamma","B","Psi",
                                            "extra","mu","Omega","param"))
@@ -297,11 +297,30 @@ skeleton.lvm <- function(object, as.lava,
     }else{
         index.Psi <- NULL        
     }
+
+    toUpdate2 <- c(nu = FALSE,
+                   K = FALSE,
+                   Lambda = FALSE,
+                   Sigma = TRUE,
+                   alpha = FALSE,
+                   Gamma = FALSE,
+                   B = FALSE,
+                   Psi = TRUE,
+                   extra = TRUE,
+                   mu = FALSE,
+                   Omega = FALSE,
+                   param = FALSE)
+
+    index.LambdaB <- names(skeleton$type)[which(skeleton$type %in% c("Lambda","B"))]
     adjustMoment <- list(index.matrix = index.matrix,
-                            index.Psi = index.Psi,
-                            A = A,
-                            name.var = name.var,
-                            n.rhs = n.rhs)
+                         index.Psi = index.Psi,
+                         index.LambdaB = index.LambdaB,
+                         toUpdate = toUpdate2,
+                         A = A,
+                         name.endogenous = name.endogenous,
+                         name.latent = name.latent,
+                         name.var = name.var,
+                         n.rhs = n.rhs)
 
 
 ### ** export
@@ -356,11 +375,10 @@ skeleton.lvmfit <- function(object, param, data,
         index.update <- which(!is.na(skeleton$Sigma))
         value$Sigma[index.update] <- param[skeleton$Sigma[index.update]]
     }
-    
-    ## *** extra
-    if(toUpdate["extra"]){
-        ## linear predictor (measurement model without latent variable)
-        value$nu.XK <- matrix(NA, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
+
+    ## *** mu
+    if(toUpdate["mu"]){ ## linear predictor (measurement model without latent variable)   
+        value$nu.XK <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
                                        dimnames = list(NULL,name.endogenous))
         for(iY in 1:n.endogenous){ # iY <- 1
             iY2 <- name.endogenous[iY]
@@ -402,10 +420,9 @@ skeleton.lvmfit <- function(object, param, data,
             value$Psi[index.update] <- param[skeleton$Psi[index.update]]
         }
         
-        ## *** extra
-        if(toUpdate["extra"]){
-            ## linear predictor (latent variable)
-            value$alpha.XGamma <- matrix(NA,nrow = n.data, ncol = n.latent, byrow = TRUE,
+        ## *** mu
+        if(toUpdate["mu"]){ ## linear predictor (latent variable)            
+            value$alpha.XGamma <- matrix(0,nrow = n.data, ncol = n.latent, byrow = TRUE,
                                          dimnames = list(NULL,name.latent))
         
             for(iLatent in 1:n.latent){
@@ -418,15 +435,16 @@ skeleton.lvmfit <- function(object, param, data,
             }
             value$iIB <- solve(diag(1,n.latent,n.latent)-value$B)            
             value$alpha.XGamma.iIB <- value$alpha.XGamma %*% value$iIB
-
-            ## other
+        }
+        
+        ## *** extra
+        if(toUpdate["extra"]){
             value$iIB.Lambda <-  value$iIB %*% value$Lambda    
             value$Psi.iIB <- value$Psi %*% value$iIB
             value$tLambda.tiIB.Psi.iIB <- t(value$iIB.Lambda) %*% value$Psi.iIB
         }
     }
 
-  
 ### ** Export
     return(value)
 }
@@ -436,6 +454,72 @@ skeleton.lvmfit <- function(object, param, data,
 #' @rdname skeleton
 `skeletonDtheta` <-
     function(object, ...) UseMethod("skeletonDtheta")
+## * skeletonDtheta.gls
+#' @rdname skeleton
+skeletonDtheta.gls <- function(object, class.cor, class.var, X, 
+                               sigma2.base0, Msigma2.base0, M.corcoef, ref.group,
+                               index.lower.tri, indexArr.lower.tri,
+                               name.endogenous, n.endogenous, cluster, n.cluster,
+                               var.coef, name.varcoef, name.other, n.varcoef, name.corcoef, n.corcoef,
+                               index.Omega,
+                               ...){
+
+    ## ** mean
+    name.X <- colnames(X)
+    dmu <- lapply(name.X, function(iCoef){ # iCoef <- name.X[1]
+        dmu.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                            dimnames = list(NULL, name.endogenous))
+        for(iC in 1:n.cluster){ ## iC <- 5
+            dmu.tempo[iC,index.Omega[[iC]]] <- X[cluster==iC,iCoef]
+        }
+     n   
+        return(dmu.tempo)
+    })
+    names(dmu) <- name.X
+
+    ## ** variance
+    dOmega <- vector(mode = "list", length = n.corcoef + n.varcoef)
+    names(dOmega) <- c(name.corcoef, name.varcoef)
+
+    ## *** dispersion coefficient
+    dOmega[["sigma2"]] <- diag(sigma2.base0, nrow = n.endogenous, ncol = n.endogenous)
+   
+    if("NULL" %in% class.cor == FALSE){
+        dOmega[["sigma2"]][index.lower.tri] <- Msigma2.base0[index.lower.tri] * cor.coef[M.corcoef[index.lower.tri]]
+        dOmega[["sigma2"]] <- symmetrize(dOmega[["sigma2"]])      
+    }
+    dimnames(dOmega[["sigma2"]]) <-  list(name.endogenous, name.endogenous)
+
+    ## *** multiplicative factors
+    if("NULL" %in% class.var == FALSE){
+
+        for(iVar in name.other){ # iVar <- name.other
+            iTest.endogenous <- ref.group %in% iVar
+            dOmega[[iVar]] <- var.coef["sigma2"]*diag(iTest.endogenous,
+                                                      nrow = n.endogenous, ncol = n.endogenous)
+
+            if("NULL" %in% class.cor == FALSE){
+                index.iVar <- which(rowSums(indexArr.lower.tri==which(iTest.endogenous))>0)
+
+                ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2*x)
+                dOmega[[iVar]][index.lower.tri[index.iVar]] <- var.coef["sigma2"]*dOmega[["sigma2"]][index.lower.tri[index.iVar]]/(2*var.coef[iVar])
+                dOmega[[iVar]] <- symmetrize(dOmega[[iVar]])
+            }
+            
+            dimnames(dOmega[[iVar]]) <- list(name.endogenous, name.endogenous)            
+        }
+    }
+    
+    ## ** correlation
+    if("NULL" %in% class.cor == FALSE){
+        for(iVar in name.corcoef){
+            dOmega[[iVar]] <- Msigma2.base0 * var.coef["sigma2"] * (M.corcoef==iVar)
+        }
+    }
+
+    ### ** export
+    return(list(dmu = dmu, dOmega = dOmega))
+}
 
 ## * skeletonDtheta.lvm
 #' @rdname skeleton
@@ -656,6 +740,113 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
 #' @rdname skeleton
 `skeletonDtheta2` <-
     function(object, ...) UseMethod("skeletonDtheta2")
+
+## * skeletonDtheta2.gls
+skeletonDtheta2.gls <- function(object, dOmega,
+                                class.cor = NULL, class.var = NULL,
+                                M.corcoef = NULL, n.endogenous = NULL,
+                                index.lower.tri = NULL, indexArr.lower.tri = NULL,
+                                var.coef = NULL, name.other = NULL, name.varcoef = NULL, n.varcoef = NULL,
+                                cor.coef = NULL, name.corcoef = NULL,
+                                ...){
+
+    ## ** import information
+    if(is.null(class.cor)){
+        class.cor <- object$conditionalMoment$d2Omega.init$class.cor
+    }
+    if(is.null(class.var)){
+        class.var <- object$conditionalMoment$d2Omega.init$class.var
+    }
+    if(is.null(M.corcoef)){
+        M.corcoef <- object$conditionalMoment$d2Omega.init$M.corcoef
+    }
+    if(is.null(n.endogenous)){
+        n.endogenous <- object$conditionalMoment$d2Omega.init$n.endogenous
+    }
+    if(is.null(index.lower.tri)){
+        index.lower.tri <- object$conditionalMoment$d2Omega.init$index.lower.tri
+    }
+    if(is.null(indexArr.lower.tri)){
+        indexArr.lower.tri <- object$conditionalMoment$d2Omega.init$indexArr.lower.tri
+    }
+    if(is.null(var.coef)){
+        var.coef <- object$conditionalMoment$d2Omega.init$var.coef
+    }
+    if(is.null(name.varcoef)){
+       name.varcoef <- object$conditionalMoment$d2Omega.init$name.varcoef
+    }
+    if(is.null(name.other)){
+        name.other <- object$conditionalMoment$d2Omega.init$name.other
+    }
+    if(is.null(n.varcoef)){
+       n.varcoef <- object$conditionalMoment$d2Omega.init$n.varcoef
+    }
+    if(is.null(cor.coef)){
+        cor.coef <- object$conditionalMoment$d2Omega.init$cor.coef
+    }
+    if(is.null(name.corcoef)){
+       name.corcoef <- object$conditionalMoment$d2Omega.init$name.corcoef
+    }
+    d2Omega <- list()
+
+    ## ** derivative: dispersion parameter with other variance parameter
+    if("NULL" %in% class.var == FALSE){
+        for(iVar in name.other){ ## iVar <- name.other[1]
+            d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
+        }
+    }
+
+    ## ** derivative: dispersion parameter with correlation parameters
+    if("NULL" %in% class.cor == FALSE){
+        for(iVar in name.corcoef){
+            d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
+        }
+    }
+
+    ## ** derivative: correlation parameter with other variance parameters
+    if("NULL" %in% class.var == FALSE && "NULL" %in% class.cor == FALSE){
+        M.corvalue <- matrix(1, nrow = n.endogenous, ncol = n.endogenous)
+        M.corvalue[index.lower.tri] <- cor.coef[M.corcoef[index.lower.tri]]
+        M.corvalue <- symmetrize(M.corvalue, update.upper = TRUE)
+
+            for(iVar1 in name.other){ ## iVar <- name.other[1]
+
+                iIndex.var1 <- which(name.varcoef == iVar1)
+                
+                ## var var
+                for(iVar2 in name.varcoef[iIndex.var1:n.varcoef]){
+
+                    ##
+                    M.tempo <- c(1,-1)[(iVar1==iVar2)+1] * dOmega[[iVar1]]/(2*var.coef[iVar2])
+
+                    ## remove null derivative on the diagonal
+                    diag(M.tempo) <- 0
+
+                    ## remove null derivative outside the diagonal
+                    iIndex.var2 <- which(name.varcoef == iVar2)
+                    
+                    index0 <- union(which(rowSums(indexArr.lower.tri==iIndex.var1)==0),
+                                    which(rowSums(indexArr.lower.tri==iIndex.var2)==0))
+                    M.tempo[index.lower.tri[index0]] <- 0
+                    M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
+
+                    d2Omega[[iVar1]][[iVar2]] <- M.tempo
+                }                
+                
+                ## var cor
+                for(iVar2 in name.corcoef){                    
+                    M.tempo <- dOmega[[iVar1]]/M.corvalue
+                    M.tempo[M.corcoef!=iVar2] <- 0
+                    if(any(M.tempo!=0)){
+                        d2Omega[[iVar1]][[iVar2]] <- M.tempo
+                    }
+                }
+
+            }
+    }
+
+    return(d2Omega)
+}
 
 ## * skeletonDtheta2.lm
 skeletonDtheta2.lm <- function(object, ...){
