@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: mar 28 2018 (15:37) 
+## Last-Updated: apr  3 2018 (15:54) 
 ##           By: Brice Ozenne
-##     Update #: 724
+##     Update #: 784
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,6 +20,7 @@
 #' @description Compute bias corrected residuals variance covariance matrix
 #' and information matrix.
 #' Also provides the leverage values and corrected sample size when adjust.n is set to TRUE.
+#' @name estimate2
 #' 
 #' @keywords internal
 .estimate2 <- function(object, epsilon, n.cluster,
@@ -200,7 +201,9 @@
                                dOmega = dOmega,
                                Omega = Omega.adj,
                                n.corrected = n.corrected,
-                               leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
+                               leverage = leverage,
+                               index.Omega = index.Omega,
+                               n.cluster = n.cluster,
                                grid.meanparam = grid.meanparam,
                                n.grid.meanparam = n.grid.meanparam,
                                grid.varparam = grid.varparam,
@@ -275,7 +278,7 @@
                  "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
         }
         epsilon.adj <- epsilon %*% Omega.chol %*% HM1 %*% Omega.chol
-
+        
     }else{ ## missing values
         
         epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
@@ -296,7 +299,7 @@
         }
         
     }
-    
+    dimnames(epsilon.adj) <- list(NULL,name.endogenous)
     return(epsilon.adj)
 }
 
@@ -310,7 +313,7 @@
                        dimnames = list(NULL, name.endogenous))
 
     if(is.null(index.Omega)){
-        iIndex.Omega <- 1:n.endogenous
+        iIndex <- 1:n.endogenous
         iOmegaM1 <- chol2inv(chol(Omega)) ## solve(Omega)
         iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x %*% iOmegaM1})
     }
@@ -350,35 +353,69 @@
 }
 
 ## * .adjustMoment.gls
-.adjustMoment.gls <- function(object, Omega){
+.adjustMoment.gls <- function(object, Omega, ...){
 
     ## ** extract information
-    class.cor <- object$conditionalMoment$adjustMoment$class.cor
-    class.var <- object$conditionalMoment$adjustMoment$class.var
-    name.varcoef <- object$conditionalMoment$adjustMoment$name.varcoef
-    name.other <- object$conditionalMoment$adjustMoment$name.other
-    ref.group <- object$conditionalMoment$adjustMoment$ref.group
+    class.cor <- object$conditionalMoment$skeleton$class.cor
+    class.var <- object$conditionalMoment$skeleton$class.var
+    name.corcoef <- object$conditionalMoment$skeleton$name.corcoef
+    name.otherVar <- object$conditionalMoment$skeleton$name.otherVar
+    name.varcoef <- object$conditionalMoment$skeleton$name.varcoef
+    ref.group <- object$conditionalMoment$skeleton$ref.group
+    M.corcoef <- object$conditionalMoment$skeleton$M.corcoef
+    name.endogenous <- object$conditionalMoment$skeleton$name.endogenous
+    n.endogenous <- object$conditionalMoment$skeleton$n.endogenous
     
     ## ** identify parameters
-    if(class.cor == "NULL" && class.var == "NULL"){
-        object$conditionalMoment$param["sigma2"] <- as.double(Omega)
-    }else if(class.cor == "NULL"){
-        av.value <- tapply(diag(Omega),ref.group,mean)
-        object$conditionalMoment$param["sigma2"] <- av.value[ref.group[1]]
-        object$conditionalMoment$param[name.other] <- av.value[ref.group[-1]]/av.value[ref.group[1]]        
-    }else if(class.cor == "corCompSymm"){
-        if(class.var == "NULL"){
-            object$conditionalMoment$param[name.varcoef] <- as.double(Omega)
-            object$conditionalMoment$param[name.varcoef] <- as.double(Omega)
-        }
-        browser()        
-    }else if(class.cor == "corCompSymm"){
-        if(class.var == "NULL"){
-        }
-        browser()
+
+    if(identical(class.var, "NULL")){
+        object$conditionalMoment$param["sigma2"] <- mean(diag(Omega))
+    }else{            
+        index.Sigma2 <- which(ref.group %in% name.otherVar == FALSE)
+        object$conditionalMoment$param["sigma2"] <- mean(diag(Omega)[index.Sigma2])
+
+        vec.k <- tapply(diag(Omega)/Omega[index.Sigma2,index.Sigma2], ref.group, mean)            
+        object$conditionalMoment$param[name.otherVar] <- vec.k[name.otherVar]
+    }
+
+    if(identical(class.cor, "NULL")){
+        ## do nothing
+    }else if("corCompSymm" %in% class.cor){
+        object$conditionalMoment$param[name.corcoef] <- mean(stats::cov2cor(Omega)[lower.tri(Omega)])
+    }else if("corSymm" %in% class.cor){
+        vec.cor <- tapply(stats::cov2cor(Omega)[lower.tri(Omega)],
+                          M.corcoef[lower.tri(Omega)],
+                          mean)            
+        object$conditionalMoment$param[name.corcoef] <- vec.cor[name.corcoef]
     } 
 
+    ## ** update conditional moments
+    object$conditionalMoment$Omega <- .getVarCov2(object,
+                                                  param = object$conditionalMoment$param,
+                                                  attr.param = attributes(object$conditionalMoment$param),
+                                                  name.endogenous = name.endogenous,
+                                                  n.endogenous = n.endogenous,
+                                                  ref.group = ref.group)
     
+    ## ** update first derivative of the conditional variance
+    object$conditionalMoment$dOmega <- skeletonDtheta(object, class.cor = class.cor, class.var = class.var, 
+                                                      sigma2.base0 = object$conditionalMoment$skeleton$sigma2.base0,
+                                                      Msigma2.base0 = object$conditionalMoment$skeleton$Msigma2.base0,
+                                                      M.corcoef = M.corcoef, ref.group = ref.group,
+                                                      index.lower.tri = object$conditionalMoment$skeleton$index.lower.tri,
+                                                      indexArr.lower.tri = object$conditionalMoment$skeleton$indexArr.lower.tri,
+                                                      name.endogenous =  name.endogenous, n.endogenous = n.endogenous,
+                                                      cluster = object$conditionalMoment$skeleton$cluster,
+                                                      n.cluster = object$conditionalMoment$skeleton$n.cluster,
+                                                      var.coef = object$conditionalMoment$param[name.varcoef],
+                                                      name.varcoef = name.varcoef, name.otherVar = name.otherVar,
+                                                      n.varcoef = object$conditionalMoment$skeleton$n.varcoef,
+                                                      cor.coef = object$conditionalMoment$param[name.corcoef],
+                                                      name.corcoef = name.corcoef,
+                                                      n.corcoef = object$conditionalMoment$skeleton$n.corcoef,
+                                                      update.mean = FALSE, update.variance = TRUE, ...)$dOmega
+
+    ## ** export
     ## names(object$conditionalMoment)
     ## object$conditionalMoment$param["sigma2"] <- as.double(Omega)
     return(object$conditionalMoment)
@@ -388,37 +425,27 @@
 ## * .adjustMoment.lme
 .adjustMoment.lme <- function(object, Omega){
 
-    ## ** extract information
-    class.cor <- object$conditionalMoment$adjustMoment$class.cor
-    class.var <- object$conditionalMoment$adjustMoment$class.var
+    name.rancoef <- attr(object$conditionalMoment$param,"ran.coef")
+    
+    ## ** Identify random effect
+    if(!identical(object$conditionalMoment$skeleton$class.cor,"NULL")){
+        stop("Does not know how to identify the correlation coefficients when corStruct is not NULL \n")
+    }
+    object$conditionalMoment$param[name.rancoef] <- mean(Omega[lower.tri(Omega)])
 
-    ## **
-    if(class.cor == "NULL" && class.var == "NULL"){
-        if(class.var == "NULL"){
-        }else{
-        }
-        browser()
-    }else if(class.cor == "corCompSymm"){
-        if(class.var == "NULL"){
-        }else{
-        }
-        
-    }else if(class.cor == "corCompSymm"){
-        if(class.var == "NULL"){
-        }else{
-        }
-        
-    } 
-    browser()
-    
-    ## names(object$conditionalMoment)
-    ## object$conditionalMoment$param["sigma2"] <- as.double(Omega)
-    return(object$conditionalMoment)
-    
+    ## ** save derivative regarding random effect
+    save <- object$conditionalMoment$dOmega$ranCoef1
+
+    ## ** compute moments 
+    conditionalMoment <- .adjustMoment.gls(object, Omega = Omega - object$conditionalMoment$param["ranCoef1"],
+                                           name.rancoef = name.rancoef)
+
+    ## ** restaure derivative regarding random effect
+    conditionalMoment$dOmega$ranCoef1 <- save
+    return(conditionalMoment)
 }
-        
-## * .adjustMoment.lvmfit
 
+## * .adjustMoment.lvmfit
 .adjustMoment.lvmfit <- function(object, Omega){
 
     ## ** extract info
@@ -442,7 +469,7 @@
     iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
     dLambda <- object$conditionalMoment$dMoment.init$dLambda
     dB <- object$conditionalMoment$dMoment.init$dB
-    
+
     ## ** right hand side of the equation
     eq.rhs <- Omega[index.matrix$index]
     

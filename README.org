@@ -4,8 +4,6 @@
 
 * lavaSeach2
 
-** Overview
-
 *lava* is an R package that implements Structural Equation Models with
  latent variables (see [[https://github.com/kkholst/lava]]). The present
  software package, *lavaSearch2*, provides additional functionalities
@@ -27,7 +25,7 @@ models. This means that it may not work / give valid results:
   this case could probably be fixed, you can contact the package
   maintainer if you need this functionality.
 
-** Installation 
+* Installation of lavaSearch2
 Install the stable version from CRAN using:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 install.packages("lavaSearch2")
@@ -38,7 +36,7 @@ Install the development version from Github using:
 devtools::install_github("bozenne/lavaSearch2")
 #+END_SRC
 
-** Functionalities
+* Functionalities
 
 Load *lavaSearch2* in the R session:
 #+BEGIN_SRC R :exports code :results output :session *R* :cache no
@@ -48,9 +46,9 @@ suppressPackageStartupMessages(library(lavaSearch2))
 #+RESULTS:
 
 
-*** Inference: single univariate Wald test
+** Inference: single univariate Wald test
 
-**** Introductory example
+*** Introductory example
 You may have noticed that for simple linear regression, the p-values
 of the Wald tests from =lm=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
@@ -109,7 +107,7 @@ summary2(e)$coef
 : Y~~Y 0.5557910  0.2242758 2.4781588         NA  4.25
 : Y    0.7967775  0.2506765 3.1785096 0.00549580 17.00
 
-**** How it works in a nutshell
+*** How it works in a nutshell
 
 When using *lava*, the p.values that are obtained from the summary
 (Wald tests) rely on a Gaussian approximation. While being
@@ -131,7 +129,7 @@ too large, i.e. the p.values are have a downward bias.  gg
   and degree of freedoms (i.e. columns "Std. Error" and "df" in the
   summary are modified).
 
-**** Example
+*** Example
 
 We will illustrate the functionalities using a simulated dataset:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
@@ -285,7 +283,7 @@ system.time(
 :    user  system elapsed 
 :    0.07    0.00    0.06
 
-*** Inference: single multivariate Wald test
+** Inference: single multivariate Wald test
 
 The function =compare= can be use to perform multivariate Wald tests,
 i.e. to test simultaneously several linear combinations of the
@@ -421,7 +419,7 @@ resTest0$statistic/qr(resC$contrast)$rank
 : 7.110689
 
 
-*** Inference: adjustment for multiple comparisons (univariate Wald test, single model)
+** Inference: adjustment for multiple comparisons (univariate Wald test, single model)
 
 When performing multiple testing, adjustment for multiple comparisons
 is necessary in order to control the type 1 error rate, i.e. to
@@ -538,7 +536,7 @@ book: "Multiple Comparisons Using R" by Frank Bretz, Torsten Hothorn,
 and Peter Westfall (2011, CRC Press) for details about the theory
 underlying the *multcomp* package.
 
-*** Inference: adjustment for multiple comparisons (univariate Wald test, multiple models)
+** Inference: adjustment for multiple comparisons (univariate Wald test, multiple models)
 
 Pipper et al. in "A Versatile Method for Confirmatory Evaluation of
 the Effects of a Covariate in Multiple Models" (2012, Journal of the
@@ -645,7 +643,7 @@ Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 (Univariate p values reported)
 #+end_example
 
-*** Model diagnostic: detection of local dependencies
+** Model diagnostic: detection of local dependencies
 
 The =modelsearch= function of *lava* is a diagnostic tool for latent
 variable models. It enables to search for local dependencies
@@ -770,7 +768,7 @@ summary(resMax2)
 : 7   y3~x1      8             0  1.789390       0.29565912
 : confidence level: 0.9 (two sided, adjustement: fastmax)
 
-*** Model diagnostic: checking that the names of the variables in the model match those of the data
+** Model diagnostic: checking that the names of the variables in the model match those of the data
 
 When estimating latent variable models using *lava*, it sometimes
 happens that the model does not converge:
@@ -835,7 +833,7 @@ checkData(m, data = df.data)
 : No issue detected
 
 
-** Information about the R session used for this document
+* Information about the R session used for this document
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 sessionInfo()
 #+END_SRC

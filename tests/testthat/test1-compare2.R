@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: mar 28 2018 (15:44) 
+## last-updated: apr  3 2018 (15:40) 
 ##           By: Brice Ozenne
-##     Update #: 223
+##     Update #: 224
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -350,6 +350,19 @@ test_that("UN mixed model: df",{
     name.param <- names(coef(e.lvm))
     df.lvm <- compare2(e.lvm, par = name.param, bias.correct = FALSE, as.lava = FALSE)
 
+    ##                          estimate       std  statistic       df      p-value
+    ## [eta] = 0              -0.2530247 0.2459609 -1.0287194 61.99195 3.076087e-01
+    ## [Y2] = 0                0.1513703 0.2248199  0.6732956 50.00000 5.038597e-01
+    ## [Y3] = 0                0.3987991 0.2286753  1.7439534 50.00000 8.731285e-02
+    ## [eta~X1] = 0            1.4498392 0.1465743  9.8914990 50.00000 2.318146e-13
+    ## [eta~GenderFemale] = 0  0.9213738 0.2991017  3.0804696 50.00000 3.355219e-03
+    ## [Y1~~Y1] = 0            1.3533853 0.4323206  3.1305133 29.40589 3.923193e-03
+    ## [eta~~eta] = 0          0.4391486 0.3092283  1.4201436 21.64808 1.698083e-01
+    ## [Y2~~Y2] = 0            1.6200992 0.4392003  3.6887476 13.94845 2.444719e-03
+    ## [Y3~~Y3] = 0            1.7889734 0.4646774  3.8499254 13.62954 1.850575e-03
+    ## [Y1~~Y2] = 0            0.2231421 0.3296648  0.6768757 24.12389 5.049242e-01
+    ## [Y1~~Y3] = 0            0.2638691 0.3376548  0.7814760 23.84905 4.422119e-01
+    ## global                         NA        NA 17.0357449 34.39628 7.882273e-11
     ## overparametrized model
     ## name.param <- names(.coef2(e.lme))
     ## df.lme <- compare2(e.lme, par = name.param, bias.correct = FALSE, as.lava = FALSE)

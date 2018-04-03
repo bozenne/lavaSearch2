@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: mar 13 2018 (13:25) 
+## Last-Updated: apr  3 2018 (17:49) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 52
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -39,6 +39,24 @@ dW <- dW[order(dW$Id),,drop=FALSE]
 dL <- reshape2::melt(dW,id.vars = c("G","Id","Gender"), variable.name = "time")
 dL <- dL[order(dL$Id),,drop=FALSE]
 dL$time.num <- as.numeric(dL$time)
+
+## * t.test
+test_that("invariant to the order in the dataset", {
+    e1.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Id),],
+                  weights = varIdent(form = ~1|Gender),
+                  method = "ML")
+
+    out1 <- getVarCov2(e1.gls, cluster = dW$Id)
+    index.cluster <- as.numeric(names(out1$index.Omega))
+    expect_true(all(diff(index.cluster)>0))
+
+    e2.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Gender),],
+                  weights = varIdent(form = ~1|Gender),
+                  method = "ML")
+    out2 <- getVarCov2(e2.gls, cluster = dW$Id)
+    index.cluster <- as.numeric(names(out2$index.Omega))
+    expect_true(all(diff(index.cluster)>0))
+})
 
 ## * Heteroschedasticity
 e.gls <- nlme::gls(value ~ time + G + Gender,

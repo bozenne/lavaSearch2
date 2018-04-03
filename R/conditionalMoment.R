@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: mar 28 2018 (15:41) 
+## last-updated: apr  3 2018 (17:44) 
 ##           By: Brice Ozenne
-##     Update #: 1080
+##     Update #: 1128
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -139,10 +139,11 @@ conditionalMoment.gls <- function(object, data, formula,
     n.corcoef <- length(name.corcoef)
     var.coef <- param[name.varcoef]
     cor.coef <- param[name.corcoef]
-
+        
     class.var <- class(object$modelStruct$varStruct)
     class.cor <- class(object$modelStruct$corStruct)
 
+    
     ## *** design matrix    
     X <- stats::model.matrix(formula, data)
     X <- X[,attr.param$mean.coef,drop=FALSE] ## drop unused columns (e.g. factor with 0 occurence)    
@@ -151,12 +152,12 @@ conditionalMoment.gls <- function(object, data, formula,
     
     ## *** variance terms
     if("NULL" %in% class.var == FALSE){
-        name.other <- setdiff(names(var.coef),"sigma2")
-        factor.varcoef <- setNames(c(1,var.coef[name.other]),
+        name.otherVar <- setdiff(names(var.coef),"sigma2")
+        factor.varcoef <- setNames(c(1,var.coef[name.otherVar]),
                                    attr(object$modelStruct$varStruct,"groupNames"))
         sigma2.base0 <- factor.varcoef[ref.group]        
     }else{
-        name.other <- NULL
+        name.otherVar <- NULL
         sigma2.base0 <- setNames(rep(1, n.endogenous), name.endogenous)
     }
     sigma2.base <- sigma2.base0 * var.coef["sigma2"]
@@ -184,14 +185,33 @@ conditionalMoment.gls <- function(object, data, formula,
 
     ## *** export
     out <- list(param = param,
-                name.3deriv = name.varcoef)
+                name.3deriv = c(name.varcoef,name.corcoef),
+                skeleton = list(class.cor = class.cor,
+                                class.var = class.var,
+                                sigma2.base0 = sigma2.base0,
+                                Msigma2.base0 = Msigma2.base0,
+                                ref.group = ref.group,
+                                n.endogenous = n.endogenous,
+                                name.endogenous = name.endogenous,
+                                M.corcoef = M.corcoef,
+                                index.lower.tri = index.lower.tri,
+                                indexArr.lower.tri = indexArr.lower.tri,
+                                var.coef = var.coef,
+                                name.varcoef = name.varcoef,
+                                n.varcoef = n.varcoef,
+                                name.otherVar = name.otherVar,
+                                ref.group = ref.group,
+                                cor.coef = cor.coef,
+                                name.corcoef = name.corcoef,
+                                n.corcoef = n.corcoef,
+                                cluster  = cluster,
+                                n.cluster = n.cluster))
     
 ### ** Reconstruct conditional mean
     ## transpose necessary because of the way index.OmegaMat was computed
-    out$mu <- t(matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                       dimnames = list(NULL, name.endogenous)))
+    out$mu <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                     dimnames = list(NULL, name.endogenous))
     out$mu[vec.OmegaMat] <- X %*% param[colnames(X)]
-    out$mu <- t(out$mu)
     
     
 ### ** Reconstruct conditional variance covariance matrix
@@ -201,22 +221,6 @@ conditionalMoment.gls <- function(object, data, formula,
                              name.endogenous = name.endogenous,
                              n.endogenous = n.endogenous,
                              ref.group = ref.group)
-
-### ** Prepare for recovery
-    out$adjustMoment <- list(class.cor = class.cor,
-                             class.var = class.var,
-                             class.re = class(object$modelStruct$reStruct),
-                             M.corcoef = M.corcoef,
-                             n.endogenous = n.endogenous,
-                             index.lower.tri = index.lower.tri,
-                             indexArr.lower.tri = indexArr.lower.tri,
-                             var.coef = var.coef,
-                             name.varcoef = name.varcoef,
-                             name.other = name.other,
-                             n.varcoef = n.varcoef,
-                             ref.group = ref.group,
-                             cor.coef = cor.coef,
-                             name.corcoef = name.corcoef)
     
 ### ** first order
     if(first.order){
@@ -236,11 +240,14 @@ conditionalMoment.gls <- function(object, data, formula,
                                 n.cluster = n.cluster,
                                 var.coef = var.coef,
                                 name.varcoef = name.varcoef,
-                                name.other = name.other,
+                                name.otherVar = name.otherVar,
                                 n.varcoef = n.varcoef,
+                                cor.coef = cor.coef,
                                 name.corcoef = name.corcoef,
                                 n.corcoef = n.corcoef,
-                                index.Omega = index.Omega)
+                                index.Omega = index.Omega,
+                                update.mean = TRUE, update.variance = TRUE,
+                                ...) ## ... to pass coef.rancoef
         out$dmu <- outD1$dmu
         out$dOmega <- outD1$dOmega
     }
@@ -258,22 +265,10 @@ conditionalMoment.gls <- function(object, data, formula,
                                        indexArr.lower.tri = indexArr.lower.tri,
                                        var.coef = var.coef,
                                        name.varcoef = name.varcoef,
-                                       name.other = name.other,
+                                       name.otherVar = name.otherVar,
                                        n.varcoef = n.varcoef,
                                        cor.coef = cor.coef,
                                        name.corcoef = name.corcoef)
-    }else{
-        out$d2Omega.init <- list(class.cor = class.cor,
-                                 class.var = class.var,
-                                 M.corcoef = M.corcoef,
-                                 n.endogenous = n.endogenous,
-                                 index.lower.tri = index.lower.tri,
-                                 indexArr.lower.tri = indexArr.lower.tri,
-                                 var.coef = var.coef,
-                                 name.varcoef = name.varcoef,
-                                 n.varcoef = n.varcoef,
-                                 cor.coef = cor.coef,
-                                 name.corcoef = name.corcoef)
     }
     
 ### ** export
@@ -284,25 +279,18 @@ conditionalMoment.gls <- function(object, data, formula,
 ## * conditionalMoment.lme
 #' @rdname conditionalMoment
 #' @export
-conditionalMoment.lme <- function(object, attr.param, name.endogenous,
-                                  first.order, ...){
+conditionalMoment.lme <- function(object, attr.param, ...){
 
-    resGLS <- conditionalMoment.gls(object, attr.param = attr.param,
-                                    name.endogenous = name.endogenous, ...)
-        
-### ** random effect
-    if(first.order){
-        name.rancoef <- attr.param$ran.coef
-        n.endogenous <- length(name.endogenous)
-        resGLS$dOmega[[name.rancoef]] <- matrix(1, nrow = n.endogenous, ncol = n.endogenous,
-                                                dimnames = list(name.endogenous,name.endogenous)
-                                                )
-    }
-    
-### ** export
-    return(resGLS)
+    name.rancoef <- attr.param$ran.coef
+    out <- conditionalMoment.gls(object, attr.param = attr.param,
+                                 name.rancoef = name.rancoef, ...)
+
+    ##  the derivative regarding the random effect is added by skeletonDtheta.lme
+    out$name.3deriv <- c(out$name.3deriv, name.rancoef)
+    out$skeleton$class.ran <- class(object$modelStruct$reStruct)
+
+    return(out)
 }
-
 ## * conditionalMoment.lvm
 #' @rdname conditionalMoment
 #' @export
@@ -400,7 +388,7 @@ conditionalMoment.lvmfit <- function(object, data, param,
         if(object$conditionalMoment$skeleton$toUpdate["Omega"]){
             object$conditionalMoment$Omega <- getVarCov2(object)
         }
-
+        
         ## *** first order derivatives
         if(first.order){
             out <- skeletonDtheta(object,
@@ -412,9 +400,7 @@ conditionalMoment.lvmfit <- function(object, data, param,
 
         ## *** second order derivatives
         if(second.order){
-            out2 <- skeletonDtheta2(object,
-                                    name.endogenous = name.endogenous,
-                                    name.latent = name.latent)
+            out2 <- skeletonDtheta2(object)
             object$conditionalMoment$d2mu <- out2$d2mu
             object$conditionalMoment$d2Omega <- out2$d2Omega
         }

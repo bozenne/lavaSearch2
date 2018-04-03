@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (13:39) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:34) 
+## Last-Updated: apr  3 2018 (17:09) 
 ##           By: Brice Ozenne
-##     Update #: 17
+##     Update #: 26
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -63,15 +63,16 @@ df-e.ttest$parameter
 e.gls <- gls(value ~ variable, data = dLred2,
              weights = varIdent(form = ~1|variable),
              method = "ML")
-coef(e.gls)[2]-diff(e.ttest$estimate)
-sCorrect(e.gls, cluster = "Id") <- TRUE
+
+expect_equal(as.double(coef(e.gls)[2]),
+             as.double(diff(e.ttest$estimate)))
 
 test_that("t test (full data)", {
     expect_equal(unname(e.ttest$parameter),
-                 summary2(e.gls)$tTable["variableY2","df"],
+                 summary2(e.gls, cluster = "Id")$tTable["variableY2","df"],
                  tol = 1e-3)
     expect_equal(unname(e.ttest$p.value),
-                 summary2(e.gls)$tTable["variableY2","p-value"],
+                 summary2(e.gls, cluster = "Id")$tTable["variableY2","p-value"],
                  tol = 1e-5)
 })
 
@@ -79,16 +80,17 @@ test_that("t test (full data)", {
 eNA.gls <- gls(value ~ variable, data = dLred3,
                weights = varIdent(form = ~1|variable),
                method = "ML")
-coef(eNA.gls)[2]-diff(e.ttest$estimate)
 
-sCorrect(eNA.gls, cluster = "Id") <- TRUE
+expect_equal(as.double(coef(eNA.gls)[2]),
+             as.double(diff(e.ttest$estimate)))
+## getVarCov2(eNA.gls, cluster = "Id")
 
 test_that("t test (missing data)", {
     expect_equal(unname(e.ttest$parameter),
-                 summary2(eNA.gls)$tTable["variableY2","df"],
+                 summary2(eNA.gls, cluster = "Id")$tTable["variableY2","df"],
                  tol = 1e-3)
     expect_equal(unname(e.ttest$p.value),
-                 summary2(eNA.gls)$tTable["variableY2","p-value"],
+                 summary2(eNA.gls, cluster = "Id")$tTable["variableY2","p-value"],
                  tol = 1e-5)
 })
 

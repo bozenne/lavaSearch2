@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: mar 28 2018 (15:09) 
+## Last-Updated: apr  3 2018 (15:44) 
 ##           By: Brice Ozenne
-##     Update #: 980
+##     Update #: 1012
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -460,65 +460,89 @@ skeletonDtheta.gls <- function(object, class.cor, class.var, X,
                                sigma2.base0, Msigma2.base0, M.corcoef, ref.group,
                                index.lower.tri, indexArr.lower.tri,
                                name.endogenous, n.endogenous, cluster, n.cluster,
-                               var.coef, name.varcoef, name.other, n.varcoef, name.corcoef, n.corcoef,
-                               index.Omega,
+                               var.coef, name.varcoef, name.otherVar, n.varcoef,
+                               cor.coef, name.corcoef, n.corcoef,
+                               index.Omega, update.mean, update.variance,
                                ...){
 
+    out <- list()
+
     ## ** mean
-    name.X <- colnames(X)
-    dmu <- lapply(name.X, function(iCoef){ # iCoef <- name.X[1]
-        dmu.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                            dimnames = list(NULL, name.endogenous))
-        for(iC in 1:n.cluster){ ## iC <- 5
-            dmu.tempo[iC,index.Omega[[iC]]] <- X[cluster==iC,iCoef]
-        }
-     n   
-        return(dmu.tempo)
-    })
-    names(dmu) <- name.X
-
-    ## ** variance
-    dOmega <- vector(mode = "list", length = n.corcoef + n.varcoef)
-    names(dOmega) <- c(name.corcoef, name.varcoef)
-
-    ## *** dispersion coefficient
-    dOmega[["sigma2"]] <- diag(sigma2.base0, nrow = n.endogenous, ncol = n.endogenous)
-   
-    if("NULL" %in% class.cor == FALSE){
-        dOmega[["sigma2"]][index.lower.tri] <- Msigma2.base0[index.lower.tri] * cor.coef[M.corcoef[index.lower.tri]]
-        dOmega[["sigma2"]] <- symmetrize(dOmega[["sigma2"]])      
-    }
-    dimnames(dOmega[["sigma2"]]) <-  list(name.endogenous, name.endogenous)
-
-    ## *** multiplicative factors
-    if("NULL" %in% class.var == FALSE){
-
-        for(iVar in name.other){ # iVar <- name.other
-            iTest.endogenous <- ref.group %in% iVar
-            dOmega[[iVar]] <- var.coef["sigma2"]*diag(iTest.endogenous,
-                                                      nrow = n.endogenous, ncol = n.endogenous)
-
-            if("NULL" %in% class.cor == FALSE){
-                index.iVar <- which(rowSums(indexArr.lower.tri==which(iTest.endogenous))>0)
-
-                ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2*x)
-                dOmega[[iVar]][index.lower.tri[index.iVar]] <- var.coef["sigma2"]*dOmega[["sigma2"]][index.lower.tri[index.iVar]]/(2*var.coef[iVar])
-                dOmega[[iVar]] <- symmetrize(dOmega[[iVar]])
+    if(update.mean == TRUE){
+        name.X <- colnames(X)
+        out$dmu <- lapply(name.X, function(iCoef){ # iCoef <- name.X[1]
+            dmu.tempo <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                                dimnames = list(NULL, name.endogenous))
+            for(iC in 1:n.cluster){ ## iC <- 5
+                dmu.tempo[iC,index.Omega[[iC]]] <- X[cluster==iC,iCoef]
             }
+        
+            return(dmu.tempo)
+        })
+        names(out$dmu) <- name.X
+    }
+    
+    ## ** variance
+    if(update.variance == TRUE){
+        out$dOmega <- vector(mode = "list", length = n.corcoef + n.varcoef)
+        names(out$dOmega) <- c(name.corcoef, name.varcoef)
+
+        ## *** dispersion coefficient
+        out$dOmega[["sigma2"]] <- diag(sigma2.base0, nrow = n.endogenous, ncol = n.endogenous)
+   
+        if("NULL" %in% class.cor == FALSE){
+            out$dOmega[["sigma2"]][index.lower.tri] <- Msigma2.base0[index.lower.tri] * cor.coef[M.corcoef[index.lower.tri]]
+            out$dOmega[["sigma2"]] <- symmetrize(out$dOmega[["sigma2"]])      
+        }
+        dimnames(out$dOmega[["sigma2"]]) <-  list(name.endogenous, name.endogenous)
+
+        ## *** multiplicative factors
+        if("NULL" %in% class.var == FALSE){
+
+            for(iVar in name.otherVar){ # iVar <- name.otherVar
+                iTest.endogenous <- ref.group %in% iVar
+                out$dOmega[[iVar]] <- var.coef["sigma2"]*diag(iTest.endogenous,
+                                                              nrow = n.endogenous, ncol = n.endogenous)
+
+                if("NULL" %in% class.cor == FALSE){
+                    index.iVar <- which(rowSums(indexArr.lower.tri==which(iTest.endogenous))>0)
+
+                    ##  d sqrt(x) / d x = 1/(2 sqrt(x)) = sqrt(x) / (2*x)
+                    out$dOmega[[iVar]][index.lower.tri[index.iVar]] <- var.coef["sigma2"]*out$dOmega[["sigma2"]][index.lower.tri[index.iVar]]/(2*var.coef[iVar])
+                    out$dOmega[[iVar]] <- symmetrize(out$dOmega[[iVar]])
+                }
             
-            dimnames(dOmega[[iVar]]) <- list(name.endogenous, name.endogenous)            
+                dimnames(out$dOmega[[iVar]]) <- list(name.endogenous, name.endogenous)            
+            }
+        }
+    
+        ## ** correlation
+        if("NULL" %in% class.cor == FALSE){
+            for(iVar in name.corcoef){
+                out$dOmega[[iVar]] <- Msigma2.base0 * var.coef["sigma2"] * (M.corcoef==iVar)
+            }
         }
     }
     
-    ## ** correlation
-    if("NULL" %in% class.cor == FALSE){
-        for(iVar in name.corcoef){
-            dOmega[[iVar]] <- Msigma2.base0 * var.coef["sigma2"] * (M.corcoef==iVar)
-        }
-    }
-
     ### ** export
-    return(list(dmu = dmu, dOmega = dOmega))
+    return(out)
+}
+
+## * skeletonDtheta.lme
+#' @rdname skeleton
+skeletonDtheta.lme <- function(object, name.endogenous, n.endogenous,
+                               name.rancoef, ...){
+
+    out <- skeletonDtheta.gls(object,
+                              name.endogenous = name.endogenous,
+                              n.endogenous = n.endogenous,
+                              ...)
+
+    out$dOmega[[name.rancoef]] <- matrix(1, nrow = n.endogenous, ncol = n.endogenous,
+                                         dimnames = list(name.endogenous,name.endogenous)
+                                         )
+
+    return(out)
 }
 
 ## * skeletonDtheta.lvm
@@ -742,64 +766,68 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
     function(object, ...) UseMethod("skeletonDtheta2")
 
 ## * skeletonDtheta2.gls
-skeletonDtheta2.gls <- function(object, dOmega,
+#' @rdname skeleton
+skeletonDtheta2.gls <- function(object, dOmega = NULL,
                                 class.cor = NULL, class.var = NULL,
                                 M.corcoef = NULL, n.endogenous = NULL,
                                 index.lower.tri = NULL, indexArr.lower.tri = NULL,
-                                var.coef = NULL, name.other = NULL, name.varcoef = NULL, n.varcoef = NULL,
+                                var.coef = NULL, name.otherVar = NULL, name.varcoef = NULL, n.varcoef = NULL,
                                 cor.coef = NULL, name.corcoef = NULL,
                                 ...){
 
     ## ** import information
+    if(is.null(dOmega)){
+        dOmega <- object$conditionalMoment$dOmega
+    }
     if(is.null(class.cor)){
-        class.cor <- object$conditionalMoment$d2Omega.init$class.cor
+        class.cor <- object$conditionalMoment$skeleton$class.cor
     }
     if(is.null(class.var)){
-        class.var <- object$conditionalMoment$d2Omega.init$class.var
+        class.var <- object$conditionalMoment$skeleton$class.var
     }
     if(is.null(M.corcoef)){
-        M.corcoef <- object$conditionalMoment$d2Omega.init$M.corcoef
+        M.corcoef <- object$conditionalMoment$skeleton$M.corcoef
     }
     if(is.null(n.endogenous)){
-        n.endogenous <- object$conditionalMoment$d2Omega.init$n.endogenous
+        n.endogenous <- object$conditionalMoment$skeleton$n.endogenous
     }
     if(is.null(index.lower.tri)){
-        index.lower.tri <- object$conditionalMoment$d2Omega.init$index.lower.tri
+        index.lower.tri <- object$conditionalMoment$skeleton$index.lower.tri
     }
     if(is.null(indexArr.lower.tri)){
-        indexArr.lower.tri <- object$conditionalMoment$d2Omega.init$indexArr.lower.tri
+        indexArr.lower.tri <- object$conditionalMoment$skeleton$indexArr.lower.tri
     }
     if(is.null(var.coef)){
-        var.coef <- object$conditionalMoment$d2Omega.init$var.coef
+        var.coef <- object$conditionalMoment$skeleton$var.coef
     }
     if(is.null(name.varcoef)){
-       name.varcoef <- object$conditionalMoment$d2Omega.init$name.varcoef
+       name.varcoef <- object$conditionalMoment$skeleton$name.varcoef
     }
-    if(is.null(name.other)){
-        name.other <- object$conditionalMoment$d2Omega.init$name.other
+    if(is.null(name.otherVar)){
+        name.otherVar <- object$conditionalMoment$skeleton$name.otherVar
     }
     if(is.null(n.varcoef)){
-       n.varcoef <- object$conditionalMoment$d2Omega.init$n.varcoef
+       n.varcoef <- object$conditionalMoment$skeleton$n.varcoef
     }
     if(is.null(cor.coef)){
-        cor.coef <- object$conditionalMoment$d2Omega.init$cor.coef
+        cor.coef <- object$conditionalMoment$skeleton$cor.coef
     }
     if(is.null(name.corcoef)){
-       name.corcoef <- object$conditionalMoment$d2Omega.init$name.corcoef
+       name.corcoef <- object$conditionalMoment$skeleton$name.corcoef
     }
-    d2Omega <- list()
+    out <- list(d2Omega = list(), d2mu = NULL)
 
     ## ** derivative: dispersion parameter with other variance parameter
     if("NULL" %in% class.var == FALSE){
-        for(iVar in name.other){ ## iVar <- name.other[1]
-            d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
+        for(iVar in name.otherVar){ ## iVar <- name.otherVar[1]
+            out$d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
         }
     }
 
     ## ** derivative: dispersion parameter with correlation parameters
     if("NULL" %in% class.cor == FALSE){
         for(iVar in name.corcoef){
-            d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
+            out$d2Omega[["sigma2"]][[iVar]] <- dOmega[[iVar]]/var.coef["sigma2"]
         }
     }
 
@@ -809,7 +837,7 @@ skeletonDtheta2.gls <- function(object, dOmega,
         M.corvalue[index.lower.tri] <- cor.coef[M.corcoef[index.lower.tri]]
         M.corvalue <- symmetrize(M.corvalue, update.upper = TRUE)
 
-            for(iVar1 in name.other){ ## iVar <- name.other[1]
+            for(iVar1 in name.otherVar){ ## iVar <- name.otherVar[1]
 
                 iIndex.var1 <- which(name.varcoef == iVar1)
                 
@@ -830,7 +858,7 @@ skeletonDtheta2.gls <- function(object, dOmega,
                     M.tempo[index.lower.tri[index0]] <- 0
                     M.tempo <- symmetrize(M.tempo, update.upper = TRUE)
 
-                    d2Omega[[iVar1]][[iVar2]] <- M.tempo
+                    out$d2Omega[[iVar1]][[iVar2]] <- M.tempo
                 }                
                 
                 ## var cor
@@ -838,17 +866,22 @@ skeletonDtheta2.gls <- function(object, dOmega,
                     M.tempo <- dOmega[[iVar1]]/M.corvalue
                     M.tempo[M.corcoef!=iVar2] <- 0
                     if(any(M.tempo!=0)){
-                        d2Omega[[iVar1]][[iVar2]] <- M.tempo
+                        out$d2Omega[[iVar1]][[iVar2]] <- M.tempo
                     }
                 }
 
             }
     }
 
-    return(d2Omega)
+    return(out)
 }
 
+## * skeletonDtheta2.lme
+#' @rdname skeleton
+skeletonDtheta2.lme <- skeletonDtheta2.gls
+
 ## * skeletonDtheta2.lm
+#' @rdname skeleton
 skeletonDtheta2.lm <- function(object, ...){
     return(list(d2mu = NULL, d2Omega = NULL))    
 }
@@ -1058,10 +1091,10 @@ skeletonDtheta2.lvm <- function(object, data, df.param.all,
 
 ## * skeletonDtheta2.lvmfit
 #' @rdname skeleton
-skeletonDtheta2.lvmfit <- function(object, name.endogenous, name.latent, ...){
+skeletonDtheta2.lvmfit <- function(object, ...){
     
 ### ** Import information
-    n.endogenous <- length(name.endogenous)
+    n.endogenous <- NCOL(object$conditionalMoment$Omega)
 
     ## from Moment
     Psi <- object$conditionalMoment$value$Psi

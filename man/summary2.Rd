@@ -3,6 +3,7 @@
 \name{summary2}
 \alias{summary2}
 \alias{summary2.gls}
+\alias{summary2.lm2}
 \alias{summary2.gls2}
 \alias{summary2.lme2}
 \alias{summary2.lvmfit2}
@@ -11,6 +12,9 @@
 summary2(object, ...)
 
 \method{summary2}{gls}(object, bias.correct = TRUE, cluster = NULL, ...)
+
+\method{summary2}{lm2}(object, digit = max(3, getOption("digit")),
+  robust = FALSE, ...)
 
 \method{summary2}{gls2}(object, digit = max(3, getOption("digit")),
   robust = FALSE, ...)

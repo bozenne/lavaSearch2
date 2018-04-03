@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:34) 
+## Last-Updated: apr  3 2018 (17:46) 
 ##           By: Brice Ozenne
-##     Update #: 40
+##     Update #: 51
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -53,16 +53,16 @@ e.lm <- lm(Y1~X1+X2, data = d)
 ## ** iid2 matches clubSandwich
 test_that("iid2.lm/iid2.lvm matches clubSandwich", {
     V.GS <- clubSandwich::vcovCR(e.lm, type = "CR2", cluster = d$Id)
-
+    
     eHC2.iid2.lm <- iid2(e.lm, bias.correct = TRUE)
     V.lm <- crossprod(eHC2.iid2.lm)
 
-    expect_equal(as.matrix(V.GS),
-                 V.lm[rownames(V.GS),colnames(V.GS)],
-                 tol = 1e-7)
-    ## a <- sCorrect(e.lm,adjust.n=TRUE,adjust.Omega=TRUE, n.iter = 1)$Omega 
-    ## b <- sCorrect(e.lm,adjust.n=FALSE,adjust.Omega=FALSE)$Omega
-    ## a/b
+    ## no more equal to clubSandwich since version 1.2.1 
+    ## > lavaSearch2 uses the average bias to correct the residuals instead of the individual bias
+    
+    ## expect_equal(as.matrix(V.GS),
+    ##              V.lm[rownames(V.GS),colnames(V.GS)],
+    ##              tol = 1e-7)
 })
 
 
@@ -113,7 +113,10 @@ test_that("iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.gls, type = "CR2", cluster = dLred$Id) * factor^2
-    expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-5)
+
+    ## no more equal to clubSandwich since version 1.2.1 
+    ## > lavaSearch2 uses the average bias to correct the residuals instead of the individual bias
+    ## expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-5)
 })
 
 ## * mixed model: CS [lvm,gls,lme]
@@ -180,7 +183,9 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.gls <- crossprod(iid2HC2.gls)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.gls, type = "CR2", cluster = dLred$Id) * factor^2
-    expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-10)
+    ## no more equal to clubSandwich since version 1.2.1 
+    ## > lavaSearch2 uses the average bias to correct the residuals instead of the individual bias
+    ## expect_equal(as.double(GS),as.double(VHC2.gls), tolerance = 1e-10)
 })
 
 ## * mixed model: CS with different variances [lvm,gls]
@@ -240,7 +245,9 @@ test_that("iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.lme <- crossprod(iid2HC2.lme)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-5)
+    ## no more equal to clubSandwich since version 1.2.1 
+    ## > lavaSearch2 uses the average bias to correct the residuals instead of the individual bias
+    ## expect_equal(as.double(GS),as.double(VHC2.lme), tolerance = 1e-5)
 })
 
 
@@ -294,7 +301,7 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC0-HC1)", {
 
 ## ** HC2
 iid2HC2.gls <- iid2(e.gls, bias.correct = TRUE, n.iter = 1)
-## iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1)
+expect_error(iid2HC2.lme <- iid2(e.lme, bias.correct = TRUE, n.iter = 1))
 ## does not work because the model is overparametrized
 iid2HC2.lvm <- iid2(e.lvm, bias.correct = TRUE, n.iter = 1)
 
@@ -305,7 +312,9 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
     VHC2.lvm <- crossprod(iid2HC2.lvm)[index.coef,index.coef]
     GS <- clubSandwich::vcovCR(e.lme, type = "CR2", cluster = dLred$Id)
-    expect_equal(as.double(GS),as.double(VHC2.lvm), tolerance = 1e-5)
+    ## no more equal to clubSandwich since version 1.2.1 
+    ## > lavaSearch2 uses the average bias to correct the residuals instead of the individual bias
+    ## expect_equal(as.double(GS),as.double(VHC2.lvm), tolerance = 1e-5)
 })
 
 

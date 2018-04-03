@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: mar 28 2018 (16:16) 
+## Last-Updated: apr  3 2018 (18:28) 
 ##           By: Brice Ozenne
-##     Update #: 1098
+##     Update #: 1224
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,6 +38,8 @@
 #' @param score [internal] export the score.
 #' @param ... [internal] only used by the generic method or by the <- methods.
 #'
+#' @details The argument \code{value} is equivalent to the argument \code{bias.correct} of the function \code{summary2}.
+#' 
 #' @concept small sample inference
 #' @concept derivative of the score equation
 #' n <- 5e1
@@ -54,18 +56,18 @@
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
 #' system.time(
-#' sCorrect(e.lm) <- TRUE
+#' sCorrect(e.lm) <- TRUE ## i.e. bias.correct = TRUE
 #')
 #' 
 #' ## gls model
 #' library(nlme)
 #' e.gls <- gls(formula.lvm, data = d, method = "ML")
-#' sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE
+#' sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE ## i.e. bias.correct = TRUE
 #' summary2(e.gls)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' sCorrect(e.lvm) <- TRUE
+#' sCorrect(e.lvm) <- TRUE ## i.e. bias.correct = TRUE
 #' summary2(e.lvm)
 #' 
 #' @export
@@ -146,6 +148,12 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                  df = df,
                  numeric.derivative = numeric.derivative,
                  tol = tol, n.iter = n.iter)
+
+    if(df && numeric.derivative){
+        argsNumDeriv <- list(data=data)
+    }else{
+        argsNumDeriv <- list()
+    }
     
 ### ** correction
     if(df == FALSE){
@@ -157,7 +165,6 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     }
 
     out <- .sCorrect(object,
-                     data = data,
                      param = model.param,
                      epsilon = object.residuals,
                      name.param = name.param,
@@ -167,6 +174,7 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      score = score,
                      derivative = derivative,
                      args = args,
+                     argsNumDeriv = argsNumDeriv,
                      trace = trace,
                      ...)
     
@@ -189,7 +197,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                          param = NULL, data = NULL,
                          tol = 1e-5, n.iter = 20, trace = 0,
                          ...){
-
 ### ** limitations
     if(object$method!="ML"){
         if(adjust.Omega==TRUE || adjust.n == TRUE){
@@ -201,6 +208,8 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     
     ## check valid class for corStruct and varStruct: see .getVarCov2
 ### ** Extract quantities from the model
+
+    
     ## *** data
     if(is.null(data)){
         data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
@@ -210,7 +219,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     ## *** endogenous variable
     formula.object <- .getFormula2(object)
     name.Y <- all.vars(stats::update(formula.object, ".~1"))
-    Y <- data[[name.Y]]
     
     ## *** parameters
     model.param <- .coef2(object)
@@ -241,11 +249,18 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("- done \n")
     }
 
+    if(df && numeric.derivative){
+        ## data before re-ordering
+        argsNumDeriv <- list(data = data,
+                             cluster = cluster)
+    }else{
+        argsNumDeriv <- NULL
+    }
+    
     ## *** repetition relative to each observation
     if(trace>0){
         cat("* Relate observations to endogenous variables ")
     }
-    
     res.index <- .getIndexOmega2(object,
                                  param = model.param,
                                  attr.param = attributes(model.param),
@@ -256,12 +271,30 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     name.endogenous <- res.index$name.endogenous
     n.endogenous <- res.index$n.endogenous
     index.Omega <- res.index$index.Omega
-    vec.OmegaMat <- unlist(sapply(1:n.cluster, function(iC){
-        index.Omega[[iC]]+n.endogenous*(iC-1)
-    }))
-    
     if(trace>0){
         cat("- done \n")
+    }
+
+    ## *** sort data by group
+    vec.OmegaMat <- rep(NA, length(cluster))
+    vec.endogenous <- rep(NA, length(cluster))
+    count <- 0
+    for(iC in 1:n.cluster){
+        iNobs.cluster <- length(index.Omega[[iC]])
+        vec.endogenous[cluster==iC] <- index.Omega[[iC]]
+        ## for vector format to matrix format (for residuals and fitted values)
+        vec.OmegaMat[count + 1:iNobs.cluster] <- iC + (index.Omega[[iC]]-1)*n.cluster
+        count <- count + iNobs.cluster
+    }
+    
+    order.obs <- order(cluster,vec.endogenous)
+    if(is.unsorted(order.obs)==TRUE){
+        data <- data[order.obs,,drop=FALSE]
+        cluster <- cluster[order.obs]        
+    }
+    order.cluster <- order(res.cluster$levels.cluster)
+    if(is.unsorted(order.cluster)==TRUE){
+        index.Omega <- index.Omega[order.cluster]
     }
 
 ### ** Compute conditional moments and derivatives
@@ -290,17 +323,18 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("* Extract residuals ")
     }
-    epsilon <- t(matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                        dimnames = list(NULL, name.endogenous)))
-    ## transpose necessary because of the way index.OmegaMat was computed
-    epsilon[vec.OmegaMat] <- Y - t(object$conditionalMoment$mu)[vec.OmegaMat]
-    epsilon <- t(epsilon)
+    epsilon <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                      dimnames = list(NULL, name.endogenous))
+    epsilon[vec.OmegaMat] <- data[[name.Y]]
+    epsilon <- epsilon -  object$conditionalMoment$mu
     
     if(trace>0){
         cat("- done \n")
     }
     ## stats::residuals(object)-na.omit(as.double(t(epsilon)))
-    
+    ## epsilon + object$conditionalMoment$mu
+    ## data
+    ## as.double(stats::residuals(object))
     ## ** Check missing value
     if(all(!is.na(epsilon))){
         index.Omega <- NULL
@@ -310,10 +344,9 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     args <- list(adjust.Omega = adjust.Omega,
                  adjust.n = adjust.n,                     
                  df = df,
-                 cluster = cluster,
                  numeric.derivative = numeric.derivative,
                  tol = tol, n.iter = n.iter)
-    
+                 
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -322,9 +355,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     }else{
         derivative <- "analytic"
     }
-
     out <- .sCorrect(object,
-                     data = data,
                      param = model.param,
                      epsilon = epsilon,
                      name.param = name.param,
@@ -334,10 +365,19 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
                      score = score,
                      derivative = derivative,
                      args = args,
+                     argsNumDeriv = argsNumDeriv,
                      trace = trace,
                      ...)
     
-    ## ** export    
+    ## ** export
+    ## *** restaure original order
+    if(is.unsorted(order.cluster)==TRUE){
+        old.order.cluster <- order(order.cluster)
+        out$score <- out$score[old.order.cluster,,drop=FALSE]
+        out$residuals <- out$residuals[old.order.cluster,,drop=FALSE]
+        out$leverage <- out$leverage[old.order.cluster,,drop=FALSE]
+    }    
+    ##
     return(out)          
  
 }
@@ -472,7 +512,12 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                  df = df,
                  numeric.derivative = numeric.derivative,
                  tol = tol, n.iter = n.iter)
-
+    if(df && numeric.derivative){
+        argsNumDeriv <- list(data = data)
+    }else{
+        argsNumDeriv <- list()
+    }
+    
 ### ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -483,7 +528,6 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     }
 
     out <- .sCorrect(object,
-                     data = data,
                      param = model.param,
                      epsilon = epsilon,
                      name.param = name.param,
@@ -493,6 +537,7 @@ sCorrect.lvmfit <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                      score = score,
                      derivative = derivative,
                      args = args,
+                     argsNumDeriv = argsNumDeriv,
                      trace = trace,
                      ...)
 
@@ -508,10 +553,10 @@ sCorrect.lvmfit2 <- function(object, ...){
     return(sCorrect(object, ...))    
 }
 ## * .sCorrect
-.sCorrect <- function(object, data, param, epsilon, 
+.sCorrect <- function(object, param, epsilon, 
                       name.param, name.endogenous, 
                       n.cluster, index.Omega,
-                      score, derivative, args, trace){
+                      score, derivative, args, argsNumDeriv, trace){
 
     n.param <- length(param)
     if(!is.null(index.Omega)){
@@ -597,12 +642,13 @@ sCorrect.lvmfit2 <- function(object, ...){
         if(trace>0){
             cat("Compute first derivative of the information matrix using numerical differentiation ")
         }
-        if(adjust.Omega || adjust.n){
+        if(args$adjust.Omega || args$adjust.n){
             warning("The numerical derivative of the information matrix is computed ignoring the small sample correction \n")
         }
 
         args.tempo <- args
-        args.tempo$data <- data
+        args.tempo$data <- argsNumDeriv$data
+        args.tempo$cluster <- argsNumDeriv$cluster
         args.tempo$df <- FALSE
         args.tempo$score <- FALSE
 
@@ -610,10 +656,10 @@ sCorrect.lvmfit2 <- function(object, ...){
         calcVcov <- function(iParam){ # x <- p.obj
             pp <- param
             pp[names(iParam)] <- iParam
-            
             vcov.param <- do.call(sCorrect,
                                   args = c(list(object, param = pp), args.tempo))$vcov.param
             return(vcov.param)
+            ## return(solve(vcov.param))
         }
 
         ### *** numerical derivative
@@ -638,10 +684,8 @@ sCorrect.lvmfit2 <- function(object, ...){
         }
 
         ## update conditional moments
-        resD2 <- skeletonDtheta2(object,
-                                 name.endogenous = name.endogenous,
-                                 name.latent = name.latent)
-        
+        resD2 <- skeletonDtheta2(object)
+
         dInfo.dtheta <- .dInformation2(dmu = object$conditionalMoment$dmu,
                                        d2mu = resD2$d2mu,
                                        dOmega = object$conditionalMoment$dOmega,
@@ -658,7 +702,8 @@ sCorrect.lvmfit2 <- function(object, ...){
         object$dVcov$dVcov.param <- array(NA, dim = dim(dInfo.dtheta), dimnames = dimnames(dInfo.dtheta))
         
         for(iP in 1:p3){
-            object$dVcov$dVcov.param[,,iP] <- - object$dVcov$vcov.param %*% dInfo.dtheta[,,iP] %*% object$dVcov$vcov.param 
+            object$dVcov$dVcov.param[,,iP] <- - object$dVcov$vcov.param %*% dInfo.dtheta[,,iP] %*% object$dVcov$vcov.param
+            ## object$dVcov$dVcov.param[,,iP] <- dInfo.dtheta[,,iP]
         }
 
         if(trace>0){

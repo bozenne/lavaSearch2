@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:55) 
 ## Version: 
-## Last-Updated: mar 27 2018 (10:25) 
+## Last-Updated: apr  3 2018 (16:19) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 7
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -113,12 +113,12 @@ getVarCov2.gls <- function(object, data = NULL, cluster, ...){
     ## ** extractors   
     res.cluster <- .getCluster2(object, data = data, cluster = cluster)
     res.param <- .coef2(object)
-
     res.index <- .getIndexOmega2(object,
                                  param = res.param,
                                  attr.param = attributes(res.param),
                                  name.Y = name.Y,
                                  cluster = res.cluster$cluster,
+                                 levels.cluster = res.cluster$levels.cluster,
                                  data = data)
     res.Omega <- .getVarCov2(object,
                              param = res.param,

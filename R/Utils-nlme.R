@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 15 2017 (17:29) 
 ## Version: 
-## Last-Updated: mar 28 2018 (10:09) 
+## Last-Updated: apr  3 2018 (18:02) 
 ##           By: Brice Ozenne
-##     Update #: 577
+##     Update #: 605
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -166,7 +166,7 @@
             if(cluster %in% names(data) == FALSE){
                 stop("Variable \"",cluster,"\" not in data \n")
             }
-            cluster <- as.numeric(as.factor(data[[cluster]]))
+            cluster <- as.numeric(factor(data[[cluster]], levels = unique(data[[cluster]])))
         }else if(length(cluster)==NROW(data)){
             cluster <- as.numeric(as.factor(cluster))
         }else{
@@ -313,7 +313,6 @@
             })))
             test.duplicated <- TRUE
         }
-
         ## recover order
         if(("NULL" %in% class.var == FALSE) && all(test.duplicated==FALSE)){
             ## from varIdent when no missing values
@@ -337,12 +336,10 @@
             }
         }
     }
-
     attr(object$modelStruct$varStruct,"groupNames")
     attr(object$modelStruct$varStruct,"groups")
 
     ## ** Normalize index.Omega
-    index.Omega <- index.Omega[levels.cluster]
     if(norm){
         level.index <- unique(unlist(index.Omega))
         convertion <- setNames(order(level.index), level.index)

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: mar 28 2017 (17:33) 
+## Last-Updated: apr  3 2018 (14:19) 
 ##           By: Brice Ozenne
-##     Update #: 11
+##     Update #: 15
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,7 +50,7 @@ test_that("linear regression - no constrains",{
     e.lvm$conditionalMoment <- conditionalMoment(e.lvm,
                                                  data = d,
                                                  param = coef(e.lvm),
-                                                 first.order = FALSE,
+                                                 first.order = TRUE,
                                                  second.order = FALSE,
                                                  usefit = TRUE)    
     solution <- .adjustMoment(e.lvm, Omega = Omega)
@@ -69,7 +69,7 @@ test_that("linear regression - constrains and covariance",{
     e.lvm$conditionalMoment <- conditionalMoment(e.lvm,
                                                  data = d,
                                                  param = coef(e.lvm),
-                                                 first.order = FALSE,
+                                                 first.order = TRUE,
                                                  second.order = FALSE,
                                                  usefit = TRUE)    
     solution <- .adjustMoment(e.lvm, Omega = Omega)
@@ -85,12 +85,13 @@ m <- lvm(Y1~eta,
          eta~X1+X3)
 e.lvm <- estimate(m, d)
 
+sCorrect(e.lvm) <- TRUE
 test_that("factor model",{
     Omega <- getVarCov2(e.lvm)
     e.lvm$conditionalMoment <- conditionalMoment(e.lvm,
                                                  data = d,
                                                  param = coef(e.lvm),
-                                                 first.order = FALSE,
+                                                 first.order = TRUE,
                                                  second.order = FALSE,
                                                  usefit = TRUE)    
     solution <- .adjustMoment(e.lvm, Omega = Omega)
@@ -111,7 +112,7 @@ test_that("two factor model - correlation",{
     e.lvm$conditionalMoment <- conditionalMoment(e.lvm,
                                                  data = d,
                                                  param = coef(e.lvm),
-                                                 first.order = FALSE,
+                                                 first.order = TRUE,
                                                  second.order = FALSE,
                                                  usefit = TRUE)    
     solution <- .adjustMoment(e.lvm, Omega = Omega)
@@ -131,7 +132,7 @@ test_that("two factor model - covariance",{
     e.lvm$conditionalMoment <- conditionalMoment(e.lvm,
                                                  data = d,
                                                  param = coef(e.lvm),
-                                                 first.order = FALSE,
+                                                 first.order = TRUE,
                                                  second.order = FALSE,
                                                  usefit = TRUE)    
     solution <- .adjustMoment(e.lvm, Omega = Omega)

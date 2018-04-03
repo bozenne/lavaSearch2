@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  8 2018 (14:56) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:34) 
+## Last-Updated: apr  3 2018 (18:26) 
 ##           By: Brice Ozenne
-##     Update #: 45
+##     Update #: 49
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -150,9 +150,11 @@ test_that("multiple linear regression: Satterthwaite", {
     expect_equal(as.double(test.lvm[grep("Y3",name.coef.lvm),grep("Y3",name.coef.lvm),"Y3~~Y3"]),
                  as.double(GS[[3]]))
 
-    test.gls <- sCorrect(e.gls, adjust.Omega = FALSE, adjust.n = FALSE, numeric.derivative = FALSE, score = FALSE, cluster = "Id")$dVcov.param
-    GS.gls <- sCorrect(e.gls, adjust.Omega = FALSE, adjust.n = FALSE, numeric.derivative = TRUE, score = FALSE, cluster = "Id")$dVcov.param
-    expect_equal(test.gls, GS.gls)
+    test.gls <- sCorrect(e.gls, adjust.Omega = FALSE, adjust.n = FALSE,
+                         numeric.derivative = FALSE, score = FALSE, cluster = "Id")$dVcov.param
+    GS.gls <- sCorrect(e.gls, adjust.Omega = FALSE, adjust.n = FALSE,
+                       numeric.derivative = TRUE, score = FALSE, cluster = "Id")$dVcov.param
+    expect_equal(test.gls, GS.gls)    
 })
 
 test_that("multiple linear regression: Satterthwaite + small sample correction", {
