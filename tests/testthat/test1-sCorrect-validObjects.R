@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: apr  3 2018 (16:22) 
+## Last-Updated: apr  4 2018 (14:20) 
 ##           By: Brice Ozenne
-##     Update #: 48
+##     Update #: 58
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,16 +16,15 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R    
     library(testthat)
     library(lavaSearch2)
 }
 library(data.table)
-library(lava.tobit)
 library(nlme)
 lava.options(symbols = c("~","~~"))
-context("sCorrect: warnings and errors for invalid objects/arguments")
+context("sCorrect (warnings and errors for invalid objects/arguments)")
 
 ## * Simulation
 n <- 100
@@ -39,17 +38,19 @@ d <- lava::sim(m.sim,n,latent=FALSE)
 
 ## ** error for multigroup lvm
 ## check in sCorrect.R 
-e <- estimate(list(lvm(Y~X1),lvm(Y~X1),lvm(Y~X1)), data = split(d,d$G))
+suppressWarnings(e <- estimate(list(lvm(Y~X1),lvm(Y~X1),lvm(Y~X1)), data = split(d,d$G)))
 test_that("error for multigroup models", {
     expect_error(sCorrect(e))
 })
 
 ## ** error for tobit lvm
 ## check in sCorrect.R
-e <- estimate(lvm(G~X1), data = d)
-test_that("error for tobit models", {
-    expect_error(sCorrect(e))
-})
+if(require(lava.tobit)){
+    e <- estimate(lvm(G~X1), data = d)
+    test_that("error for tobit models", {
+        expect_error(sCorrect(e))
+    })
+}
 
 ## ** error for lvm with transform variables
 ## check in sCorrect.R
@@ -78,8 +79,7 @@ test_that("warning when using nlme with REML and Satterthwaite", {
     expect_warning(sCorrect(e, score = FALSE, df = FALSE, trace = 0) <- FALSE)
 })
 
-
-## ** error for the small sample correction estimated with REML
+## ** warning for the small sample correction estimated with REML
 ## check in sCorrect.R
 e <- gls(Y~X1, data = d, correlation = corCompSymm(form =~1|G))
 test_that("warning when using nlme with REML and small sample correction", {
@@ -107,8 +107,6 @@ test_that("error when using nlme with non standard variance", {
     expect_error(sCorrect(e, cluster = 1:NROW(d), trace = 0))
 })
 
-##----------------------------------------------------------------------
-### test1-sCorrect-validObjects.R ends here
 
 ## * sCorrect with data.table
 
@@ -117,3 +115,7 @@ test_that("ok for data.table objects", {
     sCorrect(e) <- FALSE
     sCorrect(e) <- TRUE
 })
+
+##----------------------------------------------------------------------
+### test1-sCorrect-validObjects.R ends here
+

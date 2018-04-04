@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: apr  3 2018 (17:49) 
+## Last-Updated: apr  4 2018 (14:19) 
 ##           By: Brice Ozenne
-##     Update #: 52
+##     Update #: 56
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -62,6 +62,7 @@ test_that("invariant to the order in the dataset", {
 e.gls <- nlme::gls(value ~ time + G + Gender,
                    weights = varIdent(form =~ 1|time),
                    data = dL, method = "ML")
+
 test_that("Heteroschedasticity", {
     vec.sigma <- c(1,coef(e.gls$modelStruct$varStruct, unconstrained = FALSE))
     expect_equal(diag(vec.sigma^2 * sigma(e.gls)^2),

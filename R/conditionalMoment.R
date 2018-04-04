@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: apr  3 2018 (17:44) 
+## last-updated: apr  4 2018 (09:52) 
 ##           By: Brice Ozenne
-##     Update #: 1128
+##     Update #: 1132
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -129,7 +129,6 @@ conditionalMoment.gls <- function(object, data, formula,
         stop("Cannot pre-compute quantities for the second order derivatives ",
              "without those for the first order derivatives \n")
     }
-
 ### ** prepare
 
     ## *** coefficients

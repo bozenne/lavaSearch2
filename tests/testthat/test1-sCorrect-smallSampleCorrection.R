@@ -1,11 +1,11 @@
-### test1-sCorrect-clubSandwich.R --- 
+### test1-sCorrect-smallSampleCorrection.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: apr  3 2018 (17:46) 
+## Last-Updated: apr  4 2018 (14:20) 
 ##           By: Brice Ozenne
-##     Update #: 51
+##     Update #: 55
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -29,7 +29,7 @@ calcFactor <- function(object){
     return((object$dims$N - object$dims$p)/(object$dims$N - object$dims$p * (object$method == "REML")))
 }
 
-context("sCorrect: replicate clubSandwich results")
+context("sCorrect (Satterthwaite + small sample correction)")
 
 ## * simulation
 n <- 5e1
@@ -319,4 +319,4 @@ test_that("iid2.gls/iid2.lme/iid2.lvm matches clubSandwich (HC2)", {
 
 
 ##----------------------------------------------------------------------
-### test1-sCorrect-clubSandwich.R ends here
+### test1-sCorrect-smallSampleCorrection.R ends here

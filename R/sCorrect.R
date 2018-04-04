@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: apr  3 2018 (18:28) 
+## Last-Updated: apr  4 2018 (12:28) 
 ##           By: Brice Ozenne
-##     Update #: 1224
+##     Update #: 1262
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -209,7 +209,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     ## check valid class for corStruct and varStruct: see .getVarCov2
 ### ** Extract quantities from the model
 
-    
     ## *** data
     if(is.null(data)){
         data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
@@ -249,12 +248,18 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         cat("- done \n")
     }
 
+    ## data before re-ordering
+    args <- list(adjust.Omega = adjust.Omega,
+                 adjust.n = adjust.n,                     
+                 df = df,
+                 numeric.derivative = numeric.derivative,
+                 tol = tol, n.iter = n.iter,
+                 cluster = cluster) ## for score2
+
     if(df && numeric.derivative){
-        ## data before re-ordering
-        argsNumDeriv <- list(data = data,
-                             cluster = cluster)
+        argsNumDeriv <- list(data = data)
     }else{
-        argsNumDeriv <- NULL
+        argsNumDeriv <- list()
     }
     
     ## *** repetition relative to each observation
@@ -274,28 +279,28 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("- done \n")
     }
-
+  
     ## *** sort data by group
-    vec.OmegaMat <- rep(NA, length(cluster))
     vec.endogenous <- rep(NA, length(cluster))
-    count <- 0
     for(iC in 1:n.cluster){
-        iNobs.cluster <- length(index.Omega[[iC]])
-        vec.endogenous[cluster==iC] <- index.Omega[[iC]]
-        ## for vector format to matrix format (for residuals and fitted values)
-        vec.OmegaMat[count + 1:iNobs.cluster] <- iC + (index.Omega[[iC]]-1)*n.cluster
-        count <- count + iNobs.cluster
+        vec.endogenous[cluster==iC] <- index.Omega[[res.cluster$levels.cluster[iC]]]
     }
-    
     order.obs <- order(cluster,vec.endogenous)
     if(is.unsorted(order.obs)==TRUE){
         data <- data[order.obs,,drop=FALSE]
-        cluster <- cluster[order.obs]        
+        cluster <- cluster[order.obs]
+        vec.endogenous <- vec.endogenous[order.obs]
     }
-    order.cluster <- order(res.cluster$levels.cluster)
-    if(is.unsorted(order.cluster)==TRUE){
-        index.Omega <- index.Omega[order.cluster]
+    test.reorder <- is.unsorted(res.cluster$levels.cluster)
+    if(test.reorder==TRUE){
+        index.Omega <- index.Omega[res.cluster$levels.cluster]
     }
+    ## for vector format to matrix format (for residuals and fitted values)
+    vec.OmegaMat <- cluster + (vec.endogenous-1)*n.cluster
+    
+    ## M.check <- matrix(NA, nrow = n.cluster, ncol = n.endogenous)
+    ## M.check[vec.endogenous + (cluster-1)*n.endogenous] <- data[["G"]]
+    ## M.check[cluster + (vec.endogenous-1)*n.cluster] <- data[["G"]]
 
 ### ** Compute conditional moments and derivatives
     if(trace>0){
@@ -340,13 +345,6 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
         index.Omega <- NULL
     }
     
-    ## ** args
-    args <- list(adjust.Omega = adjust.Omega,
-                 adjust.n = adjust.n,                     
-                 df = df,
-                 numeric.derivative = numeric.derivative,
-                 tol = tol, n.iter = n.iter)
-                 
     ## ** correction
     if(df == FALSE){
         derivative <- "none"
@@ -371,11 +369,10 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     
     ## ** export
     ## *** restaure original order
-    if(is.unsorted(order.cluster)==TRUE){
-        old.order.cluster <- order(order.cluster)
-        out$score <- out$score[old.order.cluster,,drop=FALSE]
-        out$residuals <- out$residuals[old.order.cluster,,drop=FALSE]
-        out$leverage <- out$leverage[old.order.cluster,,drop=FALSE]
+    if(test.reorder==TRUE){
+        out$score <- out$score[res.cluster$levels.cluster,,drop=FALSE]
+        out$residuals <- out$residuals[res.cluster$levels.cluster,,drop=FALSE]
+        out$leverage <- out$leverage[res.cluster$levels.cluster,,drop=FALSE]
     }    
     ##
     return(out)          
@@ -584,6 +581,10 @@ sCorrect.lvmfit2 <- function(object, ...){
     if(length(name.varparam)>0 && !identical(sort(name.varparam),sort(names(object$conditionalMoment$dOmega)))){
         stop("Mismatch first derivative of the conditional variance and name.varparam \n")
     }
+    if(length(name.varparam)==0){
+        args$adjust.n <- FALSE
+        args$adjust.Omega <- FALSE
+    }
     
     ## ** corrected ML estimates
     object  <- .estimate2(object = object,
@@ -648,7 +649,6 @@ sCorrect.lvmfit2 <- function(object, ...){
 
         args.tempo <- args
         args.tempo$data <- argsNumDeriv$data
-        args.tempo$cluster <- argsNumDeriv$cluster
         args.tempo$df <- FALSE
         args.tempo$score <- FALSE
 

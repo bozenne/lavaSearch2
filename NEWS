@@ -1,5 +1,26 @@
 # -*- mode: org -*-
 
+* Version 1.3.0 <2018-04-04 Wed>
+** User visble changes 
+- =summary2= can be called directly.
+
+** Internal changes
+- identification of the small sample bias of the variance-covariance
+  parameters. This enable to correct the derivatives and not only the
+  estimation of the conditional variance.
+- =sCorrect= is able to handle missing values
+- reorganisation of the structure of the functions in =sCorrect=.
+  Only =sCorrect= do real computations and all the results are stored
+  in the object (slot sCorrect). The other functions (=summary2=,
+  =compare2=, =iid2=, =score2=, =residuals2=) only extract and combine
+  information from the object.
+
+
+* Version 1.2.0 <2018-16-03 Fri>
+
+** Internal changes
+- iterative estimation of the small sample bias 
+
 * Version 1.1.0 <2018-02-01 Thu>
 ** User visible changes
  - The argument =numericDerivative= has been renamed =numeric.derivative=.

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: mar 27 2018 (18:03) 
+## Last-Updated: apr  4 2018 (14:08) 
 ##           By: Brice Ozenne
-##     Update #: 247
+##     Update #: 254
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -108,7 +108,7 @@ summary2.lm2 <- function(object,
     name.param <- names(coef(object))
     n.param <- length(name.param)
 
-    tTable.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
+    tTable.all <- compare2(object, par = name.param, robust = robust, F.test = FALSE, as.lava = FALSE)
     tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(tTable) <- list(name.param,
                              c("Value","Std.Error","t-value","p-value","df")
@@ -138,7 +138,7 @@ summary2.gls2 <- function(object,
     name.param <- names(coef(object))
     n.param <- length(name.param)
 
-    tTable.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
+    tTable.all <- compare2(object, par = name.param, robust = robust, F.test = FALSE, as.lava = FALSE)
     tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(tTable) <- list(name.param,
                              c("Value","Std.Error","t-value","p-value","df")
@@ -167,17 +167,16 @@ summary2.lme2 <- summary2.gls2
 #' @export
 summary2.lvmfit2 <- function(object, robust = FALSE, ...){
 
-    ### ** perform Wald test
+### ** perform Wald test
     param <- lava::pars(object)
     name.param <- names(param)
     n.param <- length(param)
 
-    table.all <- compare2(object, par = name.param, robust = robust, as.lava = FALSE)
+    table.all <- compare2(object, par = name.param, robust = robust, F.test = FALSE, as.lava = FALSE)
     table.coef <- table.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(table.coef) <- list(name.param,
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")
                                  )
-    
     ### ** get summary
     class(object) <- setdiff(class(object),"lvmfit2")
     object.summary <- summary(object, ...)
@@ -195,7 +194,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, ...){
     ## add rows corresponding to reference parameters
     missing.rows <- setdiff(lava.rownames,rownames(table.coef))
     if(length(missing.rows)>0){
-        addon <- object.summary$coef[missing.rows,c("Estimate","Std. Error","Z-value","P-value")]
+        addon <- object.summary$coef[missing.rows,c("Estimate","Std. Error","Z-value","P-value"),drop=FALSE]
         colnames(addon)[3] <- "t-value"
         table.coef <- rbind(table.coef, cbind(addon,df=NA))
     }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar 15 2018 (12:21) 
+## Last-Updated: apr  4 2018 (14:11) 
 ##           By: Brice Ozenne
-##     Update #: 312
+##     Update #: 317
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,6 +31,7 @@
 #' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
 #' @param null [vector] the right hand side of the linear hypotheses to be tested.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
+#' @param F.test [logical] should a joint test be performed?
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
 #' @param ...  [internal] only used by the generic method.
 #'
@@ -155,7 +156,7 @@ compare2.lvmfit2 <- function(object, ...){
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
                       robust = FALSE,
-                      as.lava = TRUE, level = 0.95){
+                      as.lava = TRUE, F.test = TRUE, level = 0.95){
 
     ## ** extract information
     dVcov.param <- object$sCorrect$dVcov.param
@@ -274,20 +275,23 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
     
 ### ** multivariate F test
-    ## statistic
-    stat.F <- try(t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo, silent = TRUE)
-     
-    ## store
     df.table <- rbind(df.table, global = rep(NA,5))
-    if(!inherits(stat.F,"try-error")){
-        df.table["global", "statistic"] <- as.numeric(stat.F)
-        df.table["global", "df"] <- df.F
-        df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
-                                                       df1 = n.hypo,
-                                                       df2 = df.table["global", "df"])
-        error <- NULL
-    }else{
-        error <- df.table
+    error <- NULL
+     
+    if(F.test){
+        ## statistic
+        stat.F <- try(t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo, silent = TRUE)
+     
+        ## store
+        if(!inherits(stat.F,"try-error")){
+            df.table["global", "statistic"] <- as.numeric(stat.F)
+            df.table["global", "df"] <- df.F
+            df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
+                                                           df1 = n.hypo,
+                                                           df2 = df.table["global", "df"])
+        }else{
+            error <- df.table
+        }
     }
     
     ## ** export

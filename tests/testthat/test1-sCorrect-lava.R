@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:40) 
 ## Version: 
-## Last-Updated: apr  3 2018 (17:44) 
+## Last-Updated: apr  4 2018 (14:20) 
 ##           By: Brice Ozenne
-##     Update #: 130
+##     Update #: 137
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 ## source("c:/Users/hpl802/Documents/GitHub/lavaSearch2/tests/testthat/test1-iid2-lava.R")
 
 ## * header
-##rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -27,7 +27,7 @@ if(FALSE){ ## already called in test-all.R
 lava.options(symbols = c("~","~~"))
 .coef2 <- lavaSearch2:::.coef2
 library(nlme)
-context("sCorrect: replicate lava results")
+context("sCorrect (replicate lava results)")
 
 ## * simulation
 n <- 5e1

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: apr  3 2018 (15:54) 
+## Last-Updated: apr  4 2018 (12:27) 
 ##           By: Brice Ozenne
-##     Update #: 784
+##     Update #: 800
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -325,7 +325,6 @@
             iOmegaM1 <- chol2inv(chol(Omega[iIndex,iIndex,drop=FALSE]))
             iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iIndex,iIndex] %*% iOmegaM1})
         }
-
         ## derivative of the score regarding Y
         scoreY <- ls.dmu[[iC]] %*% iOmegaM1
         for(iP in 1:n.varparam){ ## iP <- 1

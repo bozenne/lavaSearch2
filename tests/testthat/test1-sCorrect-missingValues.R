@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (13:39) 
 ## Version: 
-## Last-Updated: apr  3 2018 (17:09) 
+## Last-Updated: apr  4 2018 (14:20) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 32
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -25,7 +25,7 @@ if(FALSE){ ## already called in test-all.R
 lava.options(symbols = c("~","~~"))
 .coef2 <- lavaSearch2:::.coef2
 library(nlme)
-context("sCorrect: dealing with missing values")
+context("sCorrect (dealing with missing values)")
 
 ## * simulation
 n <- 2e1

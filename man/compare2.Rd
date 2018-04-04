@@ -32,7 +32,7 @@ compare2(object, ...)
 \method{compare2}{lvmfit2}(object, ...)
 
 .compare2(object, par = NULL, contrast = NULL, null = NULL,
-  robust = FALSE, as.lava = TRUE, level = 0.95)
+  robust = FALSE, as.lava = TRUE, F.test = TRUE, level = 0.95)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
@@ -54,6 +54,8 @@ See the examples section.}
 \item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
 
 \item{as.lava}{[logical] should the output be similar to the one return by \code{lava::compare}?}
+
+\item{F.test}{[logical] should a joint test be performed?}
 
 \item{level}{[numeric 0-1] the confidence level of the confidence interval.}
 }

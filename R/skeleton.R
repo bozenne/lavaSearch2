@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: apr  3 2018 (15:44) 
+## Last-Updated: apr  4 2018 (09:52) 
 ##           By: Brice Ozenne
-##     Update #: 1012
+##     Update #: 1017
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -466,7 +466,6 @@ skeletonDtheta.gls <- function(object, class.cor, class.var, X,
                                ...){
 
     out <- list()
-
     ## ** mean
     if(update.mean == TRUE){
         name.X <- colnames(X)

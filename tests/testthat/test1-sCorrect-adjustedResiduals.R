@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:21) 
 ## Version: 
-## Last-Updated: apr  3 2018 (17:46) 
+## Last-Updated: apr  4 2018 (14:20) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 28
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,14 +16,14 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
 }
 
 lava.options(symbols = c("~","~~"))
-context("sCorrect: residuals")
+context("sCorrect (residuals)")
 
 ## * simulation
 n <- 5e1
