@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: apr  4 2018 (14:19) 
+## last-updated: apr  4 2018 (17:18) 
 ##           By: Brice Ozenne
-##     Update #: 226
+##     Update #: 230
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,11 +30,13 @@
 ### Code:
 
 ## * header
-## rm(list = ls())
+rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
 }
+
+
 library(clubSandwich)
 library(nlme)
 library(lme4)
@@ -234,6 +236,8 @@ coef_test(e.lme, vcov = "CR0", test = "Satterthwaite", cluster = dLred$Id)
 expect_equal(as.double(logLik(e.lmer)),as.double(logLik(e.lvm)))
 
 test_that("mixed model: Satterthwaite ",{
+    skip_if_not_installed("lmerTest", minimum_version = "2.0-37.90016")
+
     ## does not work when running test
     ## GS <- summary(e.lmer)$coef[,"df"]
     GS <- do.call(rbind,lapply(1:5, function(x){ ## x <- 3
@@ -268,6 +272,8 @@ test_that("mixed model: Satterthwaite ",{
 })
 
 test_that("mixed model: KR-like correction",{
+    skip_if_not_installed("lmerTest", minimum_version = "2.0-37.90016")
+
     ## does not work when running test
     ## GS <- summary(e.lmer, ddf = "Kenward-Roger")$coef[,"df"]
     GS <- do.call(rbind,lapply(1:5, function(x){ ## x <- 3
