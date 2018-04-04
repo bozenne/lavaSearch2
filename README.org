@@ -9,32 +9,33 @@
 for Latent Variable Models (LVM) estimated by maximum likelihood
 (ML). It is built upon the *lava* package (see
 [[https://github.com/kkholst/lava]]): the *lava* package is used to define
-and estimate LVM. While *lava* can also be used to perform inference
-and model checking, *lavaSearch2* improves some of the existing tools
-in lava::
-- Improved control of the type 1 error rate when performing inference
+and estimate LVM. While *lava* can also be used to perform diagnostics
+and inference, *lavaSearch2* improves some of the existing tools
+in *lava*:
+- Better control of the type 1 error rate when performing inference
   with small samples. The new methods =summary2= and =compare2=
   replace the =summary= and =compare= functions that performs,
-  respectively, univariate and multivariate Wald tests. These methods
-  are also applicable to specific =gls= and =lme= models (*nlme*
-  package).
-- Improved control of the type 1 error rate when adjusting for
-  multiple comparisons with small samples (via the *multcomp*
-  package). Compared to =glht=, the function =glht2= propagates the
-  small sample correction to *multcomp*.
-- Improved detection of local dependencies that are not included in
-  the latent variable model. The new method =modelsearch2= improves
-  the =modelsearch= method by providing p-values adjusted for multiple
-  comparisons. Also applicable to Cox models via the libraries
-  *riskRegression* and *survival* / *rms*.
+  respectively, univariate and multivariate Wald tests. The new
+  methods are also applicable to specific =gls= and =lme= models
+  (*nlme* package).
+- Better control of the type 1 error rate when adjusting for multiple
+  comparisons with small samples (via the *multcomp*
+  package). Compared to =glht=, the function =glht2= propagates small
+  sample corrections to *multcomp*.
+- Better detection of local dependencies that are not included in the
+  LVM. The new method =modelsearch2= improves the =modelsearch= method
+  by providing p-values adjusted for multiple comparisons. Also
+  applicable to Cox models via the libraries *riskRegression* and
+  *survival* / *rms*.
 
 _Limitations_: *lavaSearch2* has been design for Gaussian linear
 latent variable models. This means that it may not work / give valid
 results:
 - in presence of censored or binary outcomes.
-- with stratified models (i.e. object of class =multigroup=). This
-  case could probably be fixed, you can contact the package maintainer
-  if you need this functionality.
+- with stratified models (i.e. object of class =multigroup=).
+
+ This last case could probably be fixed, you can contact the package
+  maintainer if you need this functionality. 
 
 * Installation of lavaSearch2
 Install the stable version from CRAN using:
@@ -42,7 +43,7 @@ Install the stable version from CRAN using:
 install.packages("lavaSearch2")
 #+END_SRC
 
-Install the development version from Github using:
+or install the development version from Github using:
 #+BEGIN_SRC R :exports code :results output :session *R* :cache no
 devtools::install_github("bozenne/lavaSearch2")
 #+END_SRC
@@ -224,6 +225,7 @@ left unchanged compared to the original lava output. The only change
 is how the p-values are computed, i.e. based on the quantiles of a
 Student's t distribution instead of a Gaussian distribution. 
 
+*** Saving computation time with =sCorrect=
 For each call to =summary2= the small sample size correction(s) will
 be recalculated. However the calculation of the sample correction(s)
 can be time consuming.
@@ -241,7 +243,8 @@ In such a case one can pre-compute the main terms of the correction
 (e.g. the derivative of the variance-covariance matrix) once for all
 using the =sCorrect= method (=sCorrect= stands for Satterthwaite
 correction). When calling =sCorrect=, the right hand side indicates
-whether the bias correction should be used:
+whether the bias correction should be used (equivalent to
+=bias.correct= argument described previously):
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 e2 <- e
 sCorrect(e2) <- TRUE
@@ -491,7 +494,7 @@ This may be explained by the fact the robust standard error tends to
 be liberal in small samples (e.g. see Kauermann 2001, A Note on the
 Efficiency of Sandwich Covariance Matrix Estimation ).
 
-** Inference: adjustment for multiple comparisons (univariate Wald test, single model)
+** Adjustment for multiple comparisons: univariate Wald test, single model
 
 When performing multiple testing, adjustment for multiple comparisons
 is necessary in order to control the type 1 error rate, i.e. to
@@ -608,7 +611,7 @@ book: "Multiple Comparisons Using R" by Frank Bretz, Torsten Hothorn,
 and Peter Westfall (2011, CRC Press) for details about the theory
 underlying the *multcomp* package.
 
-** Inference: adjustment for multiple comparisons (univariate Wald test, multiple models)
+** Adjustment for multiple comparisons: univariate Wald test, multiple models
 
 Pipper et al. in "A Versatile Method for Confirmatory Evaluation of
 the Effects of a Covariate in Multiple Models" (2012, Journal of the
