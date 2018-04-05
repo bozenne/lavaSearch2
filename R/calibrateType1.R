@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr  5 2018 (13:20) 
+## Last-Updated: apr  5 2018 (15:10) 
 ##           By: Brice Ozenne
-##     Update #: 142
+##     Update #: 188
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,8 +31,10 @@
 ##' Can also be \code{NULL}: in such a case the coefficients are set to default values decided by lava (usually 0 or 1).
 ##' @param dir.save [character] path to the directory were the results should be exported.
 ##' Can also be \code{NULL}: in such a case the results are not exported.
+##' @param label.file [character] element to include in the file name.
 ##' @param n.true [integer, >0] sample size at which the estimated coefficients will be a reliable approximation of the true coefficients.
 ##' @param check.true [logical] should \code{coef.value} be compared to the estimate coefficients when the sample size equals \code{n.true}?
+##' @param round.true [integer, >0] the number of decimal places to be used for the true value of the coefficients. No rounding is done if \code{NULL}.
 ##' @param bootstrap [logical] should bootstrap resampling be performed?
 ##' @param type.bootstrap [character vector]
 ##' @param n.bootstrap [integer, >0] the number of bootstrap sample to be used for each bootstrap.
@@ -78,8 +80,9 @@
 ## * calibrateType1
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
-                           n.true = 1e5, check.true = TRUE,
+calibrateType1 <- function(object, null, n, n.rep, coef.value,
+                           dir.save = NULL, label.file = NULL,
+                           n.true = 1e5, round.true = 2, check.true = TRUE,
                            bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
                            seed = NULL, trace = 2){
 
@@ -95,41 +98,58 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
     df.type <- coefType(e0, as.lava = FALSE)
     df.type <- df.type[df.type$name %in% name.coef,]
     type.coef <- setNames(df.type$detail, df.type$name)
+    name.param <- df.type$param
     param2name <- setNames(df.type$name, df.type$param)
 
     ## coef true value
     coef.true <- setNames(rep(NA, n.coef), name.coef)
     if(!is.null(coef.value)){
-        extracoef <- setdiff(sort(names(coef.value)), sort(names(param2name)))
-        missingcoef <- setdiff(sort(names(param2name)),sort(names(coef.value)))        
+        extraParam <- setdiff(sort(names(coef.value)), sort(name.param))
+        missingParam <- setdiff(sort(name.param),sort(names(coef.value)))        
+    }else{
+        extraParam <- NULL
+        missingParam <- name.param
+    }
+    missingCoef <- param2name[missingParam]
 
-        if(length(extracoef)>0){
+    if(!is.null(coef.value)){
+        if(length(extraParam)>0){
             stop("Invalid argument \'coef.value\': some of the coefficient names do not match those of the estimated model \n",
-                 "extra coefficients: \"",paste0(extracoef, collapse = "\" \""),"\"\n")
+                 "extra coefficients: \"",paste0(extraParam, collapse = "\" \""),"\"\n")
         }
         coef.true[param2name[names(coef.value)]] <- coef.value
-
-        if(length(missingcoef)>0){
-            message("Argument \'coef.value\' do not fully specify the value of the coefficients \n",
-                    "missing coefficients: \"",paste0(missingcoef, collapse = "\" \""),"\"\n",
-                    "they will be set to their default value (zero or one) \n")
-            if(trace>1){
-                cat("* find missing coefficients \n")
-            }
-            lavavalue <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
-            coef.true[missingcoef] <- lavavalue[missingcoef]
-        }
-        if(check.true){ 
-            if(trace>1){
-                cat("* check coefficient values match what can be estimated with n=",n.true," \n",sep="")
-            }
-            coef.true.empirical <- coef(estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
-            if(any(abs(coef.true.empirical - coef.true) > pmax(1e-2,coef.true/10))){
-                warning("Some discrepancy between the estimated coefficient and the theoretical one for n=",n.true,"\n")
-            }
-        }
-
     }
+    if(length(missingParam)>0){
+        message("Argument \'coef.value\' do not fully specify the value of the coefficients \n",
+                "missing coefficients: \"",paste0(missingParam, collapse = "\" \""),"\"\n",
+                "they will be set to their default value (zero or one) \n")
+        if(trace>1){
+            cat("* find missing coefficients \n")
+        }
+        lavavalue <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
+        if(!is.null(round.true)){
+            lavavalue <- round(lavavalue, digits = round.true)
+        }
+        coef.true[missingCoef] <- lavavalue[missingCoef]
+    }
+    if(check.true){ 
+        if(trace>1){
+            cat("* check coefficient values match what can be estimated with n=",n.true," \n",sep="")
+        }
+        
+        if(length(missingParam)>0){
+            coef.true.empirical <- lavavalue
+        }else{
+            coef.true.empirical <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
+        }
+        tol <- 1e-1
+        ok.error <- setNames(rep(tol,n.coef), name.coef)
+        ok.error[abs(coef.true)>tol*10] <- pmax(tol,coef.true[abs(coef.true)>tol*10]/10)
+        if(any(abs(coef.true.empirical - coef.true) > ok.error)){
+            warning("Some discrepancy between the estimated coefficient and the theoretical one for n=",n.true,"\n")
+        }
+    }
+
 
     ## null hypothesis
     n.null <- length(null)
@@ -142,6 +162,18 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
                  "incorrect names: \"",paste(null[incorrect.name], collapse = "\" \""),"\" \n")
         }
     }
+    
+    ## filename
+    if(is.null(label.file)){label.file <- seed}
+    filename_tempo.pvalue <- paste0("type1error-S",label.file,"(tempo).rds")
+    filename_tempo.bias <- paste0("bias-S",label.file,"(tempo).rds")
+    filename.pvalue <- gsub("\\(tempo\\)","",filename_tempo.pvalue)
+    filename.bias <- gsub("\\(tempo\\)","",filename_tempo.bias)
+
+    if(!is.null(dir.save)){
+        saveRDS(NULL, file = file.path(dir.save,filename.pvalue))
+        saveRDS(NULL, file = file.path(dir.save,filename.bias))
+    }
 
 ### ** display
     if(trace>1){
@@ -152,7 +184,9 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
         cat("  > coefficients: \n")
         print(coef.true)
         cat("  > bootstrap: ",bootstrap,"\n")
-        cat("  > seed: ",seed,"\n")
+        if(!is.null(seed)){
+            cat("  > seed: ",seed,"\n")
+        }
         if(!is.null(dir.save)){
             cat("  > export results in ",dir.save,"\n")
         }
@@ -162,7 +196,11 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
 ### ** loop
     dt.pvalue <- NULL
     dt.bias <- NULL
-    if(!is.null(seed)){set.seed(seed)}
+    if(!is.null(seed)){
+        set.seed(seed)
+    }else{
+        seed <- NA
+    }
 
     if(trace>1){cat("* perform simulation: \n")}
     for(iN in 1:n.n){
@@ -186,7 +224,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
             e.lvm.Satt <- e.lvm
             sCorrect(e.lvm.Satt) <- FALSE
             e.lvm.KR <- e.lvm
-            sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE
+            suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE)
             ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
             test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
             coef.original <- coef(e.lvm)
@@ -231,24 +269,30 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
                 ls.iP$p.bootStud <- boot.stud[null,"p.value"]
                 ls.iP$p.bootBca <- boot.bca[null,"p.value"]
             }
-
             ## metainformation
-            iDT.pvalue <- cbind(data.frame(n = n.tempo, rep = iRep, seed = seed, nboot = n.bootstrap,
+            iDT.pvalue <- cbind(data.frame(n = n.tempo,
+                                           rep = iRep,
+                                           seed = seed,
+                                           nboot = n.bootstrap,
                                            niter = e.lvm.KR$sCorrect$opt$iterations,
                                            warning = test.warning,
-                                           link = null, stringsAsFactors = FALSE),
+                                           link = null,
+                                           stringsAsFactors = FALSE),
                                 do.call(cbind,ls.iP))
             rownames(iDT.pvalue) <- NULL
             dt.pvalue <- rbind(dt.pvalue, iDT.pvalue)
 
             ## *** collect result (bias)
-            iDT.bias <- data.frame(n = n.tempo, rep = iRep, seed = seed,
+            iDT.bias <- data.frame(n = n.tempo,
+                                   rep = iRep,
+                                   seed = seed,
                                    niter = e.lvm.KR$sCorrect$opt$iterations,
                                    warning = test.warning,
                                    estimate.truth = as.double(coef.true),
                                    estimate.ML = as.double(coef.original[name.coef]),
                                    estimate.MLcorrected = as.double(coef.corrected[name.coef]),
-                                   name = names(coef.true), type = type.coef[name.coef],
+                                   name = names(coef.true),
+                                   type = type.coef[name.coef],
                                    stringsAsFactors = FALSE)
             rownames(iDT.bias) <- NULL
             dt.bias <- rbind(dt.bias, iDT.bias)
@@ -269,7 +313,9 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value, dir.save = NULL,
     }
 
     out <- list(p.value = dt.pvalue,
-                bias = dt.bias)
+                bias = dt.bias,
+                coef.true = coef.true,
+                null = null)
     class(out) <- append("calibrateType1",class(out))
     return(out)
 

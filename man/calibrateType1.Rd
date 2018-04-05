@@ -6,9 +6,9 @@
 \title{Simulation Study Assessing Bias and Type 1 Error}
 \usage{
 calibrateType1(object, null, n, n.rep, coef.value, dir.save = NULL,
-  n.true = 1e+05, check.true = TRUE, bootstrap = FALSE,
-  type.bootstrap = c("perc", "stud", "bca"), n.bootstrap = 1000,
-  seed = NULL, trace = 2)
+  label.file = NULL, n.true = 1e+05, round.true = 2, check.true = TRUE,
+  bootstrap = FALSE, type.bootstrap = c("perc", "stud", "bca"),
+  n.bootstrap = 1000, seed = NULL, trace = 2)
 }
 \arguments{
 \item{object}{a \code{lvm} object defining the generative model.}
@@ -25,7 +25,11 @@ Can also be \code{NULL}: in such a case the coefficients are set to default valu
 \item{dir.save}{[character] path to the directory were the results should be exported.
 Can also be \code{NULL}: in such a case the results are not exported.}
 
+\item{label.file}{[character] element to include in the file name.}
+
 \item{n.true}{[integer, >0] sample size at which the estimated coefficients will be a reliable approximation of the true coefficients.}
+
+\item{round.true}{[integer, >0] the number of decimal places to be used for the true value of the coefficients. No rounding is done if \code{NULL}.}
 
 \item{check.true}{[logical] should \code{coef.value} be compared to the estimate coefficients when the sample size equals \code{n.true}?}
 

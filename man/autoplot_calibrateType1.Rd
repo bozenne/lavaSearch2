@@ -13,6 +13,9 @@
 \arguments{
 \item{object}{output of \code{\link{calibrateType1}}.}
 
+\item{type}{[character] if type equals \code{"bias"} the bias will be displayed.
+Otherwise if it equals \code{"type1error"} the type 1 error will be displayed.}
+
 \item{plot}{[logical] should the plot be displayed?}
 
 \item{color.threshold}{[character] the color for the line representing the expected value(s).}
@@ -36,9 +39,6 @@ Only relevant when type equals \code{"type1error"}.}
 
 \item{keep.method}{[character vector] the methods names for which the type 1 error should be displayed.
 Only relevant when type equals \code{"type1error"}.}
-
-\item{type[character]}{if type equals \code{"bias"} the bias will be displayed.
-Otherwise if it equals \code{"type1error"} the type 1 error will be displayed.}
 }
 \value{
 An list containing:

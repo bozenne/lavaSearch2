@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr  5 2018 (13:34) 
+## Last-Updated: apr  5 2018 (13:52) 
 ##           By: Brice Ozenne
-##     Update #: 9
+##     Update #: 16
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,7 @@
 ##' @name autoplot_calibrateType1
 ##' 
 ##' @param object output of \code{\link{calibrateType1}}.
-##' @param type[character] if type equals \code{"bias"} the bias will be displayed.
+##' @param type [character] if type equals \code{"bias"} the bias will be displayed.
 ##' Otherwise if it equals \code{"type1error"} the type 1 error will be displayed.
 ##' @param plot [logical] should the plot be displayed?
 ##' @param color.threshold [character] the color for the line representing the expected value(s).
@@ -89,9 +89,10 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         df.gg <- rbind(df1,df2)
 
         ## *** display
-        gg <- ggplot() + geom_boxplot(data = df.gg, aes(x = type, y = bias)) + facet_wrap(corrected ~ n, labeller = label_both)
-        
-        gg <- gg + geom_line(data =  data.frame(x = c(-Inf,Inf), y = 0), aes(x=x, y=y), color = color.threshold)
+        gg <- ggplot() + geom_boxplot(data = df.gg, aes_string(x = "type", y = "bias")) 
+        gg <- gg + facet_wrap(corrected ~ n, labeller = label_both)
+        df.line <- data.frame(x = c(-Inf,Inf), y = 0)
+        gg <- gg + geom_line(data = df.line, aes_string(x = "x", y = "y"), color = color.threshold)
         
     }
 
@@ -102,10 +103,10 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
                        measure.vars = grep("^p.",names(object$p.value),value = TRUE),
                        value.name = "p.value",
                        variable.name = "method")
-        df.gg <- aggregate(dfLong$p.value,
-                           by = list(n = dfLong$n, method = dfLong$method, link = dfLong$link),
-                           FUN = function(x){c(n = length(x), type1error = mean(x<=alpha, na.rm = TRUE))},
-                           simplify = FALSE)
+        df.gg <- stats::aggregate(dfLong$p.value,
+                                  by = list(n = dfLong$n, method = dfLong$method, link = dfLong$link),
+                                  FUN = function(x){c(n = length(x), type1error = mean(x<=alpha, na.rm = TRUE))},
+                                  simplify = FALSE)
         df.gg <- cbind(df.gg[,c("n","method","link")],
                        do.call(rbind,df.gg[,"x"]))
 
@@ -129,8 +130,9 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
 
         label.method <- name2label[keep.method]
         n.method <- length(keep.method)
+
         
-        gg <- ggplot(df.gg, aes(x = n, y = type1error, group = method, color = method, shape = method))
+        gg <- ggplot(df.gg, aes_string(x = "n", y = "type1error", group = "method", color = "method", shape = "method"))
         gg <- gg + geom_point(size = 3) + geom_line(size = 2)
         gg <- gg + facet_grid(~link, labeller = label_parsed)
         gg <- gg + geom_abline(intercept = alpha, slope = 0, color = color.threshold)
