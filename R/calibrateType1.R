@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr  5 2018 (15:10) 
+## Last-Updated: apr  5 2018 (15:54) 
 ##           By: Brice Ozenne
-##     Update #: 188
+##     Update #: 191
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -90,7 +90,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
     n.n <- length(n)
 
     ## coef names
-    e0 <- estimate(object, data = sim(object,n[n.n]))
+    e0 <- estimate(object, data = lava::sim(object,n[n.n]))
     name.coef <- names(coef(e0))
     n.coef <- length(name.coef)
     
@@ -124,17 +124,20 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
                 "missing coefficients: \"",paste0(missingParam, collapse = "\" \""),"\"\n",
                 "they will be set to their default value (zero or one) \n")
         if(trace>1){
-            cat("* find missing coefficients \n")
+            cat("* find missing coefficients ")
         }
         lavavalue <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
         if(!is.null(round.true)){
             lavavalue <- round(lavavalue, digits = round.true)
         }
         coef.true[missingCoef] <- lavavalue[missingCoef]
+        if(trace>1){
+            cat("- done \n")
+        }
     }
     if(check.true){ 
         if(trace>1){
-            cat("* check coefficient values match what can be estimated with n=",n.true," \n",sep="")
+            cat("* check coefficient values match what can be estimated with n=",n.true," ",sep="")
         }
         
         if(length(missingParam)>0){
@@ -147,6 +150,9 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
         ok.error[abs(coef.true)>tol*10] <- pmax(tol,coef.true[abs(coef.true)>tol*10]/10)
         if(any(abs(coef.true.empirical - coef.true) > ok.error)){
             warning("Some discrepancy between the estimated coefficient and the theoretical one for n=",n.true,"\n")
+        }
+        if(trace>1){
+            cat("- done \n")
         }
     }
 
@@ -171,8 +177,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
     filename.bias <- gsub("\\(tempo\\)","",filename_tempo.bias)
 
     if(!is.null(dir.save)){
-        saveRDS(NULL, file = file.path(dir.save,filename.pvalue))
-        saveRDS(NULL, file = file.path(dir.save,filename.bias))
+        lavaSearch2:::validPath(dir.save, type = "dir")
     }
 
 ### ** display

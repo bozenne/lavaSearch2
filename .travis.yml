@@ -16,6 +16,9 @@ addons:
       - tcl8.5-dev
       - tk8.5-dev
 
+r_packages:
+  - devtools
+  
 r_github_packages:
 - tagteam/riskRegression
 
