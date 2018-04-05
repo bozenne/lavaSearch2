@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: apr  4 2018 (12:28) 
+## Last-Updated: apr  5 2018 (09:29) 
 ##           By: Brice Ozenne
-##     Update #: 1262
+##     Update #: 1266
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -776,16 +776,22 @@ sCorrect.lvmfit2 <- function(object, ...){
     dots[["safeMode"]] <- NULL
     
     if(identical(safeMode,TRUE)){
-        x$sCorrect <-  try(do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = value), dots) ), silent = TRUE)
+        x$sCorrect <-  try(do.call(sCorrect,
+                                   args = c(list(x, adjust.Omega = value, adjust.n = value),
+                                            dots) ), silent = TRUE)
         if(value == TRUE && inherits(x$sCorrect,"try-error")){
             warn <- x$sCorrect
-            x$sCorrect <- do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = FALSE), dots) )
+            x$sCorrect <- do.call(sCorrect,
+                                  args = c(list(x, adjust.Omega = value, adjust.n = FALSE),
+                                           dots) )
             attr(x$sCorrect,"warning") <- warn
             warning("sCorrect failed and has been re-run setting the argument \'adjust.n\' to FALSE \n",
                     "see the attribute \"warning\" of object$sCorrect for the error message \n")
         }
     }else{
-        x$sCorrect <-  do.call(sCorrect, args = c(list(x, adjust.Omega = value, adjust.n = value), dots) )
+        x$sCorrect <-  do.call(sCorrect,
+                               args = c(list(x, adjust.Omega = value, adjust.n = value),
+                                        dots) )
     }
     class(x) <- append("lvmfit2",class(x))
 
