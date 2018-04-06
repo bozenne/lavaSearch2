@@ -5,13 +5,14 @@
 \alias{calibrateType1}
 \title{Simulation Study Assessing Bias and Type 1 Error}
 \usage{
-calibrateType1(object, null, n, n.rep, coef.value, dir.save = NULL,
-  label.file = NULL, n.true = 1e+05, round.true = 2, check.true = TRUE,
-  bootstrap = FALSE, type.bootstrap = c("perc", "stud", "bca"),
-  n.bootstrap = 1000, seed = NULL, trace = 2)
+calibrateType1(object, null, n, n.rep, generative.object = NULL,
+  generative.coef = NULL, true.coef = NULL, n.true = 1e+06,
+  round.true = 2, bootstrap = FALSE, type.bootstrap = c("perc", "stud",
+  "bca"), n.bootstrap = 1000, dir.save = NULL, label.file = NULL,
+  seed = NULL, trace = 2)
 }
 \arguments{
-\item{object}{a \code{lvm} object defining the generative model.}
+\item{object}{a \code{lvm} object defining the model to be fitted.}
 
 \item{null}{[character vector] names of the coefficient whose value will be tested against 0.}
 
@@ -19,25 +20,27 @@ calibrateType1(object, null, n, n.rep, coef.value, dir.save = NULL,
 
 \item{n.rep}{[integer, >0] number of simulations per sample size.}
 
-\item{coef.value}{[named numeric vector] values for each coefficient of the model.
+\item{generative.object}{[lvm] object defining the statistical model generating the data.}
+
+\item{generative.coef}{[name numeric vector] values for the parameters of the generative model.
 Can also be \code{NULL}: in such a case the coefficients are set to default values decided by lava (usually 0 or 1).}
 
-\item{dir.save}{[character] path to the directory were the results should be exported.
-Can also be \code{NULL}: in such a case the results are not exported.}
-
-\item{label.file}{[character] element to include in the file name.}
+\item{true.coef}{[name numeric vector] expected values for the parameters of the fitted model.}
 
 \item{n.true}{[integer, >0] sample size at which the estimated coefficients will be a reliable approximation of the true coefficients.}
 
 \item{round.true}{[integer, >0] the number of decimal places to be used for the true value of the coefficients. No rounding is done if \code{NULL}.}
-
-\item{check.true}{[logical] should \code{coef.value} be compared to the estimate coefficients when the sample size equals \code{n.true}?}
 
 \item{bootstrap}{[logical] should bootstrap resampling be performed?}
 
 \item{type.bootstrap}{[character vector]}
 
 \item{n.bootstrap}{[integer, >0] the number of bootstrap sample to be used for each bootstrap.}
+
+\item{dir.save}{[character] path to the directory were the results should be exported.
+Can also be \code{NULL}: in such a case the results are not exported.}
+
+\item{label.file}{[character] element to include in the file name.}
 
 \item{seed}{[integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 Can also be \code{NULL}: in such a case no seed is set.}
@@ -70,16 +73,16 @@ vec.par <- c(mu2 = 0, ## mu1 is set to 0 by default
              "eta~~eta" = 1.63)
 
 #### parameters to test ####
-null <- c("mu2","beta2")
+null <- c("Y2","eta~GenderF")
 
-#### launch simulation ####
+#### launch simulation: same model generation fit ####
 \dontrun{
-res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, coef.value = vec.par)
+res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, generative.coef = vec.par)
 autoplot(res, type = "bias")
 autoplot(res, type = "type1error")
 }
 \dontshow{
-res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 2, coef.value = vec.par)
+res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.true = 1e3, n.rep = 2, generative.coef = vec.par)
 }
 }
 \seealso{

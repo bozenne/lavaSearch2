@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr  5 2018 (15:54) 
+## Last-Updated: apr  6 2018 (18:07) 
 ##           By: Brice Ozenne
-##     Update #: 191
+##     Update #: 252
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,21 +23,22 @@
 ##' and the type 1 error of the Wald test and robust Wald test
 ##' @name calibrateType
 ##' 
-##' @param object a \code{lvm} object defining the generative model.
+##' @param object a \code{lvm} object defining the model to be fitted.
 ##' @param null [character vector] names of the coefficient whose value will be tested against 0. 
 ##' @param n [integer vector, >0] sample size(s) considered in the simulation study.
 ##' @param n.rep [integer, >0] number of simulations per sample size.
-##' @param coef.value [named numeric vector] values for each coefficient of the model.
+##' @param generative.object [lvm] object defining the statistical model generating the data.
+##' @param generative.coef [name numeric vector] values for the parameters of the generative model.
 ##' Can also be \code{NULL}: in such a case the coefficients are set to default values decided by lava (usually 0 or 1).
-##' @param dir.save [character] path to the directory were the results should be exported.
-##' Can also be \code{NULL}: in such a case the results are not exported.
-##' @param label.file [character] element to include in the file name.
+##' @param true.coef [name numeric vector] expected values for the parameters of the fitted model.
 ##' @param n.true [integer, >0] sample size at which the estimated coefficients will be a reliable approximation of the true coefficients.
-##' @param check.true [logical] should \code{coef.value} be compared to the estimate coefficients when the sample size equals \code{n.true}?
 ##' @param round.true [integer, >0] the number of decimal places to be used for the true value of the coefficients. No rounding is done if \code{NULL}.
 ##' @param bootstrap [logical] should bootstrap resampling be performed?
 ##' @param type.bootstrap [character vector]
 ##' @param n.bootstrap [integer, >0] the number of bootstrap sample to be used for each bootstrap.
+##' @param dir.save [character] path to the directory were the results should be exported.
+##' Can also be \code{NULL}: in such a case the results are not exported.
+##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
 ##' @param trace [interger] should the execution of the function be trace. Can be 0, 1 or 2.
@@ -65,111 +66,103 @@
 ##'              "eta~~eta" = 1.63)
 ##'
 ##' #### parameters to test ####
-##' null <- c("mu2","beta2")
+##' null <- c("Y2","eta~GenderF")
 ##'
-##' #### launch simulation ####
+##' #### launch simulation: same model generation fit ####
 ##' \dontrun{
-##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, coef.value = vec.par)
+##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, generative.coef = vec.par)
 ##' autoplot(res, type = "bias")
 ##' autoplot(res, type = "type1error")
 ##' }
 ##' \dontshow{
-##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 2, coef.value = vec.par)
+##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.true = 1e3, n.rep = 2, generative.coef = vec.par)
 ##' }
 
 ## * calibrateType1
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1 <- function(object, null, n, n.rep, coef.value,
-                           dir.save = NULL, label.file = NULL,
-                           n.true = 1e5, round.true = 2, check.true = TRUE,
+calibrateType1 <- function(object, null, n, n.rep, 
+                           generative.object = NULL, generative.coef = NULL, 
+                           true.coef = NULL, n.true = 1e6, round.true = 2,              
                            bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
+                           dir.save = NULL, label.file = NULL,             
                            seed = NULL, trace = 2){
 
 ### ** prepare
     n.n <- length(n)
-
-    ## coef names
-    e0 <- estimate(object, data = lava::sim(object,n[n.n]))
-    name.coef <- names(coef(e0))
-    n.coef <- length(name.coef)
     
-    ## coef type
-    df.type <- coefType(e0, as.lava = FALSE)
-    df.type <- df.type[df.type$name %in% name.coef,]
-    type.coef <- setNames(df.type$detail, df.type$name)
-    name.param <- df.type$param
-    param2name <- setNames(df.type$name, df.type$param)
-
-    ## coef true value
-    coef.true <- setNames(rep(NA, n.coef), name.coef)
-    if(!is.null(coef.value)){
-        extraParam <- setdiff(sort(names(coef.value)), sort(name.param))
-        missingParam <- setdiff(sort(name.param),sort(names(coef.value)))        
-    }else{
-        extraParam <- NULL
-        missingParam <- name.param
+    ## *** generative model
+    if(is.null(generative.object)){
+        generative.object <- object
     }
-    missingCoef <- param2name[missingParam]
-
-    if(!is.null(coef.value)){
-        if(length(extraParam)>0){
-            stop("Invalid argument \'coef.value\': some of the coefficient names do not match those of the estimated model \n",
-                 "extra coefficients: \"",paste0(extraParam, collapse = "\" \""),"\"\n")
-        }
-        coef.true[param2name[names(coef.value)]] <- coef.value
+    if(any(lava::manifest(object) %in% lava::manifest(generative.object) == FALSE)){
+        missingVar <- lava::manifest(object)[lava::manifest(object) %in% lava::manifest(generative.object) == FALSE]
+        stop("The object contains manifest variables that are not in the generative model \n",
+             "missing manifest variables: \"",paste0(missingVar, collapse = "\" \""),"\" \n")
     }
-    if(length(missingParam)>0){
-        message("Argument \'coef.value\' do not fully specify the value of the coefficients \n",
-                "missing coefficients: \"",paste0(missingParam, collapse = "\" \""),"\"\n",
-                "they will be set to their default value (zero or one) \n")
+    df.type_generative <- coefType(generative.object, as.lava = FALSE)
+    name.param_generative <- df.type_generative[!is.na(df.type_generative$lava),"param"]
+    n.param_generative <- length(name.param_generative)
+
+    ## *** coef generative
+    if(!is.null(generative.coef) && any(names(generative.coef) %in% name.param_generative == FALSE)){
+        extraParam <- names(generative.coef)[names(generative.coef) %in% name.param_generative == FALSE]
+        stop("Invalid argument \'generative.coef\': some of the coefficient names do not match those of the generative model \n",
+             "extra coefficients: \"",paste0(extraParam, collapse = "\" \""),"\"\n")
+    }
+
+    ## *** coef of the fitted model
+    if(is.null(true.coef)){
         if(trace>1){
-            cat("* find missing coefficients ")
+            cat("* estimate true coefficients using a sample size of n=",n.true," ", sep="")
         }
-        lavavalue <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
+        e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
+        coef.true <- coef(e.true)
         if(!is.null(round.true)){
-            lavavalue <- round(lavavalue, digits = round.true)
+            coef.true <- round(coef.true, digits = round.true)
         }
-        coef.true[missingCoef] <- lavavalue[missingCoef]
         if(trace>1){
             cat("- done \n")
         }
-    }
-    if(check.true){ 
+    }else{
         if(trace>1){
-            cat("* check coefficient values match what can be estimated with n=",n.true," ",sep="")
+            cat("* check true coefficients ")
+        }
+        n.true <- n[n.n]
+        e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
+        name.test <- names(coef(e.true))
+        
+        if(!identical(sort(name.test),sort(names(true.coef)))){
+            extraNames <- setdiff(names(true.coef),name.test)
+            missingNames <- setdiff(name.test,names(true.coef))
+            stop("Names of the coefficients in argument \'true.coef\' does not matches those of the estimated coefficients \n",
+                 "missing names: \"",paste0(missingNames, collapse = "\" \""),"\" \n",
+                 "extra names: \"",paste0(extraNames, collapse = "\" \""),"\" \n")
         }
         
-        if(length(missingParam)>0){
-            coef.true.empirical <- lavavalue
-        }else{
-            coef.true.empirical <- coef(lava::estimate(object, data = lava::sim(object, n = n.true, p = coef.value)))
-        }
-        tol <- 1e-1
-        ok.error <- setNames(rep(tol,n.coef), name.coef)
-        ok.error[abs(coef.true)>tol*10] <- pmax(tol,coef.true[abs(coef.true)>tol*10]/10)
-        if(any(abs(coef.true.empirical - coef.true) > ok.error)){
-            warning("Some discrepancy between the estimated coefficient and the theoretical one for n=",n.true,"\n")
-        }
+        coef.true <- true.coef
         if(trace>1){
             cat("- done \n")
         }
+        
     }
+    name.coef <- names(coef.true)
+    n.coef <- length(name.coef)
+       
+    ## *** type of the coef of the fitted model
+    df.type <- coefType(e.true, as.lava = FALSE)
+    df.type <- df.type[df.type$name %in% name.coef,]
+    type.coef <- setNames(df.type$detail, df.type$name)
 
-
-    ## null hypothesis
+    ## *** null hypothesis
     n.null <- length(null)
     if(any(null %in% name.coef == FALSE)){
-        incorrect.name <- which(null %in% name.coef == FALSE)
-        if(all(null[incorrect.name] %in% names(param2name))){
-            null[incorrect.name] <- as.character(param2name[null[incorrect.name]])
-        }else{
-            stop("Invalid argument \'null\': some of the coefficient names does not match those of the estimate model \n",
-                 "incorrect names: \"",paste(null[incorrect.name], collapse = "\" \""),"\" \n")
-        }
+        incorrect.name <- null[null %in% name.coef == FALSE]
+        stop("Invalid argument \'null\': some of the coefficient names does not match those of the estimate model \n",
+             "incorrect names: \"",paste(incorrect.name, collapse = "\" \""),"\" \n")
     }
     
-    ## filename
+    ## *** filename
     if(is.null(label.file)){label.file <- seed}
     filename_tempo.pvalue <- paste0("type1error-S",label.file,"(tempo).rds")
     filename_tempo.bias <- paste0("bias-S",label.file,"(tempo).rds")
@@ -177,7 +170,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
     filename.bias <- gsub("\\(tempo\\)","",filename_tempo.bias)
 
     if(!is.null(dir.save)){
-        lavaSearch2:::validPath(dir.save, type = "dir")
+        validPath(dir.save, type = "dir")
     }
 
 ### ** display
@@ -186,7 +179,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
         cat("  > simulation for n=",paste(n,collapse = " "),"\n",sep="")
         cat("  > model: \n")
         print(object)
-        cat("  > coefficients: \n")
+        cat("  > expected coefficients: \n")
         print(coef.true)
         cat("  > bootstrap: ",bootstrap,"\n")
         if(!is.null(seed)){
@@ -217,7 +210,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
             if(trace>0){cat(iRep," ")}
 
             ## *** simulation
-            dt.sim <- lava::sim(object, n = n.tempo, p = coef.value)
+            dt.sim <- lava::sim(generative.object, n = n.tempo, p = generative.coef, latent = FALSE)
 
             ## *** model adjustement
             e.lvm <- lava::estimate(object, data = dt.sim)
@@ -259,12 +252,16 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
             ## z test
             ls.iP$p.Ztest <- eS.lvm$coef[null,"P-value"]
             ls.iP$p.robustZtest <-  2*(1-pnorm(abs(eS.robustSatt[null,"t-value"])))
-        
+
             ## Satterwaite
             ls.iP$p.Satt <- eS.Satt[null,"P-value"]
             ls.iP$p.robustSatt <- eS.robustSatt[null,"P-value"]
+
+            ## Small sample correction
+            ls.iP$p.SSC <- 2*(1-pnorm(abs(eS.KR[null,"t-value"]))) ## 2*(1-pt(abs(eS.KR[null,"t-value"]), df = eS.KR[null,"df"]))            
+            ls.iP$p.robustSSC <- 2*(1-pnorm(abs(eS.robustSatt[null,"P-value"])))
         
-            ## KR
+            ## Satterwaite + SSC
             ls.iP$p.KR <- eS.KR[null,"P-value"]
             ls.iP$p.robustKR <- eS.robustKR[null,"P-value"]
 
@@ -319,7 +316,7 @@ calibrateType1 <- function(object, null, n, n.rep, coef.value,
 
     out <- list(p.value = dt.pvalue,
                 bias = dt.bias,
-                coef.true = coef.true,
+                e.true = e.true,
                 null = null)
     class(out) <- append("calibrateType1",class(out))
     return(out)
