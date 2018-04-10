@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  6 2018 (10:42) 
 ## Version: 
-## Last-Updated: apr  4 2018 (14:20) 
+## Last-Updated: apr 10 2018 (09:34) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 59
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,6 @@ m.sim <- lvm(Y~X1+X2,G~1)
 categorical(m.sim,K=3,label=c("a","b","c")) <- ~G+X2
 set.seed(10)
 d <- lava::sim(m.sim,n,latent=FALSE)
-
 
 ## * sCorrect for lvm objects
 

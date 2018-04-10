@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr  6 2018 (18:07) 
+## Last-Updated: apr 10 2018 (09:23) 
 ##           By: Brice Ozenne
-##     Update #: 252
+##     Update #: 259
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,6 +36,8 @@
 ##' @param bootstrap [logical] should bootstrap resampling be performed?
 ##' @param type.bootstrap [character vector]
 ##' @param n.bootstrap [integer, >0] the number of bootstrap sample to be used for each bootstrap.
+##' @param checkType1 [logical] returns an error if the coefficients associated to the null hypotheses do not equal 0.
+##' @param checkType2 [logical] returns an error if the coefficients associated to the null hypotheses equal 0.
 ##' @param dir.save [character] path to the directory were the results should be exported.
 ##' Can also be \code{NULL}: in such a case the results are not exported.
 ##' @param label.file [character] element to include in the file name.
@@ -85,6 +87,7 @@ calibrateType1 <- function(object, null, n, n.rep,
                            generative.object = NULL, generative.coef = NULL, 
                            true.coef = NULL, n.true = 1e6, round.true = 2,              
                            bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
+                           checkType1 = FALSE, checkType2 = FALSE,
                            dir.save = NULL, label.file = NULL,             
                            seed = NULL, trace = 2){
 
@@ -160,6 +163,15 @@ calibrateType1 <- function(object, null, n, n.rep,
         incorrect.name <- null[null %in% name.coef == FALSE]
         stop("Invalid argument \'null\': some of the coefficient names does not match those of the estimate model \n",
              "incorrect names: \"",paste(incorrect.name, collapse = "\" \""),"\" \n")
+    }
+
+    if(checkType1 && any(coef.true[null]!=0)){
+        txtCoef <- paste(null[coef.true[null]!=0], collapse = "\" \"")
+        stop("Control type 1 error: coefficients \"",txtCoef,"\" are not 0 while their belong to the null hypothesis\n")
+    }
+    if(checkType2 && any(coef.true[null]==0)){
+        txtCoef <- paste(null[coef.true[null]==0], collapse = "\" \"")
+        stop("Control type 2 error: coefficients \"",txtCoef,"\" are 0 while their belong to the null hypothesis\n")
     }
     
     ## *** filename
@@ -259,7 +271,7 @@ calibrateType1 <- function(object, null, n, n.rep,
 
             ## Small sample correction
             ls.iP$p.SSC <- 2*(1-pnorm(abs(eS.KR[null,"t-value"]))) ## 2*(1-pt(abs(eS.KR[null,"t-value"]), df = eS.KR[null,"df"]))            
-            ls.iP$p.robustSSC <- 2*(1-pnorm(abs(eS.robustSatt[null,"P-value"])))
+            ls.iP$p.robustSSC <- 2*(1-pnorm(abs(eS.robustSatt[null,"t-value"])))
         
             ## Satterwaite + SSC
             ls.iP$p.KR <- eS.KR[null,"P-value"]

@@ -8,8 +8,8 @@
 calibrateType1(object, null, n, n.rep, generative.object = NULL,
   generative.coef = NULL, true.coef = NULL, n.true = 1e+06,
   round.true = 2, bootstrap = FALSE, type.bootstrap = c("perc", "stud",
-  "bca"), n.bootstrap = 1000, dir.save = NULL, label.file = NULL,
-  seed = NULL, trace = 2)
+  "bca"), n.bootstrap = 1000, checkType1 = FALSE, checkType2 = FALSE,
+  dir.save = NULL, label.file = NULL, seed = NULL, trace = 2)
 }
 \arguments{
 \item{object}{a \code{lvm} object defining the model to be fitted.}
@@ -36,6 +36,10 @@ Can also be \code{NULL}: in such a case the coefficients are set to default valu
 \item{type.bootstrap}{[character vector]}
 
 \item{n.bootstrap}{[integer, >0] the number of bootstrap sample to be used for each bootstrap.}
+
+\item{checkType1}{[logical] returns an error if the coefficients associated to the null hypotheses do not equal 0.}
+
+\item{checkType2}{[logical] returns an error if the coefficients associated to the null hypotheses equal 0.}
 
 \item{dir.save}{[character] path to the directory were the results should be exported.
 Can also be \code{NULL}: in such a case the results are not exported.}
