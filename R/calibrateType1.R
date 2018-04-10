@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 10 2018 (09:23) 
+## Last-Updated: apr 10 2018 (11:52) 
 ##           By: Brice Ozenne
-##     Update #: 259
+##     Update #: 261
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -228,8 +228,9 @@ calibrateType1 <- function(object, null, n, n.rep,
             e.lvm <- lava::estimate(object, data = dt.sim)
             if(e.lvm$opt$convergence==1){next} ## exclude lvm that has not converged
             eS.lvm <- try(summary(e.lvm),silent = TRUE)
-            if("try-error" %in% class(eS.lvm)){next}
-
+            if("try-error" %in% class(eS.lvm)){next} ## exclude lvm where we cannot compute the summary
+            if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
+            
             ## *** correction
             e.lvm.Satt <- e.lvm
             sCorrect(e.lvm.Satt) <- FALSE
