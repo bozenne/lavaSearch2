@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 10 2018 (11:52) 
+## Last-Updated: apr 10 2018 (14:48) 
 ##           By: Brice Ozenne
-##     Update #: 261
+##     Update #: 271
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -242,12 +242,14 @@ calibrateType1 <- function(object, null, n, n.rep,
             coef.corrected <- e.lvm.KR$sCorrect$param
 
             ## *** Wald test
-            eS.Satt <- summary2(e.lvm.Satt)$coef
-            eS.KR <- summary2(e.lvm.KR)$coef
+            eS.Satt <- summary2(e.lvm.Satt, df = TRUE)$coef
+            eS.SSC <- summary2(e.lvm.KR, df = FALSE)$coef
+            eS.KR <- summary2(e.lvm.KR, df = TRUE)$coef
 
-            ## *** Robust Wald test        
-            eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE)$coef
-            eS.robustKR <- summary2(e.lvm.KR, robust = TRUE)$coef
+            ## *** Robust Wald test
+            eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE, df = TRUE)$coef
+            eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
+            eS.robustKR <- summary2(e.lvm.KR, robust = TRUE, df = TRUE)$coef
 
             ## *** bootstrap
             if(bootstrap>0){
@@ -271,8 +273,8 @@ calibrateType1 <- function(object, null, n, n.rep,
             ls.iP$p.robustSatt <- eS.robustSatt[null,"P-value"]
 
             ## Small sample correction
-            ls.iP$p.SSC <- 2*(1-pnorm(abs(eS.KR[null,"t-value"]))) ## 2*(1-pt(abs(eS.KR[null,"t-value"]), df = eS.KR[null,"df"]))            
-            ls.iP$p.robustSSC <- 2*(1-pnorm(abs(eS.robustSatt[null,"t-value"])))
+            ls.iP$p.SSC <- eS.SSC[null,"P-value"]
+            ls.iP$p.robustSSC <- eS.robustSSC[null,"P-value"]
         
             ## Satterwaite + SSC
             ls.iP$p.KR <- eS.KR[null,"P-value"]

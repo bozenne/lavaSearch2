@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: apr  5 2018 (09:29) 
+## Last-Updated: apr 10 2018 (14:28) 
 ##           By: Brice Ozenne
-##     Update #: 1266
+##     Update #: 1269
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,7 +26,8 @@
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.
 #' @param value [logical] value for the arguments \code{adjust.Omega} and \code{adjust.n}.
-#' @param df [logical] should the first derivative of the expected information matrix be computed. Required when computing the degrees of freedom of the test statistics.
+#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param adjust.Omega [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param adjust.n [logical] should the correction for the degree of freedom be performed?
 #' @param tol [numeric >0] the minimum absolute difference between two estimation of the small sample bias.
@@ -634,8 +635,8 @@ sCorrect.lvmfit2 <- function(object, ...){
         }
     }
 
-    ## ** first derivative of the expected information matrix
-    if(length(name.3deriv)==0){
+    ## ** first derivative of the expected information matrix    
+    if(args$df == FALSE || length(name.3deriv)==0){
         object$dVcov$dVcov.param <- NULL
     }else if(derivative == "none"){
         object$dVcov$dVcov.param <- NA

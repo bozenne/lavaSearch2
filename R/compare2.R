@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: apr  4 2018 (14:11) 
+## Last-Updated: apr 10 2018 (14:34) 
 ##           By: Brice Ozenne
-##     Update #: 317
+##     Update #: 321
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,6 +22,8 @@
 #' @name compare2
 #'
 #' @param object an object that inherits from lm/gls/lme/lvmfit.
+#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models without correlation structure.
@@ -101,16 +103,16 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, bias.correct = TRUE, ...){
-    sCorrect(object) <- bias.correct
+compare2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
+    sCorrect(object, df = df) <- bias.correct
     return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, cluster = cluster) <- bias.correct
+compare2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
+    sCorrect(object, df = df, cluster = cluster) <- bias.correct
     return(.compare2(object, ...))
 }
 
@@ -155,12 +157,16 @@ compare2.lvmfit2 <- function(object, ...){
 ## * .compare2
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
-                      robust = FALSE,
+                      robust = FALSE, df = TRUE,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
     ## ** extract information
-    dVcov.param <- object$sCorrect$dVcov.param
-
+    if(df){
+        dVcov.param <- object$sCorrect$dVcov.param
+    }else{
+        dVcov.param <- NULL
+    }
+    
     param <- object$sCorrect$param
     if(robust){
         vcov.param <- crossprod(iid2(object))

@@ -76,7 +76,8 @@ sCorrect(x, ...) <- value
 
 \item{score}{[internal] export the score.}
 
-\item{df}{[logical] should the first derivative of the expected information matrix be computed. Required when computing the degrees of freedom of the test statistics.}
+\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.}
 
 \item{numeric.derivative}{[logical] should a numerical derivative be used to compute the first derivative of the information matrix?
 Otherwise an analytic formula is used.}
