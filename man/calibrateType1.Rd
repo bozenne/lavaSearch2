@@ -5,11 +5,12 @@
 \alias{calibrateType1}
 \title{Simulation Study Assessing Bias and Type 1 Error}
 \usage{
-calibrateType1(object, null, n, n.rep, generative.object = NULL,
-  generative.coef = NULL, true.coef = NULL, n.true = 1e+06,
-  round.true = 2, bootstrap = FALSE, type.bootstrap = c("perc", "stud",
-  "bca"), n.bootstrap = 1000, checkType1 = FALSE, checkType2 = FALSE,
-  dir.save = NULL, label.file = NULL, seed = NULL, trace = 2)
+calibrateType1(object, null, n, n.rep, Ftest = FALSE,
+  generative.object = NULL, generative.coef = NULL, true.coef = NULL,
+  n.true = 1e+06, round.true = 2, bootstrap = FALSE,
+  type.bootstrap = c("perc", "stud", "bca"), n.bootstrap = 1000,
+  checkType1 = FALSE, checkType2 = FALSE, dir.save = NULL,
+  label.file = NULL, seed = NULL, trace = 2)
 }
 \arguments{
 \item{object}{a \code{lvm} object defining the model to be fitted.}
@@ -19,6 +20,8 @@ calibrateType1(object, null, n, n.rep, generative.object = NULL,
 \item{n}{[integer vector, >0] sample size(s) considered in the simulation study.}
 
 \item{n.rep}{[integer, >0] number of simulations per sample size.}
+
+\item{Ftest}{[logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?}
 
 \item{generative.object}{[lvm] object defining the statistical model generating the data.}
 

@@ -1,5 +1,7 @@
 #+BEGIN_HTML
 <a href="https://travis-ci.org/bozenne/lavaSearch2"><img src="https://travis-ci.org/bozenne/lavaSearch2.svg?branch=master"></a>
+<a href="http://cran.rstudio.com/web/packages/lavaSearch2/index.html"><img src="http://www.r-pkg.org/badges/version/lavaSearch2"></a>
+<a href="http://cranlogs.r-pkg.org/downloads/total/last-month/lavaSearch2"><img src="http://cranlogs.r-pkg.org/badges/lavaSearch2"></a>
 #+END_HTML
 
 * lavaSeach2

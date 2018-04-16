@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: apr  4 2018 (17:18) 
+## last-updated: jul 22 2016 (18:10) 
 ##           By: Brice Ozenne
-##     Update #: 230
+##     Update #: 231
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -306,18 +306,24 @@ if(FALSE){
 
     ## /* Define path to file */
     ## FILENAME Fichier "&NomEtude.%Str(mydata.txt)";
-    
+
     ## /* Importation of the data */
     ## Data mydata; 
-    ## Infile Fichier FirstObs=2 obs=151; /* if no FirstObs : will read all first lines */
-    ## input Id $ X1 X2 X3 Gender $ variable $ value; 
+    ## Infile Fichier FirstObs=2 obs=61; /* if no FirstObs : will read all first lines */
+    ## input gpr $ animal $ week weight; 
     ## Run;
 
+    ## /* display data */
+    ## PROC SGPANEL DATA=mydata;
+    ## PANELBY gpr;
+    ## SERIES X=week Y=weight / GROUP=animal;
+    ## RUN;
+
     ## /* Fit mixed model */
-    ## PROC Mixed Data = mydata;
-    ## Class Id Gender variable ;
-    ## Model value = variable X1 Gender / SOLUTION DDFM=KR;
-    ## Repeated variable / SUBJECT = id TYPE = CS R RCORR;
+    ## PROC Mixed DATA = mydata;
+    ## Class gpr animal week ;
+    ## Model weight = week gpr*week / SOLUTION DDFM=KR;
+    ## Repeated week / SUBJECT = animal TYPE = CS R RCORR;
     ## RUN; 
 }
 

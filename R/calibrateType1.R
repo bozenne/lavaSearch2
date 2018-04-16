@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 11 2018 (13:12) 
+## Last-Updated: apr 13 2018 (15:15) 
 ##           By: Brice Ozenne
-##     Update #: 273
+##     Update #: 283
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,6 +40,7 @@
 ##' @param checkType2 [logical] returns an error if the coefficients associated to the null hypotheses equal 0.
 ##' @param dir.save [character] path to the directory were the results should be exported.
 ##' Can also be \code{NULL}: in such a case the results are not exported.
+##' @param Ftest [logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?
 ##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
@@ -83,7 +84,7 @@
 ## * calibrateType1
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1 <- function(object, null, n, n.rep, 
+calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
                            generative.object = NULL, generative.coef = NULL, 
                            true.coef = NULL, n.true = 1e6, round.true = 2,              
                            bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
@@ -206,6 +207,10 @@ calibrateType1 <- function(object, null, n, n.rep,
 ### ** loop
     dt.pvalue <- NULL
     dt.bias <- NULL
+    store.coef <- null
+    if(Ftest){
+        store.coef <- c(store.coef, "global")
+    }
     if(!is.null(seed)){
         set.seed(seed)
     }else{
@@ -242,15 +247,48 @@ calibrateType1 <- function(object, null, n, n.rep,
             coef.corrected <- e.lvm.KR$sCorrect$param
 
             ## *** Wald test
+            eS.ML <- summary2(e.lvm.Satt, df = FALSE)$coef
             eS.Satt <- summary2(e.lvm.Satt, df = TRUE)$coef
             eS.SSC <- summary2(e.lvm.KR, df = FALSE)$coef
             eS.KR <- summary2(e.lvm.KR, df = TRUE)$coef
 
             ## *** Robust Wald test
+            eS.robustML <- summary2(e.lvm.Satt, robust = TRUE, df = FALSE)$coef
             eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE, df = TRUE)$coef
             eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
             eS.robustKR <- summary2(e.lvm.KR, robust = TRUE, df = TRUE)$coef
 
+            if(Ftest){
+                order.oldname <- c("statistic","std","estimate","p-value","df") ## estimate is NA this is why it is put in the middle
+                new.name <- names(eS.Satt)
+
+                eS.ML <- rbind(eS.ML,
+                               setNames(compare2(e.lvm.Satt, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                               )
+                eS.Satt <- rbind(eS.Satt,
+                                 setNames(compare2(e.lvm.Satt, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                 )
+                eS.SSC <- rbind(eS.SSC,
+                                setNames(compare2(e.lvm.KR, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                )
+                eS.KR <- rbind(eS.KR,
+                               setNames(compare2(e.lvm.KR, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                               )
+
+                eS.robustML <- rbind(eS.robustML,
+                                     setNames(compare2(e.lvm.Satt, robust = TRUE, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                     )
+                eS.robustSatt <- rbind(eS.robustSatt,
+                                       setNames(compare2(e.lvm.Satt, robust = TRUE, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                       )
+                eS.robustSSC <- rbind(eS.robustSSC,
+                                      setNames(compare2(e.lvm.KR, robust = TRUE, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                      )
+                eS.robustKR <- rbind(eS.robustKR,
+                                     setNames(compare2(e.lvm.KR, robust = TRUE, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
+                                     )
+            }
+            
             ## *** bootstrap
             if(bootstrap>0){
                 e.boot <- eval(parse(text = "butils::bootReg(e.lvm, type = \"coef\", n.boot = n.bootstrap"))
@@ -265,26 +303,26 @@ calibrateType1 <- function(object, null, n, n.rep,
             ls.iP <- list()
 
             ## z test
-            ls.iP$p.Ztest <- eS.lvm$coef[null,"P-value"]
-            ls.iP$p.robustZtest <-  2*(1-pnorm(abs(eS.robustSatt[null,"t-value"])))
+            ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
+            ls.iP$p.robustZtest <-  eS.robustML[store.coef,"P-value"]
 
             ## Satterwaite
-            ls.iP$p.Satt <- eS.Satt[null,"P-value"]
-            ls.iP$p.robustSatt <- eS.robustSatt[null,"P-value"]
+            ls.iP$p.Satt <- eS.Satt[store.coef,"P-value"]
+            ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"P-value"]
 
             ## Small sample correction
-            ls.iP$p.SSC <- eS.SSC[null,"P-value"]
-            ls.iP$p.robustSSC <- eS.robustSSC[null,"P-value"]
+            ls.iP$p.SSC <- eS.SSC[store.coef,"P-value"]
+            ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"P-value"]
         
             ## Satterwaite + SSC
-            ls.iP$p.KR <- eS.KR[null,"P-value"]
-            ls.iP$p.robustKR <- eS.robustKR[null,"P-value"]
+            ls.iP$p.KR <- eS.KR[store.coef,"P-value"]
+            ls.iP$p.robustKR <- eS.robustKR[store.coef,"P-value"]
 
             ## bootstrap
             if(bootstrap){
-                ls.iP$p.bootPerc <- boot.perc[null,"p.value"]
-                ls.iP$p.bootStud <- boot.stud[null,"p.value"]
-                ls.iP$p.bootBca <- boot.bca[null,"p.value"]
+                ls.iP$p.bootPerc <- boot.perc[store.coef,"p.value"]
+                ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
+                ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
             }
             ## metainformation
             iDT.pvalue <- cbind(data.frame(n = n.tempo,
@@ -293,7 +331,7 @@ calibrateType1 <- function(object, null, n, n.rep,
                                            nboot = n.bootstrap,
                                            niter = e.lvm.KR$sCorrect$opt$iterations,
                                            warning = test.warning,
-                                           link = null,
+                                           link = store.coef,
                                            stringsAsFactors = FALSE),
                                 do.call(cbind,ls.iP))
             rownames(iDT.pvalue) <- NULL

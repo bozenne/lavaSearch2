@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 10 2018 (09:34) 
 ## Version: 
-## Last-Updated: apr 11 2018 (13:07) 
+## Last-Updated: apr 13 2018 (15:17) 
 ##           By: Brice Ozenne
-##     Update #: 9
+##     Update #: 10
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,17 +41,17 @@ test_that("calibrateType1", {
                           n = c(10,20), n.rep = 2,
                           generative.object = m.generative,
                           generative.coef = generative.coef,
-                          dir.save = NULL,
+                          dir.save = NULL, Ftest = TRUE,
                           bootstrap = FALSE, seed = 10, trace = 0)
 
-    expect_equal(out$p.value[1,"p.Ztest"], 1.793176e-05)
-    expect_equal(out$p.value[1,"p.robustZtest"], 0.0002798229)
-    expect_equal(out$p.value[1,"p.Satt"], 0.001588207)
-    expect_equal(out$p.value[1,"p.robustSatt"], 0.004587442)
-    expect_equal(out$p.value[1,"p.SSC"], 0.0008923767)
-    expect_equal(out$p.value[1,"p.robustSSC"], 0.004887758)
-    expect_equal(out$p.value[1,"p.KR"], 0.01595612)
-    expect_equal(out$p.value[1,"p.robustKR"], 0.03058102)
+    expect_equal(out$p.value[1:2,"p.Ztest"], rep(1.793176e-05,2))
+    expect_equal(out$p.value[1:2,"p.robustZtest"], rep(0.0002798229,2))
+    expect_equal(out$p.value[1:2,"p.Satt"], rep(0.001588207,2))
+    expect_equal(out$p.value[1:2,"p.robustSatt"], rep(0.004587442,2))
+    expect_equal(out$p.value[1:2,"p.SSC"], rep(0.0008923767,2))
+    expect_equal(out$p.value[1:2,"p.robustSSC"], rep(0.004887758,2))
+    expect_equal(out$p.value[1:2,"p.KR"], rep(0.01595612,2))
+    expect_equal(out$p.value[1:2,"p.robustKR"], rep(0.03058102,2))
 })
 
 
