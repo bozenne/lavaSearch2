@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 13 2018 (15:15) 
+## Last-Updated: apr 17 2018 (10:55) 
 ##           By: Brice Ozenne
-##     Update #: 283
+##     Update #: 332
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,7 +40,7 @@
 ##' @param checkType2 [logical] returns an error if the coefficients associated to the null hypotheses equal 0.
 ##' @param dir.save [character] path to the directory were the results should be exported.
 ##' Can also be \code{NULL}: in such a case the results are not exported.
-##' @param Ftest [logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?
+##' @param F.test [logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?
 ##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
@@ -84,7 +84,7 @@
 ## * calibrateType1
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
+calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
                            generative.object = NULL, generative.coef = NULL, 
                            true.coef = NULL, n.true = 1e6, round.true = 2,              
                            bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
@@ -174,6 +174,10 @@ calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
         txtCoef <- paste(null[coef.true[null]==0], collapse = "\" \"")
         stop("Control type 2 error: coefficients \"",txtCoef,"\" are 0 while their belong to the null hypothesis\n")
     }
+
+    res.C <- createContrast(null, name.param = name.coef, add.rowname = TRUE, rowname.rhs = FALSE)
+    contrast <- res.C$contrast
+    rhs <- res.C$null
     
     ## *** filename
     if(is.null(label.file)){label.file <- seed}
@@ -208,9 +212,10 @@ calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
     dt.pvalue <- NULL
     dt.bias <- NULL
     store.coef <- null
-    if(Ftest){
+    if(F.test){
         store.coef <- c(store.coef, "global")
     }
+    n.store <- length(store.coef)
     if(!is.null(seed)){
         set.seed(seed)
     }else{
@@ -225,70 +230,113 @@ calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
 
         for(iRep in 1:n.rep){
             if(trace>0){cat(iRep," ")}
-
+            ls.iP <- list()
+            
             ## *** simulation
             dt.sim <- lava::sim(generative.object, n = n.tempo, p = generative.coef, latent = FALSE)
 
             ## *** model adjustement
             e.lvm <- lava::estimate(object, data = dt.sim)
             if(e.lvm$opt$convergence==1){next} ## exclude lvm that has not converged
-            eS.lvm <- try(summary(e.lvm),silent = TRUE)
-            if("try-error" %in% class(eS.lvm)){next} ## exclude lvm where we cannot compute the summary
             if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
-            
-            ## *** correction
+
             e.lvm.Satt <- e.lvm
-            sCorrect(e.lvm.Satt) <- FALSE
+            testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE)
             e.lvm.KR <- e.lvm
-            suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE)
-            ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
-            test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
+            testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE))
+            
+            ## *** coefficients
             coef.original <- coef(e.lvm)
-            coef.corrected <- e.lvm.KR$sCorrect$param
+            if(!inherits(testError.KR,"try-error")){
+                ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
+                test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
 
-            ## *** Wald test
-            eS.ML <- summary2(e.lvm.Satt, df = FALSE)$coef
-            eS.Satt <- summary2(e.lvm.Satt, df = TRUE)$coef
-            eS.SSC <- summary2(e.lvm.KR, df = FALSE)$coef
-            eS.KR <- summary2(e.lvm.KR, df = TRUE)$coef
-
-            ## *** Robust Wald test
-            eS.robustML <- summary2(e.lvm.Satt, robust = TRUE, df = FALSE)$coef
-            eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE, df = TRUE)$coef
-            eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
-            eS.robustKR <- summary2(e.lvm.KR, robust = TRUE, df = TRUE)$coef
-
-            if(Ftest){
-                order.oldname <- c("statistic","std","estimate","p-value","df") ## estimate is NA this is why it is put in the middle
-                new.name <- names(eS.Satt)
-
-                eS.ML <- rbind(eS.ML,
-                               setNames(compare2(e.lvm.Satt, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                               )
-                eS.Satt <- rbind(eS.Satt,
-                                 setNames(compare2(e.lvm.Satt, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                 )
-                eS.SSC <- rbind(eS.SSC,
-                                setNames(compare2(e.lvm.KR, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                )
-                eS.KR <- rbind(eS.KR,
-                               setNames(compare2(e.lvm.KR, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                               )
-
-                eS.robustML <- rbind(eS.robustML,
-                                     setNames(compare2(e.lvm.Satt, robust = TRUE, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                     )
-                eS.robustSatt <- rbind(eS.robustSatt,
-                                       setNames(compare2(e.lvm.Satt, robust = TRUE, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                       )
-                eS.robustSSC <- rbind(eS.robustSSC,
-                                      setNames(compare2(e.lvm.KR, robust = TRUE, df = FALSE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                      )
-                eS.robustKR <- rbind(eS.robustKR,
-                                     setNames(compare2(e.lvm.KR, robust = TRUE, df = TRUE, par = null, as.lava = FALSE)["global",order.oldname], new.name)
-                                     )
+                coef.corrected <- e.lvm.KR$sCorrect$param
+            }else{
+                coef.corrected <- setNames(rep(NA,n.coef),name.coef)
+                test.warning <- NA
             }
             
+            ## *** no correction
+            ## get Wald tests
+            eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")],silent = TRUE)
+            if("try-error" %in% class(eS.ML)){next} ## exclude lvm where we cannot compute the summary
+            if(F.test){
+                F.ML <- lava::compare(e.lvm, par = null)
+                eS.ML <- rbind(eS.ML, global = c(Estimate = F.ML$statistic, "P-value" = F.ML$p.value))
+            }
+            
+            if(!inherits(testError.Satt,"try-error")){                
+                eS.robustML <- compare2(e.lvm.Satt, robust = TRUE, df = FALSE,
+                                        contrast = contrast, null = rhs,
+                                        F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
+                names(eS.robustML) <- c("Estimate","P-value")
+            }else{
+                eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")],silent = TRUE)
+                if(inherits(eS.robustML,"try-error")){
+                    eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
+                }
+                if(F.test){
+                    eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
+                }
+            }
+
+            ## store results
+            ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
+            ls.iP$p.robustZtest <-  eS.robustML[store.coef,"P-value"]
+            
+            ## *** Sattterwaith correction
+            if(!inherits(testError.Satt,"try-error")){
+                ## get Wald tests
+                eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
+                                    contrast = contrast, null = rhs,
+                                    F.test = F.test, as.lava = FALSE)
+                eS.robustSatt <- compare2(e.lvm.Satt, robust = TRUE, df = TRUE,
+                                          contrast = contrast, null = rhs,
+                                          F.test = F.test, as.lava = FALSE)
+
+                ## store results
+                ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
+                ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"p-value"]
+            }else{
+                ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
+                ls.iP$p.robustSatt <- rep(as.numeric(NA), n.store)
+            }
+
+            ## *** small sample correction
+            if(!inherits(testError.KR,"try-error")){
+                ## get Wald tests
+                eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                                   contrast = contrast, null = rhs,
+                                   F.test = F.test, as.lava = FALSE)
+                eS.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
+                                         contrast = contrast, null = rhs,
+                                         F.test = F.test, as.lava = FALSE)
+                ## store results
+                ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
+                ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"p-value"]
+            }else{
+                ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
+                ls.iP$p.robustSSC <- rep(as.numeric(NA), n.store)
+            }
+
+            ## *** Sattterwaith correction with small sample correction
+            if(!inherits(testError.KR,"try-error")){
+                ## get Wald tests
+                eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
+                                  contrast = contrast, null = rhs,
+                                  F.test = F.test, as.lava = FALSE)
+                eS.robustKR <- compare2(e.lvm.KR, robust = TRUE, df = TRUE,
+                                        contrast = contrast, null = rhs,
+                                        F.test = F.test, as.lava = FALSE)
+                
+                ## store results
+                ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
+                ls.iP$p.robustKR <- eS.robustKR[store.coef,"p-value"]
+            }else{
+                ls.iP$p.KR <- rep(as.numeric(NA), n.store)
+                ls.iP$p.robustKR <- rep(as.numeric(NA), n.store)
+            }
             ## *** bootstrap
             if(bootstrap>0){
                 e.boot <- eval(parse(text = "butils::bootReg(e.lvm, type = \"coef\", n.boot = n.bootstrap"))
@@ -297,34 +345,13 @@ calibrateType1 <- function(object, null, n, n.rep, Ftest = FALSE,
                 boot.perc <- summary(e.boot, p.value = TRUE, type = "perc", print = FALSE, index = index.coef.boot)
                 boot.stud <- summary(e.boot, p.value = TRUE, type = "stud", print = FALSE, index = index.coef.boot)
                 boot.bca <- summary(e.boot, p.value = TRUE, type = "bca", print = FALSE, index = index.coef.boot)
-            }
 
-            ## *** collect results (p.values)
-            ls.iP <- list()
-
-            ## z test
-            ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
-            ls.iP$p.robustZtest <-  eS.robustML[store.coef,"P-value"]
-
-            ## Satterwaite
-            ls.iP$p.Satt <- eS.Satt[store.coef,"P-value"]
-            ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"P-value"]
-
-            ## Small sample correction
-            ls.iP$p.SSC <- eS.SSC[store.coef,"P-value"]
-            ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"P-value"]
-        
-            ## Satterwaite + SSC
-            ls.iP$p.KR <- eS.KR[store.coef,"P-value"]
-            ls.iP$p.robustKR <- eS.robustKR[store.coef,"P-value"]
-
-            ## bootstrap
-            if(bootstrap){
                 ls.iP$p.bootPerc <- boot.perc[store.coef,"p.value"]
                 ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
                 ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
             }
-            ## metainformation
+
+            ## *** metainformation
             iDT.pvalue <- cbind(data.frame(n = n.tempo,
                                            rep = iRep,
                                            seed = seed,

@@ -5,7 +5,7 @@
 \alias{calibrateType1}
 \title{Simulation Study Assessing Bias and Type 1 Error}
 \usage{
-calibrateType1(object, null, n, n.rep, Ftest = FALSE,
+calibrateType1(object, null, n, n.rep, F.test = FALSE,
   generative.object = NULL, generative.coef = NULL, true.coef = NULL,
   n.true = 1e+06, round.true = 2, bootstrap = FALSE,
   type.bootstrap = c("perc", "stud", "bca"), n.bootstrap = 1000,
@@ -21,7 +21,7 @@ calibrateType1(object, null, n, n.rep, Ftest = FALSE,
 
 \item{n.rep}{[integer, >0] number of simulations per sample size.}
 
-\item{Ftest}{[logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?}
+\item{F.test}{[logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?}
 
 \item{generative.object}{[lvm] object defining the statistical model generating the data.}
 

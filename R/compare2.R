@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: apr 10 2018 (14:34) 
+## Last-Updated: apr 17 2018 (10:31) 
 ##           By: Brice Ozenne
-##     Update #: 321
+##     Update #: 328
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -199,12 +199,24 @@ compare2.lvmfit2 <- function(object, ...){
             stop("Argument \'contrast\' and argument \'par\' cannot be both NULL \n",
                  "Please specify the null hypotheses using one of the two arguments \n")
         }
+        if(is.null(colnames(contrast))){
+            stop("Argument \'contrast\' must have column names \n")
+        }
+        if(any(colnames(contrast) %in% name.param == FALSE)){
+            txt <- setdiff(colnames(contrast), name.param)
+            stop("Argument \'contrast\' has incorrect column names \n",
+                 "invalid name(s): \"",paste(txt, collapse = "\" \""),"\"\n")
+        }
+        if(any(name.param %in% colnames(contrast) == FALSE)){
+            txt <- setdiff(name.param, colnames(contrast))
+            stop("Argument \'contrast\' has incorrect column names \n",
+                 "missing name(s): \"",paste(txt, collapse = "\" \""),"\"\n")
+        }
         if(NCOL(contrast) != n.param){
             stop("Argument \'contrast\' should be a matrix with ",n.param," columns \n")
         }
-        if(is.null(colnames(contrast)) || any(colnames(contrast) != name.param)){
-            stop("Argument \'contrast\' has incorrect column names \n")
-        }
+        ## reorder columns according to coefficients
+        contrast <- contrast[,name.param,drop=FALSE]
         if(any(abs(svd(contrast)$d)<1e-10)){
             stop("Argument \'contrast\' is singular \n")
         }

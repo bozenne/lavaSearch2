@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:55) 
 ## Version: 
-## Last-Updated: apr  3 2018 (16:19) 
+## Last-Updated: apr 17 2018 (10:49) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 9
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,8 +17,8 @@
 
 ## * getVarCov2
 
-#' @title Reconstruct the Marginal Variance Covariance Matrix
-#' @description Reconstruct the marginal variance covariance matrix from a nlme or lvm model.
+#' @title Reconstruct the Conditional Variance Covariance Matrix
+#' @description Reconstruct the conditional variance covariance matrix from a nlme or lvm model.
 #' Only compatible with specific correlation and variance structure.
 #' @name getVarCov2
 #'
@@ -27,7 +27,7 @@
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param ... [internal] only used by the generic method.
 #' 
-#' @details The marginal variance covariance matrix for gls model is of the form:
+#' @details The conditional variance covariance matrix for gls model is of the form:
 #' 
 #' \tabular{cccc}{
 #' \eqn{\Sigma =} \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \sigma_2 \rho_{1,2}} \tab \eqn{\sigma^2 \sigma_3 \rho_{1,3}} \cr

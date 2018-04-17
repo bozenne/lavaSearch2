@@ -5,7 +5,7 @@
 \alias{getVarCov2.gls}
 \alias{getVarCov2.lme}
 \alias{getVarCov2.lvmfit}
-\title{Reconstruct the Marginal Variance Covariance Matrix}
+\title{Reconstruct the Conditional Variance Covariance Matrix}
 \usage{
 getVarCov2(object, ...)
 
@@ -28,11 +28,11 @@ getVarCov2(object, ...)
 A list containing the residual variance-covariance matrix in the element Omega.
 }
 \description{
-Reconstruct the marginal variance covariance matrix from a nlme or lvm model.
+Reconstruct the conditional variance covariance matrix from a nlme or lvm model.
 Only compatible with specific correlation and variance structure.
 }
 \details{
-The marginal variance covariance matrix for gls model is of the form:
+The conditional variance covariance matrix for gls model is of the form:
 
 \tabular{cccc}{
 \eqn{\Sigma =} \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \sigma_2 \rho_{1,2}} \tab \eqn{\sigma^2 \sigma_3 \rho_{1,3}} \cr
