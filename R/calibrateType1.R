@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 17 2018 (10:55) 
+## Last-Updated: apr 18 2018 (09:33) 
 ##           By: Brice Ozenne
-##     Update #: 332
+##     Update #: 341
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -241,25 +241,26 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
             if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
 
             e.lvm.Satt <- e.lvm
-            testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE)
+            testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
             e.lvm.KR <- e.lvm
-            testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE))
+            testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
             
             ## *** coefficients
             coef.original <- coef(e.lvm)
             if(!inherits(testError.KR,"try-error")){
                 ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
                 test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
-
+                niter.correct <- e.lvm.KR$sCorrect$opt$iterations
                 coef.corrected <- e.lvm.KR$sCorrect$param
             }else{
-                coef.corrected <- setNames(rep(NA,n.coef),name.coef)
+                niter.correct <- NA
                 test.warning <- NA
+                coef.corrected <- setNames(rep(NA,n.coef),name.coef)
             }
             
             ## *** no correction
             ## get Wald tests
-            eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")],silent = TRUE)
+            eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")], silent = TRUE)
             if("try-error" %in% class(eS.ML)){next} ## exclude lvm where we cannot compute the summary
             if(F.test){
                 F.ML <- lava::compare(e.lvm, par = null)
@@ -272,10 +273,11 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
                                         F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
                 names(eS.robustML) <- c("Estimate","P-value")
             }else{
-                eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")],silent = TRUE)
+                eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")], silent = TRUE)
                 if(inherits(eS.robustML,"try-error")){
                     eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
                 }
+
                 if(F.test){
                     eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
                 }
@@ -350,13 +352,13 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
                 ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
                 ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
             }
-
+      
             ## *** metainformation
             iDT.pvalue <- cbind(data.frame(n = n.tempo,
                                            rep = iRep,
                                            seed = seed,
                                            nboot = n.bootstrap,
-                                           niter = e.lvm.KR$sCorrect$opt$iterations,
+                                           niter = niter.correct,
                                            warning = test.warning,
                                            link = store.coef,
                                            stringsAsFactors = FALSE),
@@ -368,7 +370,7 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
             iDT.bias <- data.frame(n = n.tempo,
                                    rep = iRep,
                                    seed = seed,
-                                   niter = e.lvm.KR$sCorrect$opt$iterations,
+                                   niter = niter.correct,
                                    warning = test.warning,
                                    estimate.truth = as.double(coef.true),
                                    estimate.ML = as.double(coef.original[name.coef]),

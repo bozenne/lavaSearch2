@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: apr 13 2018 (14:31) 
+## Last-Updated: apr 18 2018 (09:34) 
 ##           By: Brice Ozenne
-##     Update #: 803
+##     Update #: 804
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -110,7 +110,10 @@
                            name.meanparam = name.meanparam,
                            name.varparam = name.varparam,
                            param2index = param2index, n.param = n.param)
-    iVcov.param <- chol2inv(chol(iInfo))
+    iVcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
+    if(inherits(iVcov.param, "try-error")){
+        iVcov.param <- solve(iInfo)
+    }
     if(trace>0){
         cat("- done \n")
     }
