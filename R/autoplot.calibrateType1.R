@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr  5 2018 (13:52) 
+## Last-Updated: apr 22 2018 (18:22) 
 ##           By: Brice Ozenne
-##     Update #: 16
+##     Update #: 27
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,11 +105,14 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
                        variable.name = "method")
         df.gg <- stats::aggregate(dfLong$p.value,
                                   by = list(n = dfLong$n, method = dfLong$method, link = dfLong$link),
-                                  FUN = function(x){c(n = length(x), type1error = mean(x<=alpha, na.rm = TRUE))},
+                                  FUN = function(x){c(n.rep = length(x), type1error = mean(x<=alpha, na.rm = TRUE))},
                                   simplify = FALSE)
         df.gg <- cbind(df.gg[,c("n","method","link")],
                        do.call(rbind,df.gg[,"x"]))
 
+        df.gg$ci.inf <- df.gg$type1error + stats::qnorm(0.025) * sqrt(df.gg$type1error*(1-df.gg$type1error)/df.gg$n.rep)
+        df.gg$ci.sup <- df.gg$type1error + stats::qnorm(0.975) * sqrt(df.gg$type1error*(1-df.gg$type1error)/df.gg$n.rep)
+        
         ## *** display
         if(is.null(keep.method)){
             keep.method <- as.character(unique(df.gg$method))
@@ -131,7 +134,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         label.method <- name2label[keep.method]
         n.method <- length(keep.method)
 
-        
+       y.range <- range(c(alpha,df.gg$type1error))
         gg <- ggplot(df.gg, aes_string(x = "n", y = "type1error", group = "method", color = "method", shape = "method"))
         gg <- gg + geom_point(size = 3) + geom_line(size = 2)
         gg <- gg + facet_grid(~link, labeller = label_parsed)
@@ -139,6 +142,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         gg <- gg + xlab("sample size")
         gg <- gg + ylab("type 1 error rate")
         gg <- gg + theme(legend.position = "bottom")
+        gg <- gg + coord_cartesian(ylim = y.range)
 
         if(!is.null(nrow.legend)){
             gg <- gg + guides(color=guide_legend(nrow=nrow.legend,byrow=TRUE))
@@ -160,6 +164,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
     if(plot){
         print(gg)
     }
+    rownames(df.gg) <- NULL
     return(invisible(list(plot = gg,
                           data = df.gg)))
 }

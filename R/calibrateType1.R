@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 17 2018 (10:55) 
+## Last-Updated: apr 22 2018 (18:20) 
 ##           By: Brice Ozenne
-##     Update #: 332
+##     Update #: 350
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 ##' @description Perform a simulation study over one or several sample size
 ##' to assess the bias of the estimate
 ##' and the type 1 error of the Wald test and robust Wald test
-##' @name calibrateType
+##' @name calibrateType1
 ##' 
 ##' @param object a \code{lvm} object defining the model to be fitted.
 ##' @param null [character vector] names of the coefficient whose value will be tested against 0. 
@@ -118,7 +118,7 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
     ## *** coef of the fitted model
     if(is.null(true.coef)){
         if(trace>1){
-            cat("* estimate true coefficients using a sample size of n=",n.true," ", sep="")
+            cat("  Estimate true coefficients using a sample size of n=",n.true," ", sep="")
         }
         e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
         coef.true <- coef(e.true)
@@ -130,7 +130,7 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
         }
     }else{
         if(trace>1){
-            cat("* check true coefficients ")
+            cat("  Check true coefficients ")
         }
         n.true <- n[n.n]
         e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
@@ -162,8 +162,16 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
     n.null <- length(null)
     if(any(null %in% name.coef == FALSE)){
         incorrect.name <- null[null %in% name.coef == FALSE]
+        possible.name <- setdiff(name.coef, null)
+        ls.name <- lapply(incorrect.name, function(iN){
+            dist.tempo <- adist(x = iN, y = possible.name)
+            return(possible.name[which.min(dist.tempo)])
+        })
+        ex.name <- unique(unlist(ls.name))
+
         stop("Invalid argument \'null\': some of the coefficient names does not match those of the estimate model \n",
-             "incorrect names: \"",paste(incorrect.name, collapse = "\" \""),"\" \n")
+             "incorrect names: \"",paste(incorrect.name, collapse = "\" \""),"\" \n",
+             "example of valid names: \"",paste(ex.name, collapse = "\" \""),"\"\n")
     }
 
     if(checkType1 && any(coef.true[null]!=0)){
@@ -192,13 +200,15 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
 
 ### ** display
     if(trace>1){
-        cat("* settings: \n")
+        cat("  Settings: \n")
         cat("  > simulation for n=",paste(n,collapse = " "),"\n",sep="")
         cat("  > model: \n")
         print(object)
         cat("  > expected coefficients: \n")
         print(coef.true)
-        cat("  > bootstrap: ",bootstrap,"\n")
+        if(bootstrap){
+            cat("  > bootstrap: ",bootstrap,"\n")
+        }
         if(!is.null(seed)){
             cat("  > seed: ",seed,"\n")
         }
@@ -222,7 +232,10 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
         seed <- NA
     }
 
-    if(trace>1){cat("* perform simulation: \n")}
+    if(trace>1){
+        cat("\n")
+        cat(" Perform simulation: \n")
+    }
     for(iN in 1:n.n){
 
         if(trace>0){cat("  > sample size=",n[iN],": ", sep = "")}
