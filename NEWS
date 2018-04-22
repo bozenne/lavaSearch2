@@ -1,5 +1,9 @@
 # -*- mode: org -*-
 
+* Version 1.3.4
+** User visble changes 
+- improve documentation of =calibrateType1=.
+
 * Version 1.3.3
 ** User visble changes 
 - add option Ftest to =calibrateType1=.
