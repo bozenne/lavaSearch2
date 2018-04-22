@@ -499,8 +499,8 @@ Efficiency of Sandwich Covariance Matrix Estimation ).
 
 The function =calibrateType1= can be used to assess the type 1 error
 of a Wald statistic on a specific example. This however assumes that
-the estimated model is the true model. Let's make an example. For this
-we simulate some data:
+the estimated model is correctly specified. Let's make an example. For
+this we simulate some data:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 set.seed(10)
 m.generative <- lvm(Y ~ X1 + X2 + Gene)
@@ -509,7 +509,7 @@ d <- lava::sim(m.generative, n = 50, latent = FALSE)
 #+END_SRC
 
 Let's now imagine that we want to analyze the relationship between
-\(Y\) and \(Gene\) using the following dataset:
+Y and Gene using the following dataset:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 head(d)
 #+END_SRC
@@ -567,7 +567,7 @@ We can now use the function =calibrateType1=:
   perform. This should be large (>1000) to be able to accurately
   estimate the type 1 error.
 - the arugment =generative.object= must contain the model used to
-  generate the data. Typically we don't know it and will use the
+  generate the data. Typically we don't know it and we will use the
   investigator model.
 - the arugment =generative.coef= is an addtional argument specifying
   values of the coefficients of the generative model. When assessing
@@ -655,8 +655,6 @@ We obtain a =data.frame= with:
   test at one sample size. Otherwise one would need to adjust the
   interval for multiple comparisons.
 
-\bigskip
-
 When the dataset contains categorical/factor variables:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 d2 <- d
@@ -681,7 +679,7 @@ categorical(myModel2, labels = c("others","LL")) <- ~Gene
 
 #+RESULTS:
 
-and the name of the coefficients needs to be consistent with the
+and the names of the coefficients need to be consistent with the
 reference levels of these variables:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 myCoefUnderH0.2 <- myCoefUnderH0
