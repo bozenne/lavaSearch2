@@ -495,7 +495,7 @@ rbind(robust = diag(crossprod(iid(e2))),
 This may be explained by the fact the robust standard error tends to
 be liberal in small samples (e.g. see Kauermann 2001, A Note on the
 Efficiency of Sandwich Covariance Matrix Estimation ).
-** Inference: assessing type 1 error of the testing procedure
+** Inference: assessing the type 1 error of the testing procedure
 
 The function =calibrateType1= can be used to assess the type 1 error
 of a Wald statistic on a specific example. This however assumes that
