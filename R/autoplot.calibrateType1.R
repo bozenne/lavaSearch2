@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr 23 2018 (13:04) 
+## Last-Updated: apr 23 2018 (13:12) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 20
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -121,7 +121,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         label.method <- name2label[keep.method]
         n.method <- length(keep.method)
 
-        
+       y.range <- range(c(alpha,df.gg$type1error))
         gg <- ggplot(df.gg, aes_string(x = "n", y = "type1error", group = "method", color = "method", shape = "method"))
         gg <- gg + geom_point(size = 3) + geom_line(size = 2)
         gg <- gg + facet_grid(~link, labeller = label_parsed)
@@ -129,6 +129,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         gg <- gg + xlab("sample size")
         gg <- gg + ylab("type 1 error rate")
         gg <- gg + theme(legend.position = "bottom")
+        gg <- gg + coord_cartesian(ylim = y.range)
 
         if(!is.null(nrow.legend)){
             gg <- gg + guides(color=guide_legend(nrow=nrow.legend,byrow=TRUE))
@@ -150,6 +151,7 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
     if(plot){
         print(gg)
     }
+    rownames(df.gg) <- NULL
     return(invisible(list(plot = gg,
                           data = df.gg)))
 }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: apr 10 2018 (14:33) 
+## Last-Updated: apr 22 2018 (17:32) 
 ##           By: Brice Ozenne
-##     Update #: 266
+##     Update #: 267
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 #' except that it first computes the small sample correction (but does not store it).
 #' So if \code{summary2} is to be called several times,
 #' it is more efficient to pre-compute the quantities for the small sample correction
-#' using \code{sCorrect} and then call \code{summary}.
+#' using \code{sCorrect} and then call \code{summary2}.
 #' 
 #' @examples
 #' m <- lvm(Y~X1+X2)

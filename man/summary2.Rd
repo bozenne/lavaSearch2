@@ -51,7 +51,7 @@ Summary with small sample correction.
 except that it first computes the small sample correction (but does not store it).
 So if \code{summary2} is to be called several times,
 it is more efficient to pre-compute the quantities for the small sample correction
-using \code{sCorrect} and then call \code{summary}.
+using \code{sCorrect} and then call \code{summary2}.
 }
 \examples{
 m <- lvm(Y~X1+X2)

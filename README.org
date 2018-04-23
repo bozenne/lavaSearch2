@@ -131,10 +131,10 @@ samples. Simulations have shown that the type 1 error rate tends to be
 too large, i.e. the p.values are have a downward bias.  gg
 *lavaSearch2* improves the Gaussian approximation in two way:
 - using a Student's t distribution instead of a normal distribution to
-  account for the uncertainty on the variance of the parameters. The
+  account for the uncertainty on the variance of the coefficients. The
   degrees of freedom are estimated using Satterwaite approximation,
   i.e. identifying the chi-squared distribution that best fit the
-  observed moments of the variance of the parameters. 
+  observed moments of the variance of the coefficients. 
 - correct for the first order bias in the residual variance due to ML
   estimation. This bias also affects the standard error of the
   estimates and the control of the type 1 error. The correction does
@@ -495,6 +495,233 @@ rbind(robust = diag(crossprod(iid(e2))),
 This may be explained by the fact the robust standard error tends to
 be liberal in small samples (e.g. see Kauermann 2001, A Note on the
 Efficiency of Sandwich Covariance Matrix Estimation ).
+** Inference: assessing the type 1 error of the testing procedure
+
+The function =calibrateType1= can be used to assess the type 1 error
+of a Wald statistic on a specific example. This however assumes that
+the estimated model is correctly specified. Let's make an example. For
+this we simulate some data:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+set.seed(10)
+m.generative <- lvm(Y ~ X1 + X2 + Gene)
+categorical(m.generative, K = 2) <- ~Gene
+d <- lava::sim(m.generative, n = 50, latent = FALSE)
+#+END_SRC
+
+Let's now imagine that we want to analyze the relationship between
+Y and Gene using the following dataset:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+head(d)
+#+END_SRC
+
+#+RESULTS:
+:             Y         X1         X2 Gene
+: 1 -1.14369572 -0.4006375 -0.7618043    0
+: 2 -0.09943370 -0.3345566  0.4193754    0
+: 3 -0.04331996  1.3679540 -1.0399434    1
+: 4  2.25017335  2.1377671  0.7115740    0
+: 5  0.16715138  0.5058193 -0.6332130    0
+: 6  1.73931135  0.7863424  0.5631747    0
+
+For this we fit define a LVM:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+myModel <- lvm(Y ~ X1 + X2 + Gene)
+#+END_SRC
+
+#+RESULTS:
+
+and estimate the coefficients of the model using =estimate=:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+myModelFit <- estimate(myModel, data = d)
+myModelFit
+#+END_SRC
+#+RESULTS:
+:                     Estimate Std. Error  Z-value  P-value
+: Regressions:                                             
+:    Y~X1              1.02349    0.12017  8.51728   <1e-12
+:    Y~X2              0.91519    0.12380  7.39244   <1e-12
+:    Y~Gene            0.48035    0.23991  2.00224  0.04526
+: Intercepts:                                              
+:    Y                -0.11221    0.15773 -0.71141   0.4768
+: Residual Variances:                                      
+:    Y                 0.67073    0.13415  5.00000
+
+We want to test the effect of the variable Gene. So under the null
+hypothesis and if our model is correct, the coefficients of the model are:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+myNull <- c("Y~Gene")
+myCoefUnderH0 <- coef(myModelFit)
+myCoefUnderH0[myNull] <- 0
+myCoefUnderH0
+#+END_SRC
+
+#+RESULTS:
+:          Y       Y~X1       Y~X2     Y~Gene       Y~~Y 
+: -0.1122119  1.0234852  0.9151946  0.0000000  0.6707335
+
+We can now use the function =calibrateType1=:
+- the first argument must contain the model that we want to fit (called investigator model)
+- the argument =null= must contain a vector containing the parameters to be tested in the investigator model
+- the argument =n= must contain the sample size for which the simulation study should be performed.
+- the argument =n.rep= must contain the number of simulations that we want to
+  perform. This should be large (>1000) to be able to accurately
+  estimate the type 1 error.
+- the arugment =generative.object= must contain the model used to
+  generate the data. Typically we don't know it and we will use the
+  investigator model.
+- the arugment =generative.coef= is an addtional argument specifying
+  values of the coefficients of the generative model. When assessing
+  the type 1 error rate, the coefficients we want to test should be
+  set to 0 - otherwise we are assessing the power instead of the type
+  1 error.
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+mySimulation <- calibrateType1(myModel, 
+                               null = myNull,
+                               n = NROW(d),
+                               n.rep = 50,
+                               generative.object = myModel,
+                               generative.coef = myCoefUnderH0)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+  Estimate true coefficients using a sample size of n=1e+06 - done 
+  Settings: 
+  > simulation for n=50
+  > model: 
+Latent Variable Model
+                           
+  Y ~ X1+X2+Gene   gaussian
+
+Exogenous variables:                      
+  X1          gaussian
+  X2          gaussian
+  Gene        gaussian
+
+  > expected coefficients: 
+     Y   Y~X1   Y~X2 Y~Gene   Y~~Y 
+ -0.11   1.02   0.92   0.00   0.67 
+
+ Perform simulation: 
+  > sample size=50: 1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50
+#+end_example
+To save time we only make 50 simulations but much more are necessary
+to really assess the type 1 error rate. Note that one can use the
+option =checkType1= when running =calibrateType1= to ensure that the
+coefficient are indeed simulated under the null:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+try(myError <- calibrateType1(myModel, 
+                              null = c("Y","Y~X1","Y~Gene"), checkType1 = TRUE,
+                              n = NROW(d),
+                              n.rep = 50,
+                              generative.object = myModel,
+                              generative.coef = myCoefUnderH0))
+#+END_SRC
+
+#+RESULTS:
+:   Estimate true coefficients using a sample size of n=1e+06 - done 
+: Error in calibrateType1(myModel, null = c("Y", "Y~X1", "Y~Gene"), checkType1 = TRUE,  : 
+:   Control type 1 error: coefficients "Y" "Y~X1" are not 0 while their belong to the null hypothesis
+
+The function =autoplot= provides a graphical display of the bias of
+the coeffcients and type 1 error rate over the sample size. Since we
+are only simulating for one sample size it is not very
+relevant. Nevertheless we can still use this function to compute the type 1 error rate:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+out <- autoplot(mySimulation, type = "type1error", plot = FALSE)
+out$data
+#+END_SRC
+
+#+RESULTS:
+:    n        method   link n.rep type1error      ci.inf     ci.sup
+: 1 50       p.Ztest Y~Gene    50       0.02 -0.01880531 0.05880531
+: 2 50 p.robustZtest Y~Gene    50       0.04 -0.01431612 0.09431612
+: 3 50        p.Satt Y~Gene    50       0.02 -0.01880531 0.05880531
+: 4 50  p.robustSatt Y~Gene    50       0.02 -0.01880531 0.05880531
+: 5 50         p.SSC Y~Gene    50       0.02 -0.01880531 0.05880531
+: 6 50   p.robustSSC Y~Gene    50       0.02 -0.01880531 0.05880531
+: 7 50          p.KR Y~Gene    50       0.02 -0.01880531 0.05880531
+: 8 50    p.robustKR Y~Gene    50       0.02 -0.01880531 0.05880531
+
+We obtain a =data.frame= with:
+- the sample size (column =n=)
+- the statistic used (column =method=): for instance =p.Ztest=
+  corresponds to the uncorrected Wald test, =p.KR= corresponds to the
+  corrected Wald test (both small sample correction and
+  Satterthwaite), and =p. robustZtest= corresponds to the uncorrected
+  robust Wald test.
+- the pointwise 95% confidence interval (column =ci.inf= and
+  =ci.sup=): the confidence interval is valid when looking at only one
+  test at one sample size. Otherwise one would need to adjust the
+  interval for multiple comparisons.
+
+When the dataset contains categorical/factor variables:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+d2 <- d
+d2$Gene <- factor(d2$Gene, levels = 0:1, labels = c("others", "LL"))
+head(d2)
+#+END_SRC
+
+#+RESULTS:
+:             Y         X1         X2   Gene
+: 1 -1.14369572 -0.4006375 -0.7618043 others
+: 2 -0.09943370 -0.3345566  0.4193754 others
+: 3 -0.04331996  1.3679540 -1.0399434     LL
+: 4  2.25017335  2.1377671  0.7115740 others
+: 5  0.16715138  0.5058193 -0.6332130 others
+: 6  1.73931135  0.7863424  0.5631747 others
+
+they should be explicitely described in the generative model:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+myModel2 <- myModel
+categorical(myModel2, labels = c("others","LL")) <- ~Gene
+#+END_SRC
+
+#+RESULTS:
+
+and the names of the coefficients need to be consistent with the
+reference levels of these variables:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+myCoefUnderH0.2 <- myCoefUnderH0
+names(myCoefUnderH0.2) <- gsub("Gene", "GeneLL", names(myCoefUnderH0.2))
+myCoefUnderH0.2
+#+END_SRC
+
+#+RESULTS:
+:          Y       Y~X1       Y~X2   Y~GeneLL       Y~~Y 
+: -0.1122119  1.0234852  0.9151946  0.0000000  0.6707335
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+mySimulation2 <- calibrateType1(myModel, 
+                                null = c("Y~GeneLL"), checkType1 = TRUE,
+                                n = NROW(d),
+                                n.rep = 50,
+                                generative.object = myModel2,
+                                generative.coef = myCoefUnderH0)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+  Estimate true coefficients using a sample size of n=1e+06 - done 
+  Settings: 
+  > simulation for n=50
+  > model: 
+Latent Variable Model
+                           
+  Y ~ X1+X2+Gene   gaussian
+
+Exogenous variables:                      
+  X1          gaussian
+  X2          gaussian
+  Gene        gaussian
+
+  > expected coefficients: 
+       Y     Y~X1     Y~X2 Y~GeneLL     Y~~Y 
+   -0.11     1.02     0.92     0.00     0.67 
+
+ Perform simulation: 
+  > sample size=50: 1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  50
+#+end_example
 
 ** Adjustment for multiple comparisons: univariate Wald test, single model
 
