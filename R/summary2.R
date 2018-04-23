@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: apr 22 2018 (17:32) 
+## Last-Updated: apr 23 2018 (13:58) 
 ##           By: Brice Ozenne
-##     Update #: 267
+##     Update #: 269
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' @name summary2
 #'
 #' @param object a \code{gls}, \code{lme} or \code{lvm} object.
-#' @param digit [integer > 0] the number of digit to keep when displaying the summary.
+#' @param digit [integer > 0] the number of decimal places to use when displaying the summary.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?

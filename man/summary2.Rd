@@ -39,7 +39,7 @@ See \code{\link{sCorrect}} for more details.}
 \item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models without correlation structure.}
 
-\item{digit}{[integer > 0] the number of digit to keep when displaying the summary.}
+\item{digit}{[integer > 0] the number of decimal places to use when displaying the summary.}
 
 \item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
 }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr 23 2018 (13:12) 
+## Last-Updated: apr 23 2018 (15:19) 
 ##           By: Brice Ozenne
-##     Update #: 20
+##     Update #: 25
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -40,7 +40,8 @@
 ##' Only relevant when type equals \code{"type1error"}.
 ##' @param keep.method [character vector] the methods names for which the type 1 error should be displayed.
 ##' Only relevant when type equals \code{"type1error"}.
-##'
+##' @param ... [internal] Only used by the generic method.
+##' 
 ##' @details Method names:
 ##' \itemize{
 ##' \item \code{p.Ztest}
@@ -64,7 +65,8 @@
 ##' @export
 autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.threshold = "red",
                                     type.bias = "absolute",
-                                    alpha = 0.05, nrow.legend = NULL, name2label = NULL, color = NULL, keep.method = NULL){
+                                    alpha = 0.05, nrow.legend = NULL, name2label = NULL, color = NULL, keep.method = NULL,
+                                    ...){
 
     type <- match.arg(type, choices = c("bias","type1error"))
 
@@ -98,20 +100,14 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
 
     ## ** display type 1 error
     if(type == "type1error"){
-        df.gg <- summary(object, alpha = alpha, type = type, display = display)
+        df.gg <- summary(object, alpha = alpha, type = type, display = FALSE)
         
         ## *** display
         if(is.null(keep.method)){
             keep.method <- as.character(unique(df.gg$method))
         }
         if(is.null(name2label)){
-            name2label <- c(p.Ztest = "Gaussian approx.",
-                            p.Satt = "Satterthwaite approx.",
-                            p.KR = "Satterthwaite approx. with small sample correction",
-                            p.robustZtest = "robust Gaussian approx.",
-                            p.robustSatt = "robust Satterthwaite approx.",
-                            p.robustKR = "robust Satterthwaite approx. with small sample correction"
-                            )
+            name2label <- setNames(unique(paste0(df.gg$statistic,", ",df.gg$correction)),unique(df.gg$method))
         }
         if(is.null(color)){
             ## from ggthemes::colorblind_pal()(8)

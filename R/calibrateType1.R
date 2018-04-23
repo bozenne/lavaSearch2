@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 23 2018 (13:12) 
+## Last-Updated: apr 23 2018 (14:15) 
 ##           By: Brice Ozenne
-##     Update #: 349
+##     Update #: 361
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -44,7 +44,8 @@
 ##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
-##' @param trace [interger] should the execution of the function be trace. Can be 0, 1 or 2.
+##' @param trace [integer] should the execution of the function be trace. Can be 0, 1 or 2.
+##' @param ... [internal] Only used by the generic method.
 ##' 
 ##' @return An object of class \code{calibrateType1}.
 ##' @seealso \code{link{autoplot.calibrateType1}} for a graphical display of the bias or of the type 1 error.
@@ -69,7 +70,12 @@
 ##'          Y3~eta,
 ##'          eta~Group+Gender)
 ##' e <- lava::estimate(m, data = d)
+##' \dontshow{
 ##' res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
+##' }
+##' \dontshow{
+##' res <- calibrateType1(e, null = "eta~Group", n.rep = 1000)
+##' }
 ##' summary(res)
 ##' 
 ##' @export
@@ -85,7 +91,7 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
                                bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
                                checkType1 = FALSE, checkType2 = FALSE,
                                dir.save = NULL, label.file = NULL,             
-                               seed = NULL, trace = 2){
+                               seed = NULL, trace = 2, ...){
 
 ### ** prepare
     n.n <- length(n)
@@ -159,7 +165,7 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         incorrect.name <- null[null %in% name.coef == FALSE]
         possible.name <- setdiff(name.coef, null)
         ls.name <- lapply(incorrect.name, function(iN){
-            dist.tempo <- adist(x = iN, y = possible.name)
+            dist.tempo <- utils::adist(x = iN, y = possible.name)
             return(possible.name[which.min(dist.tempo)])
         })
         ex.name <- unique(unlist(ls.name))
@@ -233,11 +239,16 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
     }
     for(iN in 1:n.n){
 
-        if(trace>0){cat("  > sample size=",n[iN],": ", sep = "")}
+        if(trace>0){
+            cat("  > sample size=",n[iN],": ", sep = "")
+            pb <- utils::txtProgressBar(max = n.rep, style = 3)
+        }
         n.tempo <- n[iN]
 
         for(iRep in 1:n.rep){
-            if(trace>0){cat(iRep," ")}
+            if(trace>0){
+                utils::setTxtProgressBar(pb, value = iRep)
+            }
             ls.iP <- list()
             
             ## *** simulation
@@ -395,7 +406,10 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
             saveRDS(dt.pvalue, file = file.path(dir.save,filename_tempo.pvalue))
             saveRDS(dt.bias, file = file.path(dir.save,filename_tempo.bias))
         }
-        if(trace>0){cat("\n")}
+        if(trace>0){
+            cat("\n")
+            close(pb)
+        }
     }
 
     ## ** export
@@ -419,7 +433,7 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
 ##' @export
 calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
                                   bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
-                                  seed = NULL, trace = 2){
+                                  seed = NULL, trace = 2, ...){
 
     ## ** Prepare
     ## *** model

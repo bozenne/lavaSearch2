@@ -2,17 +2,27 @@
 % Please edit documentation in R/calibrateType1.R
 \name{calibrateType1}
 \alias{calibrateType1}
+\alias{calibrateType1.lvm}
+\alias{calibrateType1.lvmfit}
 \title{Simulation Study Assessing Bias and Type 1 Error}
 \usage{
-calibrateType1(object, null, n, n.rep, F.test = FALSE,
+calibrateType1(object, ...)
+
+\method{calibrateType1}{lvm}(object, null, n, n.rep, F.test = FALSE,
   generative.object = NULL, generative.coef = NULL, true.coef = NULL,
   n.true = 1e+06, round.true = 2, bootstrap = FALSE,
   type.bootstrap = c("perc", "stud", "bca"), n.bootstrap = 1000,
   checkType1 = FALSE, checkType2 = FALSE, dir.save = NULL,
-  label.file = NULL, seed = NULL, trace = 2)
+  label.file = NULL, seed = NULL, trace = 2, ...)
+
+\method{calibrateType1}{lvmfit}(object, null, n.rep, F.test = FALSE,
+  bootstrap = FALSE, type.bootstrap = c("perc", "stud", "bca"),
+  n.bootstrap = 1000, seed = NULL, trace = 2, ...)
 }
 \arguments{
 \item{object}{a \code{lvm} object defining the model to be fitted.}
+
+\item{...}{[internal] Only used by the generic method.}
 
 \item{null}{[character vector] names of the coefficient whose value will be tested against 0.}
 
@@ -51,7 +61,7 @@ Can also be \code{NULL}: in such a case the results are not exported.}
 \item{seed}{[integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 Can also be \code{NULL}: in such a case no seed is set.}
 
-\item{trace}{[interger] should the execution of the function be trace. Can be 0, 1 or 2.}
+\item{trace}{[integer] should the execution of the function be trace. Can be 0, 1 or 2.}
 }
 \value{
 An object of class \code{calibrateType1}.
@@ -62,7 +72,7 @@ to assess the bias of the estimate
 and the type 1 error of the Wald test and robust Wald test
 }
 \examples{
-#### generative model ####
+#### simulate data ####
 m.Sim <- lvm(c(Y1[mu1:sigma]~1*eta,
                Y2[mu2:sigma]~1*eta,
                Y3[mu3:sigma]~1*eta,
@@ -70,26 +80,23 @@ m.Sim <- lvm(c(Y1[mu1:sigma]~1*eta,
 latent(m.Sim) <- ~eta
 categorical(m.Sim, labels = c("M","F")) <- ~Gender
 
-vec.par <- c(mu2 = 0, ## mu1 is set to 0 by default
-             mu3 = -0.37,
-             "eta" = -2.74,
-             beta1 = -1.20,
-             beta2 = 0,
-             sigma = 1.46,
-             "eta~~eta" = 1.63)
+d <- lava::sim(m.Sim, 1e2)
 
-#### parameters to test ####
-null <- c("Y2","eta~GenderF")
 
-#### launch simulation: same model generation fit ####
-\dontrun{
-res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, generative.coef = vec.par)
-autoplot(res, type = "bias")
-autoplot(res, type = "type1error")
+#### calibrate type 1 error on the estimated model ####
+m <- lvm(Y1~eta,
+         Y2~eta,
+         Y3~eta,
+         eta~Group+Gender)
+e <- lava::estimate(m, data = d)
+\dontshow{
+res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
 }
 \dontshow{
-res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.true = 1e3, n.rep = 2, generative.coef = vec.par)
+res <- calibrateType1(e, null = "eta~Group", n.rep = 1000)
 }
+summary(res)
+
 }
 \seealso{
 \code{link{autoplot.calibrateType1}} for a graphical display of the bias or of the type 1 error.
