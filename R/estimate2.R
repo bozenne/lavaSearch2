@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: apr 18 2018 (09:34) 
+## Last-Updated: apr 20 2018 (15:32) 
 ##           By: Brice Ozenne
-##     Update #: 804
+##     Update #: 807
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -187,7 +187,7 @@
             n.corrected <- rep(n.cluster, n.endogenous) - colSums(leverage, na.rm = TRUE)
         }
         
-        ## *** Step (iv): correct residual covariance matrix and estimates
+        ## *** Step (v): correct residual covariance matrix, estimates, and derivatives
         if(adjust.Omega){
             ## corrected residual covariance variance
             Omega.adj <- Omega + Psi
@@ -199,7 +199,7 @@
            
         }
 
-        ## *** Step (v): expected information matrix
+        ## *** Step (vii): expected information matrix
         iInfo <- .information2(dmu = dmu,
                                dOmega = dOmega,
                                Omega = Omega.adj,

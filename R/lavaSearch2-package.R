@@ -54,7 +54,6 @@
 
 #' @import lava
 #' @import ggplot2
-#' @importFrom ggplot2 autoplot
 #' @importFrom graphics par plot text
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag

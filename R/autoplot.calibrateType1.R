@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr  5 2018 (13:52) 
+## Last-Updated: apr 23 2018 (13:04) 
 ##           By: Brice Ozenne
-##     Update #: 16
+##     Update #: 18
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -98,18 +98,8 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
 
     ## ** display type 1 error
     if(type == "type1error"){
-        ## *** data
-        dfLong <- melt(object$p.value,
-                       measure.vars = grep("^p.",names(object$p.value),value = TRUE),
-                       value.name = "p.value",
-                       variable.name = "method")
-        df.gg <- stats::aggregate(dfLong$p.value,
-                                  by = list(n = dfLong$n, method = dfLong$method, link = dfLong$link),
-                                  FUN = function(x){c(n = length(x), type1error = mean(x<=alpha, na.rm = TRUE))},
-                                  simplify = FALSE)
-        df.gg <- cbind(df.gg[,c("n","method","link")],
-                       do.call(rbind,df.gg[,"x"]))
-
+        df.gg <- summary(object, alpha = alpha, type = type, display = display)
+        
         ## *** display
         if(is.null(keep.method)){
             keep.method <- as.character(unique(df.gg$method))

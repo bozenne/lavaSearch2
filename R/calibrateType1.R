@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 18 2018 (09:33) 
+## Last-Updated: apr 23 2018 (13:10) 
 ##           By: Brice Ozenne
-##     Update #: 341
+##     Update #: 348
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -52,7 +52,7 @@
 ##' @author Brice Ozenne
 ##'
 ##' @examples
-##' #### generative model ####
+##' #### simulate data ####
 ##' m.Sim <- lvm(c(Y1[mu1:sigma]~1*eta,
 ##'                Y2[mu2:sigma]~1*eta,
 ##'                Y3[mu3:sigma]~1*eta,
@@ -60,37 +60,32 @@
 ##' latent(m.Sim) <- ~eta
 ##' categorical(m.Sim, labels = c("M","F")) <- ~Gender
 ##'
-##' vec.par <- c(mu2 = 0, ## mu1 is set to 0 by default
-##'              mu3 = -0.37,
-##'              "eta" = -2.74,
-##'              beta1 = -1.20,
-##'              beta2 = 0,
-##'              sigma = 1.46,
-##'              "eta~~eta" = 1.63)
+##' d <- lava::sim(m.Sim, 1e2)
 ##'
-##' #### parameters to test ####
-##' null <- c("Y2","eta~GenderF")
-##'
-##' #### launch simulation: same model generation fit ####
-##' \dontrun{
-##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.rep = 50, generative.coef = vec.par)
-##' autoplot(res, type = "bias")
-##' autoplot(res, type = "type1error")
-##' }
-##' \dontshow{
-##' res <- calibrateType1(m.Sim, null = null, n = c(20,30,40), n.true = 1e3, n.rep = 2, generative.coef = vec.par)
-##' }
+##' 
+##' #### calibrate type 1 error on the estimated model ####
+##' m <- lvm(Y1~eta,
+##'          Y2~eta,
+##'          Y3~eta,
+##'          eta~Group+Gender)
+##' e <- lava::estimate(m, data = d)
+##' res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
+##' summary(res)
+##' 
+##' @export
+`calibrateType1` <-
+  function(object, ...) UseMethod("calibrateType1")
 
-## * calibrateType1
+## * calibrateType1.lvm
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
-                           generative.object = NULL, generative.coef = NULL, 
-                           true.coef = NULL, n.true = 1e6, round.true = 2,              
-                           bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
-                           checkType1 = FALSE, checkType2 = FALSE,
-                           dir.save = NULL, label.file = NULL,             
-                           seed = NULL, trace = 2){
+calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
+                               generative.object = NULL, generative.coef = NULL, 
+                               true.coef = NULL, n.true = 1e6, round.true = 2,              
+                               bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
+                               checkType1 = FALSE, checkType2 = FALSE,
+                               dir.save = NULL, label.file = NULL,             
+                               seed = NULL, trace = 2){
 
 ### ** prepare
     n.n <- length(n)
@@ -406,6 +401,55 @@ calibrateType1 <- function(object, null, n, n.rep, F.test = FALSE,
 
 }
 
+## * calibrateType1.lvmfit
+##' @rdname calibrateType1
+##' @export
+calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
+                                  bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
+                                  seed = NULL, trace = 2){
 
+    ## ** Prepare
+    ## *** model
+    object.model <- object$model
+
+    ## *** coef
+    coef.true <- coef(object)
+    name.coef <- names(coef.true)
+    if(any(null %in% name.coef == FALSE)){
+        txt <- null[null %in% name.coef == FALSE]
+        txt2 <- setdiff(name.coef, null)
+        stop("Argument \'null\' does not match the names of the model coefficients \n",
+             "Incorrect null: \"",paste(txt, collapse = "\" \""),"\" \n",
+             "Possible null: \"",paste(txt2, collapse = "\" \""),"\" \n")
+    }
+    coef.true[null] <- 0
+
+    ## *** data
+    n <- object$data$n
+
+    ## ** Run
+    out <- calibrateType1(object.model,
+                          null = null,
+                          n = n,
+                          n.rep = n.rep,
+                          F.test = F.test,
+                          generative.object = object.model,
+                          generative.coef = coef.true, 
+                          true.coef = coef.true,              
+                          bootstrap = bootstrap,
+                          type.bootstrap = type.bootstrap,
+                          n.bootstrap = n.bootstrap,
+                          checkType1 = FALSE,
+                          checkType2 = FALSE,
+                          dir.save = NULL,
+                          label.file = NULL,             
+                          seed = seed,
+                          trace = trace)
+
+
+    ## ** Export
+    return(out)
+}
+    
 ######################################################################
 ### calibrateType1.R ends here
