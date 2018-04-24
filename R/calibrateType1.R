@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 23 2018 (14:15) 
+## Last-Updated: apr 24 2018 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 361
+##     Update #: 448
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,7 +34,6 @@
 ##' @param n.true [integer, >0] sample size at which the estimated coefficients will be a reliable approximation of the true coefficients.
 ##' @param round.true [integer, >0] the number of decimal places to be used for the true value of the coefficients. No rounding is done if \code{NULL}.
 ##' @param bootstrap [logical] should bootstrap resampling be performed?
-##' @param type.bootstrap [character vector]
 ##' @param n.bootstrap [integer, >0] the number of bootstrap sample to be used for each bootstrap.
 ##' @param checkType1 [logical] returns an error if the coefficients associated to the null hypotheses do not equal 0.
 ##' @param checkType2 [logical] returns an error if the coefficients associated to the null hypotheses equal 0.
@@ -44,6 +43,8 @@
 ##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
+##' @param ncpus [integer >0] the number of processors to use.
+##' If greater than 1, the simulations are performed in parallel. 
 ##' @param trace [integer] should the execution of the function be trace. Can be 0, 1 or 2.
 ##' @param ... [internal] Only used by the generic method.
 ##' 
@@ -73,8 +74,9 @@
 ##' \dontshow{
 ##' res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
 ##' }
-##' \dontshow{
+##' \dontrun{
 ##' res <- calibrateType1(e, null = "eta~Group", n.rep = 1000)
+##' res <- calibrateType1(e, null = "eta~Group", n.rep = 1000, ncpus = 4)
 ##' }
 ##' summary(res)
 ##' 
@@ -88,10 +90,10 @@
 calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
                                generative.object = NULL, generative.coef = NULL, 
                                true.coef = NULL, n.true = 1e6, round.true = 2,              
-                               bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
+                               bootstrap = FALSE, n.bootstrap = 1e3,
                                checkType1 = FALSE, checkType2 = FALSE,
                                dir.save = NULL, label.file = NULL,             
-                               seed = NULL, trace = 2, ...){
+                               seed = NULL, ncpus = 1, trace = 2, ...){
 
 ### ** prepare
     n.n <- length(n)
@@ -188,17 +190,6 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
     contrast <- res.C$contrast
     rhs <- res.C$null
     
-    ## *** filename
-    if(is.null(label.file)){label.file <- seed}
-    filename_tempo.pvalue <- paste0("type1error-S",label.file,"(tempo).rds")
-    filename_tempo.bias <- paste0("bias-S",label.file,"(tempo).rds")
-    filename.pvalue <- gsub("\\(tempo\\)","",filename_tempo.pvalue)
-    filename.bias <- gsub("\\(tempo\\)","",filename_tempo.bias)
-
-    if(!is.null(dir.save)){
-        validPath(dir.save, type = "dir")
-    }
-
 ### ** display
     if(trace>1){
         cat("  Settings: \n")
@@ -212,204 +203,178 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         }
         if(!is.null(seed)){
             cat("  > seed: ",seed,"\n")
-        }
-        if(!is.null(dir.save)){
-            cat("  > export results in ",dir.save,"\n")
-        }
-        
+        }        
     }
+
     
 ### ** loop
-    dt.pvalue <- NULL
-    dt.bias <- NULL
     store.coef <- null
     if(F.test){
         store.coef <- c(store.coef, "global")
     }
     n.store <- length(store.coef)
-    if(!is.null(seed)){
-        set.seed(seed)
-    }else{
-        seed <- NA
-    }
-
+    
     if(trace>1){
         cat("\n")
         cat(" Perform simulation: \n")
     }
-    for(iN in 1:n.n){
 
-        if(trace>0){
-            cat("  > sample size=",n[iN],": ", sep = "")
-            pb <- utils::txtProgressBar(max = n.rep, style = 3)
+    if(ncpus>1){
+
+        ## *** prepare parallel computing
+        test.package <- try(requireNamespace("doParallel"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'doParallel\' \n",
+                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
         }
-        n.tempo <- n[iN]
+        test.package <- try(requireNamespace("foreach"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'foreach\' \n",
+                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
+        }
+        if(ncpus > parallel::detectCores()){
+            stop("Argument \'ncpus\' is greater than the number of available CPU cores \n",
+                 "available CPU cores: ",parallel::detectCores(),"\n")
+        }
+        cl <- parallel::makeCluster(ncpus)
+        doParallel::registerDoParallel(cl)
 
-        for(iRep in 1:n.rep){
-            if(trace>0){
-                utils::setTxtProgressBar(pb, value = iRep)
+        if(trace > 0){
+            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'tcltk\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
             }
-            ls.iP <- list()
-            
-            ## *** simulation
-            dt.sim <- lava::sim(generative.object, n = n.tempo, p = generative.coef, latent = FALSE)
-
-            ## *** model adjustement
-            e.lvm <- lava::estimate(object, data = dt.sim)
-            if(e.lvm$opt$convergence==1){next} ## exclude lvm that has not converged
-            if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
-
-            e.lvm.Satt <- e.lvm
-            testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
-            e.lvm.KR <- e.lvm
-            testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
-            
-            ## *** coefficients
-            coef.original <- coef(e.lvm)
-            if(!inherits(testError.KR,"try-error")){
-                ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
-                test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
-                niter.correct <- e.lvm.KR$sCorrect$opt$iterations
-                coef.corrected <- e.lvm.KR$sCorrect$param
-            }else{
-                niter.correct <- NA
-                test.warning <- NA
-                coef.corrected <- setNames(rep(NA,n.coef),name.coef)
-            }
-            
-            ## *** no correction
-            ## get Wald tests
-            eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")], silent = TRUE)
-            if("try-error" %in% class(eS.ML)){next} ## exclude lvm where we cannot compute the summary
-            if(F.test){
-                F.ML <- lava::compare(e.lvm, par = null)
-                eS.ML <- rbind(eS.ML, global = c(Estimate = F.ML$statistic, "P-value" = F.ML$p.value))
-            }
-            
-            if(!inherits(testError.Satt,"try-error")){                
-                eS.robustML <- compare2(e.lvm.Satt, robust = TRUE, df = FALSE,
-                                        contrast = contrast, null = rhs,
-                                        F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
-                names(eS.robustML) <- c("Estimate","P-value")
-            }else{
-                eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")], silent = TRUE)
-                if(inherits(eS.robustML,"try-error")){
-                    eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
-                }
-
-                if(F.test){
-                    eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
-                }
-            }
-
-            ## store results
-            ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
-            ls.iP$p.robustZtest <-  eS.robustML[store.coef,"P-value"]
-            
-            ## *** Sattterwaith correction
-            if(!inherits(testError.Satt,"try-error")){
-                ## get Wald tests
-                eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
-                                    contrast = contrast, null = rhs,
-                                    F.test = F.test, as.lava = FALSE)
-                eS.robustSatt <- compare2(e.lvm.Satt, robust = TRUE, df = TRUE,
-                                          contrast = contrast, null = rhs,
-                                          F.test = F.test, as.lava = FALSE)
-
-                ## store results
-                ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
-                ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"p-value"]
-            }else{
-                ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
-                ls.iP$p.robustSatt <- rep(as.numeric(NA), n.store)
-            }
-
-            ## *** small sample correction
-            if(!inherits(testError.KR,"try-error")){
-                ## get Wald tests
-                eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
-                                   contrast = contrast, null = rhs,
-                                   F.test = F.test, as.lava = FALSE)
-                eS.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
-                                         contrast = contrast, null = rhs,
-                                         F.test = F.test, as.lava = FALSE)
-                ## store results
-                ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
-                ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"p-value"]
-            }else{
-                ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
-                ls.iP$p.robustSSC <- rep(as.numeric(NA), n.store)
-            }
-
-            ## *** Sattterwaith correction with small sample correction
-            if(!inherits(testError.KR,"try-error")){
-                ## get Wald tests
-                eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
-                                  contrast = contrast, null = rhs,
-                                  F.test = F.test, as.lava = FALSE)
-                eS.robustKR <- compare2(e.lvm.KR, robust = TRUE, df = TRUE,
-                                        contrast = contrast, null = rhs,
-                                        F.test = F.test, as.lava = FALSE)
-                
-                ## store results
-                ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
-                ls.iP$p.robustKR <- eS.robustKR[store.coef,"p-value"]
-            }else{
-                ls.iP$p.KR <- rep(as.numeric(NA), n.store)
-                ls.iP$p.robustKR <- rep(as.numeric(NA), n.store)
-            }
-            ## *** bootstrap
-            if(bootstrap>0){
-                e.boot <- eval(parse(text = "butils::bootReg(e.lvm, type = \"coef\", n.boot = n.bootstrap"))
-
-                index.coef.boot <- match(null, name.coef)
-                boot.perc <- summary(e.boot, p.value = TRUE, type = "perc", print = FALSE, index = index.coef.boot)
-                boot.stud <- summary(e.boot, p.value = TRUE, type = "stud", print = FALSE, index = index.coef.boot)
-                boot.bca <- summary(e.boot, p.value = TRUE, type = "bca", print = FALSE, index = index.coef.boot)
-
-                ls.iP$p.bootPerc <- boot.perc[store.coef,"p.value"]
-                ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
-                ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
-            }
-      
-            ## *** metainformation
-            iDT.pvalue <- cbind(data.frame(n = n.tempo,
-                                           rep = iRep,
-                                           seed = seed,
-                                           nboot = n.bootstrap,
-                                           niter = niter.correct,
-                                           warning = test.warning,
-                                           link = store.coef,
-                                           stringsAsFactors = FALSE),
-                                do.call(cbind,ls.iP))
-            rownames(iDT.pvalue) <- NULL
-            dt.pvalue <- rbind(dt.pvalue, iDT.pvalue)
-
-            ## *** collect result (bias)
-            iDT.bias <- data.frame(n = n.tempo,
-                                   rep = iRep,
-                                   seed = seed,
-                                   niter = niter.correct,
-                                   warning = test.warning,
-                                   estimate.truth = as.double(coef.true),
-                                   estimate.ML = as.double(coef.original[name.coef]),
-                                   estimate.MLcorrected = as.double(coef.corrected[name.coef]),
-                                   name = names(coef.true),
-                                   type = type.coef[name.coef],
-                                   stringsAsFactors = FALSE)
-            rownames(iDT.bias) <- NULL
-            dt.bias <- rbind(dt.bias, iDT.bias)
+            parallel::clusterExport(cl, varlist = "trace")
         }
 
-        ## *** export (tempo)
+        cpus.name <- unlist(parallel::clusterApply(cl = cl, 1:ncpus, function(x){
+            myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
+            return(myName)
+        }))
+
+        vec.packages <- c("lava","lavaSearch2")
+        toExport <- c(".warperType1", "cpus.name")
+
+        if(length(seed)==0){
+            seed <- rep(NA, ncpus)
+        }else if(length(seed)==1){
+            set.seed(seed)
+            seed <- sample(1:1e5,size=ncpus,replace=FALSE)                
+        }else{
+            if(length(seed)!=ncpus){
+                stop("Length of argument \'seed\' does not match argument \'ncpus\' \n")
+            }            
+        }
+        names(seed) <- cpus.name
+
+        ## *** parallel computation
+        iRep <- NULL # [:for CRAN check] foreach
+        resSim <- foreach::`%dopar%`(
+                               foreach::foreach(iRep = 1:n.rep, .packages =  c("lava","lavaSearch2"),
+                                                .export = toExport),{ # iRep <- 1
+                                                    
+                                                    myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
+                                                    iSeed <- seed[myName]
+                                                    
+                                                    if(trace){
+                                                        if(!exists("pb")){
+                                                            pb <- tcltk::tkProgressBar("simulation type 1 error:", min=0, max=n.rep)
+                                                        }
+                                                        tcltk::setTkProgressBar(pb, iRep)
+                                                    }
+                                                    iOut <- NULL
+                                                    for(iN in n){ # iN <- n[1]
+                                                        iOut <- c(iOut,
+                                                                  .warperType1(iRep,
+                                                                               n = iN,
+                                                                               generative.object = generative.object,
+                                                                               generative.coef = generative.coef,
+                                                                               object = object,
+                                                                               coef.true = coef.true, type.coef = type.coef, name.coef = name.coef,
+                                                                               store.coef = store.coef, n.coef = n.coef, n.store = n.store,
+                                                                               F.test = F.test, null = null, contrast = contrast, rhs = rhs,
+                                                                               bootstrap = bootstrap,
+                                                                               n.bootstrap = n.bootstrap,
+                                                                               seed = iSeed)
+                                                                  )
+                                                    }
+                                                    return(iOut)
+                                                })
+    
+        parallel::stopCluster(cl)
+
+        ## *** post process
+        dt.pvalue <- do.call("rbind",lapply(resSim,"[[","pvalue"))
+        dt.pvalue <- dt.pvalue[order(dt.pvalue$n,dt.pvalue$rep),,drop=FALSE]
+        dt.bias <- do.call("rbind",lapply(resSim,"[[","bias"))
+        dt.bias <- dt.bias[order(dt.bias$n,dt.bias$rep),,drop=FALSE]
+        
+    }else{
+
+        ## *** filename
+        if(is.null(label.file)){label.file <- seed}
+        filename_tempo.pvalue <- paste0("type1error-S",label.file,"(tempo).rds")
+        filename_tempo.bias <- paste0("bias-S",label.file,"(tempo).rds")
+        filename.pvalue <- gsub("\\(tempo\\)","",filename_tempo.pvalue)
+        filename.bias <- gsub("\\(tempo\\)","",filename_tempo.bias)
+
         if(!is.null(dir.save)){
-            saveRDS(dt.pvalue, file = file.path(dir.save,filename_tempo.pvalue))
-            saveRDS(dt.bias, file = file.path(dir.save,filename_tempo.bias))
+            validPath(dir.save, type = "dir")
         }
+
+        if(!is.null(dir.save)){
+            cat("  > export results in ",dir.save,"\n")
+        }
+
         if(trace>0){
-            cat("\n")
-            close(pb)
+            FCTapply <- pbapply::pblapply
+        }else{
+            FCTapply <- lapply
         }
+        if(!is.null(seed)){
+            set.seed(seed)
+        }else{
+            seed <- NA
+        }
+        
+        ## *** sequential simulation
+        dt.pvalue <- NULL
+        dt.bias <- NULL
+        
+        for(iN in n){ ## iN <- n[1]
+
+            if(trace>0){
+                cat("  > sample size=",iN,"\n", sep = "")                    
+            }
+
+            resSim <- do.call(FCTapply, args = list(X = 1:n.rep, FUN = function(iRep){
+                .warperType1(iRep,
+                             n = iN,
+                             generative.object = generative.object,
+                             generative.coef = generative.coef,
+                             object = object,
+                             coef.true = coef.true, type.coef = type.coef, name.coef = name.coef,
+                             store.coef = store.coef, n.coef = n.coef, n.store = n.store,
+                             F.test = F.test, null = null, contrast = contrast, rhs = rhs,
+                             bootstrap = bootstrap,
+                             n.bootstrap = n.bootstrap,
+                             seed = seed)
+            }))
+            dt.pvalue <- rbind(dt.pvalue,
+                               do.call("rbind",lapply(resSim,"[[","pvalue"))
+                               )
+            dt.bias <- rbind(dt.bias,
+                             do.call("rbind",lapply(resSim,"[[","bias")))
+                             
+            
+            ## export (tempo)
+            if(!is.null(dir.save)){
+                saveRDS(dt.pvalue, file = file.path(dir.save,filename_tempo.pvalue))
+                saveRDS(dt.bias, file = file.path(dir.save,filename_tempo.bias))
+            }
+            
+        }   
     }
 
     ## ** export
@@ -417,7 +382,6 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         saveRDS(dt.pvalue, file = file.path(dir.save,filename.pvalue))
         saveRDS(dt.bias, file = file.path(dir.save,filename.bias))
     }
-
     out <- list(p.value = dt.pvalue,
                 bias = dt.bias,
                 e.true = e.true,
@@ -432,8 +396,8 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
 ##' @rdname calibrateType1
 ##' @export
 calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
-                                  bootstrap = FALSE, type.bootstrap = c("perc","stud","bca"), n.bootstrap = 1e3,
-                                  seed = NULL, trace = 2, ...){
+                                  bootstrap = FALSE, n.bootstrap = 1e3,
+                                  seed = NULL, trace = 2, ncpus = 1, ...){
 
     ## ** Prepare
     ## *** model
@@ -464,17 +428,179 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
                           generative.coef = coef.true, 
                           true.coef = coef.true,              
                           bootstrap = bootstrap,
-                          type.bootstrap = type.bootstrap,
                           n.bootstrap = n.bootstrap,
                           checkType1 = FALSE,
                           checkType2 = FALSE,
                           dir.save = NULL,
                           label.file = NULL,             
                           seed = seed,
+                          ncpus = ncpus,
                           trace = trace)
 
 
     ## ** Export
+    return(out)
+}
+
+## * .warperType1
+.warperType1 <- function(iRep, n, generative.object, generative.coef,
+                         object,
+                         coef.true, type.coef, name.coef, store.coef, n.coef, n.store,
+                         F.test, null, contrast, rhs,
+                         bootstrap, n.bootstrap,
+                         seed){
+
+    ls.iP <- list()  ## temporary
+    out <- list()
+    
+    ## ** simulation
+    dt.sim <- lava::sim(generative.object, n = n, p = generative.coef, latent = FALSE)
+
+    ## ** model adjustement
+    e.lvm <- lava::estimate(object, data = dt.sim)
+    if(e.lvm$opt$convergence==1){next} ## exclude lvm that has not converged
+    if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
+
+    e.lvm.Satt <- e.lvm
+    testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
+    e.lvm.KR <- e.lvm
+    testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
+            
+    ## ** coefficients
+    coef.original <- coef(e.lvm)
+    if(!inherits(testError.KR,"try-error")){
+        ## check whether adjusted residuals could be computed (otherwise adjust.n=FALSE)
+        test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
+        niter.correct <- e.lvm.KR$sCorrect$opt$iterations
+        coef.corrected <- e.lvm.KR$sCorrect$param
+    }else{
+        niter.correct <- NA
+        test.warning <- NA
+        coef.corrected <- setNames(rep(NA,n.coef),name.coef)
+    }
+            
+    ## ** no correction
+    ## get Wald tests
+    eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")], silent = TRUE)
+    if("try-error" %in% class(eS.ML)){next} ## exclude lvm where we cannot compute the summary
+    if(F.test){
+        F.ML <- lava::compare(e.lvm, par = null)
+        eS.ML <- rbind(eS.ML, global = c(Estimate = F.ML$statistic, "P-value" = F.ML$p.value))
+    }
+            
+    if(!inherits(testError.Satt,"try-error")){                
+        eS.robustML <- compare2(e.lvm.Satt, robust = TRUE, df = FALSE,
+                                contrast = contrast, null = rhs,
+                                F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
+        names(eS.robustML) <- c("Estimate","P-value")
+    }else{
+        eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")], silent = TRUE)
+        if(inherits(eS.robustML,"try-error")){
+            eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
+        }
+
+        if(F.test){
+            eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
+        }
+    }
+
+    ## store results
+    ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
+    ls.iP$p.robustZtest <-  eS.robustML[store.coef,"P-value"]
+            
+    ## ** Sattterwaith correction
+    if(!inherits(testError.Satt,"try-error")){
+        ## get Wald tests
+        eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
+                            contrast = contrast, null = rhs,
+                            F.test = F.test, as.lava = FALSE)
+        eS.robustSatt <- compare2(e.lvm.Satt, robust = TRUE, df = TRUE,
+                                  contrast = contrast, null = rhs,
+                                  F.test = F.test, as.lava = FALSE)
+
+        ## store results
+        ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
+        ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"p-value"]
+    }else{
+        ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
+        ls.iP$p.robustSatt <- rep(as.numeric(NA), n.store)
+    }
+
+    ## ** small sample correction
+    if(!inherits(testError.KR,"try-error")){
+        ## get Wald tests
+        eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                           contrast = contrast, null = rhs,
+                           F.test = F.test, as.lava = FALSE)
+        eS.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
+                                 contrast = contrast, null = rhs,
+                                 F.test = F.test, as.lava = FALSE)
+        ## store results
+        ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
+        ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"p-value"]
+    }else{
+        ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
+        ls.iP$p.robustSSC <- rep(as.numeric(NA), n.store)
+    }
+
+    ## ** Sattterwaith correction with small sample correction
+    if(!inherits(testError.KR,"try-error")){
+        ## get Wald tests
+        eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
+                          contrast = contrast, null = rhs,
+                          F.test = F.test, as.lava = FALSE)
+        eS.robustKR <- compare2(e.lvm.KR, robust = TRUE, df = TRUE,
+                                contrast = contrast, null = rhs,
+                                F.test = F.test, as.lava = FALSE)
+                
+        ## store results
+        ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
+        ls.iP$p.robustKR <- eS.robustKR[store.coef,"p-value"]
+    }else{
+        ls.iP$p.KR <- rep(as.numeric(NA), n.store)
+        ls.iP$p.robustKR <- rep(as.numeric(NA), n.store)
+    }
+    ## ** bootstrap
+    if(bootstrap>0){
+        e.boot <- eval(parse(text = "butils::bootReg(e.lvm, type = \"coef\", n.boot = n.bootstrap"))
+
+        index.coef.boot <- match(null, name.coef)
+        boot.perc <- summary(e.boot, p.value = TRUE, type = "perc", print = FALSE, index = index.coef.boot)
+        boot.stud <- summary(e.boot, p.value = TRUE, type = "stud", print = FALSE, index = index.coef.boot)
+        boot.bca <- summary(e.boot, p.value = TRUE, type = "bca", print = FALSE, index = index.coef.boot)
+
+        ls.iP$p.bootPerc <- boot.perc[store.coef,"p.value"]
+        ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
+        ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
+    }
+
+    ## ** metainformation
+    out$pvalue <- cbind(data.frame(n = n,
+                                   rep = iRep,
+                                   seed = seed,
+                                   nboot = n.bootstrap,
+                                   niter = niter.correct,
+                                   warning = test.warning,
+                                   link = store.coef,
+                                   stringsAsFactors = FALSE),
+                        do.call(cbind,ls.iP))
+    rownames(out$pvalue) <- NULL
+    
+    ## ** collect result (bias)
+    out$bias <- data.frame(n = n,
+                           rep = iRep,
+                           seed = seed,
+                           niter = niter.correct,
+                           warning = test.warning,
+                           estimate.truth = as.double(coef.true),
+                           estimate.ML = as.double(coef.original[name.coef]),
+                           estimate.MLcorrected = as.double(coef.corrected[name.coef]),
+                           name = names(coef.true),
+                           type = type.coef[name.coef],
+                           stringsAsFactors = FALSE)
+    rownames(out$bias) <- NULL
+
+    ## ** export
     return(out)
 }
     

@@ -10,14 +10,13 @@ calibrateType1(object, ...)
 
 \method{calibrateType1}{lvm}(object, null, n, n.rep, F.test = FALSE,
   generative.object = NULL, generative.coef = NULL, true.coef = NULL,
-  n.true = 1e+06, round.true = 2, bootstrap = FALSE,
-  type.bootstrap = c("perc", "stud", "bca"), n.bootstrap = 1000,
+  n.true = 1e+06, round.true = 2, bootstrap = FALSE, n.bootstrap = 1000,
   checkType1 = FALSE, checkType2 = FALSE, dir.save = NULL,
-  label.file = NULL, seed = NULL, trace = 2, ...)
+  label.file = NULL, seed = NULL, ncpus = 1, trace = 2, ...)
 
 \method{calibrateType1}{lvmfit}(object, null, n.rep, F.test = FALSE,
-  bootstrap = FALSE, type.bootstrap = c("perc", "stud", "bca"),
-  n.bootstrap = 1000, seed = NULL, trace = 2, ...)
+  bootstrap = FALSE, n.bootstrap = 1000, seed = NULL, trace = 2,
+  ncpus = 1, ...)
 }
 \arguments{
 \item{object}{a \code{lvm} object defining the model to be fitted.}
@@ -45,8 +44,6 @@ Can also be \code{NULL}: in such a case the coefficients are set to default valu
 
 \item{bootstrap}{[logical] should bootstrap resampling be performed?}
 
-\item{type.bootstrap}{[character vector]}
-
 \item{n.bootstrap}{[integer, >0] the number of bootstrap sample to be used for each bootstrap.}
 
 \item{checkType1}{[logical] returns an error if the coefficients associated to the null hypotheses do not equal 0.}
@@ -60,6 +57,9 @@ Can also be \code{NULL}: in such a case the results are not exported.}
 
 \item{seed}{[integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 Can also be \code{NULL}: in such a case no seed is set.}
+
+\item{ncpus}{[integer >0] the number of processors to use.
+If greater than 1, the simulations are performed in parallel.}
 
 \item{trace}{[integer] should the execution of the function be trace. Can be 0, 1 or 2.}
 }
@@ -92,8 +92,9 @@ e <- lava::estimate(m, data = d)
 \dontshow{
 res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
 }
-\dontshow{
+\dontrun{
 res <- calibrateType1(e, null = "eta~Group", n.rep = 1000)
+res <- calibrateType1(e, null = "eta~Group", n.rep = 1000, ncpus = 4)
 }
 summary(res)
 
