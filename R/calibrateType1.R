@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 24 2018 (17:52) 
+## Last-Updated: apr 24 2018 (18:20) 
 ##           By: Brice Ozenne
-##     Update #: 448
+##     Update #: 451
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -458,8 +458,8 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
 
     ## ** model adjustement
     e.lvm <- lava::estimate(object, data = dt.sim)
-    if(e.lvm$opt$convergence==1){next} ## exclude lvm that has not converged
-    if(any(eigen(getVarCov2(e.lvm))$values<=0)){next} ## exclude lvm where the residual covariance matrix is not semipositive definite
+    if(e.lvm$opt$convergence==1){return(list(pvalue=NULL,bias=NULL))} ## exclude lvm that has not converged
+    if(any(eigen(getVarCov2(e.lvm))$values<=0)){return(list(pvalue=NULL,bias=NULL))} ## exclude lvm where the residual covariance matrix is not semipositive definite
 
     e.lvm.Satt <- e.lvm
     testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
@@ -482,7 +482,7 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
     ## ** no correction
     ## get Wald tests
     eS.ML <- try(summary(e.lvm)$coef[,c("Estimate","P-value")], silent = TRUE)
-    if("try-error" %in% class(eS.ML)){next} ## exclude lvm where we cannot compute the summary
+    if("try-error" %in% class(eS.ML)){return(list(pvalue=NULL,bias=NULL))} ## exclude lvm where we cannot compute the summary
     if(F.test){
         F.ML <- lava::compare(e.lvm, par = null)
         eS.ML <- rbind(eS.ML, global = c(Estimate = F.ML$statistic, "P-value" = F.ML$p.value))

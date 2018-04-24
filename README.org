@@ -549,7 +549,7 @@ e
 :    Y                 0.67073    0.13415  5.00000
 
 We can now use =calibrateType1= to perform a simulation study. We just
-need to define the null hypotheses (i.e. which coefficient should be
+need to define the null hypotheses (i.e. which coefficients should be
 set to 0 when generating the data) and the number of simulations:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 mySimulation <- calibrateType1(e, 
