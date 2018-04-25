@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 25 2018 (11:44) 
+## Last-Updated: apr 25 2018 (15:45) 
 ##           By: Brice Ozenne
-##     Update #: 474
+##     Update #: 478
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -364,11 +364,6 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         dt.pvalue <- NULL
         dt.bias <- NULL
 
-        print(rnorm(5))
-        print(generative.object)
-        print(generative.coef)
-        print(lava::sim(generative.object,2,p=generative.coef))
-        
         for(iN in n){ ## iN <- n[1]
 
             if(trace>0){
