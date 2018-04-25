@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 24 2018 (18:20) 
+## Last-Updated: apr 25 2018 (11:44) 
 ##           By: Brice Ozenne
-##     Update #: 451
+##     Update #: 474
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -268,42 +268,64 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         }
         names(seed) <- cpus.name
 
+        n.repCpus <- rep(round(n.rep/ncpus), ncpus)
+        n.repCpus[1] <- n.rep - sum(n.repCpus[-1])
+        names(n.repCpus) <- cpus.name
+
         ## *** parallel computation
         iRep <- NULL # [:for CRAN check] foreach
         resSim <- foreach::`%dopar%`(
-                               foreach::foreach(iRep = 1:n.rep, .packages =  c("lava","lavaSearch2"),
+                               foreach::foreach(iCpus = 1:ncpus, .packages =  c("lava","lavaSearch2"),
                                                 .export = toExport),{ # iRep <- 1
                                                     
                                                     myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
                                                     iSeed <- seed[myName]
+                                                    iN.rep <- n.repCpus[myName]
                                                     
-                                                    if(trace){
-                                                        if(!exists("pb")){
-                                                            pb <- tcltk::tkProgressBar("simulation type 1 error:", min=0, max=n.rep)
-                                                        }
-                                                        tcltk::setTkProgressBar(pb, iRep)
-                                                    }
-                                                    iOut <- NULL
+                                                    ls.pvalue <- vector(mode = "list", length = iN.rep*n.n)
+                                                    ls.bias <- vector(mode = "list", length = iN.rep*n.n)
+                                                    iIndex <- 1
+                                                    
                                                     for(iN in n){ # iN <- n[1]
-                                                        iOut <- c(iOut,
-                                                                  .warperType1(iRep,
-                                                                               n = iN,
-                                                                               generative.object = generative.object,
-                                                                               generative.coef = generative.coef,
-                                                                               object = object,
-                                                                               coef.true = coef.true, type.coef = type.coef, name.coef = name.coef,
-                                                                               store.coef = store.coef, n.coef = n.coef, n.store = n.store,
-                                                                               F.test = F.test, null = null, contrast = contrast, rhs = rhs,
-                                                                               bootstrap = bootstrap,
-                                                                               n.bootstrap = n.bootstrap,
-                                                                               seed = iSeed)
-                                                                  )
+                                                        if(trace){
+                                                            pb <- tcltk::tkProgressBar(paste0("simulation for n=",iN," (",myName,"):"), min=0, max=iN.rep)
+                                                        }
+                                                        
+                                                        for(iRep in 1:iN.rep){
+                                                            
+                                                            iRes <- .warperType1(iRep,
+                                                                                   n = iN,
+                                                                                   generative.object = generative.object,
+                                                                                   generative.coef = generative.coef,
+                                                                                   object = object,
+                                                                                   coef.true = coef.true,
+                                                                                   type.coef = type.coef,
+                                                                                   name.coef = name.coef,
+                                                                                   store.coef = store.coef,
+                                                                                   n.coef = n.coef,
+                                                                                   n.store = n.store,
+                                                                                   F.test = F.test,
+                                                                                   null = null,
+                                                                                   contrast = contrast,
+                                                                                   rhs = rhs,
+                                                                                   bootstrap = bootstrap,
+                                                                                   n.bootstrap = n.bootstrap,
+                                                                                   seed = iSeed)
+
+                                                            ls.pvalue[[iIndex]] <- iRes$pvalue
+                                                            ls.bias[[iIndex]] <- iRes$bias
+                                                            iIndex <- iIndex + 1
+                                                            if(trace){tcltk::setTkProgressBar(pb, iRep)}
+                                                            
+                                                        }
+                                                        if(trace){close(pb)}
                                                     }
-                                                    return(iOut)
+                                                    
+                                                    return(list(pvalue = do.call("rbind",ls.pvalue),
+                                                                bias = do.call("rbind",ls.bias)))
                                                 })
     
         parallel::stopCluster(cl)
-
         ## *** post process
         dt.pvalue <- do.call("rbind",lapply(resSim,"[[","pvalue"))
         dt.pvalue <- dt.pvalue[order(dt.pvalue$n,dt.pvalue$rep),,drop=FALSE]
@@ -341,6 +363,11 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         ## *** sequential simulation
         dt.pvalue <- NULL
         dt.bias <- NULL
+
+        print(rnorm(5))
+        print(generative.object)
+        print(generative.coef)
+        print(lava::sim(generative.object,2,p=generative.coef))
         
         for(iN in n){ ## iN <- n[1]
 
