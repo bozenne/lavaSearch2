@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: apr 26 2018 (11:54) 
+## Last-Updated: apr 26 2018 (13:24) 
 ##           By: Brice Ozenne
-##     Update #: 290
+##     Update #: 293
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -74,16 +74,16 @@
 ## * summary2.lm
 #' @rdname summary
 #' @export
-summary2.lm <- function(object, cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
+summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct
-    return(summary2(object, cluster = cluster, ...))
+    return(summary2(object, ...))
 }
 ## * summary2.gls
 #' @rdname summary2
 #' @export
 summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
     sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(summary2(object, cluster = cluster, ...))
+    return(summary2(object, ...))
 }
 
 ## * summary2.lme
@@ -104,7 +104,6 @@ summary2.lm2 <- function(object,
                          digit = max(3, getOption("digit")),
                          robust = FALSE,
                          df = TRUE,
-                         cluster = NULL,
                          ...){
 
 ### ** perform Wald test
@@ -114,7 +113,6 @@ summary2.lm2 <- function(object,
     tTable.all <- compare2(object,
                            par = name.param,
                            robust = robust,
-                           cluster = cluster,
                            df = df,
                            F.test = FALSE,
                            as.lava = FALSE)
@@ -142,7 +140,6 @@ summary2.gls2 <- function(object,
                           digit = max(3, getOption("digit")),
                           robust = FALSE,
                           df = TRUE,
-                          cluster = NULL,
                           ...){
     
     ### ** perform Wald test
@@ -152,7 +149,6 @@ summary2.gls2 <- function(object,
     tTable.all <- compare2(object,
                            par = name.param,
                            robust = robust,
-                           cluster = cluster,
                            df = df,
                            F.test = FALSE,
                            as.lava = FALSE)

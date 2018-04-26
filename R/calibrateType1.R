@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 26 2018 (12:04) 
+## Last-Updated: apr 26 2018 (13:10) 
 ##           By: Brice Ozenne
-##     Update #: 488
+##     Update #: 490
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,6 +27,8 @@
 ##' @param null [character vector] names of the coefficient whose value will be tested against 0. 
 ##' @param n [integer vector, >0] sample size(s) considered in the simulation study.
 ##' @param n.rep [integer, >0] number of simulations per sample size.
+##' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
+##' Will be passed to \code{lava::estimate}.
 ##' @param generative.object [lvm] object defining the statistical model generating the data.
 ##' @param generative.coef [name numeric vector] values for the parameters of the generative model.
 ##' Can also be \code{NULL}: in such a case the coefficients are set to default values decided by lava (usually 0 or 1).

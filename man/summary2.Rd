@@ -15,13 +15,13 @@ summary2(object, ...)
   cluster = NULL, ...)
 
 \method{summary2}{lm2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, cluster = NULL, ...)
+  robust = FALSE, df = TRUE, ...)
 
 \method{summary2}{gls2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, cluster = NULL, ...)
+  robust = FALSE, df = TRUE, ...)
 
 \method{summary2}{lme2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, cluster = NULL, ...)
+  robust = FALSE, df = TRUE, ...)
 
 \method{summary2}{lvmfit2}(object, cluster = NULL, robust = FALSE,
   df = TRUE, ...)

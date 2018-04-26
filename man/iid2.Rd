@@ -14,16 +14,16 @@
 \usage{
 iid2(object, ...)
 
-\method{iid2}{lm}(object, cluster = NULL, param = NULL, data = NULL,
+\method{iid2}{lm}(object, param = NULL, data = NULL, bias.correct = TRUE,
+  ...)
+
+\method{iid2}{gls}(object, cluster = NULL, param = NULL, data = NULL,
   bias.correct = TRUE, ...)
 
-\method{iid2}{gls}(object, cluster, param = NULL, data = NULL,
-  bias.correct = TRUE, ...)
+\method{iid2}{lme}(object, param = NULL, data = NULL, bias.correct = TRUE,
+  ...)
 
-\method{iid2}{lme}(object, cluster = NULL, param = NULL, data = NULL,
-  bias.correct = TRUE, ...)
-
-\method{iid2}{lvmfit}(object, cluster = NULL, param = NULL, data = NULL,
+\method{iid2}{lvmfit}(object, param = NULL, data = NULL,
   bias.correct = TRUE, ...)
 
 \method{iid2}{lm2}(object, cluster = NULL, param = NULL, data = NULL,
@@ -42,13 +42,13 @@ iid2(object, ...)
 
 \item{...}{arguments to be passed to \code{sCorrect}.}
 
-\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
-
 \item{param}{[optional] the fitted parameters.}
 
 \item{data}{[optional] the data set.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.}
+
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
 \item{robust}{[logical] if \code{FALSE}, the i.i.d. decomposition is rescaled such its the squared sum equals the model-based standard error (instead of the robust standard error).}
 }

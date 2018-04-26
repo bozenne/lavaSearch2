@@ -11,7 +11,8 @@
 \arguments{
 \item{object}{output of the \code{calibrateType1} function.}
 
-\item{robust}{[logical] should the results be also displayed for tested using the robust standard errors?}
+\item{robust}{[character] should the results be displayed for both model-based and robust standard errors (\code{TRUE}),
+only  model-based standard error (\code{FALSE}), or only robust standard error (\code{"only"})?}
 
 \item{type}{[character] should the type 1 error rate be diplayed (\code{"type1error"}) or the bias (\code{"bias")}.}
 

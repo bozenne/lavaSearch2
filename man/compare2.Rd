@@ -15,14 +15,12 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, cluster = NULL, df = TRUE,
-  bias.correct = TRUE, ...)
+\method{compare2}{lm}(object, df = TRUE, bias.correct = TRUE, ...)
 
 \method{compare2}{gls}(object, cluster = NULL, df = TRUE,
   bias.correct = TRUE, ...)
 
-\method{compare2}{lme}(object, cluster = NULL, df = TRUE,
-  bias.correct = TRUE, ...)
+\method{compare2}{lme}(object, df = TRUE, bias.correct = TRUE, ...)
 
 \method{compare2}{lvmfit}(object, cluster = NULL, df = TRUE,
   bias.correct = TRUE, ...)
@@ -44,12 +42,12 @@ compare2(object, ...)
 
 \item{...}{[internal] only used by the generic method.}
 
-\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
-
 \item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
+
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}

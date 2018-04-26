@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: apr 26 2018 (11:57) 
+## Last-Updated: apr 26 2018 (13:23) 
 ##           By: Brice Ozenne
-##     Update #: 335
+##     Update #: 338
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,17 +103,17 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
+compare2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct
-    return(.compare2(object, cluster = cluster, ...))
+    return(.compare2(object, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object,  cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
+compare2.gls <- function(object, cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(.compare2(object, cluster = cluster, ...))
+    return(.compare2(object, ...))
 }
 
 ## * compare2.lme
@@ -124,7 +124,10 @@ compare2.lme <- compare2.lm
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-compare2.lvmfit <- compare2.lm
+compare2.lvmfit <- function(object, cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
+    sCorrect(object, df = df) <- bias.correct
+    return(.compare2(object, cluster = cluster, ...))
+}
 
 ## * compare2.lm2
 #' @rdname compare2

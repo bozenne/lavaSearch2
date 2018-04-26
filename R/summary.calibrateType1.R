@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 23 2018 (12:58) 
 ## Version: 
-## Last-Updated: apr 23 2018 (15:18) 
+## Last-Updated: apr 26 2018 (12:29) 
 ##           By: Brice Ozenne
-##     Update #: 52
+##     Update #: 68
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,8 @@
 #'
 #' @param object output of the \code{calibrateType1} function.
 #' @param alpha [numeric, 0-1] the confidence levels.
-#' @param robust [logical] should the results be also displayed for tested using the robust standard errors?
+#' @param robust [character] should the results be displayed for both model-based and robust standard errors (\code{TRUE}),
+#' only  model-based standard error (\code{FALSE}), or only robust standard error (\code{"only"})?
 #' @param type [character] should the type 1 error rate be diplayed (\code{"type1error"}) or the bias (\code{"bias")}.
 #' @param digits [integer >0] the number of decimal places to use when displaying the summary.
 #' @param log.transform [logical] should the confidence intervals be computed on the logit scale.
@@ -36,6 +37,8 @@ summary.calibrateType1 <- function(object, robust = FALSE, type = "type1error",
 
 
     type <- match.arg(type, c("type1error","bias"))
+    if(is.logical(robust)){robust <- as.character(robust)}
+    robust <- match.arg(robust, c("TRUE","FALSE","only"))
     
     ## ** compute bias
     if(type == "bias"){
@@ -101,7 +104,13 @@ summary.calibrateType1 <- function(object, robust = FALSE, type = "type1error",
         if(display){
             seqN <- unique(dfS$n)
             seqRep <- setNames(dfS$n.rep[duplicated(dfS$n) == FALSE],seqN)
-            ls.print <- lapply(seqN, function(iN){ # iN <- 100
+
+            vecTrans <- c("Gaus" = "Gaussian approx.",
+                          "Satt" = "Satterthwaite approx.",
+                          "SSC" = "small sample correction",
+                          "SSC + Satt" = "Satterthwaite approx. with small sample correction")
+
+            ls.print <- lapply(seqN, function(iN){ # iN <- 73
                 df.tempo <- dfS[dfS$n==iN, c("link","statistic","correction","type1error","ci.inf","ci.sup")]
                 if(!is.null(digits)){
                     df.tempo$type1error <- round(df.tempo$type1error, digits = digits)
@@ -112,26 +121,35 @@ summary.calibrateType1 <- function(object, robust = FALSE, type = "type1error",
                 df.tempo$ci.inf <- NULL
                 df.tempo$ci.sup <- NULL
 
-                if(robust == FALSE){
+                if(robust == "FALSE"){
                     df.tempo <- df.tempo[df.tempo$statistic=="Wald",,drop=FALSE]
+                }else if(robust == "only"){
+                    df.tempo <- df.tempo[df.tempo$statistic=="robust Wald",,drop=FALSE]
                 }
                 
                 df.tempo <- df.tempo[order(df.tempo$link,df.tempo$statistic),,drop=FALSE]
                 df.tempo$statistic[duplicated(cbind(df.tempo$link,df.tempo$statistic))] <- ""
                 df.tempo$link[duplicated(df.tempo$link)] <- ""
 
-                rownames(df.tempo) <- df.tempo$correction
-                df.tempo$correction <- NULL
+                rownames(df.tempo) <- NULL
+                df.tempo$correction <- factor(df.tempo$correction,
+                                              levels = as.character(vecTrans),
+                                              labels = names(vecTrans))
+                ## df.tempo$correction <- NULL
                 
                 return(df.tempo)
             })
             names(ls.print) <- as.character(seqN)
-
+       
             cat("Estimated type 1 error rate [95% confidence interval] \n")
             lapply(seqN, function(iN){
                 cat("  > sample size: ",iN," | number of simulations: ",seqRep[as.character(iN)],"\n",sep="")
-                print(ls.print[[as.character(iN)]])
+                print(ls.print[[as.character(iN)]],row.names = FALSE)
             })
+            cat("\n")
+            cat("Corrections: Gaus = Gaussian approximation \n",
+                "             SSC  = small sample correction \n",
+                "             Satt = Satterthwaite approximation \n",sep="")
             
         }        
     }
