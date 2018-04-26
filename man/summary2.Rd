@@ -15,15 +15,16 @@ summary2(object, ...)
   cluster = NULL, ...)
 
 \method{summary2}{lm2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, ...)
+  robust = FALSE, df = TRUE, cluster = NULL, ...)
 
 \method{summary2}{gls2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, ...)
+  robust = FALSE, df = TRUE, cluster = NULL, ...)
 
 \method{summary2}{lme2}(object, digit = max(3, getOption("digit")),
-  robust = FALSE, df = TRUE, ...)
+  robust = FALSE, df = TRUE, cluster = NULL, ...)
 
-\method{summary2}{lvmfit2}(object, robust = FALSE, df = TRUE, ...)
+\method{summary2}{lvmfit2}(object, cluster = NULL, robust = FALSE,
+  df = TRUE, ...)
 }
 \arguments{
 \item{object}{a \code{gls}, \code{lme} or \code{lvm} object.}
@@ -36,8 +37,7 @@ Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distributi
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?
 See \code{\link{sCorrect}} for more details.}
 
-\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
-Only required for \code{gls} models without correlation structure.}
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
 \item{digit}{[integer > 0] the number of decimal places to use when displaying the summary.}
 

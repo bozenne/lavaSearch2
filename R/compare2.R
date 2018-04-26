@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: apr 17 2018 (10:31) 
+## Last-Updated: apr 26 2018 (11:57) 
 ##           By: Brice Ozenne
-##     Update #: 328
+##     Update #: 335
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,7 +26,6 @@
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' Only required for \code{gls} models without correlation structure.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
@@ -80,6 +79,7 @@
 #'
 #' ## run compare2
 #' compare2(e.lm, contrast = C$contrast, null = C$null)
+#' compare2(e.lm, contrast = C$contrast, null = C$null, robust = TRUE)
 #' 
 #' #### with gls ####
 #' library(nlme)
@@ -103,17 +103,17 @@
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
+compare2.lm <- function(object, cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct
-    return(.compare2(object, ...))
+    return(.compare2(object, cluster = cluster, ...))
 }
 
 ## * compare2.gls
 #' @rdname compare2
 #' @export
-compare2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
+compare2.gls <- function(object,  cluster = NULL, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(.compare2(object, ...))
+    return(.compare2(object, cluster = cluster, ...))
 }
 
 ## * compare2.lme
@@ -157,7 +157,7 @@ compare2.lvmfit2 <- function(object, ...){
 ## * .compare2
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
-                      robust = FALSE, df = TRUE,
+                      robust = FALSE, cluster = NULL, df = TRUE,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
     ## ** extract information
@@ -169,7 +169,7 @@ compare2.lvmfit2 <- function(object, ...){
     
     param <- object$sCorrect$param
     if(robust){
-        vcov.param <- crossprod(iid2(object))
+        vcov.param <- crossprod(iid2(object, cluster = cluster))
     }else{
         vcov.param <- object$sCorrect$vcov.param
         attr(vcov.param, "warning") <- NULL
@@ -338,6 +338,9 @@ compare2.lvmfit2 <- function(object, ...){
                     null = null,
                     cnames = name.hypo                    
                     )
+        if(robust){
+            colnames(out$estimate)[2] <- "robust SE"
+        }        
         attr(out, "B") <- contrast
         class(out) <- "htest"
     }else{

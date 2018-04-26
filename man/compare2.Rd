@@ -15,14 +15,17 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, df = TRUE, bias.correct = TRUE, ...)
+\method{compare2}{lm}(object, cluster = NULL, df = TRUE,
+  bias.correct = TRUE, ...)
 
-\method{compare2}{gls}(object, df = TRUE, bias.correct = TRUE,
-  cluster = NULL, ...)
+\method{compare2}{gls}(object, cluster = NULL, df = TRUE,
+  bias.correct = TRUE, ...)
 
-\method{compare2}{lme}(object, df = TRUE, bias.correct = TRUE, ...)
+\method{compare2}{lme}(object, cluster = NULL, df = TRUE,
+  bias.correct = TRUE, ...)
 
-\method{compare2}{lvmfit}(object, df = TRUE, bias.correct = TRUE, ...)
+\method{compare2}{lvmfit}(object, cluster = NULL, df = TRUE,
+  bias.correct = TRUE, ...)
 
 \method{compare2}{lm2}(object, ...)
 
@@ -33,21 +36,20 @@ compare2(object, ...)
 \method{compare2}{lvmfit2}(object, ...)
 
 .compare2(object, par = NULL, contrast = NULL, null = NULL,
-  robust = FALSE, df = TRUE, as.lava = TRUE, F.test = TRUE,
-  level = 0.95)
+  robust = FALSE, cluster = NULL, df = TRUE, as.lava = TRUE,
+  F.test = TRUE, level = 0.95)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
 
 \item{...}{[internal] only used by the generic method.}
 
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
+
 \item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
-
-\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
-Only required for \code{gls} models without correlation structure.}
 
 \item{par}{[vector of characters] expression defining the linear hypotheses to be tested.
 See the examples section.}
@@ -110,6 +112,7 @@ C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
 
 ## run compare2
 compare2(e.lm, contrast = C$contrast, null = C$null)
+compare2(e.lm, contrast = C$contrast, null = C$null, robust = TRUE)
 
 #### with gls ####
 library(nlme)

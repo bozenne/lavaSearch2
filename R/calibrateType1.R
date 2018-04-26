@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 25 2018 (15:45) 
+## Last-Updated: apr 26 2018 (12:04) 
 ##           By: Brice Ozenne
-##     Update #: 478
+##     Update #: 488
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -87,7 +87,7 @@
 ## * calibrateType1.lvm
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
+calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster = NULL,
                                generative.object = NULL, generative.coef = NULL, 
                                true.coef = NULL, n.true = 1e6, round.true = 2,              
                                bootstrap = FALSE, n.bootstrap = 1e3,
@@ -123,7 +123,8 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
         if(trace>1){
             cat("  Estimate true coefficients using a sample size of n=",n.true," ", sep="")
         }
-        e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
+        e.true <- lava::estimate(object,
+                                 data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
         coef.true <- coef(e.true)
         if(!is.null(round.true)){
             coef.true <- round(coef.true, digits = round.true)
@@ -136,7 +137,8 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
             cat("  Check true coefficients ")
         }
         n.true <- n[n.n]
-        e.true <- lava::estimate(object, data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
+        e.true <- lava::estimate(object, cluster = cluster,
+                                 data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
         name.test <- names(coef(e.true))
         
         if(!identical(sort(name.test),sort(names(true.coef)))){
@@ -294,23 +296,24 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
                                                         for(iRep in 1:iN.rep){
                                                             
                                                             iRes <- .warperType1(iRep,
-                                                                                   n = iN,
-                                                                                   generative.object = generative.object,
-                                                                                   generative.coef = generative.coef,
-                                                                                   object = object,
-                                                                                   coef.true = coef.true,
-                                                                                   type.coef = type.coef,
-                                                                                   name.coef = name.coef,
-                                                                                   store.coef = store.coef,
-                                                                                   n.coef = n.coef,
-                                                                                   n.store = n.store,
-                                                                                   F.test = F.test,
-                                                                                   null = null,
-                                                                                   contrast = contrast,
-                                                                                   rhs = rhs,
-                                                                                   bootstrap = bootstrap,
-                                                                                   n.bootstrap = n.bootstrap,
-                                                                                   seed = iSeed)
+                                                                                 n = iN,
+                                                                                 generative.object = generative.object,
+                                                                                 generative.coef = generative.coef,
+                                                                                 object = object,
+                                                                                 cluster = cluster,
+                                                                                 coef.true = coef.true,
+                                                                                 type.coef = type.coef,
+                                                                                 name.coef = name.coef,
+                                                                                 store.coef = store.coef,
+                                                                                 n.coef = n.coef,
+                                                                                 n.store = n.store,
+                                                                                 F.test = F.test,
+                                                                                 null = null,
+                                                                                 contrast = contrast,
+                                                                                 rhs = rhs,
+                                                                                 bootstrap = bootstrap,
+                                                                                 n.bootstrap = n.bootstrap,
+                                                                                 seed = iSeed)
 
                                                             ls.pvalue[[iIndex]] <- iRes$pvalue
                                                             ls.bias[[iIndex]] <- iRes$bias
@@ -375,7 +378,7 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE,
                              n = iN,
                              generative.object = generative.object,
                              generative.coef = generative.coef,
-                             object = object,
+                             object = object, cluster = cluster,                             
                              coef.true = coef.true, type.coef = type.coef, name.coef = name.coef,
                              store.coef = store.coef, n.coef = n.coef, n.store = n.store,
                              F.test = F.test, null = null, contrast = contrast, rhs = rhs,
@@ -466,7 +469,7 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
 
 ## * .warperType1
 .warperType1 <- function(iRep, n, generative.object, generative.coef,
-                         object,
+                         object, cluster,
                          coef.true, type.coef, name.coef, store.coef, n.coef, n.store,
                          F.test, null, contrast, rhs,
                          bootstrap, n.bootstrap,
@@ -479,7 +482,7 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
     dt.sim <- lava::sim(generative.object, n = n, p = generative.coef, latent = FALSE)
 
     ## ** model adjustement
-    e.lvm <- lava::estimate(object, data = dt.sim)
+    e.lvm <- lava::estimate(object, data = dt.sim, cluster = cluster)
     if(e.lvm$opt$convergence==1){return(list(pvalue=NULL,bias=NULL))} ## exclude lvm that has not converged
     if(any(eigen(getVarCov2(e.lvm))$values<=0)){return(list(pvalue=NULL,bias=NULL))} ## exclude lvm where the residual covariance matrix is not semipositive definite
 
@@ -509,21 +512,26 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
         F.ML <- lava::compare(e.lvm, par = null)
         eS.ML <- rbind(eS.ML, global = c(Estimate = F.ML$statistic, "P-value" = F.ML$p.value))
     }
-            
-    if(!inherits(testError.Satt,"try-error")){                
-        eS.robustML <- compare2(e.lvm.Satt, robust = TRUE, df = FALSE,
-                                contrast = contrast, null = rhs,
-                                F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
-        names(eS.robustML) <- c("Estimate","P-value")
-    }else{
-        eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")], silent = TRUE)
-        if(inherits(eS.robustML,"try-error")){
-            eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
-        }
 
-        if(F.test){
-            eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
+    if(is.null(cluster)){
+        if(!inherits(testError.Satt,"try-error")){                
+            eS.robustML <- compare2(e.lvm.Satt, robust = TRUE, df = FALSE,
+                                    contrast = contrast, null = rhs,
+                                    F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
+            names(eS.robustML) <- c("Estimate","P-value")
+        }else{
+            eS.robustML <- try(estimate(e.lvm)$coefmat[,c("Estimate","P-value")], silent = TRUE)
+            if(inherits(eS.robustML,"try-error")){
+                eS.robustML <- matrix(as.numeric(NA), ncol = 2, nrow = n.coef, dimnames = list(name.coef, c("Estimate","P-value")))
+            }
+
+            if(F.test){
+                eS.robustML <- rbind(eS.robustML, global = rep(NA,2))
+            }
         }
+    }else{
+        eS.robustML <- eS.ML
+        eS.ML[] <- NA
     }
 
     ## store results
