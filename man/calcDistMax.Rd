@@ -9,10 +9,10 @@
 calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
   quantile.previous = NULL,
   quantile.compute = lava.options()$search.calc.quantile.int, alpha,
-  ncpus = 1, init.cpus = TRUE, trace)
+  cpus = 1, init.cpus = TRUE, trace)
 
 calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
-  quantile.previous = NULL, method, alpha, ncpus = 1, init.cpus = TRUE,
+  quantile.previous = NULL, method, alpha, cpus = 1, init.cpus = TRUE,
   n.sim, trace, n.repmax = 100)
 }
 \arguments{
@@ -33,7 +33,7 @@ If \code{NULL} the multivariate Gaussian distribution will be used instead.}
 \item{alpha}{[numeric 0-1] the significance cutoff for the p-values.
 When the p-value is below, the corresponding link will be retained.}
 
-\item{ncpus}{[integer >0] the number of processors to use.
+\item{cpus}{[integer >0] the number of processors to use.
 If greater than 1, the computation of the p-value relative to each test is performed in parallel.}
 
 \item{init.cpus}{[logical] should the processors for the parallel computation be initialized?}

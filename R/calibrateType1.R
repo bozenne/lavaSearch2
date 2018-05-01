@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: apr 26 2018 (13:10) 
+## Last-Updated: maj  1 2018 (14:41) 
 ##           By: Brice Ozenne
-##     Update #: 490
+##     Update #: 510
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,7 +45,7 @@
 ##' @param label.file [character] element to include in the file name.
 ##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
-##' @param ncpus [integer >0] the number of processors to use.
+##' @param cpus [integer >0] the number of processors to use.
 ##' If greater than 1, the simulations are performed in parallel. 
 ##' @param trace [integer] should the execution of the function be trace. Can be 0, 1 or 2.
 ##' @param ... [internal] Only used by the generic method.
@@ -77,8 +77,8 @@
 ##' res <- calibrateType1(e, null = "eta~Group", n.rep = 10)
 ##' }
 ##' \dontrun{
-##' res <- calibrateType1(e, null = "eta~Group", n.rep = 1000)
-##' res <- calibrateType1(e, null = "eta~Group", n.rep = 1000, ncpus = 4)
+##' res <- calibrateType1(e, null = "eta~Group", n.rep = 100)
+##' res <- calibrateType1(e, null = "eta~Group", n.rep = 100, cpus = 4)
 ##' }
 ##' summary(res)
 ##' 
@@ -95,11 +95,37 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
                                bootstrap = FALSE, n.bootstrap = 1e3,
                                checkType1 = FALSE, checkType2 = FALSE,
                                dir.save = NULL, label.file = NULL,             
-                               seed = NULL, ncpus = 1, trace = 2, ...){
+                               seed = NULL, cpus = 1, trace = 2, ...){
 
+### ** test
+    if(cpus>1){
+        test.package <- try(requireNamespace("foreach"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'foreach\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+
+        test.package <- try(requireNamespace("snow"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'snow\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'doSNOW\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        if(cpus > parallel::detectCores()){
+            stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
+                 "available CPU cores: ",parallel::detectCores(),"\n")
+        }
+    }
+    
 ### ** prepare
     n.n <- length(n)
-    
+
     ## *** generative model
     if(is.null(generative.object)){
         generative.object <- object
@@ -223,107 +249,79 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
         cat(" Perform simulation: \n")
     }
 
-    if(ncpus>1){
+    if(cpus>1){
+        ## *** create cluster
+        cl <- snow::makeSOCKcluster(cpus)
+        doSNOW::registerDoSNOW(cl)
 
-        ## *** prepare parallel computing
-        test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'doParallel\' \n",
-                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-        }
-        test.package <- try(requireNamespace("foreach"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'foreach\' \n",
-                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-        }
-        if(ncpus > parallel::detectCores()){
-            stop("Argument \'ncpus\' is greater than the number of available CPU cores \n",
-                 "available CPU cores: ",parallel::detectCores(),"\n")
-        }
-        cl <- parallel::makeCluster(ncpus)
-        doParallel::registerDoParallel(cl)
-
-        if(trace > 0){
-            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'tcltk\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
-            parallel::clusterExport(cl, varlist = "trace")
+        ## *** display
+        if(trace){
+            pb <- utils::txtProgressBar(min=0, max=n.rep, style=3)
+            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+        }else{
+            ls.options <- NULL
         }
 
-        cpus.name <- unlist(parallel::clusterApply(cl = cl, 1:ncpus, function(x){
-            myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
+        ## *** seed
+        cpus.name <- unlist(parallel::clusterApply(cl = cl, 1:cpus, function(x){
+            myName <- paste(Sys.info()[["nodename"]], Sys.getpid(), sep="-")
             return(myName)
         }))
-
-        vec.packages <- c("lava","lavaSearch2")
-        toExport <- c(".warperType1", "cpus.name")
-
         if(length(seed)==0){
-            seed <- rep(NA, ncpus)
+            seed <- rep(NA, cpus)
         }else if(length(seed)==1){
             set.seed(seed)
-            seed <- sample(1:1e5,size=ncpus,replace=FALSE)                
+            seed <- sample(1:1e5,size=cpus,replace=FALSE)                
         }else{
-            if(length(seed)!=ncpus){
-                stop("Length of argument \'seed\' does not match argument \'ncpus\' \n")
+            if(length(seed)!=cpus){
+                stop("Length of argument \'seed\' does not match argument \'cpus\' \n")
             }            
         }
         names(seed) <- cpus.name
 
-        n.repCpus <- rep(round(n.rep/ncpus), ncpus)
-        n.repCpus[1] <- n.rep - sum(n.repCpus[-1])
-        names(n.repCpus) <- cpus.name
-
+        
         ## *** parallel computation
+        vec.packages <- c("lava","lavaSearch2")
+        toExport <- c(".warperType1", "cpus.name")
+
         iRep <- NULL # [:for CRAN check] foreach
         resSim <- foreach::`%dopar%`(
-                               foreach::foreach(iCpus = 1:ncpus, .packages =  c("lava","lavaSearch2"),
+                               foreach::foreach(iRep = 1:n.rep,
+                                                .options.snow=ls.options,
+                                                .packages =  vec.packages,
                                                 .export = toExport),{ # iRep <- 1
                                                     
                                                     myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
                                                     iSeed <- seed[myName]
-                                                    iN.rep <- n.repCpus[myName]
                                                     
-                                                    ls.pvalue <- vector(mode = "list", length = iN.rep*n.n)
-                                                    ls.bias <- vector(mode = "list", length = iN.rep*n.n)
+                                                    ls.pvalue <- vector(mode = "list", length = n.n)
+                                                    ls.bias <- vector(mode = "list", length = n.n)
                                                     iIndex <- 1
                                                     
                                                     for(iN in n){ # iN <- n[1]
-                                                        if(trace){
-                                                            pb <- tcltk::tkProgressBar(paste0("simulation for n=",iN," (",myName,"):"), min=0, max=iN.rep)
-                                                        }
-                                                        
-                                                        for(iRep in 1:iN.rep){
-                                                            
-                                                            iRes <- .warperType1(iRep,
-                                                                                 n = iN,
-                                                                                 generative.object = generative.object,
-                                                                                 generative.coef = generative.coef,
-                                                                                 object = object,
-                                                                                 cluster = cluster,
-                                                                                 coef.true = coef.true,
-                                                                                 type.coef = type.coef,
-                                                                                 name.coef = name.coef,
-                                                                                 store.coef = store.coef,
-                                                                                 n.coef = n.coef,
-                                                                                 n.store = n.store,
-                                                                                 F.test = F.test,
-                                                                                 null = null,
-                                                                                 contrast = contrast,
-                                                                                 rhs = rhs,
-                                                                                 bootstrap = bootstrap,
-                                                                                 n.bootstrap = n.bootstrap,
-                                                                                 seed = iSeed)
+                                                        iRes <- .warperType1(iRep,
+                                                                             n = iN,
+                                                                             generative.object = generative.object,
+                                                                             generative.coef = generative.coef,
+                                                                             object = object,
+                                                                             cluster = cluster,
+                                                                             coef.true = coef.true,
+                                                                             type.coef = type.coef,
+                                                                             name.coef = name.coef,
+                                                                             store.coef = store.coef,
+                                                                             n.coef = n.coef,
+                                                                             n.store = n.store,
+                                                                             F.test = F.test,
+                                                                             null = null,
+                                                                             contrast = contrast,
+                                                                             rhs = rhs,
+                                                                             bootstrap = bootstrap,
+                                                                             n.bootstrap = n.bootstrap,
+                                                                             seed = iSeed)
 
-                                                            ls.pvalue[[iIndex]] <- iRes$pvalue
-                                                            ls.bias[[iIndex]] <- iRes$bias
-                                                            iIndex <- iIndex + 1
-                                                            if(trace){tcltk::setTkProgressBar(pb, iRep)}
-                                                            
-                                                        }
-                                                        if(trace){close(pb)}
+                                                        ls.pvalue[[iIndex]] <- iRes$pvalue
+                                                        ls.bias[[iIndex]] <- iRes$bias
+                                                        iIndex <- iIndex + 1
                                                     }
                                                     
                                                     return(list(pvalue = do.call("rbind",ls.pvalue),
@@ -331,6 +329,8 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
                                                 })
     
         parallel::stopCluster(cl)
+        if(trace>0){close(pb)}
+        
         ## *** post process
         dt.pvalue <- do.call("rbind",lapply(resSim,"[[","pvalue"))
         dt.pvalue <- dt.pvalue[order(dt.pvalue$n,dt.pvalue$rep),,drop=FALSE]
@@ -355,6 +355,11 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
         }
 
         if(trace>0){
+            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
+            if(inherits(test.package,"try-error")){
+                stop("There is no package \'pbapply\' \n",
+                     "This package is necessary when argument \'trace\' is TRUE \n")
+            }
             FCTapply <- pbapply::pblapply
         }else{
             FCTapply <- lapply
@@ -424,7 +429,7 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
 ##' @export
 calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
                                   bootstrap = FALSE, n.bootstrap = 1e3,
-                                  seed = NULL, trace = 2, ncpus = 1, ...){
+                                  seed = NULL, trace = 2, cpus = 1, ...){
 
     ## ** Prepare
     ## *** model
@@ -461,7 +466,7 @@ calibrateType1.lvmfit <- function(object, null, n.rep, F.test = FALSE,
                           dir.save = NULL,
                           label.file = NULL,             
                           seed = seed,
-                          ncpus = ncpus,
+                          cpus = cpus,
                           trace = trace)
 
 

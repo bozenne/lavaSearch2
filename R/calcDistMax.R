@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: mar 22 2018 (16:38) 
+## last-updated: maj  1 2018 (15:00) 
 ##           By: Brice Ozenne
-##     Update #: 474
+##     Update #: 483
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -32,7 +32,7 @@
 #' See the output of \code{lava.options()$search.calcMaxDist} for the possible values.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
 #' When the p-value is below, the corresponding link will be retained.
-#' @param ncpus [integer >0] the number of processors to use.
+#' @param cpus [integer >0] the number of processors to use.
 #' If greater than 1, the computation of the p-value relative to each test is performed in parallel. 
 #' @param init.cpus [logical] should the processors for the parallel computation be initialized?
 #' @param n.sim [integer >0] the number of bootstrap simulations used to compute each p-values.
@@ -122,7 +122,7 @@
 calcDistMaxIntegral <- function(statistic, iid, df, 
                                 iid.previous = NULL, quantile.previous = NULL,
                                 quantile.compute = lava.options()$search.calc.quantile.int,
-                                alpha, ncpus = 1, init.cpus = TRUE, trace){
+                                alpha, cpus = 1, init.cpus = TRUE, trace){
 
     ## ** normalize arguments
     p.iid <- NCOL(iid)
@@ -179,62 +179,39 @@ calcDistMaxIntegral <- function(statistic, iid, df,
         out$z <- NA
     }
     if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values \n") }
-    if(ncpus > 1){
+    if(cpus > 1){
         ## *** parallel computations
-        if(init.cpus){
-            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'doParallel\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            test.package <- try(requireNamespace("foreach"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'foreach\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            cl <- parallel::makeCluster(ncpus)
-            doParallel::registerDoParallel(cl)
+        if(init.cpus){            
+            cl <- snow::makeSOCKcluster(cpus)
+            doSNOW::registerDoSNOW(cl)
         }
 
-        if(trace > 0){
-            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'tcltk\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
-        
-            pb.max <- length(index.new)
-            parallel::clusterExport(cl, "trace")
+        if(trace){
+            pb <- utils::txtProgressBar(min=0, max=length(index.new), style=3)
+            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+        }else{
+            ls.options <- NULL
         }
 
         value <- NULL # [:for CRAN check] foreach
         out$p.adjust <- foreach::`%dopar%`(
                                      foreach::foreach(value = index.new,
+                                                      .options.snow=ls.options,
                                                       .packages = c("tmvtnorm","mvtnorm"),
                                                       .export = c(".calcPmaxIntegration"),
                                                       .combine = "c"),
                                      {
-                                         if(trace){
-                                             if(!exists("pb")){
-                                                 pb <- tcltk::tkProgressBar("calcDistMaxIntegral:", min=1, max=pb.max)
-                                             }
-                                             tcltk::setTkProgressBar(pb, value)
-                                         }
                                          return(warperP(value))
                                      })
 
         if(init.cpus){
             parallel::stopCluster(cl)
         }
+        if(trace>0){close(pb)}
             
     }else{
         ## *** sequential computations
-        if(trace>0){
-            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'pbapply\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
+        if(trace>0){      
             out$p.adjust <- pbapply::pbsapply(index.new, warperP)            
         }else{
             out$p.adjust <- sapply(index.new, warperP)
@@ -251,7 +228,7 @@ calcDistMaxIntegral <- function(statistic, iid, df,
 #' @rdname calcDistMax
 #' @export
 calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.previous = NULL,
-                                 method, alpha, ncpus = 1, init.cpus = TRUE, n.sim, trace, n.repmax = 100){
+                                 method, alpha, cpus = 1, init.cpus = TRUE, n.sim, trace, n.repmax = 100){
 
     ## ** normalize arguments
     n <- NROW(iid)
@@ -276,28 +253,18 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     ## ** Computation
     if(trace > 0){ cat("Bootsrap simulations to get the 95% quantile of the max statistic: ") }
 
-    if(ncpus>1){
-        n.simCpus <- rep(round(n.sim/ncpus),ncpus)
+    if(cpus>1){
+        n.simCpus <- rep(round(n.sim/cpus),cpus)
         n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
 
-        if(init.cpus){
-            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'doParallel\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            test.package <- try(requireNamespace("foreach"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'foreach\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            cl <- parallel::makeCluster(ncpus)
-            doParallel::registerDoParallel(cl)
+        if(init.cpus){            
+            cl <- snow::makeSOCKcluster(cpus)
+            doSNOW::registerDoSNOW(cl)
         }
   
         i <- NULL # [:for CRAN check] foreach
         distMax <- foreach::`%dopar%`(
-                                foreach::foreach(i = 1:ncpus, .packages =  c("MASS"),
+                                foreach::foreach(i = 1:cpus, .packages =  c("MASS"),
                                                  .export = "calcDistMax",
                                                  .combine = "c"),{
                                                      replicate(n.simCpus[i],
@@ -314,11 +281,6 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
     }else{
 
         if(trace>0){
-            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'pbapply\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
             distMax <- pbapply::pbsapply(1:n.sim, warperBoot, method = method,
                                          iid = iid.all, sigma = Sigma.statistic, n = n,                                         
                                          index.new = index.new, index.previous = index.previous,

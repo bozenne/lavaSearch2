@@ -43,7 +43,7 @@
 #' \itemize{
 #' \item alpha: the significance threshold for retaining a new link.
 #' \item method.max: the method used to compute the distribution of the max statistic. See lava.options()$search.calcMaxDist.
-#' \item ncpus: the number of cpus that can be used for the computations.
+#' \item cpus: the number of cpus that can be used for the computations.
 #' \item nStep: the maximum number of links that can be added to the model.
 #' \item na.omit: should model leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
 #' }
@@ -360,7 +360,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                           update.FCT, update.args, iid.FCT,
                           nStep = NULL, na.omit = TRUE,
                           alpha = 0.05, method.max = "integration", 
-                          ncpus = 1, trace = 1,
+                          cpus = 1, trace = 1,
                           packages = NULL, conditional = FALSE, exposure = NULL, ## not documented
                           display.warnings = TRUE, export.iid = FALSE ## not documented
                           ){
@@ -373,7 +373,7 @@ modelsearch2.default <- function(object, link, data = NULL,
     if(any(exposure %in% names(stats::coef(object)) == FALSE)){
         stop("exposure does not correspond to a coefficient in \'object\' \n")
     }    
-    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
+    if(is.null(cpus)){ cpus <- parallel::detectCores()}
     if(method.p.adjust %in% c("fastmax","max") && statistic != "Wald"){
         stop("Adjustment for multiple testing using the distribution of the max statistic \n",
              "is only available for when specifying statistic=\"Wald\" \n",
@@ -382,6 +382,32 @@ modelsearch2.default <- function(object, link, data = NULL,
     }
     if(statistic != "Wald"){
         typeSD <- NULL
+    }
+
+    
+    if(cpus>1){
+        test.package <- try(requireNamespace("foreach"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'foreach\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+
+        test.package <- try(requireNamespace("snow"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'snow\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'doSNOW\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        if(cpus > parallel::detectCores()){
+            stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
+                 "available CPU cores: ",parallel::detectCores(),"\n")
+        }
     }
 
     ## ** initialisation
@@ -406,20 +432,10 @@ modelsearch2.default <- function(object, link, data = NULL,
     cv <- FALSE
        
     ## cpus
-    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
-    if(ncpus>1){
-        test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'doParallel\' \n",
-                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-        }
-        test.package <- try(requireNamespace("foreach"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'foreach\' \n",
-                 "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-        }
-        cl <- parallel::makeCluster(ncpus)
-        doParallel::registerDoParallel(cl)
+    if(is.null(cpus)){ cpus <- parallel::detectCores()}
+    if(cpus>1){
+        cl <- snow::makeSOCKcluster(cpus)
+        doSNOW::registerDoSNOW(cl)
     }
 
     ## ** display a summary of the call
@@ -436,7 +452,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                        " Correction for sequential testing           : ",conditional,"\n")
             },
             " Confidence level                            : ",1-alpha,"\n",
-            " Number of cpus                              : ",ncpus,"\n\n",
+            " Number of cpus                              : ",cpus,"\n\n",
             sep="")
     }
 
@@ -486,7 +502,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
-                                         export.iid = max(conditional,export.iid), trace = trace-1, ncpus = ncpus, init.cpus = FALSE)
+                                         export.iid = max(conditional,export.iid), trace = trace-1, cpus = cpus, init.cpus = FALSE)
         }
 
         ## ** update according the most significant p.value
@@ -586,7 +602,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         ##                            mu = c(mu.conditional,newBeta), 
         ##                            conditional = c(mu.conditional,rep(0,length(exposure))),
         ##                            method = method.max,
-        ##                            n.sim = n.sim, ncpus = ncpus, init.cpus = FALSE, trace = trace)
+        ##                            n.sim = n.sim, cpus = cpus, init.cpus = FALSE, trace = trace)
             
         ##     df.exposure[,`p.value` := resQmax$p.adjust]
         ##     z <- resQmax$z
@@ -604,7 +620,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         }
     }
     ## * end job
-    if(ncpus>1){
+    if(cpus>1){
         parallel::stopCluster(cl)
     }
     

@@ -41,13 +41,13 @@ results:
 
 * Installation of lavaSearch2
 Install the stable version from CRAN using:
-#+BEGIN_SRC R :exports code :eval nil :session *R* :cache yes
+#+BEGIN_SRC R :exports both :eval never
 install.packages("lavaSearch2")
 #+END_SRC
 
 
 or install the development version from Github using:
-#+BEGIN_SRC R :exports code :eval nil :session *R* :cache yes
+#+BEGIN_SRC R :exports both :eval never
 devtools::install_github("bozenne/lavaSearch2")
 #+END_SRC
 
@@ -596,8 +596,6 @@ is necessary in order to control the type 1 error rate, i.e. to
 provide interpretable p.values. The *multcomp* package enables to do
 such adjustment when all tests comes from the same =lvmfit= object:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-suppressPackageStartupMessages(library(multcomp))
-
 ## simulate data
 mSim <- lvm(Y ~ 0.25 * X1 + 0.3 * X2 + 0.35 * X3 + 0.4 * X4 + 0.45 * X5 + 0.5 * X6)
 set.seed(10)
@@ -614,30 +612,37 @@ resC$contrast
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-Error in value[[3L]](cond) : 
-  Package 'mvtnorm' version 1.0.6 cannot be unloaded:
- Error in unloadNamespace(package) : namespace 'mvtnorm' is imported by 'merTools', 'multcomp', 'lavaSearch2', 'tmvtnorm' so cannot be unloaded
-In addition: Warning messages:
-1: package 'multcomp' was built under R version 3.4.4 
-2: package 'mvtnorm' was built under R version 3.4.3
-     Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
-Y~X1 0    1    0    0    0    0    0    0
-Y~X2 0    0    1    0    0    0    0    0
-Y~X3 0    0    0    1    0    0    0    0
-Y~X4 0    0    0    0    1    0    0    0
-Y~X5 0    0    0    0    0    1    0    0
-Y~X6 0    0    0    0    0    0    1    0
-#+end_example
+:      Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
+: Y~X1 0    1    0    0    0    0    0    0
+: Y~X2 0    0    1    0    0    0    0    0
+: Y~X3 0    0    0    1    0    0    0    0
+: Y~X4 0    0    0    0    1    0    0    0
+: Y~X5 0    0    0    0    0    1    0    0
+: Y~X6 0    0    0    0    0    0    1    0
 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-e.glht <- glht(e.lvm, linfct = resC$contrast, rhs = resC$null)
+e.glht <- multcomp::glht(e.lvm, linfct = resC$contrast, rhs = resC$null)
 summary(e.glht)
 #+END_SRC
 #+RESULTS:
-: Error in glht(e.lvm, linfct = resC$contrast, rhs = resC$null) : 
-:   could not find function "glht"
-: Error in summary(e.glht) : object 'e.glht' not found
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+
+Linear Hypotheses:
+          Estimate Std. Error z value Pr(>|z|)   
+Y~X1 == 0   0.3270     0.1589   2.058  0.20725   
+Y~X2 == 0   0.4025     0.1596   2.523  0.06611 . 
+Y~X3 == 0   0.5072     0.1383   3.669  0.00144 **
+Y~X4 == 0   0.3161     0.1662   1.902  0.28582   
+Y~X5 == 0   0.3875     0.1498   2.586  0.05554 . 
+Y~X6 == 0   0.3758     0.1314   2.859  0.02482 * 
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- single-step method)
+#+end_example
 
 Note that this correction relies on the Gaussian approximation. To use
 small sample corrections implemented in *lavaSearch2*, just call
@@ -659,7 +664,7 @@ Linear Hypotheses:
 Y~X1 == 0   0.3270     0.1750   1.869   0.3290  
 Y~X2 == 0   0.4025     0.1757   2.291   0.1482  
 Y~X3 == 0   0.5072     0.1522   3.333   0.0123 *
-Y~X4 == 0   0.3161     0.1830   1.727   0.4129  
+Y~X4 == 0   0.3161     0.1830   1.727   0.4128  
 Y~X5 == 0   0.3875     0.1650   2.349   0.1315  
 Y~X6 == 0   0.3758     0.1447   2.597   0.0762 .
 ---
@@ -672,11 +677,28 @@ report the most significant p-value relative to a set of
 hypotheses. If the second most significant p-value is also to be
 reported then the method "free" is more appropriate:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-summary(e.glht2, test = adjusted("free"))
+summary(e.glht2, test = multcomp::adjusted("free"))
 #+END_SRC
 
 #+RESULTS:
-: Error in adjusted("free") : could not find function "adjusted"
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
+
+Linear Hypotheses:
+          Estimate Std. Error t value Pr(>|t|)  
+Y~X1 == 0   0.3270     0.1750   1.869   0.1291  
+Y~X2 == 0   0.4025     0.1757   2.291   0.0913 .
+Y~X3 == 0   0.5072     0.1522   3.333   0.0123 *
+Y~X4 == 0   0.3161     0.1830   1.727   0.1291  
+Y~X5 == 0   0.3875     0.1650   2.349   0.0913 .
+Y~X6 == 0   0.3758     0.1447   2.597   0.0645 .
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Adjusted p values reported -- free method)
+#+end_example
 Indeed, here there is no relations between the hypotheses. See the
 book: "Multiple Comparisons Using R" by Frank Bretz, Torsten Hothorn,
 and Peter Westfall (2011, CRC Press) for details about the theory
@@ -731,11 +753,10 @@ lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ 1*eta, eta ~ -1 + Treatment),
 
 and combine them into a list of =lvmfit= objects:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-mmm.lvm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
+mmm.lvm <- multcomp::mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #+END_SRC
 
 #+RESULTS:
-: Error in mmm(X = lmX, Y = lvmY, Z = lvmZ) : could not find function "mmm"
 
 We can then generate a contrast matrix to test each coefficient
 related to the treatment:
@@ -745,15 +766,14 @@ resC$contrast
 #+END_SRC
 
 #+RESULTS:
-: Error in createContrast(mmm.lvm, var.test = "Treatment", add.variance = TRUE) : 
-:   object 'mmm.lvm' not found
-:      Y Y~X1 Y~X2 Y~X3 Y~X4 Y~X5 Y~X6 Y~~Y
-: Y~X1 0    1    0    0    0    0    0    0
-: Y~X2 0    0    1    0    0    0    0    0
-: Y~X3 0    0    0    1    0    0    0    0
-: Y~X4 0    0    0    0    1    0    0    0
-: Y~X5 0    0    0    0    0    1    0    0
-: Y~X6 0    0    0    0    0    0    1    0
+:                      X: (Intercept) X: Age X: TreatmentSSRI X: sigma2 Y: Y Y: Y~Genderfemale Y: Y~TreatmentSSRI Y: Y~~Y Z: Z1 Z: Z2 Z: Z3 Z: eta~TreatmentSSRI
+: X: TreatmentSSRI                  0      0                1         0    0                 0                  0       0     0     0     0                    0
+: Y: Y~TreatmentSSRI                0      0                0         0    0                 0                  1       0     0     0     0                    0
+: Z: eta~TreatmentSSRI              0      0                0         0    0                 0                  0       0     0     0     0                    1
+:                      Z: Z1~~Z1 Z: Z2~~Z2 Z: Z3~~Z3 Z: eta~~eta
+: X: TreatmentSSRI             0         0         0           0
+: Y: Y~TreatmentSSRI           0         0         0           0
+: Z: eta~TreatmentSSRI         0         0         0           0
 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 lvm.glht2 <- glht2(mmm.lvm, linfct = resC$contrast, rhs = resC$null)
@@ -761,18 +781,35 @@ summary(lvm.glht2)
 #+END_SRC
 
 #+RESULTS:
-: Error in glht2(mmm.lvm, linfct = resC$contrast, rhs = resC$null) : 
-:   object 'mmm.lvm' not found
-: Error in summary(lvm.glht2) : object 'lvm.glht2' not found
+: 
+: 	 Simultaneous Tests for General Linear Hypotheses
+: 
+: Linear Hypotheses:
+:                           Estimate Std. Error t value Pr(>|t|)
+: X: TreatmentSSRI == 0       0.4661     0.2533   1.840    0.187
+: Y: Y~TreatmentSSRI == 0    -0.5421     0.2613  -2.074    0.117
+: Z: eta~TreatmentSSRI == 0  -0.6198     0.4404  -1.407    0.393
+: (Adjusted p values reported -- single-step method)
 
 This can be compared to the unadjusted p.values:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-summary(lvm.glht2, test = univariate())
+summary(lvm.glht2, test = multcomp::univariate())
 #+END_SRC
 
 #+RESULTS:
-: Error in summary(lvm.glht2, test = univariate()) : 
-:   object 'lvm.glht2' not found
+#+begin_example
+
+	 Simultaneous Tests for General Linear Hypotheses
+
+Linear Hypotheses:
+                          Estimate Std. Error t value Pr(>|t|)  
+X: TreatmentSSRI == 0       0.4661     0.2533   1.840   0.0720 .
+Y: Y~TreatmentSSRI == 0    -0.5421     0.2613  -2.074   0.0435 *
+Z: eta~TreatmentSSRI == 0  -0.6198     0.4404  -1.407   0.1659  
+---
+Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+(Univariate p values reported)
+#+end_example
 
 ** Model diagnostic: detection of local dependencies
 

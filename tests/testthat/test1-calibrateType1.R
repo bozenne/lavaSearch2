@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 10 2018 (09:34) 
 ## Version: 
-## Last-Updated: apr 24 2018 (17:52) 
+## Last-Updated: maj  1 2018 (13:39) 
 ##           By: Brice Ozenne
-##     Update #: 24
+##     Update #: 25
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,7 +95,7 @@ test_that("calibrateType1.lvmfit", {
     expect_equal(GS$type1error, summary(out, display = FALSE)$type1error, tol = 1e-5, scale = 1)
 
     #### parallel computation
-    ## out <- calibrateType1(e, null = c("Y~G"), n.rep = 1e3, ncpus = 4, seed = 10)
+    ## out <- calibrateType1(e, null = c("Y~G"), n.rep = 1e3, cpus = 4, seed = 10)
     ## res <- summary(out, digit = 5)
 
     ## GS <- data.frame("n" = c(1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000), 

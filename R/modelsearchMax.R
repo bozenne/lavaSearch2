@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: mar 22 2018 (16:37) 
+## last-updated: maj  1 2018 (15:01) 
 ##           By: Brice Ozenne
-##     Update #: 706
+##     Update #: 714
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,12 +36,11 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                            update.FCT, update.args, iid.FCT,                           
                            alpha, method.p.adjust, method.max, n.sim = 1e3, 
                            iid.previous = NULL, quantile.previous = NULL, 
-                           export.iid, trace, ncpus, init.cpus){
+                           export.iid, trace, cpus, init.cpus){
 
     ## WARNING: do not put link as NULL for data.table since it is used as an argument by the function
     
     ### ** initialisation
-    if(is.null(ncpus)){ ncpus <- parallel::detectCores()}
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
 
@@ -115,7 +114,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         cat("gather influence functions \n")
     }
             
-    if(ncpus>1){
+    if(cpus>1){
 
         FCTcombine <- function(res1,res2){
             res <- list(df = rbind(res1$df,res2$df),
@@ -124,59 +123,37 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }
 
         if(init.cpus){
-            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'doParallel\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            test.package <- try(requireNamespace("foreach"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'foreach\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            
-            }
-            cl <- parallel::makeCluster(ncpus)
-            doParallel::registerDoParallel(cl)
+            cl <- snow::makeSOCKcluster(cpus)
+            doSNOW::registerDoSNOW(cl)
         }
     
-        if(trace > 0){
-            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'tcltk\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
-            parallel::clusterExport(cl, varlist = "trace")
+        if(trace){
+            pb <- utils::txtProgressBar(min=0, max=n.link, style=3)
+            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+        }else{
+            ls.options <- NULL
         }
 
         vec.packages <- c("lavaSearch2", packages)
         i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
-                            foreach::foreach(i = 1:n.link, .packages =  vec.packages,
+                            foreach::foreach(i = 1:n.link,
+                                             .packages =  vec.packages,
+                                             .options.snow=ls.options,
                                              # .export = c("ls.LVMargs"),
                                              .combine = FCTcombine),
                             {
-                                if(trace){
-                                    if(!exists("pb")){
-                                        pb <- tcltk::tkProgressBar("modelsearchMax:", min=1, max=n.link)
-                                    }
-                                    tcltk::setTkProgressBar(pb, i)
-                                }
                                 return(warper(i))
                             })
 
         if(init.cpus){
             parallel::stopCluster(cl)
         }
+        if(trace>0){close(pb)}
         
     }else{
         if(trace>0){
-            test.package <- try(requireNamespace("pbapply"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'pbapply\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }                
-            resApply <- pbapply::pblapply(1:n.link, warper)
-            
+            resApply <- pbapply::pblapply(1:n.link, warper)            
         }else{
             resApply <- lapply(1:n.link, warper)
         }
@@ -233,7 +210,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                            iid.previous = iid.previous,
                                            quantile.previous = quantile.previous, 
                                            alpha = alpha,
-                                           ncpus = ncpus,
+                                           cpus = cpus,
                                            init.cpus = FALSE,
                                            trace = trace)
             resQmax$p.adjust
@@ -245,7 +222,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
             
             resQmax <- calcDistMaxBootstrap(statistic = statisticN0, iid = iid.link, method = method.boot, n.sim = n.sim,
                                             iid.previous = iid.previous, quantile.previous = quantile.previous, 
-                                            alpha = alpha, ncpus = ncpus, init.cpus = FALSE, trace = trace)
+                                            alpha = alpha, cpus = cpus, init.cpus = FALSE, trace = trace)
         }
         df.test[indexCV, "corrected.level"] <- resQmax$correctedLevel
         df.test[indexCV, "adjusted.p.value"] <- resQmax$p.adjust

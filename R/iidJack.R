@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: mar 13 2018 (14:34) 
+## last-updated: maj  1 2018 (14:43) 
 ##           By: Brice Ozenne
-##     Update #: 304
+##     Update #: 319
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,7 +24,7 @@
 #' @param object a object containing the model.
 #' @param data [data.frame] dataset used to perform the jackknife.
 #' @param grouping [vector] variable defining cluster of observations that will be simultaneously removed by the jackknife.
-#' @param ncpus [integer >0] the number of processors to use.
+#' @param cpus [integer >0] the number of processors to use.
 #' If greater than 1, the fit of the model and the computation of the influence function for each jackknife sample is performed in parallel. 
 #' @param keep.warnings [logical] keep warning messages obtained when estimating the model with the jackknife samples.
 #' @param keep.error [logical]keep error messages obtained when estimating the model with the jackknife samples.
@@ -43,7 +43,7 @@
 #' distribution(m, ~y+z) <- binomial.lvm("logit")
 #' d <- lava::sim(m,n)
 #' g <- glm(y~x+z,data=d,family="binomial")
-#' iid1 <- iidJack(g, ncpus = 1)
+#' iid1 <- iidJack(g, cpus = 1)
 #' iid2 <- lava::iid(g)
 #' quantile(iid1-iid2)
 #' vcov(g)
@@ -111,12 +111,38 @@ iidJack <- function(object,...) UseMethod("iidJack")
 ## * method iidJack.default
 #' @rdname iidJack
 #' @export
-iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
+iidJack.default <- function(object,data=NULL,grouping=NULL,cpus=1,
                             keep.warnings=TRUE, keep.error=TRUE,
                             init.cpus=TRUE,trace=TRUE,...) {
-    
+
     estimate.lvm <- lava_estimate.lvm
 
+    ## ** test args
+    if(init.cpus && cpus>1){
+        test.package <- try(requireNamespace("foreach"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'foreach\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+
+        test.package <- try(requireNamespace("snow"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'snow\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
+        if(inherits(test.package,"try-error")){
+            stop("There is no package \'doSNOW\' \n",
+                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
+        }
+        
+        if(cpus > parallel::detectCores()){
+            stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
+                 "available CPU cores: ",parallel::detectCores(),"\n")
+        }
+    }
+    
     ## ** extract data
     if(is.null(data)){
         myData <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
@@ -177,31 +203,20 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
     # warper("31")
     
     ## ** parallel computations: get jackknife coef
-    if(ncpus>1){
-        if(init.cpus){
-            test.package <- try(requireNamespace("doParallel"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'doParallel\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            test.package <- try(requireNamespace("foreach"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'foreach\' \n",
-                     "This package is necessary when argument \'ncpus\' is greater than 1 \n")
-            }
-            cl <- parallel::makeCluster(ncpus)
-            doParallel::registerDoParallel(cl)
-        }
- 
-        if(trace > 0){
-            test.package <- try(requireNamespace("tcltk"), silent = TRUE)
-            if(inherits(test.package,"try-error")){
-                stop("There is no package \'tcltk\' \n",
-                     "This package is necessary when argument \'trace\' is TRUE \n")
-            }
-            parallel::clusterExport(cl, varlist = "trace")
+    if(cpus>1){
+        ## *** create cluster
+        cl <- snow::makeSOCKcluster(cpus)
+        doSNOW::registerDoSNOW(cl)
+        
+        ## *** display
+        if(trace){
+            pb <- utils::txtProgressBar(min=0, max=n.group, style=3)
+            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+        }else{
+            ls.options <- NULL
         }
 
+        ## *** packages/objects to export
         estimator <- as.character(object$call[[1]]) 
 
         vec.packages <- c("lava")
@@ -232,23 +247,20 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,ncpus=1,
         }
         toExport <- c(unique(toExport),"tryWithWarnings")
 
-        #sapply(as.list(object$call),as.character)
+        ## *** parallel computation
         i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(
-                                foreach::foreach(i = 1:n.group, .packages =  vec.packages,
+                                foreach::foreach(i = 1:n.group,
+                                                 .packages =  vec.packages,
+                                                 .options.snow = ls.options,
                                                  .export = toExport),{                                                      
-                                                     if(trace){
-                                                         if(!exists("pb")){
-                                                             pb <- tcltk::tkProgressBar("iidJack:", min=1, max=n.group)
-                                                         }
-                                                         tcltk::setTkProgressBar(pb, i)
-                                                     }
                                                      warper(Ugrouping[i])
                                                  })
     
         if(init.cpus){
             parallel::stopCluster(cl)
         }
+        if(trace>0){close(pb)}
 
     }else{
         

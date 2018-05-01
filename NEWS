@@ -1,5 +1,9 @@
 # -*- mode: org -*-
 
+* Version 1.3.5 <2018-05-01 Tue>
+** Internal change
+- remove dependency on tcltk for displaying progress bar with parallel computation.
+
 * Version 1.3.4 <2018-04-23 Mon>
 ** User visble changes 
 - =calibrateType1= is now a method and support parallel computation

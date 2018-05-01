@@ -7,7 +7,7 @@
 \usage{
 iidJack(object, ...)
 
-\method{iidJack}{default}(object, data = NULL, grouping = NULL, ncpus = 1,
+\method{iidJack}{default}(object, data = NULL, grouping = NULL, cpus = 1,
   keep.warnings = TRUE, keep.error = TRUE, init.cpus = TRUE,
   trace = TRUE, ...)
 }
@@ -20,7 +20,7 @@ iidJack(object, ...)
 
 \item{grouping}{[vector] variable defining cluster of observations that will be simultaneously removed by the jackknife.}
 
-\item{ncpus}{[integer >0] the number of processors to use.
+\item{cpus}{[integer >0] the number of processors to use.
 If greater than 1, the fit of the model and the computation of the influence function for each jackknife sample is performed in parallel.}
 
 \item{keep.warnings}{[logical] keep warning messages obtained when estimating the model with the jackknife samples.}
@@ -46,7 +46,7 @@ m <- lvm(y~x+z)
 distribution(m, ~y+z) <- binomial.lvm("logit")
 d <- lava::sim(m,n)
 g <- glm(y~x+z,data=d,family="binomial")
-iid1 <- iidJack(g, ncpus = 1)
+iid1 <- iidJack(g, cpus = 1)
 iid2 <- lava::iid(g)
 quantile(iid1-iid2)
 vcov(g)
