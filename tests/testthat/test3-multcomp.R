@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: maj  2 2018 (10:55) 
+## Last-Updated: maj  2 2018 (16:58) 
 ##           By: Brice Ozenne
-##     Update #: 107
+##     Update #: 111
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,7 +42,7 @@ lava.options(symbols = c("~","~~"))
 context("multcomp - mmm")
 
 ## * simulation
-mSim <- lvm(c(Y1,Y2,Y3,Y4,Y5,Y6,Y7,Y8,Y9,Y10)~ beta * eta, E ~ 1)
+mSim <- lvm(c(Y1,Y2,Y3,Y4)~ beta * eta, E ~ 1)
 latent(mSim) <- "eta"
 set.seed(10)
 n <- 1e2
@@ -112,12 +112,11 @@ test_that("glht2 vs. lava (ml): robust std", {
                      bias.correct = FALSE, robust = TRUE, df = FALSE)
 
     GS <- estimate(ls.lm[[1]], cluster = 1:n)$coefmat
-    test <- summary(e.glht2, test = adjusted("none"), print = FALSE)$test
-
+    test <- summary(e.glht2, test = adjusted("none"))$test
+    
     expect_equal(as.double(test$sigma[1]), GS["E","Std.Err"], tol = 1e-8)
     expect_equal(as.double(test$pvalues[1]), GS["E","P-value"], tol = 1e-8)
-    ## cannot compare p.values
-    ## because some are based on a student law and others on a gaussian law
+    ##
 })
 
 test_that("glht vs. calcDistMaxIntegral", {
@@ -143,10 +142,10 @@ test_that("glht vs. calcDistMaxIntegral", {
 
 
 ## * lvm
-names(df.data)
+## names(df.data)
 
-m.lvm <- lvm(c(Y1,Y2,Y3,Y4)~ eta, eta ~ Y10+E,
-             Y1~Y5)
+m.lvm <- lvm(c(Y1,Y2,Y3)~ eta, eta ~ E,
+             Y1~Y4)
 e.lvm <- estimate(m.lvm, df.data)
 
 test_that("glht vs. glht2 (lvm): information std", {
@@ -178,13 +177,7 @@ test_that("glht vs. glht2 (lvm): information std", {
 mmm.lvm <- mmm(Y1 = estimate(lvm(Y1~E), data = df.data),
                Y2 = estimate(lvm(Y2~E), data = df.data),
                Y3 = estimate(lvm(Y3~E), data = df.data),
-               Y4 = estimate(lvm(Y4~E), data = df.data),
-               Y5 = estimate(lvm(Y5~E), data = df.data),
-               Y6 = estimate(lvm(Y6~E), data = df.data),
-               Y7 = estimate(lvm(Y7~E), data = df.data),
-               Y8 = estimate(lvm(Y8~E), data = df.data),
-               Y9 = estimate(lvm(Y9~E), data = df.data),
-               Y10 = estimate(lvm(Y10~E), data = df.data)
+               Y4 = estimate(lvm(Y4~E), data = df.data)
                )
 
 test_that("glht vs. glht2 (list lvm): information std", {

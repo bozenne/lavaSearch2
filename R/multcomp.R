@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: maj  2 2018 (09:42) 
+## Last-Updated: maj  2 2018 (16:31) 
 ##           By: Brice Ozenne
-##     Update #: 372
+##     Update #: 379
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -144,6 +144,13 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
     }
+    dots <- list(...)
+    if(length(dots)>0){
+        txt.names <- names(dots)
+        warning("Argument",if(length(txt.names)>1){"s"}else{""},
+                " \'",paste(txt.names, collapse = "\' \'"),"\' are ignored\n")
+    }
+
     
     ### ** define contrast matrix
     if(!is.matrix(linfct)){
@@ -209,6 +216,12 @@ glht2.mmm <- function (model, linfct, rhs = 0,
 
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
+    }
+    dots <- list(...)
+    if(length(dots)>0){
+        txt.names <- names(dots)
+        warning("Argument",if(length(txt.names)>1){"s"}else{""},
+                " \'",paste(txt.names, collapse = "\' \'"),"\' are ignored\n")
     }
     
     ### ** check the class of each model

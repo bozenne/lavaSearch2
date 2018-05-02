@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: maj  2 2018 (10:54) 
+## Last-Updated: maj  2 2018 (16:58) 
 ##           By: Brice Ozenne
-##     Update #: 22
+##     Update #: 34
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,21 +15,19 @@
 ## 
 ### Code:
 
-## * method summary.glht2
-#' @title summary Method for glht2 Objects
-#' @description summary method for glht2 objects.
-#'
-#' @param object output of the \code{glht2} function.
-#' @param print should the summary be printed in the terminal.
-#' @param ... arguments to be passed to \code{summary.glht}.
-#' 
-#' @method summary glht2
-#' @export
-summary.glht2 <- function(object, print = TRUE, ...){
+summary.glht2 <- function(object, ...){
 
     class(object) <- setdiff(class(object), "glht2")
-    object.summary <- summary(object, ...)
-    output <- utils::capture.output(print(object.summary))
+    output <- summary(object, ...)
+    class(output) <- append("summary.glht2",class(output))
+    
+    return(output)
+}
+
+print.summary.glht2 <- function(object, ...){
+
+    class(object) <- setdiff(class(object), "summary.glht2")
+    output <- utils::capture.output(print(object))
     
     txt.robust <- switch(as.character(object$robust),
                          "TRUE" = "Robust standard errors",
@@ -41,11 +39,9 @@ summary.glht2 <- function(object, print = TRUE, ...){
                              )
     output[length(output)] <- paste0("(",txt.robust,txt.correction,")\n")
 
-    if(print){
-        cat(paste0(output,collapse = "\n"))
-    }
+    cat(paste0(output,collapse = "\n"))
     
-    return(invisible(object.summary))
+    return(invisible(object))
 }
 
 
