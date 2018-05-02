@@ -11,7 +11,7 @@
 
 \item{print}{should the summary be printed in the terminal.}
 
-\item{...}{[internal] only used by the generic method.}
+\item{...}{arguments to be passed to \code{summary.glht}.}
 }
 \description{
 summary method for glht2 objects.

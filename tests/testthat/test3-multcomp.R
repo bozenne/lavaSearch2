@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: maj  2 2018 (09:57) 
+## Last-Updated: maj  2 2018 (10:55) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 107
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -74,7 +74,7 @@ test_that("glht vs. glht2 (list lm): information std", {
     expect_equivalent(e.glht$linfct,e.glht2$linfct[,name.mean])
 
     eS.glht <- summary(e.glht)
-    eS.glht2 <- summary(e.glht2)
+    eS.glht2 <- summary(e.glht2, print = FALSE)
 
     expect_equal(eS.glht$test$tstat, 1/sqrt(n/(n-2))*eS.glht2$test$tstat)
 })
@@ -94,7 +94,7 @@ test_that("glht vs. glht2 (list ml): robust std", {
     expect_equivalent(e.glht$linfct,e.glht2$linfct[,name.mean])
 
     eS.glht <- summary(e.glht)
-    eS.glht2 <- summary(e.glht2)
+    eS.glht2 <- summary(e.glht2, print = FALSE)
 
     expect_equal(eS.glht$test$tstat, eS.glht2$test$tstat)
     ## cannot compare p.values
@@ -112,7 +112,7 @@ test_that("glht2 vs. lava (ml): robust std", {
                      bias.correct = FALSE, robust = TRUE, df = FALSE)
 
     GS <- estimate(ls.lm[[1]], cluster = 1:n)$coefmat
-    test <- summary(e.glht2, print = FALSE)$test
+    test <- summary(e.glht2, test = adjusted("none"), print = FALSE)$test
 
     expect_equal(as.double(test$sigma[1]), GS["E","Std.Err"], tol = 1e-8)
     expect_equal(as.double(test$pvalues[1]), GS["E","P-value"], tol = 1e-8)

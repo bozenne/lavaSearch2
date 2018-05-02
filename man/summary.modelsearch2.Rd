@@ -9,9 +9,9 @@
 \arguments{
 \item{object}{output of the \code{modelsearch2} function.}
 
-\item{...}{[internal] only used by the generic method.}
+\item{print}{should the summary be printed in the terminal.}
 
-\item{display}{should the summary be printed in the terminal.}
+\item{...}{[internal] only used by the generic method.}
 }
 \description{
 summary method for modelsearch2 objects.

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: maj  2 2018 (10:38) 
+## Last-Updated: maj  2 2018 (10:54) 
 ##           By: Brice Ozenne
-##     Update #: 20
+##     Update #: 22
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,14 +21,14 @@
 #'
 #' @param object output of the \code{glht2} function.
 #' @param print should the summary be printed in the terminal.
-#' @param ... [internal] only used by the generic method.
+#' @param ... arguments to be passed to \code{summary.glht}.
 #' 
 #' @method summary glht2
 #' @export
 summary.glht2 <- function(object, print = TRUE, ...){
 
     class(object) <- setdiff(class(object), "glht2")
-    object.summary <- summary(object)
+    object.summary <- summary(object, ...)
     output <- utils::capture.output(print(object.summary))
     
     txt.robust <- switch(as.character(object$robust),
