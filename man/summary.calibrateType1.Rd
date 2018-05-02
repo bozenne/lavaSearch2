@@ -6,7 +6,7 @@
 \usage{
 \method{summary}{calibrateType1}(object, robust = FALSE,
   type = "type1error", alpha = 0.05, log.transform = TRUE, digits = 5,
-  display = TRUE, ...)
+  print = TRUE, ...)
 }
 \arguments{
 \item{object}{output of the \code{calibrateType1} function.}
@@ -22,7 +22,7 @@ only  model-based standard error (\code{FALSE}), or only robust standard error (
 
 \item{digits}{[integer >0] the number of decimal places to use when displaying the summary.}
 
-\item{display}{should the summary be printed in the terminal.}
+\item{print}{should the summary be printed in the terminal.}
 
 \item{...}{[internal] only used by the generic method.}
 }

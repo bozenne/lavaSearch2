@@ -362,7 +362,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                           alpha = 0.05, method.max = "integration", 
                           cpus = 1, trace = 1,
                           packages = NULL, conditional = FALSE, exposure = NULL, ## not documented
-                          display.warnings = TRUE, export.iid = FALSE ## not documented
+                          print.warnings = TRUE, export.iid = FALSE ## not documented
                           ){
 
     ## ** preliminary tests
@@ -486,7 +486,7 @@ modelsearch2.default <- function(object, link, data = NULL,
             ### *** run modelsearchLR
             res.search <- modelsearchLR(iObject, restricted = iRestricted, link = iLink, directive = iDirective,
                                         update.FCT = update.FCT, update.args = update.args,
-                                        method.p.adjust = method.p.adjust, display.warnings = display.warnings, trace = trace-1)
+                                        method.p.adjust = method.p.adjust, print.warnings = print.warnings, trace = trace-1)
 
         }else if(statistic == "Wald"){
             ### *** run modelsearchMax

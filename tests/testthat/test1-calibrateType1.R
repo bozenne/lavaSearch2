@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 10 2018 (09:34) 
 ## Version: 
-## Last-Updated: maj  1 2018 (13:39) 
+## Last-Updated: maj  2 2018 (09:55) 
 ##           By: Brice Ozenne
-##     Update #: 25
+##     Update #: 26
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -92,7 +92,7 @@ test_that("calibrateType1.lvmfit", {
                      "correction" = c("Gaussian approx.", "Gaussian approx.", "Satterthwaite approx.", "Satterthwaite approx.", "small sample correction", "small sample correction", "Satterthwaite approx. with small sample correction", "Satterthwaite approx. with small sample correction"), 
                      "statistic" = c("Wald", "robust Wald", "Wald", "robust Wald", "Wald", "robust Wald", "Wald", "robust Wald"))
 
-    expect_equal(GS$type1error, summary(out, display = FALSE)$type1error, tol = 1e-5, scale = 1)
+    expect_equal(GS$type1error, summary(out, print = FALSE)$type1error, tol = 1e-5, scale = 1)
 
     #### parallel computation
     ## out <- calibrateType1(e, null = c("Y~G"), n.rep = 1e3, cpus = 4, seed = 10)

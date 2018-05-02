@@ -9,10 +9,10 @@
 glht2(model, ...)
 
 \method{glht2}{lvmfit}(model, linfct, rhs = 0, bias.correct = TRUE,
-  robust = FALSE, ...)
+  df = TRUE, robust = FALSE, cluster = NULL, ...)
 
 \method{glht2}{mmm}(model, linfct, rhs = 0, bias.correct = TRUE,
-  robust = FALSE, ...)
+  df = TRUE, robust = FALSE, cluster = NULL, ...)
 }
 \arguments{
 \item{model}{a \code{lvmfit} or \code{mmm} object.
@@ -26,8 +26,12 @@ The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
 
+\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?}
+
 \item{robust}{[logical] should robust standard error be used? 
 Otherwise rescale the influence function with the standard error obtained from the information matrix.}
+
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 }
 \value{
 A \code{glht} object.

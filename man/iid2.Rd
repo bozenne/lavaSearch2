@@ -42,9 +42,9 @@ iid2(object, ...)
 
 \item{...}{arguments to be passed to \code{sCorrect}.}
 
-\item{param}{[optional] the fitted parameters.}
+\item{param}{[named numeric vector] the fitted parameters.}
 
-\item{data}{[optional] the data set.}
+\item{data}{[data.frame] the data set.}
 
 \item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.}
 

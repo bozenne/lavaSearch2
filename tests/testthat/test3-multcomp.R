@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:34) 
+## Last-Updated: maj  2 2018 (09:57) 
 ##           By: Brice Ozenne
-##     Update #: 103
+##     Update #: 106
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -97,6 +97,25 @@ test_that("glht vs. glht2 (list ml): robust std", {
     eS.glht2 <- summary(e.glht2)
 
     expect_equal(eS.glht$test$tstat, eS.glht2$test$tstat)
+    ## cannot compare p.values
+    ## because some are based on a student law and others on a gaussian law
+})
+
+test_that("glht2 vs. lava (ml): robust std", {
+    lsRed.lm <- ls.lm[1:2]
+    class(lsRed.lm) <- "mmm"
+
+    resC <- createContrast(lsRed.lm, var.test = "E", add.variance = TRUE)
+    name.all <- colnames(resC$contrast)
+    name.mean <- name.all[-grep("sigma",name.all)]
+    e.glht2 <- glht2(lsRed.lm, linfct = resC$contrast,
+                     bias.correct = FALSE, robust = TRUE, df = FALSE)
+
+    GS <- estimate(ls.lm[[1]], cluster = 1:n)$coefmat
+    test <- summary(e.glht2, print = FALSE)$test
+
+    expect_equal(as.double(test$sigma[1]), GS["E","Std.Err"], tol = 1e-8)
+    expect_equal(as.double(test$pvalues[1]), GS["E","P-value"], tol = 1e-8)
     ## cannot compare p.values
     ## because some are based on a student law and others on a gaussian law
 })

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: mar 26 2018 (17:11) 
+## Last-Updated: maj  2 2018 (09:42) 
 ##           By: Brice Ozenne
-##     Update #: 359
+##     Update #: 372
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -79,8 +79,10 @@ estfun.lvmfit <- function(x, ...){
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
+##' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
 #' @param ... [internal] Only used by the generic method.
 #'
 #' @details
@@ -137,8 +139,12 @@ estfun.lvmfit <- function(x, ...){
 #' @rdname glht2
 #' @export
 glht2.lvmfit <- function(model, linfct, rhs = 0,
-                         bias.correct = TRUE, robust = FALSE, ...){
+                         bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL, ...){
 
+    if(robust==FALSE && !is.null(cluster)){
+        stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
+    }
+    
     ### ** define contrast matrix
     if(!is.matrix(linfct)){
         resC <- createContrast(model, par = linfct)
@@ -150,7 +156,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 
 ### ** pre-compute quantities for the small sample correction
     if(!inherits(model,"lvmfit2")){
-        sCorrect(model, score = robust) <- bias.correct
+        sCorrect(model, df = df, score = robust) <- bias.correct
     }
 
 ### ** Wald test with small sample correction
@@ -162,12 +168,16 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
     ## update name according to multcomp, i.e. without second member
     rownames(linfct) <- .contrast2name(linfct, null = NULL) 
 
-    ### ** Global degree of freedom
-    df.global <- round(resWald["global","df"], digits = 0)
+### ** Global degree of freedom
+    if(df){
+        df.global <- round(resWald["global","df"], digits = 0)
+    }else{
+        df.global <- 0
+    }
     
-    ### ** compute variance-covariance matrix
+### ** compute variance-covariance matrix
     if(robust){
-        vcov.model <- crossprod(iid2(model))
+        vcov.model <- crossprod(iid2(model, cluster = cluster))
     }else{
         vcov.model <- model$sCorrect$vcov.param
     }
@@ -180,8 +190,10 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
                 vcov = vcov.model,
                 df = df.global,
                 alternative = "two.sided",
-                type = NULL)
-    class(out) <- "glht"
+                type = NULL,
+                robust = robust,
+                bias.correct = bias.correct)
+    class(out) <- c("glht2","glht")
         
     ### ** export
     return(out)
@@ -191,7 +203,14 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 ## * glht2.mmm
 #' @rdname glht2
 #' @export
-glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FALSE, ...){
+glht2.mmm <- function (model, linfct, rhs = 0,
+                       bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL, ...){
+
+
+    if(robust==FALSE && !is.null(cluster)){
+        stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
+    }
+    
     ### ** check the class of each model
     n.model <- length(model)
     name.model <- names(model)    
@@ -238,7 +257,7 @@ glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FAL
 
 ### *** Pre-compute quantities
         if(!inherits(model[[iM]],"lm2") && !inherits(model[[iM]],"gls2") && !inherits(model[[iM]],"lme2") && !inherits(model[[iM]],"lvmfit2")){
-            sCorrect(model[[iM]], score = TRUE) <- bias.correct
+            sCorrect(model[[iM]], df = df, score = TRUE) <- bias.correct
         }
         out$param <- model[[iM]]$sCorrect$param
         name.param <- names(out$param)
@@ -246,15 +265,18 @@ glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FAL
         out$param <- setNames(out$param, name.object.param)
         
 ### *** Compute df for each test
+        if(df){
         ## here null does not matter since we only extract the degrees of freedom
         iContrast <- ls.contrast[[iM]]
         colnames(iContrast) <- name.param
         
-        iWald <- compare2(model[[iM]], contrast = iContrast, as.lava = FALSE)
-        out$df <- iWald[1:(NROW(iWald)-1),"df"]
-
+            iWald <- compare2(model[[iM]], contrast = iContrast, as.lava = FALSE)
+            out$df <- iWald[1:(NROW(iWald)-1),"df"]
+        }else{
+            out$df <- Inf
+        }
 ### *** get iid decomposition
-        out$iid <- iid2(model[[iM]], robust = robust)
+        out$iid <- iid2(model[[iM]], robust = robust, cluster = cluster)
         colnames(out$iid) <- name.object.param
             
         return(out)
@@ -262,10 +284,14 @@ glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FAL
     })
     seq.df <- unlist(lapply(ls.res,"[[","df"))
     seq.param <- unlist(lapply(ls.res,"[[","param"))
-    df.global <- round(stats::median(seq.df), digits = 0)
+    if(df){
+        df.global <- round(stats::median(seq.df), digits = 0)
+    }else{
+        df.global <- 0
+    }
     vcov.model <- crossprod(do.call(cbind,lapply(ls.res,"[[","iid")))
 
-    ### ** convert to the appropriate format
+### ** convert to the appropriate format
     out <- list(model = model,
                 linfct = linfct,
                 rhs = unname(rhs),
@@ -273,8 +299,10 @@ glht2.mmm <- function (model, linfct, rhs = 0, bias.correct = TRUE, robust = FAL
                 vcov = vcov.model,
                 df = df.global,
                 alternative = "two.sided",
-                type = NULL)
-    class(out) <- "glht"
+                type = NULL,
+                robust = robust,
+                bias.correct = bias.correct)
+    class(out) <- c("glht2","glht")
         
     ### ** export
     return(out)    

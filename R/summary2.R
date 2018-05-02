@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: apr 26 2018 (13:24) 
+## Last-Updated: maj  2 2018 (09:54) 
 ##           By: Brice Ozenne
-##     Update #: 293
+##     Update #: 294
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -203,7 +203,7 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
     if(!is.null(object$cluster)){
         
         ## if(robust == FALSE){
-        ##     stop("Can only display summary for robust standard errors \n",
+        ##     stop("Can only print summary for robust standard errors \n",
         ##          "when the object contain a cluster variable \n")
         ## }
         colnames(object.summary$coef) <- c("Estimate","Std. Error","Z-value","P-value")

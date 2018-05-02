@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 23 2018 (12:58) 
 ## Version: 
-## Last-Updated: apr 26 2018 (12:29) 
+## Last-Updated: maj  2 2018 (10:38) 
 ##           By: Brice Ozenne
-##     Update #: 68
+##     Update #: 70
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,14 +26,14 @@
 #' @param type [character] should the type 1 error rate be diplayed (\code{"type1error"}) or the bias (\code{"bias")}.
 #' @param digits [integer >0] the number of decimal places to use when displaying the summary.
 #' @param log.transform [logical] should the confidence intervals be computed on the logit scale.
-#' @param display should the summary be printed in the terminal.
+#' @param print should the summary be printed in the terminal.
 #' @param ... [internal] only used by the generic method.
 #' 
 #' @method summary calibrateType1
 #' @export
 summary.calibrateType1 <- function(object, robust = FALSE, type = "type1error",
                                    alpha = 0.05, log.transform = TRUE,
-                                   digits = 5, display = TRUE, ...){
+                                   digits = 5, print = TRUE, ...){
 
 
     type <- match.arg(type, c("type1error","bias"))
@@ -101,7 +101,7 @@ summary.calibrateType1 <- function(object, robust = FALSE, type = "type1error",
                                 p.robustKR = "robust Wald")
 
         ## display
-        if(display){
+        if(print){
             seqN <- unique(dfS$n)
             seqRep <- setNames(dfS$n.rep[duplicated(dfS$n) == FALSE],seqN)
 
