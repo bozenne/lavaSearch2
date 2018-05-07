@@ -22,7 +22,7 @@ createContrast(object, ...)
 
 \method{createContrast}{lme}(object, par, add.variance, ...)
 
-\method{createContrast}{lvmfit}(object, par, ...)
+\method{createContrast}{lvmfit}(object, par = NULL, var.test = NULL, ...)
 
 \method{createContrast}{list}(object, par = NULL, add.variance,
   var.test = NULL, ...)

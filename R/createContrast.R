@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: apr 17 2018 (10:11) 
+## Last-Updated: maj  4 2018 (18:07) 
 ##           By: Brice Ozenne
-##     Update #: 202
+##     Update #: 204
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,6 +88,13 @@ createContrast.character <- function(object, name.param,
                                      ...){
 
     n.param <- length(name.param)
+    dots <- list(...)
+    if(length(dots)>0){
+        txt.args <- paste(names(dots), collapse = "\" \"")
+        txt.s <- if(length(dots)>1){"s"}else{""}
+        warning("Extra argument",txt.s," \"",txt.args,"\" are ignored. \n")
+    }
+
     
     n.hypo <- length(object)
     if(any(nchar(object)==0)){
@@ -199,8 +206,11 @@ createContrast.lme <- createContrast.lm
 ## * createContrast.lvmfit
 #' @rdname createContrast
 #' @export
-createContrast.lvmfit <- function(object, par, ...){
+createContrast.lvmfit <- function(object, par = NULL, var.test = NULL, ...){
 
+    if(is.null(par) && !is.null(var.test)){
+       par <- grep(var.test, names(coef(object)),  value = TRUE)
+    }
     if(!identical(class(par),"character")){
         stop("Argument \'par\' must be a character \n")
     }
