@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (13:20) 
 ## Version: 
-## Last-Updated: apr 23 2018 (15:19) 
+## Last-Updated: maj 23 2018 (09:53) 
 ##           By: Brice Ozenne
-##     Update #: 25
+##     Update #: 29
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,10 +91,10 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         df.gg <- rbind(df1,df2)
 
         ## *** display
-        gg <- ggplot() + geom_boxplot(data = df.gg, aes_string(x = "type", y = "bias")) 
-        gg <- gg + facet_wrap(corrected ~ n, labeller = label_both)
+        gg <- ggplot2::ggplot() + ggplot2::geom_boxplot(data = df.gg, aes_string(x = "type", y = "bias")) 
+        gg <- gg + ggplot2::facet_wrap(corrected ~ n, labeller = ggplot2::label_both)
         df.line <- data.frame(x = c(-Inf,Inf), y = 0)
-        gg <- gg + geom_line(data = df.line, aes_string(x = "x", y = "y"), color = color.threshold)
+        gg <- gg + ggplot2::geom_line(data = df.line, aes_string(x = "x", y = "y"), color = color.threshold)
         
     }
 
@@ -118,27 +118,27 @@ autoplot.calibrateType1 <- function(object, type = "bias", plot = TRUE, color.th
         n.method <- length(keep.method)
 
        y.range <- range(c(alpha,df.gg$type1error))
-        gg <- ggplot(df.gg, aes_string(x = "n", y = "type1error", group = "method", color = "method", shape = "method"))
-        gg <- gg + geom_point(size = 3) + geom_line(size = 2)
-        gg <- gg + facet_grid(~link, labeller = label_parsed)
-        gg <- gg + geom_abline(intercept = alpha, slope = 0, color = color.threshold)
-        gg <- gg + xlab("sample size")
-        gg <- gg + ylab("type 1 error rate")
-        gg <- gg + theme(legend.position = "bottom")
-        gg <- gg + coord_cartesian(ylim = y.range)
+        gg <- ggplot2::ggplot(df.gg, aes_string(x = "n", y = "type1error", group = "method", color = "method", shape = "method"))
+        gg <- gg + ggplot2::geom_point(size = 3) + ggplot2::geom_line(size = 2)
+        gg <- gg + ggplot2::facet_grid(~link, labeller = ggplot2::label_parsed)
+        gg <- gg + ggplot2::geom_abline(intercept = alpha, slope = 0, color = color.threshold)
+        gg <- gg + ggplot2::xlab("sample size")
+        gg <- gg + ggplot2::ylab("type 1 error rate")
+        gg <- gg + ggplot2::theme(legend.position = "bottom")
+        gg <- gg + ggplot2::coord_cartesian(ylim = y.range)
 
         if(!is.null(nrow.legend)){
-            gg <- gg + guides(color=guide_legend(nrow=nrow.legend,byrow=TRUE))
+            gg <- gg + ggplot2::guides(color = ggplot2::guide_legend(nrow=nrow.legend,byrow=TRUE))
         }
         
-        gg <- gg + scale_color_manual("",
-                                      breaks = keep.method,
-                                      label = label.method,
-                                      values = color[1:n.method])
-        gg <- gg + scale_shape_manual("",
-                                      breaks = keep.method,
-                                      label = label.method,
-                                      values = seq(15,by=1,length=n.method))
+        gg <- gg + ggplot2::scale_color_manual("",
+                                               breaks = keep.method,
+                                               label = label.method,
+                                               values = color[1:n.method])
+        gg <- gg + ggplot2::scale_shape_manual("",
+                                               breaks = keep.method,
+                                               label = label.method,
+                                               values = seq(15,by=1,length=n.method))
         
          
     }
