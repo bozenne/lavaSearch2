@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: apr 17 2018 (10:11) 
+## Last-Updated: maj 17 2018 (13:18) 
 ##           By: Brice Ozenne
-##     Update #: 202
+##     Update #: 214
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -71,8 +71,8 @@
 #'
 #' ## Contrast matrix for the join model
 #' ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
-#' createContrast(ls.lvm, var.test = "Treatment")
-#' createContrast(ls.lvm, par = character(0))
+#' createContrast(ls.lvm, var.test = "Treatment", add.variance = FALSE)
+#' createContrast(ls.lvm, par = character(0), add.variance = FALSE)
 #'
 #' @concept small sample inference
 #' 
@@ -88,6 +88,14 @@ createContrast.character <- function(object, name.param,
                                      ...){
 
     n.param <- length(name.param)
+    dots <- list(...)
+    dots[["add.variance"]] <- NULL
+    if(length(dots)>0){
+        txt.args <- paste(names(dots), collapse = "\" \"")
+        txt.s <- if(length(dots)>1){"s"}else{""}
+        warning("Extra argument",txt.s," \"",txt.args,"\" are ignored. \n")
+    }
+
     
     n.hypo <- length(object)
     if(any(nchar(object)==0)){
@@ -161,13 +169,16 @@ createContrast.lm <- function(object, par, add.variance, ...){
         stop("Argument \'par\' must be a character \n")
     }    
     name.coef <- names(coef(object))
+    if(is.null(add.variance)){
+        stop("Argument \'add.variance\' must be specified for lm objects \n")
+    }
     if(add.variance){
         if(any("sigma2" %in% name.coef)){
             stop("createContrast does not work when one of the coefficients is named \"sigma2\" \n")
         }
         name.coef <- c(name.coef,"sigma2")
     }
-    
+
     out <- createContrast(par, name.param = name.coef, ...)
     return(out)
     
@@ -199,8 +210,11 @@ createContrast.lme <- createContrast.lm
 ## * createContrast.lvmfit
 #' @rdname createContrast
 #' @export
-createContrast.lvmfit <- function(object, par, ...){
+createContrast.lvmfit <- function(object, par = NULL, var.test = NULL, ...){
 
+    if(is.null(par) && !is.null(var.test)){
+       par <- grep(var.test, names(coef(object)),  value = TRUE)
+    }
     if(!identical(class(par),"character")){
         stop("Argument \'par\' must be a character \n")
     }
@@ -212,14 +226,16 @@ createContrast.lvmfit <- function(object, par, ...){
 ## * createContrast.list
 #' @rdname createContrast
 #' @export
-createContrast.list <- function(object, par = NULL, add.variance, var.test = NULL, 
+createContrast.list <- function(object, par = NULL, add.variance = NULL, var.test = NULL, 
                                 ...){
 
     ## ** find the names of the coefficients
     name.model <- names(object)
     
     ls.coefname <- lapply(name.model, function(iModel){ ## list by model
-        iResC <- createContrast(object[[iModel]], par = character(0), add.variance = add.variance)
+        iResC <- createContrast(object[[iModel]],
+                                par = character(0),
+                                add.variance = add.variance)
         return(colnames(iResC$contrast))
     })
     names(ls.coefname) <- name.model

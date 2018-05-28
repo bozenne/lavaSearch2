@@ -53,7 +53,7 @@
 #' 
 
 #' @import lava
-#' @import ggplot2
+#' @importFrom ggplot2  aes_string autoplot
 #' @importFrom graphics par plot text
 #' @importFrom MASS mvrnorm
 #' @importFrom Matrix bdiag

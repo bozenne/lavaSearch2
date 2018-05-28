@@ -22,12 +22,12 @@ createContrast(object, ...)
 
 \method{createContrast}{lme}(object, par, add.variance, ...)
 
-\method{createContrast}{lvmfit}(object, par, ...)
+\method{createContrast}{lvmfit}(object, par = NULL, var.test = NULL, ...)
 
-\method{createContrast}{list}(object, par = NULL, add.variance,
+\method{createContrast}{list}(object, par = NULL, add.variance = NULL,
   var.test = NULL, ...)
 
-\method{createContrast}{mmm}(object, par = NULL, add.variance,
+\method{createContrast}{mmm}(object, par = NULL, add.variance = NULL,
   var.test = NULL, ...)
 }
 \arguments{
@@ -94,8 +94,8 @@ createContrast(lmX, par = character(0))
 
 ## Contrast matrix for the join model
 ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
-createContrast(ls.lvm, var.test = "Treatment")
-createContrast(ls.lvm, par = character(0))
+createContrast(ls.lvm, var.test = "Treatment", add.variance = FALSE)
+createContrast(ls.lvm, par = character(0), add.variance = FALSE)
 
 }
 \concept{

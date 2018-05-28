@@ -146,7 +146,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     dots.modelsearch2 <- dots[names(dots) %in% args.findNewLink == FALSE]
     
     ## ** normalize the links
-    if(is.null(link)){
+     if(is.null(link)){
         res.find <- do.call(findNewLink,
                             args = c(list(object$model,
                                           data = stats::model.frame(object),
@@ -228,7 +228,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                                  typeSD = "information", df = TRUE, bias.correct = TRUE,
                                  trace = TRUE,
                                  ...){
-    
+
     ## ** normalise arguments
     typeSD <- match.arg(typeSD, c("information","robust","jackknife"))
     if(df == FALSE && bias.correct == TRUE){
