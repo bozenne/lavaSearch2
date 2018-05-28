@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: maj  1 2018 (15:01) 
+## last-updated: maj 28 2018 (23:48) 
 ##           By: Brice Ozenne
-##     Update #: 714
+##     Update #: 721
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -123,26 +123,31 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         }
 
         if(init.cpus){
-            cl <- snow::makeSOCKcluster(cpus)
-            doSNOW::registerDoSNOW(cl)
+            ## define cluster
+            cl <- parallel::makeCluster(cpus)
+
+            ## link to foreach
+            doParallel::registerDoParallel(cl)
         }
     
-        if(trace){
-            pb <- utils::txtProgressBar(min=0, max=n.link, style=3)
-            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
-        }else{
-            ls.options <- NULL
+        if(trace > 0){
+            pb <- utils::txtProgressBar(max = n.link, style = 3) 
         }
 
+        ## export package
         vec.packages <- c("lavaSearch2", packages)
+        parallel::clusterCall(cl, fun = function(x){
+            sapply(vec.packages, function(iP){
+                suppressPackageStartupMessages(requireNamespace(iP, quietly = TRUE))
+            })
+        })
+        
         i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link,
-                                             .packages =  vec.packages,
-                                             .options.snow=ls.options,
-                                             # .export = c("ls.LVMargs"),
                                              .combine = FCTcombine),
                             {
+                                if(trace>0){utils::setTxtProgressBar(pb, i)}
                                 return(warper(i))
                             })
 

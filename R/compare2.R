@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: apr 26 2018 (13:23) 
+## Last-Updated: maj  5 2018 (21:16) 
 ##           By: Brice Ozenne
-##     Update #: 338
+##     Update #: 345
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,18 +30,18 @@
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
-#' @param null [vector] the right hand side of the linear hypotheses to be tested.
+#' @param null,rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param F.test [logical] should a joint test be performed?
 #' @param level [numeric 0-1] the confidence level of the confidence interval.
 #' @param ...  [internal] only used by the generic method.
 #'
-#' @details The \code{par} argument or the arguments \code{contrast} and \code{null} specify the set of linear hypotheses to be tested. They can be written:
+#' @details The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
+#' specify the set of linear hypotheses to be tested. They can be written:
 #' \deqn{
 #'   contrast * \theta = null
 #' }
 #' where \eqn{\theta} is the vector of the model coefficients. \cr
-#' 
 #' The \code{par} argument must contain expression(s) involving the model coefficients.
 #' For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
 #' A contrast matrix and the right hand side will be generated inside the function. \cr
@@ -50,6 +50,9 @@
 #' Each hypothesis correspond to a row in the contrast matrix. \cr
 #'
 #' The null vector should contain as many elements as there are row in the contrast matrix. \cr
+#' 
+#' Argument rhs and null are equivalent.
+#' This redondance enable compatibility between \code{lava::compare}, \code{compare2}, \code{multcomp::glht}, and \code{glht2}.
 #'
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
 #' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
@@ -159,11 +162,15 @@ compare2.lvmfit2 <- function(object, ...){
 
 ## * .compare2
 #' @rdname compare2
-.compare2 <- function(object, par = NULL, contrast = NULL, null = NULL,
+.compare2 <- function(object, par = NULL, contrast = NULL, null = NULL, rhs = NULL,
                       robust = FALSE, cluster = NULL, df = TRUE,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
     ## ** extract information
+    if(!is.null(null) && !is.null(rhs)){
+        stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
+    }
+    
     if(df){
         dVcov.param <- object$sCorrect$dVcov.param
     }else{

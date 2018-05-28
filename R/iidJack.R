@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 23 2017 (09:15) 
 ## Version: 
-## last-updated: maj  1 2018 (14:43) 
+## last-updated: maj 28 2018 (23:48) 
 ##           By: Brice Ozenne
-##     Update #: 319
+##     Update #: 326
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -125,18 +125,6 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,cpus=1,
                  "This package is necessary when argument \'cpus\' is greater than 1 \n")
         }
 
-        test.package <- try(requireNamespace("snow"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'snow\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
-        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'doSNOW\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
         if(cpus > parallel::detectCores()){
             stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
                  "available CPU cores: ",parallel::detectCores(),"\n")
@@ -204,17 +192,16 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,cpus=1,
     
     ## ** parallel computations: get jackknife coef
     if(cpus>1){
-        ## *** create cluster
-        cl <- snow::makeSOCKcluster(cpus)
-        doSNOW::registerDoSNOW(cl)
-        
-        ## *** display
-        if(trace){
-            pb <- utils::txtProgressBar(min=0, max=n.group, style=3)
-            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+
+        ## *** define cluster
+        if(trace>0){
+            cl <- suppressMessages(parallel::makeCluster(cpus, outfile = ""))
+            pb <- utils::txtProgressBar(max = n.group, style = 3)          
         }else{
-            ls.options <- NULL
+            cl <- parallel::makeCluster(cpus)
         }
+        ## *** link to foreach
+        doParallel::registerDoParallel(cl)
 
         ## *** packages/objects to export
         estimator <- as.character(object$call[[1]]) 
@@ -236,6 +223,14 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,cpus=1,
         if(possiblePackage %in% existingPackage){
             vec.packages <- c(vec.packages,possiblePackage)
         }
+
+        parallel::clusterCall(cl, fun = function(x){
+            sapply(vec.packages, function(iP){
+                suppressPackageStartupMessages(requireNamespace(iP, quietly = TRUE))
+            })
+        })
+        
+        ## *** objects to export
         if(length(object$call$data)==1){
             toExport <- c(toExport,as.character(object$call$data))
         }
@@ -251,10 +246,11 @@ iidJack.default <- function(object,data=NULL,grouping=NULL,cpus=1,
         i <- NULL # [:for CRAN check] foreach
         resLoop <- foreach::`%dopar%`(
                                 foreach::foreach(i = 1:n.group,
-                                                 .packages =  vec.packages,
-                                                 .options.snow = ls.options,
-                                                 .export = toExport),{                                                      
-                                                     warper(Ugrouping[i])
+                                                 .export = toExport),{
+                                                     
+                                                     if(trace>0){utils::setTxtProgressBar(pb, i)}
+
+                                                     return(warper(Ugrouping[i]))
                                                  })
     
         if(init.cpus){

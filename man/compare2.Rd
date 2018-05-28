@@ -33,7 +33,7 @@ compare2(object, ...)
 
 \method{compare2}{lvmfit2}(object, ...)
 
-.compare2(object, par = NULL, contrast = NULL, null = NULL,
+.compare2(object, par = NULL, contrast = NULL, null = NULL, rhs = NULL,
   robust = FALSE, cluster = NULL, df = TRUE, as.lava = TRUE,
   F.test = TRUE, level = 0.95)
 }
@@ -54,7 +54,7 @@ See the examples section.}
 
 \item{contrast}{[matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.}
 
-\item{null}{[vector] the right hand side of the linear hypotheses to be tested.}
+\item{null, rhs}{[vector] the right hand side of the linear hypotheses to be tested.}
 
 \item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
 
@@ -73,12 +73,12 @@ Test Linear Hypotheses using a multivariate Wald statistic.
 Similar to \code{lava::compare} but with small sample correction.
 }
 \details{
-The \code{par} argument or the arguments \code{contrast} and \code{null} specify the set of linear hypotheses to be tested. They can be written:
+The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
+specify the set of linear hypotheses to be tested. They can be written:
 \deqn{
   contrast * \theta = null
 }
 where \eqn{\theta} is the vector of the model coefficients. \cr
-
 The \code{par} argument must contain expression(s) involving the model coefficients.
 For example \code{"beta = 0"} or \code{c("-5*beta + alpha = 3","-alpha")} are valid expressions if alpha and beta belong to the set of model coefficients.
 A contrast matrix and the right hand side will be generated inside the function. \cr
@@ -87,6 +87,9 @@ When directly specified, the contrast matrix must contain as many columns as the
 Each hypothesis correspond to a row in the contrast matrix. \cr
 
 The null vector should contain as many elements as there are row in the contrast matrix. \cr
+
+Argument rhs and null are equivalent.
+This redondance enable compatibility between \code{lava::compare}, \code{compare2}, \code{multcomp::glht}, and \code{glht2}.
 }
 \examples{
 #### simulate data ####

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: maj  2 2018 (16:31) 
+## Last-Updated: maj 28 2018 (23:42) 
 ##           By: Brice Ozenne
-##     Update #: 379
+##     Update #: 383
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -88,8 +88,10 @@ estfun.lvmfit <- function(x, ...){
 #' @details
 #' Whenever the argument linfct is not a matrix, it is passed to the function \code{createContrast} to generate the contrast matrix and, if not specified, rhs. \cr \cr
 #'
-#' Since only one degree of freedom can be specify in a glht object and it must be an integer, the degree of freedom of the denominator of an F test simultaneously testing all hypotheses is retained, after rounding.
+#' Since only one degree of freedom can be specify in a glht object and it must be an integer, the degree of freedom of the denominator of an F test simultaneously testing all hypotheses is retained, after rounding. \cr \cr
 #'
+#' Argument rhs and null are equivalent.
+#' This redondance enable compatibility between \code{lava::compare}, \code{compare2}, \code{multcomp::glht}, and \code{glht2}.
 #' @return A \code{glht} object.
 #' 
 #' @seealso

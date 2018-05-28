@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 21 2017 (16:44) 
 ## Version: 
-## last-updated: maj  1 2018 (15:00) 
+## last-updated: maj 28 2018 (23:47) 
 ##           By: Brice Ozenne
-##     Update #: 483
+##     Update #: 495
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -181,27 +181,35 @@ calcDistMaxIntegral <- function(statistic, iid, df,
     if(trace > 0){ cat("Computation of multivariate student probabilities to adjust the p.values \n") }
     if(cpus > 1){
         ## *** parallel computations
+
         if(init.cpus){            
-            cl <- snow::makeSOCKcluster(cpus)
-            doSNOW::registerDoSNOW(cl)
+            ## define cluster
+            if(trace>0){
+                cl <- parallel::makeCluster(cpus, outfile = "")
+            }else{
+                cl <- parallel::makeCluster(cpus)
+            }
+            ## link to foreach
+            doParallel::registerDoParallel(cl)
         }
 
-        if(trace){
-            pb <- utils::txtProgressBar(min=0, max=length(index.new), style=3)
-            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
-        }else{
-            ls.options <- NULL
+        if(trace>0){
+            pb <- utils::txtProgressBar(max = length(index.new), style = 3)                   
         }
 
+        ## export package
+        parallel::clusterCall(cl, fun = function(x){
+            suppressPackageStartupMessages(requireNamespace("mvtnorm", quietly = TRUE))
+        })
+        
         value <- NULL # [:for CRAN check] foreach
         out$p.adjust <- foreach::`%dopar%`(
-                                     foreach::foreach(value = index.new,
-                                                      .options.snow=ls.options,
-                                                      .packages = c("tmvtnorm","mvtnorm"),
+                                     foreach::foreach(value = 1:length(index.new),
                                                       .export = c(".calcPmaxIntegration"),
                                                       .combine = "c"),
                                      {
-                                         return(warperP(value))
+                                         if(trace>0){utils::setTxtProgressBar(pb, value)}
+                                         return(warperP(index.new[value]))
                                      })
 
         if(init.cpus){
@@ -258,8 +266,11 @@ calcDistMaxBootstrap <- function(statistic, iid, iid.previous = NULL, quantile.p
         n.simCpus[1] <- n.sim-sum(n.simCpus[-1])
 
         if(init.cpus){            
-            cl <- snow::makeSOCKcluster(cpus)
-            doSNOW::registerDoSNOW(cl)
+            ## define cluster
+            cl <- parallel::makeCluster(cpus)
+
+            ## link to foreach
+            doParallel::registerDoParallel(cl)
         }
   
         i <- NULL # [:for CRAN check] foreach

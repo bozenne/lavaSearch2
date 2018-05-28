@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: maj  1 2018 (14:41) 
+## Last-Updated: maj 28 2018 (23:47) 
 ##           By: Brice Ozenne
-##     Update #: 510
+##     Update #: 518
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,18 +105,6 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
                  "This package is necessary when argument \'cpus\' is greater than 1 \n")
         }
 
-        test.package <- try(requireNamespace("snow"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'snow\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
-        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'doSNOW\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
         if(cpus > parallel::detectCores()){
             stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
                  "available CPU cores: ",parallel::detectCores(),"\n")
@@ -250,18 +238,23 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
     }
 
     if(cpus>1){
-        ## *** create cluster
-        cl <- snow::makeSOCKcluster(cpus)
-        doSNOW::registerDoSNOW(cl)
 
-        ## *** display
-        if(trace){
-            pb <- utils::txtProgressBar(min=0, max=n.rep, style=3)
-            ls.options <- list(progress = function(n){ utils::setTxtProgressBar(pb, n) })
+        ## *** define cluster
+        if(trace>0){
+            cl <- suppressMessages(parallel::makeCluster(cpus, outfile = ""))
+            pb <- utils::txtProgressBar(max = n.rep, style = 3)          
         }else{
-            ls.options <- NULL
+            cl <- parallel::makeCluster(cpus)
         }
+        ## *** link to foreach
+        doParallel::registerDoParallel(cl)
 
+        ## *** export package
+        parallel::clusterCall(cl, fun = function(x){
+            suppressPackageStartupMessages(requireNamespace("lava", quietly = TRUE))
+            suppressPackageStartupMessages(requireNamespace("lavaSearch2", quietly = TRUE))
+        })
+        
         ## *** seed
         cpus.name <- unlist(parallel::clusterApply(cl = cl, 1:cpus, function(x){
             myName <- paste(Sys.info()[["nodename"]], Sys.getpid(), sep="-")
@@ -281,16 +274,15 @@ calibrateType1.lvm <- function(object, null, n, n.rep, F.test = FALSE, cluster =
 
         
         ## *** parallel computation
-        vec.packages <- c("lava","lavaSearch2")
         toExport <- c(".warperType1", "cpus.name")
 
         iRep <- NULL # [:for CRAN check] foreach
         resSim <- foreach::`%dopar%`(
                                foreach::foreach(iRep = 1:n.rep,
-                                                .options.snow=ls.options,
-                                                .packages =  vec.packages,
                                                 .export = toExport),{ # iRep <- 1
-                                                    
+
+                                                    if(trace>0){utils::setTxtProgressBar(pb, iRep)}
+
                                                     myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
                                                     iSeed <- seed[myName]
                                                     

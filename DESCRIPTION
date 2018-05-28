@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
 Version: 1.3.5
-Date: 2018-05-02
+Date: 2018-05-28
 Author: Brice Ozenne [aut, cre]
 Maintainer: Brice Ozenne <brice.ozenne@orange.fr>
 URL: https://github.com/bozenne/lavaSearch2
@@ -17,6 +17,7 @@ Depends:
     lava,
     ggplot2
 Imports:
+    doParallel,
     MASS,
     Matrix,
     methods,
@@ -31,7 +32,6 @@ Imports:
 Suggests:
     clubSandwich,
     data.table,
-    doSNOW,
     foreach,
     lava.tobit,
     lme4,
@@ -40,7 +40,6 @@ Suggests:
     pbapply,
     pbkrtest,
     riskRegression,
-    snow,
     survival,
     testthat
 RoxygenNote: 6.0.1

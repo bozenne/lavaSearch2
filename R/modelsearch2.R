@@ -392,18 +392,6 @@ modelsearch2.default <- function(object, link, data = NULL,
                  "This package is necessary when argument \'cpus\' is greater than 1 \n")
         }
 
-        test.package <- try(requireNamespace("snow"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'snow\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
-        test.package <- try(requireNamespace("doSNOW"), silent = TRUE)
-        if(inherits(test.package,"try-error")){
-            stop("There is no package \'doSNOW\' \n",
-                 "This package is necessary when argument \'cpus\' is greater than 1 \n")
-        }
-        
         if(cpus > parallel::detectCores()){
             stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
                  "available CPU cores: ",parallel::detectCores(),"\n")
@@ -433,10 +421,16 @@ modelsearch2.default <- function(object, link, data = NULL,
        
     ## cpus
     if(is.null(cpus)){ cpus <- parallel::detectCores()}
-    if(cpus>1){
-        cl <- snow::makeSOCKcluster(cpus)
-        doSNOW::registerDoSNOW(cl)
+
+    ## define cluster
+    if(trace>0){
+        cl <- parallel::makeCluster(cpus, outfile = "")
+    }else{
+        cl <- parallel::makeCluster(cpus)
     }
+
+    ## link to foreach
+    doParallel::registerDoParallel(cl)
 
     ## ** display a summary of the call
     if(trace>0){
