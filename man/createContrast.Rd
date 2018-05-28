@@ -13,8 +13,8 @@
 \usage{
 createContrast(object, ...)
 
-\method{createContrast}{character}(object, name.param, add.rowname = TRUE,
-  rowname.rhs = TRUE, ...)
+\method{createContrast}{character}(object, name.param, diff.first = FALSE,
+  add.rowname = TRUE, rowname.rhs = TRUE, ...)
 
 \method{createContrast}{lm}(object, par, add.variance, ...)
 
@@ -36,6 +36,8 @@ createContrast(object, ...)
 \item{...}{[internal] Only used by the generic method.}
 
 \item{name.param}{[internal] the names of all the model coefficients.}
+
+\item{diff.first}{[logical] should the contrasts between the first and any of the other coefficients define the null hypotheses.}
 
 \item{add.rowname}{[internal] should a name be defined for each hypothesis.}
 
