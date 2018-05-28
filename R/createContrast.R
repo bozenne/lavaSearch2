@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: maj 17 2018 (13:18) 
+## Last-Updated: maj 24 2018 (09:35) 
 ##           By: Brice Ozenne
-##     Update #: 214
+##     Update #: 227
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,6 +26,7 @@
 #' @param add.variance [logical] should the variance coefficients be considered as model coefficients?
 #' Required for lm, gls, and lme models.
 #' @param var.test [character] a regular expression that is used to identify the coefficients to be tested using \code{grep}. Each coefficient will be tested in a separate hypothesis. When this argument is used, the argument \code{par} is disregarded.
+#' @param diff.first [logical] should the contrasts between the first and any of the other coefficients define the null hypotheses.
 #' @param name.param [internal] the names of all the model coefficients.
 #' @param add.rowname [internal] should a name be defined for each hypothesis.
 #' @param rowname.rhs should the right hand side of the null hypothesis be added to the name.
@@ -83,7 +84,7 @@
 ## * createContrast.character
 #' @rdname createContrast
 #' @export
-createContrast.character <- function(object, name.param,
+createContrast.character <- function(object, name.param, diff.first = FALSE,
                                      add.rowname = TRUE, rowname.rhs = TRUE,
                                      ...){
 
@@ -96,6 +97,9 @@ createContrast.character <- function(object, name.param,
         warning("Extra argument",txt.s," \"",txt.args,"\" are ignored. \n")
     }
 
+    if(diff.first){
+        object <- paste0(object[-1]," - ",object[1])
+    }
     
     n.hypo <- length(object)
     if(any(nchar(object)==0)){
@@ -111,6 +115,7 @@ createContrast.character <- function(object, name.param,
             if(length(iTempo.eq)==1){ ## set null to 0 when second side of the equation is missing
                 iTempo.eq <- c(iTempo.eq,"0")
             }
+
             null[iH] <- as.numeric(trim(iTempo.eq[2]))
             iRh.plus <- strsplit(iTempo.eq[[1]], split = "+", fixed = TRUE)[[1]]
             iRh <- trim(unlist(sapply(iRh.plus, strsplit, split = "-", fixed = TRUE)))
@@ -143,7 +148,12 @@ createContrast.character <- function(object, name.param,
                     stop(txt.message)                    
                 }
 
-                test.sign <- length(grep("-",strsplit(iRh[iCoef], split = iName)[[1]][1]))>0
+                ## identify if it is a minus sign
+                iBeforeCoef <- strsplit(iTempo.eq[[1]], split = ls.iRh[iCoef])[[1]][1]
+                if(iCoef > 1){
+                    iBeforeCoef <- strsplit(iBeforeCoef, split = ls.iRh[iCoef-1])[[1]][2]
+                }
+                test.sign <- length(grep("-",iBeforeCoef))>0
                 contrast[iH,iName] <- c(1,-1)[test.sign+1] * iFactor
             }
         }
