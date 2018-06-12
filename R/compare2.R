@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: maj  5 2018 (21:16) 
+## Last-Updated: jun 12 2018 (11:20) 
 ##           By: Brice Ozenne
-##     Update #: 345
+##     Update #: 370
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -170,8 +170,11 @@ compare2.lvmfit2 <- function(object, ...){
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
-    
-    if(df){
+
+    if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
+        dVcov.param <- NA ## necessary to pass the test after
+        score <- object$sCorrect$score
+    }else if(df>0){        
         dVcov.param <- object$sCorrect$dVcov.param
     }else{
         dVcov.param <- NULL
@@ -258,21 +261,17 @@ compare2.lvmfit2 <- function(object, ...){
     }else{
         vcov.tempo <- object$sCorrect$vcov.param
         attr(vcov.tempo, "warning") <- NULL
-
-        calcDF <- function(M.C){ # M.C <- C
-            C.vcov.C <- rowSums(M.C %*% vcov.tempo * M.C)
-    
-            C.dVcov.C <- sapply(keep.param, function(x){
-                rowSums(M.C %*% dVcov.param[,,x] * M.C)
-            })
-            numerator <- 2 *(C.vcov.C)^2
-            denom <- rowSums(C.dVcov.C %*% vcov.tempo[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
-            df <- numerator/denom
-            return(df)
-        }
-
         ## univariate
-        df.Wald  <- calcDF(contrast)
+        if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
+            df.Wald  <- dfSigmaRobust(contrast = contrast,
+                                      vcov = vcov.tempo,
+                                      score = score)
+        }else{
+            df.Wald  <- dfSigma(contrast = contrast,
+                                vcov = vcov.tempo,
+                                dVcov = dVcov.param,
+                                keep.param = keep.param)
+        }
 
         ## multivariate
         svd.tempo <- eigen(solve(contrast %*% vcov.tempo %*% t(contrast)))
@@ -281,8 +280,16 @@ compare2.lvmfit2 <- function(object, ...){
      
         C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
         ## Fstat - crossprod(C.anova %*% p)/n.hypo
-        nu_m <- calcDF(C.anova) ## degree of freedom of the independent t statistics
-    
+        if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
+            nu_m  <- dfSigmaRobust(contrast = C.anova,
+                                   vcov = vcov.tempo,
+                                   score = score)
+        }else{
+            nu_m <- dfSigma(contrast = C.anova,
+                            vcov = vcov.tempo,
+                            dVcov = dVcov.param,
+                            keep.param = keep.param) ## degree of freedom of the independent t statistics
+        }    
         EQ <- sum(nu_m/(nu_m-2))
         df.F <- 2*EQ / (EQ - n.hypo)
 
@@ -361,6 +368,79 @@ compare2.lvmfit2 <- function(object, ...){
 
     attr(out,"error") <- error
     return(out)
+}
+
+## * dfSigma
+##' @description Computation of the degrees of freedom of the chi-squared distribution
+##' relative to the model-based variance
+##'
+##' @param contrast [numeric vector] the linear combination of parameters to test
+##' @param vcov [numeric matrix] the variance-covariance matrix of the parameters.
+##' @param dVcov [numeric array] the first derivative of the variance-covariance matrix of the parameters.
+##' @param keep.param [character vector] the name of the parameters with non-zero first derivative of their variance parameter.
+##' 
+dfSigma <- function(contrast, vcov, dVcov, keep.param){
+    C.vcov.C <- rowSums(contrast %*% vcov * contrast) ## variance matrix of the linear combination
+    
+    C.dVcov.C <- sapply(keep.param, function(x){
+        rowSums(contrast %*% dVcov[,,x] * contrast)
+    })
+    numerator <- 2 *(C.vcov.C)^2
+    denom <- rowSums(C.dVcov.C %*% vcov[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
+    df <- numerator/denom
+    return(df)
+}
+
+## * dfSigmaRobust
+##' @description Computation of the degrees of freedom of the chi-squared distribution
+##' relative to the robust-based variance
+##'
+##' @param contrast [numeric vector] the linear combination of parameters to test
+##' @param vcov [numeric matrix] the variance-covariance matrix of the parameters.
+##' @param score [numeric matrix] the individual score for each parameter.
+##'
+##' @details When contrast is the identity matrix, this function compute the moments of the sandwich estimator
+##' and the degrees of freedom of the approximate t-test as described in (Pan, 2002) section 2 and 3.1.
+##'
+##' @references
+##' Wei Pan and Melanie M. Wall, Small-sample adjustments in using the sandwich variance estiamtor in generalized estimating equations. Statistics in medicine (2002) 21:1429-1441.
+##' 
+dfSigmaRobust <- function(contrast, vcov, score){
+    
+    ## ** prepare
+    n <- NROW(score)
+    p <- NCOL(contrast)
+        
+    ## apply contrasts
+    score.S <- score %*% contrast
+    vcov.S <- vcov %*% contrast
+    
+    M.vecPi <- t(apply(score.S, 1, function(iRow){
+        as.vector(tcrossprod(iRow))
+    }))
+    ## dim(M.vecPi) ## (n,p)
+
+    #### ** check
+    ## vcov %*% t(score) %*% score %*% vcov
+    ## (vcov %x% vcov) %*% colSums(M.vecPi)
+
+    ## ** compute moments of P
+    Q <- colMeans(vec.P)
+    T <- var(vec.P) ## missing 1/n factor compared to (Pan, 2002)
+    
+    ## vec.Pcenter <- sweep(vec.P, FUN = "-", MARGIN = 2, STATS = Q)
+    ## crossprod(vec.Pcenter)/(99)
+
+    ## ** compute moments of Vs = (Vm x Vm) P
+    E_Vs <- n *(vcov.S %x% vcov.S) %*% Q
+    Sigma_Vs <- n * (vcov.S %x% vcov.S) %*% T %*% (vcov.S %x% vcov.S) ## missing n factor compared to (Pan, 2002) so it cancels out with the previous missing factor
+
+    ## ** compute parameters of the chi-square distribution
+    sigma <- as.double(E_Vs)
+    tau <- diag(Sigma_Vs)
+
+    df <- matrix((2*sigma^2)/tau, nrow = p, ncol = p)
+    return(diag(df))
 }
 
 
