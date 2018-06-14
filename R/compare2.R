@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jun 12 2018 (11:20) 
+## Last-Updated: jun 14 2018 (09:21) 
 ##           By: Brice Ozenne
-##     Update #: 370
+##     Update #: 372
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -425,8 +425,8 @@ dfSigmaRobust <- function(contrast, vcov, score){
     ## (vcov %x% vcov) %*% colSums(M.vecPi)
 
     ## ** compute moments of P
-    Q <- colMeans(vec.P)
-    T <- var(vec.P) ## missing 1/n factor compared to (Pan, 2002)
+    Q <- colMeans(M.vecPi)
+    T <- stats::var(M.vecPi) ## missing 1/n factor compared to (Pan, 2002)
     
     ## vec.Pcenter <- sweep(vec.P, FUN = "-", MARGIN = 2, STATS = Q)
     ## crossprod(vec.Pcenter)/(99)
