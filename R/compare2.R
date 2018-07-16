@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jun 14 2018 (09:21) 
+## Last-Updated: jul 16 2018 (16:35) 
 ##           By: Brice Ozenne
-##     Update #: 372
+##     Update #: 379
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -371,6 +371,7 @@ compare2.lvmfit2 <- function(object, ...){
 }
 
 ## * dfSigma
+##' @title Degree of Freedom for the Chi-Square Test
 ##' @description Computation of the degrees of freedom of the chi-squared distribution
 ##' relative to the model-based variance
 ##'
@@ -392,6 +393,7 @@ dfSigma <- function(contrast, vcov, dVcov, keep.param){
 }
 
 ## * dfSigmaRobust
+##' @title Degree of Freedom for the Robust Chi-Square Test
 ##' @description Computation of the degrees of freedom of the chi-squared distribution
 ##' relative to the robust-based variance
 ##'

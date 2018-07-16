@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: maj 24 2018 (09:35) 
+## Last-Updated: jun 26 2018 (09:06) 
 ##           By: Brice Ozenne
-##     Update #: 227
+##     Update #: 228
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -75,6 +75,11 @@
 #' createContrast(ls.lvm, var.test = "Treatment", add.variance = FALSE)
 #' createContrast(ls.lvm, par = character(0), add.variance = FALSE)
 #'
+#' ## Contrast for multigroup models
+#' m <- lvm(Y~Age+Treatment)
+#' e <- estimate(list(m,m), data = split(df.data, df.data$Gender))
+#' createContrast(e, par = "1@Y~TreatmentSSRI - 2@Y~TreatmentSSRI = 0")
+#' createContrast(e, par = "2@Y~TreatmentSSRI - 1@Y~TreatmentSSRI = 0")
 #' @concept small sample inference
 #' 
 #' @export

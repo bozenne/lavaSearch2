@@ -2,7 +2,10 @@
 % Please edit documentation in R/summary2.R
 \name{summary2}
 \alias{summary2}
+\alias{summary2.lm}
 \alias{summary2.gls}
+\alias{summary2.lme}
+\alias{summary2.lvmfit}
 \alias{summary2.lm2}
 \alias{summary2.gls2}
 \alias{summary2.lme2}
@@ -11,8 +14,14 @@
 \usage{
 summary2(object, ...)
 
+\method{summary2}{lm}(object, df = TRUE, bias.correct = TRUE, ...)
+
 \method{summary2}{gls}(object, df = TRUE, bias.correct = TRUE,
   cluster = NULL, ...)
+
+\method{summary2}{lme}(object, df = TRUE, bias.correct = TRUE, ...)
+
+\method{summary2}{lvmfit}(object, df = TRUE, bias.correct = TRUE, ...)
 
 \method{summary2}{lm2}(object, digit = max(3, getOption("digit")),
   robust = FALSE, df = TRUE, ...)

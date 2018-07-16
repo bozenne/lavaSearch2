@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: maj  2 2018 (09:54) 
+## Last-Updated: jul 16 2018 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 294
+##     Update #: 295
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -72,7 +72,8 @@
   function(object,...) UseMethod("summary2")
 
 ## * summary2.lm
-#' @rdname summary
+#' @rdname summary2
+#' @method summary2 lm
 #' @export
 summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct
@@ -80,6 +81,7 @@ summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
 }
 ## * summary2.gls
 #' @rdname summary2
+#' @method summary2 gls
 #' @export
 summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
     sCorrect(object, df = df, cluster = cluster) <- bias.correct
@@ -87,12 +89,14 @@ summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL,
 }
 
 ## * summary2.lme
-#' @rdname summary
+#' @rdname summary2
+#' @method summary2 lme
 #' @export
 summary2.lme <- summary2.lm
 
 ## * summary2.lvmfit
-#' @rdname summary
+#' @rdname summary2
+#' @method summary2 lvmfit
 #' @export
 summary2.lvmfit <- summary2.lm
 
