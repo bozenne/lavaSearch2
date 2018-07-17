@@ -384,14 +384,15 @@ modelsearch2.default <- function(object, link, data = NULL,
         typeSD <- NULL
     }
 
-    
-    if(cpus>1){
+    if(is.null(cpus) || cpus > 1){
         test.package <- try(requireNamespace("foreach"), silent = TRUE)
         if(inherits(test.package,"try-error")){
             stop("There is no package \'foreach\' \n",
                  "This package is necessary when argument \'cpus\' is greater than 1 \n")
         }
-
+    }
+    
+    if(!is.null(cpus) && cpus>1){
         if(cpus > parallel::detectCores()){
             stop("Argument \'cpus\' is greater than the number of available CPU cores \n",
                  "available CPU cores: ",parallel::detectCores(),"\n")
@@ -423,14 +424,17 @@ modelsearch2.default <- function(object, link, data = NULL,
     if(is.null(cpus)){ cpus <- parallel::detectCores()}
 
     ## define cluster
-    if(trace>0){
-        cl <- parallel::makeCluster(cpus, outfile = "")
+    if(cpus>1){
+        if(trace>0){
+            cl <- parallel::makeCluster(cpus, outfile = "")
+        }else{
+            cl <- parallel::makeCluster(cpus)
+        }
+        doParallel::registerDoParallel(cl)
     }else{
-        cl <- parallel::makeCluster(cpus)
+        cl <- NULL
     }
-
-    ## link to foreach
-    doParallel::registerDoParallel(cl)
+    
 
     ## ** display a summary of the call
     if(trace>0){
@@ -496,7 +500,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
-                                         export.iid = max(conditional,export.iid), trace = trace-1, cpus = cpus, init.cpus = FALSE)
+                                         export.iid = max(conditional,export.iid), trace = trace-1, cpus = cpus, cl = cl)
         }
 
         ## ** update according the most significant p.value
@@ -531,7 +535,7 @@ modelsearch2.default <- function(object, link, data = NULL,
             vec.seqQuantile <- c(vec.seqQuantile,unique(res.search$df.test$quantile))
         }
         
-        ### *** update the model
+### *** update the model
         if(cv==FALSE){
             iObject <- update.FCT(iObject, args = update.args,
                                   restricted = iRestricted[index.rm,], directive = iDirective[index.rm])
@@ -541,7 +545,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         }
         ls.seqModels[[iStep]] <- iObject
 
-### *** display results
+        ## *** display results
         if(trace > 0){
             if(cv==FALSE){
                 cat("add ",as.character(ls.seqTests[[iStep]][rowSelected, "link"]),
@@ -564,7 +568,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         
     }
          
-    ## * Test treatment effect
+    ## ** Test treatment effect
     if(!is.null(exposure) && FALSE){
         if(statistic == "Wald" && method.p.adjust == "max"){
             ## df.exposure <- data.table("link" = exposure,
@@ -613,12 +617,12 @@ modelsearch2.default <- function(object, link, data = NULL,
             ## }
         }
     }
-    ## * end job
+    ## ** end parallel computation
     if(cpus>1){
         parallel::stopCluster(cl)
     }
     
-    ## * export
+    ## ** export
     if(length(ls.seqIID)==0){ls.seqIID <- NULL}
     if(length(ls.seqSigma)==0){ls.seqSigma <- NULL}
     output <- list(sequenceTest = ls.seqTests,
