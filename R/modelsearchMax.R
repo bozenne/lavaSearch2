@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: jul 17 2018 (09:24) 
+## last-updated: aug  6 2018 (13:38) 
 ##           By: Brice Ozenne
-##     Update #: 734
+##     Update #: 784
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,7 +39,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                            export.iid, trace, cpus, cl){
 
     ## WARNING: do not put link as NULL for data.table since it is used as an argument by the function
-    
+
     ## ** initialisation
     n.link <- NROW(restricted)
     nObs <- NROW(update.args$data)
@@ -52,9 +52,10 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     typeSD <- attr(iid.FCT, "typeSD")
     df <- attr(iid.FCT, "df")
     bias.correct <- attr(iid.FCT, "bias.correct")
-
-    ## ** wraper
-    warper <- function(iterI){ # iterI <- 2
+    x.coef <- names(coef(x))
+        
+        ## ** wraper
+        warper <- function(iterI){ # iterI <- 2
 
         out <- list(df = data.frame(statistic = as.numeric(NA),
                                     df = as.numeric(NA),
@@ -64,37 +65,41 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                     coefBeta = as.numeric(NA),
                                     stringsAsFactors = FALSE),
                     iid = NULL)
+
         ## *** fit new model
         newfit <- update.FCT(x, args = update.args,
                              restricted = restricted[iterI,], directive = directive[iterI])
-        out$df[1, "convergence"] <- newfit$opt$convergence
         
-        ## *** extract influence function        
-        if(class(newfit) != "try-error"){ # test whether the model was estimated
-            if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
+            ## *** extract influence function        
+            if(class(newfit) != "try-error"){ # test whether the model was estimated
+                out$df[1, "convergence"] <- newfit$opt$convergence
+                if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
 
                 ## extract coefficient
                 new.coef <- stats::coef(newfit)
-                if(link[iterI] %in% names(new.coef) == FALSE){
-                    stop("Coefficient ",link[iterI]," not found \n",
-                         "Possible coefficients: ",paste0(names(new.coef), collapse = " "),"\n")
-                }
+                name.new.coef <- setdiff(names(new.coef),x.coef)
 
-                out$df[1, "coefBeta"] <- new.coef[link[iterI]]
+                if(length(name.new.coef)==0){
+                    stop("There was no new coefficient when extending the model\n")
+                }else if(length(name.new.coef)>1){
+                    stop("There was more than one new coefficient when extending the model\n",
+                         "New coefficients: \"",paste(name.new.coef, collapse = "\" \""),"\"\n")
+                }
+                out$df[1, "coefBeta"] <- new.coef[name.new.coef]
                 ## extract degree of freedom and standard error
                 if(df || bias.correct){
                     sCorrect(newfit, df = df, score = TRUE) <- bias.correct
-                    out$iid <- iid2(newfit, robust = (typeSD != "information") )[,link[iterI],drop=FALSE]
+                    out$iid <- iid2(newfit, robust = (typeSD != "information") )[,name.new.coef,drop=FALSE]
                     if(df){
-                        e.df <- compare2(newfit, par = link[iterI], as.lava = FALSE)
+                        e.df <- compare2(newfit, par = name.new.coef, as.lava = FALSE)
                         out$df[1, "df"] <- e.df[1, "df"]
                     }
                     sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))                    
                 }else{
-                    out$iid <- sqrt(nObs)*iid.FCT(newfit)[,link[iterI],drop=FALSE]
+                    out$iid <- sqrt(nObs)*iid.FCT(newfit)[,name.new.coef,drop=FALSE]
                     if(typeSD == "information"){
                         ## NOTE: it assumes that whenever df is FALSE then bias.correct is FALSE
-                        sd.coef <- sqrt(stats::vcov(newfit)[link[iterI],link[iterI]])
+                        sd.coef <- sqrt(stats::vcov(newfit)[name.new.coef,name.new.coef])
                         out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
                     }else{
                         sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))
@@ -102,13 +107,15 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                         
                 }
 
-                ## compute test statistic
-                out$df[1, "statistic"] <- abs(out$df$coefBeta/sd.coef) ## keep .SD for clarity
+                    ## compute test statistic
+                    out$df[1, "statistic"] <- abs(out$df$coefBeta/sd.coef) ## keep .SD for clarity
+                }
+            }else{
+                out$df[1, "convergence"] <- 1
             }
+            return(out)
         }
-        return(out)
-    }
-
+    
     ## ** start parallel computation
     init.cpus <- (is.null(cl) && cpus>1)
     if(init.cpus){
@@ -117,6 +124,15 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
 
         ## link to foreach
         doParallel::registerDoParallel(cl)
+
+        ## load packages
+        vec.packages <- c("lavaSearch2",packages)
+        parallel::clusterCall(cl, fun = function(x){
+            sapply(vec.packages, function(iP){
+                suppressPackageStartupMessages(loadNamespace(iP))
+            })
+        })
+        
     }
     
 
@@ -131,14 +147,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
             pb <- utils::txtProgressBar(max = n.link, style = 3) 
         }
 
-        ## export package
-        vec.packages <- c("lavaSearch2", packages)
-        parallel::clusterCall(cl, fun = function(x){
-            sapply(vec.packages, function(iP){
-                suppressPackageStartupMessages(requireNamespace(iP, quietly = TRUE))
-            })
-        })
-
+        
         ## get influence function
         i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
@@ -148,9 +157,9 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                                              iid = cbind(res1$iid,res2$iid))
                                                  return(res)
                                              }), {
-                                if(trace>0){utils::setTxtProgressBar(pb, i)}
-                                return(warper(i))
-                            })
+                                                 if(trace>0){utils::setTxtProgressBar(pb, i)}
+                                                 return(warper(i))
+                                             })
 
         if(trace>0){close(pb)}
         
@@ -167,6 +176,9 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
     df.test <- cbind(link = link, res$df)    
     iid.link <- res$iid
 
+
+    ## print(df.test)
+    
     if(all(df.test$convergence!=0)){
         stop("none of the extended model has converged \n",
              "the additional links may be misspecified \n")
@@ -216,7 +228,6 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                            cpus = cpus,
                                            cl = cl,
                                            trace = trace)
-            resQmax$p.adjust
         }else{
             method.boot <- switch(method.max,
                                   "boot-naive" = "naive",

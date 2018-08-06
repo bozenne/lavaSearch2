@@ -144,7 +144,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     dots.findNewLink <- dots[names(dots) %in% args.findNewLink]
 
     dots.modelsearch2 <- dots[names(dots) %in% args.findNewLink == FALSE]
-    
+
     ## ** normalize the links
      if(is.null(link)){
         res.find <- do.call(findNewLink,
@@ -159,7 +159,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             stop("Automatic search has not found any possible additional link \n",
                  "Consider specifying manually the argument \'link\' \n")
         }
-    }else{
+     }else{         
         resLink <- .initializeLinks(object, data = data, link = link,
                                     statistic = statistic)
         object <- resLink$object
@@ -431,6 +431,14 @@ modelsearch2.default <- function(object, link, data = NULL,
             cl <- parallel::makeCluster(cpus)
         }
         doParallel::registerDoParallel(cl)
+
+        vec.packages <- c("lavaSearch2", packages)
+        parallel::clusterCall(cl, fun = function(x){
+            sapply(vec.packages, function(iP){
+                suppressPackageStartupMessages(attachNamespace(iP)) ## requireNamespace did not worked
+            })
+        })
+        
     }else{
         cl <- NULL
     }
@@ -496,7 +504,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                 quantile.previous <- NULL
             }
 
-            res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, packages = packages, alpha = alpha,
+            res.search <- modelsearchMax(iObject, restricted = iRestricted, link = iLink, directive = iDirective, packages = NULL, alpha = alpha,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
@@ -518,12 +526,14 @@ modelsearch2.default <- function(object, link, data = NULL,
             }
         }
 
-        ### *** identify most promising test
-        index.rm <- which.max(abs(res.search$df.test$statistic))
-
-        ### *** update the output
+        ## *** identify most promising test
+        index.rm <- which.max(abs(res.search$df.test$statistic))[1]
+        test.cv <- res.search$df.test[index.rm,"convergence"] == 0
+        test.p <- res.search$df.test[index.rm,"adjusted.p.value"] <= alpha
+        
+        ## *** update the output
         res.search$df.test$selected <- FALSE
-        res.search$df.test[index.rm,"selected"] <- (res.search$df.test[index.rm,"convergence"]==0)
+        res.search$df.test[index.rm,"selected"] <- test.cv & test.p
         res.search$df.test$nTests <- NROW(res.search$df.test)
         res.search$df.test <- res.search$df.test[order(res.search$df.test$statistic),]
         rowSelected <- which(res.search$df.test$selected)
@@ -650,17 +660,17 @@ modelsearch2.default <- function(object, link, data = NULL,
     ## first attempt
     args$start <- stats::coef(object)
     suppressWarnings(
-        newObject <- tryCatch(do.call(estimate, args = args),
-                         error = function(x){NA},
+        newObject <- tryCatch(do.call(lava::estimate, args = args),
+                         error = function(x){x},
                          finally = function(x){x})
     )
         
     ## second attempt
-    if(newObject$opt$convergence>0){
+    if(inherits(newObject,"try-error") || newObject$opt$convergence>0){
         args$control$start <- NULL
         suppressWarnings(
-            newObject <- tryCatch(do.call(estimate, args = args),
-                                  error = function(x){NA},
+            newObject <- tryCatch(do.call(lava::estimate, args = args),
+                                  error = function(x){x},
                                   finally = function(x){x})
         )
     }
@@ -717,7 +727,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         }            
     }
     ## ** take care of categorical variables
-    ls.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){
+    ls.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){ ## row <- 1
         data.frame(Y = restricted[row,1],
                    X = var2dummy(object$model,
                                  data = data,

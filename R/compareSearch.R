@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: maj  7 2018 (09:24) 
+## last-updated: aug  6 2018 (13:54) 
 ##           By: Brice Ozenne
-##     Update #: 315
+##     Update #: 324
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -111,13 +111,13 @@ compareSearch <- function(object, alpha = 0.05,
             cat("modelsearch with the Wald statistic")
         }
         if(any(c("fastmax","max") %in% method.p.adjust)){
-            if("fastmax" %in% method.p.adjust){
+            if("fastmax" %in% method.p.adjust){                
                 ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "fastmax",
                                                    trace = trace-1, ...), silent = TRUE)
                 method.p.adjust[method.p.adjust == "fastmax"] <- "max"
             }else{
                 ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "max",
-                                                   trace = trace-1, ...), silent = TRUE)
+                                                   trace = trace-1, ...), silent = TRUE)            
             }
             
 
@@ -245,6 +245,10 @@ compareSearch <- function(object, alpha = 0.05,
         if(method.p.adjust!="max"){            
             object$sequenceTest[[iTest]]$adjusted.p.value <- stats::p.adjust(object$sequenceTest[[iTest]]$p.value,
                                                                              method = method.p.adjust)
+            iIndex.guess <- which.max(abs(object$sequenceTest[[iTest]]$statistic))[1]
+            test.cv <- object$sequenceTest[[iTest]][iIndex.guess,"convergence"] == 0
+            test.p <- object$sequenceTest[[iTest]][iIndex.guess,"adjusted.p.value"] <= alpha
+            object$sequenceTest[[iTest]]$selected[iIndex.guess] <- test.cv & test.p
         }
         seqP.value[iTest] <- min(object$sequenceTest[[iTest]]$adjusted.p.value)
     }
@@ -272,7 +276,7 @@ compareSearch <- function(object, alpha = 0.05,
     }else{
         object$sequenceModel[[length(object$sequenceModel)]] <- object$sequenceModel[[index.finalModel]]
     }
-    
+
     ## ** update adjustment
     object$method.p.adjust <- method.p.adjust
     

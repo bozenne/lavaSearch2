@@ -48,15 +48,20 @@
 ## ** method findNewLink.lvm
 #' @export
 #' @rdname findNewLink
-findNewLink.lvm <- function(object, data = NULL,
-                            exclude.var = NULL, rm.latent_latent= FALSE, rm.endo_endo= FALSE, rm.latent_endo= FALSE,
-                            output = "names", ...){
+findNewLink.lvm <- function(object,
+                            data = NULL,
+                            exclude.var = NULL,
+                            rm.latent_latent= FALSE,
+                            rm.endo_endo= FALSE,
+                            rm.latent_endo= FALSE,
+                            output = "names",
+                            ...){
 
     match.arg(output, choices = c("names","index"))
     if(is.null(data)){        
         data <- lava::sim(object, n = 1)
     }
-   
+    
     ## *** convertion to dummy variable name for categorical variables
     xF <- lava_categorical2dummy(object, data)
     AP <- with(lava::index(xF$x), A + t(A) + P)
@@ -82,7 +87,7 @@ findNewLink.lvm <- function(object, data = NULL,
 
             var.i <- rownames(AP)[i]
             var.j <- rownames(AP)[j]
-          
+            
             if(!is.null(exclude.var) && (var.i %in% exclude.var || var.j %in% exclude.var)){
                 next
             }
@@ -106,14 +111,13 @@ findNewLink.lvm <- function(object, data = NULL,
             if(rm.latent_endo && ( (isLatent.i && isEndogenous.j) || (isEndogenous.i && isLatent.j) )){
                 next
             }
-      
+            
             if (AP[j, i] == 0){
                 restricted <- rbind(restricted, c(i, j))
                 directional <- c(directional, (isExogenous.i+isExogenous.j)>0 )
             }
         }
     }
-
     ## *** export  
     out <- list(M.links = restricted,
                 links = NULL,
@@ -127,7 +131,7 @@ findNewLink.lvm <- function(object, data = NULL,
             out$M.links <- M.names
         }
     }
-   
+    
     return(out)  
 }
 
