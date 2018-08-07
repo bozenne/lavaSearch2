@@ -144,9 +144,9 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     dots.findNewLink <- dots[names(dots) %in% args.findNewLink]
 
     dots.modelsearch2 <- dots[names(dots) %in% args.findNewLink == FALSE]
-
+    
     ## ** normalize the links
-     if(is.null(link)){
+    if(is.null(link)){
         res.find <- do.call(findNewLink,
                             args = c(list(object$model,
                                           data = stats::model.frame(object),
@@ -159,7 +159,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             stop("Automatic search has not found any possible additional link \n",
                  "Consider specifying manually the argument \'link\' \n")
         }
-     }else{         
+    }else{
         resLink <- .initializeLinks(object, data = data, link = link,
                                     statistic = statistic)
         object <- resLink$object
@@ -741,7 +741,7 @@ modelsearch2.default <- function(object, link, data = NULL,
 
     ## ** check links
     allVars.link <- unique(as.vector(restricted2))
-    allVars.model <- vars(object$model)
+    allVars.model <- lava::vars(object$model)
     allVars.data <- names(data)
         
     if(any(allVars.link %in% allVars.model == FALSE)){
@@ -758,7 +758,7 @@ modelsearch2.default <- function(object, link, data = NULL,
                 addVars <- allVars.data[allVars.data %in% missing.var]
                 ff <- stats::as.formula(paste0("~",paste(addVars, collapse = " + ")))
                 addvar(object$model) <- ff
-                allVars.model <- vars(object$model)        
+                allVars.model <- lava::vars(object$model)        
             }
 
             

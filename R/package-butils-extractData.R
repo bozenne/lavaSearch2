@@ -175,7 +175,7 @@ extractData.lvmfit <- function(object, design.matrix = FALSE, as.data.frame = TR
     ## ** extract data
     if(design.matrix){
         data <- object$data$model.frame
-        keep.cols <- intersect(c("(Intercept)",vars(object)), names(data))
+        keep.cols <- intersect(c("(Intercept)",lava::vars(object)), names(data))
         data <- data[,keep.cols,drop=FALSE]
     }else{
         data <- evalInParentEnv(object$call$data, envir = envir)

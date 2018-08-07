@@ -185,7 +185,7 @@ addLink.lvm <- function(object,
                         var1,
                         var2,
                         covariance,
-                        all.vars = vars(object),
+                        all.vars = lava::vars(object),
                         warnings = FALSE,
                         ...){
 
@@ -257,7 +257,7 @@ addLink.lvm <- function(object,
 ## ** method addLink.lvm.reduced
 #' @rdname addLink
 addLink.lvm.reduced <- function(object, ...){
-  return(addLink.lvm(object, all.vars = vars(object, lp = FALSE, xlp = TRUE) , ...))
+  return(addLink.lvm(object, all.vars = lava::vars(object, lp = FALSE, xlp = TRUE) , ...))
 }
 
 ## * setLink
