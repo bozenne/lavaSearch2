@@ -135,7 +135,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## ** normalise arguments
     typeSD <- match.arg(typeSD, c("information","robust","jackknife"))
     if(df == FALSE && bias.correct == TRUE){
-        stop("Argument \'df\' must be TRUE when arguemnt \'bias.correct\' is TRUE \n")
+        stop("Argument \'df\' must be TRUE when argument \'bias.correct\' is TRUE \n")
     }
 
     dots <- list(...)
@@ -199,7 +199,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         attr(iid.FCT,"method.iid") <- "iid"
     }else{
         iid.FCT <- function(x){
-            iid2(x, bias.correct = TRUE)
+            iid2(x, bias.correct = TRUE, robust = TRUE)
         }
         attr(iid.FCT,"method.iid") <- "iid2"
     }
@@ -334,7 +334,7 @@ modelsearch2.default <- function(object, link, data = NULL,
         attr(iid.FCT, "method.iid") <- "iid"
     }else{
         iid.FCT <- function(x){
-            iid2(x, bias.correct = TRUE)
+            iid2(x, bias.correct = TRUE, robust = TRUE)
         }
         attr(iid.FCT,"method.iid") <- "iid2"        
     }
@@ -410,6 +410,8 @@ modelsearch2.default <- function(object, link, data = NULL,
     iObject <- object
     nObs <- object$data$n
     vec.seqQuantile <- NULL # for conditional testing
+
+    quantile.compute <- (conditional || lava.options()$search.calc.quantile.int)
     
     ## output
     ls.seqTests <- list()
@@ -508,7 +510,10 @@ modelsearch2.default <- function(object, link, data = NULL,
                                          update.FCT = update.FCT, update.args = update.args, iid.FCT = iid.FCT,
                                          method.p.adjust = method.p.adjust, method.max = method.max,
                                          iid.previous = iid.previous, quantile.previous = quantile.previous,
-                                         export.iid = max(conditional,export.iid), trace = trace-1, cpus = cpus, cl = cl)
+                                         quantile.compute = quantile.compute,
+                                         export.iid = max(conditional,export.iid),
+                                         trace = trace-1, cpus = cpus, cl = cl)
+            
         }
 
         ## ** update according the most significant p.value
@@ -544,7 +549,7 @@ modelsearch2.default <- function(object, link, data = NULL,
             ls.seqSigma[[iStep]] <- res.search$Sigma
             vec.seqQuantile <- c(vec.seqQuantile,unique(res.search$df.test$quantile))
         }
-        
+
 ### *** update the model
         if(cv==FALSE){
             iObject <- update.FCT(iObject, args = update.args,
@@ -643,6 +648,8 @@ modelsearch2.default <- function(object, link, data = NULL,
                    statistic = statistic,
                    method.p.adjust = method.p.adjust,
                    typeSD = attr(iid.FCT,"typeSD"),
+                   conditional = conditional,
+                   quantile.compute = quantile.compute,
                    alpha = alpha,
                    cv = cv)
     class(output) <- "modelsearch2"

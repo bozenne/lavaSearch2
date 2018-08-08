@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 22 2018 (11:45) 
 ## Version: 
-## Last-Updated: maj  2 2018 (09:55) 
+## Last-Updated: aug  8 2018 (13:23) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 20
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,6 +67,15 @@ test_that("Wald 1 link",{
 
     expect_equivalent(abs(test.GS[1,"statistic"]), test.Wald$data[1,"statistic"])
     expect_equal(test.GS[1,"p-value"], test.Wald$data[1,"p.value"], tolerance = 1e-5)
+
+    ## robust
+    test.GS <- compare2(e.GS, par  = "Y~X1", bias.correct = TRUE, as.lava = FALSE, robust = TRUE)
+    test.WaldRobust <- summary(modelsearch2(e.base, link = "Y~X1", df = TRUE, bias.correct = TRUE, typeSD = "robust",
+                                            statistic = "Wald", method.p.adjust = "max", trace = 0), print = FALSE)
+
+    expect_equivalent(abs(test.GS[1,"statistic"]), test.WaldRobust$data[1,"statistic"])
+    expect_equal(test.GS[1,"p-value"], test.WaldRobust$data[1,"p.value"], tolerance = 1e-5)
+
 })
 
 ##----------------------------------------------------------------------

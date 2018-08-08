@@ -6,8 +6,8 @@
 \usage{
 modelsearchMax(x, restricted, link, directive, packages, update.FCT,
   update.args, iid.FCT, alpha, method.p.adjust, method.max, n.sim = 1000,
-  iid.previous = NULL, quantile.previous = NULL, export.iid, trace, cpus,
-  cl)
+  iid.previous = NULL, quantile.previous = NULL, quantile.compute,
+  export.iid, trace, cpus, cl)
 }
 \value{
 A \code{lvmfit} object.

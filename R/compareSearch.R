@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (11:57) 
 ## Version: 
-## last-updated: aug  6 2018 (13:54) 
+## last-updated: aug  7 2018 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 324
+##     Update #: 337
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -96,7 +96,7 @@ compareSearch <- function(object, alpha = 0.05,
             cat("modelsearch with the log likelihood ratio statistic")
         }
         ls.search$LR <- try(modelsearch2(object, statistic = "LR", method.p.adjust = "none",
-                                         trace = trace-1, ...), silent = TRUE)
+                                         alpha = alpha, trace = trace-1, ...), silent = TRUE)
         if("try-error" %in% class(ls.search$LR)){
             statistic <- setdiff(statistic,"LR")
             if(trace){
@@ -113,14 +113,13 @@ compareSearch <- function(object, alpha = 0.05,
         if(any(c("fastmax","max") %in% method.p.adjust)){
             if("fastmax" %in% method.p.adjust){                
                 ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "fastmax",
-                                                   trace = trace-1, ...), silent = TRUE)
+                                                   alpha = alpha, trace = trace-1, ...), silent = TRUE)
                 method.p.adjust[method.p.adjust == "fastmax"] <- "max"
             }else{
                 ls.search$Wald <- try(modelsearch2(object, statistic = "Wald", method.p.adjust = "max",
-                                                   trace = trace-1, ...), silent = TRUE)            
+                                                   alpha = alpha, trace = trace-1, ...), silent = TRUE)            
             }
             
-
             ## *** check whether further steps are needed for other type 1 error adjustment
             ## i.e. it could be that after max adjustement the p.value is >0.05 but if we don't adjust we should continue
             if("try-error" %in% class(ls.search$Wald) == FALSE){
@@ -133,12 +132,12 @@ compareSearch <- function(object, alpha = 0.05,
                 if(is.null(maxStep)){maxStep <- Inf}
 
                 ## *** perform additional search
-                if(any(vec.p.adjust < alpha) && any(vec.tempo$selected==FALSE) && (currentStep<maxStep) ){ # continue the modelsearch
+                if(any(vec.p.adjust < alpha) && any(vec.tempo$selected==FALSE) && (is.null(maxStep) || currentStep<maxStep) ){ # continue the modelsearch
 
                     ## add the link of the last test to the model (avoid to repeat step)
                     model.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceModel")
                     link.tempo <- getStep(ls.search$Wald, step=nStep(ls.search$Wald), slot = "sequenceTest")
-                    newLink.tempo <- link.tempo[which.min(p.value),link]
+                    newLink.tempo <- as.character(link.tempo[which.min(link.tempo$p.value),"link"])
 
                     ls.args <- lapply(model.tempo$call[-(1:2)], evalInParentEnv)
                     restricted.tempo <- unlist(initVarLink(newLink.tempo))
@@ -250,7 +249,7 @@ compareSearch <- function(object, alpha = 0.05,
             test.p <- object$sequenceTest[[iTest]][iIndex.guess,"adjusted.p.value"] <= alpha
             object$sequenceTest[[iTest]]$selected[iIndex.guess] <- test.cv & test.p
         }
-        seqP.value[iTest] <- min(object$sequenceTest[[iTest]]$adjusted.p.value)
+        seqP.value[iTest] <- min(object$sequenceTest[[iTest]]$adjusted.p.value, na.rm = TRUE)
     }
 
     ## ** stop search when necessary

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: aug  6 2018 (13:40) 
+## last-updated: aug  8 2018 (11:49) 
 ##           By: Brice Ozenne
-##     Update #: 75
+##     Update #: 77
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,8 +42,8 @@ summary.modelsearch2 <- function(object, print = TRUE, ...){
     n.step <- NROW(df.seqTest)
     n.selected <- sum(df.seqTest$selected)
 
-    keep.cols <- c("link","nTests","noConvergence","statistic","adjusted.p.value")    
-    if(!is.na(object$method.p.adjust) && object$method.p.adjust == "max"){
+    keep.cols <- c("link","nTests","noConvergence","statistic","adjusted.p.value")
+    if(object$quantile.compute){
         keep.cols <- c(keep.cols,"quantile")
     }
 

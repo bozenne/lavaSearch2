@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: maj 30 2017 (18:32) 
 ## Version: 
-## last-updated: aug  6 2018 (13:38) 
+## last-updated: aug  8 2018 (13:12) 
 ##           By: Brice Ozenne
-##     Update #: 784
+##     Update #: 818
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -35,8 +35,8 @@
 modelsearchMax <- function(x, restricted, link, directive, packages,
                            update.FCT, update.args, iid.FCT,                           
                            alpha, method.p.adjust, method.max, n.sim = 1e3, 
-                           iid.previous = NULL, quantile.previous = NULL, 
-                           export.iid, trace, cpus, cl){
+                           iid.previous = NULL, quantile.previous = NULL,
+                           quantile.compute, export.iid, trace, cpus, cl){
 
     ## WARNING: do not put link as NULL for data.table since it is used as an argument by the function
 
@@ -57,14 +57,16 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         ## ** wraper
         warper <- function(iterI){ # iterI <- 2
 
-        out <- list(df = data.frame(statistic = as.numeric(NA),
-                                    df = as.numeric(NA),
-                                    p.value = as.numeric(NA),
-                                    adjusted.p.value = as.numeric(NA),
-                                    convergence = as.numeric(NA),
-                                    coefBeta = as.numeric(NA),
-                                    stringsAsFactors = FALSE),
-                    iid = NULL)
+            out <- list(df = data.frame(coef = as.numeric(NA),
+                                        sd = as.numeric(NA),
+                                        sd.robust = as.numeric(NA),
+                                        statistic = as.numeric(NA),
+                                        df = as.numeric(NA),
+                                        p.value = as.numeric(NA),
+                                        adjusted.p.value = as.numeric(NA),
+                                        convergence = as.numeric(NA),
+                                        stringsAsFactors = FALSE),
+                        iid = NULL)
 
         ## *** fit new model
         newfit <- update.FCT(x, args = update.args,
@@ -75,40 +77,41 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                 out$df[1, "convergence"] <- newfit$opt$convergence
                 if(newfit$opt$convergence == 0){ # test whether lvmfit has correctly converged
 
-                ## extract coefficient
-                new.coef <- stats::coef(newfit)
-                name.new.coef <- setdiff(names(new.coef),x.coef)
+                    ## extract coefficient
+                    new.coef <- stats::coef(newfit)
+                    name.new.coef <- setdiff(names(new.coef),x.coef)
 
-                if(length(name.new.coef)==0){
-                    stop("There was no new coefficient when extending the model\n")
-                }else if(length(name.new.coef)>1){
-                    stop("There was more than one new coefficient when extending the model\n",
-                         "New coefficients: \"",paste(name.new.coef, collapse = "\" \""),"\"\n")
-                }
-                out$df[1, "coefBeta"] <- new.coef[name.new.coef]
-                ## extract degree of freedom and standard error
-                if(df || bias.correct){
-                    sCorrect(newfit, df = df, score = TRUE) <- bias.correct
-                    out$iid <- iid2(newfit, robust = (typeSD != "information") )[,name.new.coef,drop=FALSE]
-                    if(df){
-                        e.df <- compare2(newfit, par = name.new.coef, as.lava = FALSE)
-                        out$df[1, "df"] <- e.df[1, "df"]
+                    if(length(name.new.coef)==0){
+                        stop("There was no new coefficient when extending the model\n")
+                    }else if(length(name.new.coef)>1){
+                        stop("There was more than one new coefficient when extending the model\n",
+                             "New coefficients: \"",paste(name.new.coef, collapse = "\" \""),"\"\n")
                     }
-                    sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))                    
-                }else{
-                    out$iid <- sqrt(nObs)*iid.FCT(newfit)[,name.new.coef,drop=FALSE]
-                    if(typeSD == "information"){
-                        ## NOTE: it assumes that whenever df is FALSE then bias.correct is FALSE
-                        sd.coef <- sqrt(stats::vcov(newfit)[name.new.coef,name.new.coef])
-                        out$iid <- out$iid * sd.coef / sd(out$iid, na.rm = TRUE)
+                    out$df[1, "coef"] <- new.coef[name.new.coef]
+
+                    ## small sample correction, standard error, and df
+                    if(df || bias.correct){
+                        sCorrect(newfit, df = df, score = TRUE) <- bias.correct
+                        out$df[1, "sd"] <- sqrt(newfit$sCorrect$vcov.param[name.new.coef,name.new.coef])
+                        if(df){
+                            out$df[1, "df"] <- compare2(newfit, par = name.new.coef, as.lava = FALSE)[1, "df"]
+                        }                   
+
                     }else{
-                        sd.coef <- sqrt(sum(out$iid^2, na.rm = TRUE))
+                        out$df[1, "sd"] <- sqrt(stats::vcov(newfit)[name.new.coef,name.new.coef])
                     }
-                        
-                }
+
+                    ## extract influence function
+                    out$iid <- iid.FCT(newfit)[,name.new.coef,drop=FALSE]
+                    out$df[1, "sd.robust"] <- sqrt(sum(out$iid^2, na.rm = TRUE))
 
                     ## compute test statistic
-                    out$df[1, "statistic"] <- abs(out$df$coefBeta/sd.coef) ## keep .SD for clarity
+                    if(typeSD == "information"){
+                        out$df[1, "statistic"] <- abs(out$df$coef/out$df$sd)
+                        out$iid <- out$iid * out$df$sd / out$df$sd.robust
+                    }else if(typeSD == "robust"){ 
+                        out$df[1, "statistic"] <- abs(out$df$coef/out$df$sd.robust) 
+                    }
                 }
             }else{
                 out$df[1, "convergence"] <- 1
@@ -173,13 +176,11 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                     iid = do.call(cbind,lapply(resApply,"[[","iid")))
         
     }
-    df.test <- cbind(link = link, res$df)    
+    df.test <- cbind(link = link, res$df)
     iid.link <- res$iid
-
-
     ## print(df.test)
     
-    if(all(df.test$convergence!=0)){
+    if(all(df.test$convergence==1)){
         stop("none of the extended model has converged \n",
              "the additional links may be misspecified \n")
     }
@@ -223,7 +224,8 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
                                            iid = iid.link,
                                            df = dfN0,
                                            iid.previous = iid.previous,
-                                           quantile.previous = quantile.previous, 
+                                           quantile.previous = quantile.previous,
+                                           quantile.compute = quantile.compute,
                                            alpha = alpha,
                                            cpus = cpus,
                                            cl = cl,
@@ -258,7 +260,7 @@ modelsearchMax <- function(x, restricted, link, directive, packages,
         parallel::stopCluster(cl)
     }
     
-    ### ** export
+    ## ** export
     out <- list(df.test = df.test,
                 iid = if(export.iid){iid.link}else{NULL},
                 Sigma = Sigma)
