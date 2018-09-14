@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: apr 26 2018 (11:29) 
+## Last-Updated: sep 14 2018 (11:14) 
 ##           By: Brice Ozenne
-##     Update #: 1273
+##     Update #: 1274
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -202,7 +202,7 @@ sCorrect.gls <- function(object, cluster, adjust.Omega = TRUE, adjust.n = TRUE,
     if(object$method!="ML"){
         if(adjust.Omega==TRUE || adjust.n == TRUE){
             warning("Small sample corrections were derived for ML not for REML\n")
-        }else{
+        }else if(df){
             warning("The Satterthwaite approximation ignores that fact that the model was fitted using REML\n")
         }
     }
