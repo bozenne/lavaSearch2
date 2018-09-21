@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 23 2017 (16:52) 
 ## Version: 
-## last-updated: mar  7 2018 (12:17) 
+## last-updated: sep 21 2018 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 48
+##     Update #: 49
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -57,7 +57,7 @@ matrixPower <- function(object, power, symmetric, tol = 1e-12){
     object.eigen <- eigen(object, symmetric = symmetric)
 
     if(power<0 && any(object.eigen$values<tol)){
-        warning("negative eigenvalues are set to ",tol,"\n")
+        warning("small or negative eigenvalues are set to ",tol,"\n")
         object.eigen$values[object.eigen$values < tol] <- tol
     }
     nRow <- length(object.eigen$values)

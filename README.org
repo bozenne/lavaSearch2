@@ -63,6 +63,8 @@ suppressPackageStartupMessages(library(lavaSearch2))
 #+END_SRC 
 
 #+RESULTS:
+: Warning message:
+: package 'lava' was built under R version 3.4.4
 
 
 ** Inference: single univariate Wald test
@@ -244,7 +246,7 @@ system.time(
 
 #+RESULTS:
 :    user  system elapsed 
-:    0.40    0.00    0.41
+:    0.35    0.00    0.34
 
 In such a case one can pre-compute the main terms of the correction
 (e.g. the derivative of the variance-covariance matrix) once for all
@@ -292,7 +294,7 @@ system.time(
 
 #+RESULTS:
 :    user  system elapsed 
-:    0.14    0.00    0.14
+:    0.18    0.00    0.19
 
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 system.time(
@@ -302,7 +304,7 @@ system.time(
 
 #+RESULTS:
 :    user  system elapsed 
-:    0.17    0.00    0.17
+:    0.15    0.00    0.15
 
 ** Inference: single multivariate Wald test
 
@@ -865,75 +867,47 @@ e.lvm <- estimate(m, data = df.data)
 =modelsearch2= can be used to sequentially apply the =modelsearch=
 function with a given correction for the p.values:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-resScore <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm",
-                         alpha = 0.1, trace = FALSE)
-summary(resScore)
+resScore <- modelsearch2(e.lvm, alpha = 0.1, trace = FALSE)
+displayScore <- summary(resScore)
 #+END_SRC
 
 #+RESULTS:
 : Sequential search for local dependence using the score statistic 
-:  The variable selection procedure retained 3 variables:
-:      link nTests noConvergence statistic adjusted.p.value
-: 10   u~x2     10             0 36.436487     1.577228e-08
-: 5  y2~~y3      9             0  6.912568     7.703278e-02
-: 7   y3~x1      8             0  3.136431     6.124895e-01
-: confidence level: 0.9 (two sided, adjustement: holm)
+: The variable selection procedure retained 2 variables:
+:      link statistic se      p.value adjusted.p.value quantile selected nTests
+: 10   u~x2  6.036264  1 1.577228e-09     5.008615e-08       NA     TRUE     10
+: 5  y2~~y3  2.629176  1 8.559198e-03     6.055947e-02       NA     TRUE      9
+: 7   y3~x1  1.770997  1 7.656118e-02     2.814424e-01       NA    FALSE      8
+: Confidence level: 0.9 (two sided, adjustement: fastmax)
 
 This indeed matches the highest score statistic found by
 =modelsearch=:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 resScore0 <- modelsearch(e.lvm, silent = TRUE)
-max(resScore0$test[,"Test Statistic"])
+c(statistic = sqrt(max(resScore0$test[,"Test Statistic"])), 
+  p.value = min(resScore0$test[,"P-value"]))
 #+END_SRC
 
 #+RESULTS:
-: [1] 36.43649
-
-To adjust for multiple comparisons, the argument statistic needs to be
-set to =Wald=. Setting the argument =method.p.adjust= to =max= enable
-an appropriate adjustment of the p.values for multiple comparisons:
-#+BEGIN_SRC R :exports both :results output :session *R* :cache no
-resMax <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "max",
-                       alpha = 0.1, trace = FALSE)
-summary(resMax)
-#+END_SRC
-
-#+RESULTS:
-: Sequential search for local dependence using the Wald statistic 
-:  The variable selection procedure retained 3 variables:
-:      link nTests noConvergence statistic adjusted.p.value quantile
-: 10   u~x2     10             1  6.696056     1.831996e-08 2.457833
-: 5  y2~~y3      9             0  2.512960     9.455626e-02 2.487512
-: 7   y3~x1      8             0  1.796758     2.920497e-01 2.354532
-: confidence level: 0.9 (two sided, adjustement: max)
+:    statistic      p.value 
+: 6.036264e+00 1.577228e-09
 
 We can compare the adjustment using the max distribution to bonferroni:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-c(bonferroni =  min(p.adjust(resMax$sequenceTest[[2]][,"p.value"], method = "bonferroni")),
-  max = min(resMax$sequenceTest[[2]][,"adjusted.p.value"]))
+data.frame(link = displayScore$table[,"link"],
+           none = displayScore$table[,"p.value"],
+           bonferroni = displayScore$table[,"p.value"]*displayScore$table[1,"nTests"],
+           max = displayScore$table[,"adjusted.p.value"])
 #+END_SRC
 
 #+RESULTS:
-: bonferroni        max 
-: 0.14787407 0.09455626
+:     link         none   bonferroni          max
+: 1   u~x2 1.577228e-09 1.577228e-08 7.000396e-09
+: 2 y2~~y3 8.559198e-03 8.559198e-02 6.071006e-02
+: 3  y3~x1 7.656118e-02 7.656118e-01 2.809413e-01
 
 Here the difference is small because the generative model did not
-include an unknown correlation structure. Because it can be time
-consuming to compute the exact p-values, an approximation could be to
-only compute them when no p-value passes the bonferroni correction at
-a given step. The is what the option =fastmax= does:
-#+BEGIN_SRC R :exports both :results output :session *R* :cache no
-resMax2 <- modelsearch2(e.lvm, statistic = "Wald", method.p.adjust = "fastmax",
-                        alpha = 0.1, trace = FALSE)
-summary(resMax2)
-#+END_SRC
-
-#+RESULTS:
-: Sequential search for local dependence using the Wald statistic 
-:  The variable selection procedure retained 1 variable:
-:    link nTests noConvergence statistic adjusted.p.value
-: 10 u~x2     10             1  6.696056               NA
-: confidence level: 0.9 (two sided, adjustement: fastmax)
+include an unknown correlation structure.
 
 ** Model diagnostic: checking that the names of the variables in the model match those of the data
 

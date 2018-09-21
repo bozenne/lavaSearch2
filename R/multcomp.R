@@ -1,12 +1,11 @@
-
 ### mlf2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: aug  7 2018 (10:44) 
+## Last-Updated: sep 21 2018 (16:21) 
 ##           By: Brice Ozenne
-##     Update #: 384
+##     Update #: 475
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -324,3 +323,84 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     return(out)    
 }
 
+
+## * .calcClosure
+.calcClosure <- function(name, estimate, covariance, type, df){
+
+    n.hypo <- length(name)
+    correlation <- stats::cov2cor(covariance)
+
+    ## ** create all possible hypotheses
+    ls.closure <- lapply(n.hypo:1, function(iNtest){ ## iNtest <- 1  
+        iList <- list(M = utils::combn(name, m = iNtest))
+        iList$vec <- apply(iList$M, 2, paste, collapse = ",")
+        return(iList)
+    })
+
+    ## ** compute all p.values
+    for(iLevel in 1:length(ls.closure)){ ## iLevel <- 1
+        ls.closure[[iLevel]]$test <- t(apply(ls.closure[[iLevel]]$M, 2, function(iHypo){
+            index <- which(name %in% iHypo)
+            if(type == "chisq"){
+                return(.ChisqTest(estimate[index], covariance = covariance[index,index,drop=FALSE], df = df))
+            }else if(type == "max"){
+                return(.tTest(estimate[index],
+                              covariance = covariance[index,index,drop=FALSE],
+                              correlation = correlation[index,index,drop=FALSE], df = df))
+            }
+        }))
+        rownames(ls.closure[[iLevel]]$test) <- ls.closure[[iLevel]]$vec
+    }
+    
+    ## ** find all hypotheses in the closure related to an individual hypothesis
+    ls.hypo <- vector(mode = "list", length = n.hypo)
+    for(iHypo in 1:n.hypo){ ## iHypo <- 1
+        ls.hypo[[iHypo]] <- do.call(rbind,lapply(ls.closure, function(iClosure){ ## iClosure <- 1
+            iIndex <- which(colSums(iClosure$M==name[iHypo])>0)
+            data.frame(hypothesis = iClosure$vec[iIndex],
+                       statistic = as.double(iClosure$test[iIndex,"statistic"]),
+                       p.value = as.double(iClosure$test[iIndex,"p.value"]))
+        }))
+    }
+    names(ls.hypo) <- name
+        
+    ## ** adjusted p.values
+    vec.p.value <- unlist(lapply(ls.hypo, function(x){max(x$p.value)}))
+    return(list(closure = ls.closure,
+                test = ls.hypo,
+                p.value = vec.p.value))
+    
+}
+
+## * .tTest
+.tTest <- function(estimate, covariance, correlation, df, ...){
+    df1 <- length(estimate)
+    statistic <- max(abs(estimate/sqrt(diag(covariance))))
+    if(is.null(df)){
+        distribution <-  "gaussian"
+    }else{
+        distribution <- "student"
+    }
+    p.value <- .calcPmaxIntegration(statistic, p = df1, Sigma = correlation, df = df,
+                                    distribution = distribution)
+    return(c("statistic" = statistic,
+             "p.value" = p.value))
+}
+
+## * .ChisqTest
+.ChisqTest <- function(estimate, covariance, df, ...){
+    df1 <- length(estimate)
+    ## q * statistic ~ chisq or fisher
+    statistic <- as.double(matrix(estimate, nrow = 1) %*% solve(covariance) %*% matrix(estimate, ncol = 1)) / df1
+    if(!is.null(df)){
+        return(c("statistic" = statistic,
+                 "p.value" = 1-stats::pf(statistic, df1 = df1, df2 = df)))
+    }else{
+        return(c("statistic" = statistic,
+                 "p.value" = 1-stats::pchisq(statistic, df = df1)))
+        
+    }
+}
+
+
+ 

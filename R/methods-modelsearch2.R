@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: feb  5 2018 (18:03) 
+## last-updated: sep 21 2018 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 149
+##     Update #: 159
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,7 +33,7 @@
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = df.data)
-#' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
+#' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
 #' nStep(res)
 #'
 #' @concept modelsearch
@@ -70,7 +70,7 @@ nStep.modelsearch2 <- function(object){
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = df.data)
-#' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
+#' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
 #' getStep(res)
 #' getStep(res, slot = "sequenceTest")
 #' getStep(res, slot = "sequenceQuantile")
@@ -100,11 +100,6 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
     new.object <- object
     new.object$sequenceTest <- object$sequenceTest[step]
     new.object$sequenceModel <- object$sequenceModel[step]
-    if(object$method.p.adjust == "max"){
-        new.object$sequenceQuantile <- object$sequenceQuantile[[step]]
-        sequenceIID <- object$sequenceIID[step]
-        sequenceSigma <- object$sequenceSigma[step]
-    }
 
     ## ** export
     if(is.null(slot)){
@@ -138,7 +133,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 #' mBase <- lvm(Y~G)
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = df.data)
-#' res <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
+#' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
 #' getNewLink(res)
 #'
 #' @concept modelsearch
@@ -169,83 +164,3 @@ getNewLink.modelsearch2 <- function(object, step = 1:nStep(object), ...){
 
     return(unlist(ls.link))    
 }
-
-## * merge
-## ** documentation - merge
-#' @title Merge two modelsearch Objects
-#' @description Merge two modelsearch objects. Does not check for meaningful result.
-#' @name merge
-#' 
-#' @param x,y a \code{modelsearch2} object.
-#' @param ... [internal] only used by the generic method.
-#'
-#' @return a \code{modelsearch2} object.
-#' 
-#' @examples
-#' mSim <- lvm(Y~G+X1+X2)
-#' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
-#' df.data <- lava::sim(mSim, 1e2)
-#'
-#' mBase <- lvm(Y~G)
-#' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
-#' e.lvm <- estimate(mBase, data = df.data)
-#' res.x <- modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm", nStep = 2)
-#' res.y <- modelsearch2(getStep(res.x, slot = "sequenceModel"), 
-#'                       statistic = "score", method.p.adjust = "holm")
-#' res.xy <- merge(res.x,res.y)
-#'
-#' modelsearch2(e.lvm, statistic = "score", method.p.adjust = "holm")
-#'
-#' @keywords internal
-
-## ** function - merge
-#' @rdname merge
-#' @export
-merge.modelsearch2 <- function(x, y, ...){
-
-    ## ** merge
-    x$sequenceTest <- c(x$sequenceTest,y$sequenceTest)
-    x$sequenceModel <- c(x$sequenceModel,y$sequenceModel)
-
-    if(sum(c(y$method.p.adjust,x$method.p.adjust) == "max") == 1){
-        if(x$method.p.adjust != "max"){
-            lastStep.x <- nStep(x)
-            Mtest.x <- getStep(x, step = 1, slot = "sequenceTest")
-            nLink.x <- NROW(Mtest.x)
-            name.x <- Mtest.x[["link"]]
-
-            x$sequenceQuantile <- rep(NA, times = lastStep.x)
-            if(!is.null(y$sequenceIID)){
-                x$sequenceIID <- vector(mode = "list", length = lastStep.x)
-            }
-            x$sequenceSigma <- vector(mode = "list", length = lastStep.x)            
-        }
-        if(y$method.p.adjust != "max"){
-            lastStep.y <- nStep(y)
-            Mtest.y <- getStep(y, step = 1, slot = "sequenceTest")
-            nLink.y <- NROW(Mtest.y)
-            name.y <- Mtest.y[["link"]]
-
-            y$sequenceQuantile <- rep(NA, times = lastStep.y)
-            if(!is.null(x$sequenceIID)){
-                y$sequenceIID <- vector(mode = "list", length = lastStep.y)
-            }
-            y$sequenceSigma <- vector(mode = "list", length = lastStep.y)            
-        }
-        x$sequenceQuantile <- c(x$sequenceQuantile,y$sequenceQuantile)
-        x$sequenceIID <- c(x$sequenceIID,y$sequenceIID)
-        x$sequenceSigma <- c(x$sequenceSigma,y$sequenceSigma)
-
-    }
-    
-    for(iSlot in c("statistic","method.p.adjust","alpha","method.iid","cv")){
-        x[[iSlot]] <- unique(c(x[[iSlot]],y[[iSlot]]))
-        if(length(x[[iSlot]])>1){x[[iSlot]] <- NA}
-    }
-    ## ** export
-    return(x)    
-}
-
-
-#----------------------------------------------------------------------
-### methods-modelsearch2.R ends here
