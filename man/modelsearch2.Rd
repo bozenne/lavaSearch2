@@ -8,8 +8,8 @@
 modelsearch2(object, ...)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
-  method.p.adjust = "fastmax", alpha = 0.05, nStep = NULL,
-  na.omit = TRUE, trace = TRUE, cpus = 1, ...)
+  method.p.adjust = "fastmax", type.information = "E", alpha = 0.05,
+  nStep = NULL, na.omit = TRUE, trace = TRUE, cpus = 1, ...)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}
@@ -22,6 +22,8 @@ modelsearch2(object, ...)
 
 \item{method.p.adjust}{[character] the method used to adjust the p.values for multiple comparisons.
 Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}), or \code{"max"} or \code{"fastmax"}.}
+
+\item{type.information}{[character] the method used by \code{lava::information} to compute the information matrix.}
 
 \item{alpha}{[numeric 0-1] the significance cutoff for the p-values.
 When the p-value is below, the corresponding link will be added to the model
@@ -62,9 +64,9 @@ It is faster than \code{"max"} and lead to identical results.
 }
 \examples{
 
-#### LVM ####
+## simulate data
 mSim <- lvm()
-regression(mSim) <- c(y1,y2,y3)~u
+regression(mSim) <- c(y1,y2,y3,y4)~u
 regression(mSim) <- u~x1+x2
 categorical(mSim,labels=c("A","B","C")) <- "x2"
 latent(mSim) <- ~u
@@ -72,16 +74,48 @@ covariance(mSim) <- y1~y2
 transform(mSim, Id~u) <- function(x){1:NROW(x)}
 df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 
+## only identifiable extensions
+m <- lvm(c(y1,y2,y3,y4)~u)
+latent(m) <- ~u
+addvar(m) <- ~x1+x2
+
+e <- estimate(m, df.data)
+
+\dontrun{
+resSearch <- modelsearch(e)
+resSearch
+
+resSearch2 <- modelsearch2(e, nStep = 2)
+resSearch2
+}
+\dontshow{
+search.link <- c("u~x1","u~x2","y1~x1","y1~x2","y1~~y2","y1~~y3")
+resSearch2 <- modelsearch2(e, nStep = 2, link = search.link)
+resSearch2
+}
+
+## some extensions are not identifiable
 m <- lvm(c(y1,y2,y3)~u)
 latent(m) <- ~u
 addvar(m) <- ~x1+x2 
 
 e <- estimate(m, df.data)
 
+\dontrun{
 resSearch <- modelsearch(e)
 resSearch
 resSearch2 <- modelsearch2(e)
 resSearch2
+}
+
+## for instance
+mNI <- lvm(c(y1,y2,y3)~u)
+latent(mNI) <- ~u
+covariance(mNI) <- y1~y2
+## estimate(mNI, data = df.data)
+## does not converge
+
+
 
 }
 \concept{

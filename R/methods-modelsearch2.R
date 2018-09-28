@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: sep 22 2017 (16:43) 
 ## Version: 
-## last-updated: sep 21 2018 (16:43) 
+## last-updated: sep 28 2018 (14:11) 
 ##           By: Brice Ozenne
-##     Update #: 159
+##     Update #: 168
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,6 +26,7 @@
 #' @return an integer.
 #' 
 #' @examples
+#' \dontrun{
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
 #' df.data <- lava::sim(mSim, 1e2)
@@ -35,7 +36,8 @@
 #' e.lvm <- estimate(mBase, data = df.data)
 #' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
 #' nStep(res)
-#'
+#' }
+#' 
 #' @concept modelsearch
 #' @concept extractor
 #' @export
@@ -63,6 +65,7 @@ nStep.modelsearch2 <- function(object){
 #' @param ... [internal] only used by the generic method.
 #'
 #' @examples
+#' \dontrun{
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
 #' df.data <- lava::sim(mSim, 1e2)
@@ -71,11 +74,11 @@ nStep.modelsearch2 <- function(object){
 #' addvar(mBase) <- ~X1+X2+Z1+Z2+Z3+Z4+Z5+Z6
 #' e.lvm <- estimate(mBase, data = df.data)
 #' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
+#'
 #' getStep(res)
 #' getStep(res, slot = "sequenceTest")
-#' getStep(res, slot = "sequenceQuantile")
 #' getStep(res, step = 1)
-#'
+#' }
 #' @concept modelsearch
 #' @concept extractor
 #' @export
@@ -100,6 +103,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
     new.object <- object
     new.object$sequenceTest <- object$sequenceTest[step]
     new.object$sequenceModel <- object$sequenceModel[step]
+    class(new.object) <- NULL
 
     ## ** export
     if(is.null(slot)){
@@ -126,8 +130,11 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 #' @return A character vector.
 #' 
 #' @examples
+#' \dontrun{
 #' mSim <- lvm(Y~G+X1+X2)
 #' addvar(mSim) <- ~Z1+Z2+Z3+Z4+Z5+Z6
+#'
+#' set.seed(10)
 #' df.data <- lava::sim(mSim, 1e2)
 #'
 #' mBase <- lvm(Y~G)
@@ -135,7 +142,7 @@ getStep.modelsearch2 <- function(object, step = nStep(object), slot = NULL, ...)
 #' e.lvm <- estimate(mBase, data = df.data)
 #' res <- modelsearch2(e.lvm, method.p.adjust = "holm")
 #' getNewLink(res)
-#'
+#' }
 #' @concept modelsearch
 #' @concept extractor
 #' 

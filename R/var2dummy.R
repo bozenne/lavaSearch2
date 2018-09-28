@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: jun 22 2017 (16:03) 
 ## Version: 
-## last-updated: aug  7 2018 (10:55) 
+## last-updated: sep 28 2018 (11:57) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 41
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,11 +77,11 @@ var2dummy.lvm <- function(object, data = NULL, ...){
     if(is.null(data)){
         data <- lava::sim(object, n = 1)
     }
-
     object2 <- lava_categorical2dummy(object, data)
-
+    
     ## recover attributes for models not defined using categorical
     obsvars <- setdiff(lava::vars(object2$x),lava::latent(object))
+    
     if(any(obsvars %in% names(data) == FALSE)){
         missing.vars <- obsvars[obsvars %in% names(data) == FALSE]
         test.num <- sapply(1:NCOL(data), function(col){is.numeric(data[[col]])})

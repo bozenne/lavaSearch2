@@ -8,6 +8,7 @@
 #' @param link [character, optional for \code{lvmfit} objects] the name of the additional relationships to consider when expanding the model. Should be a vector containing strings like "Y~X". See the details section.
 #' @param method.p.adjust [character] the method used to adjust the p.values for multiple comparisons.
 #' Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}), or \code{"max"} or \code{"fastmax"}.
+#' @param type.information [character] the method used by \code{lava::information} to compute the information matrix.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
 #' When the p-value is below, the corresponding link will be added to the model
 #' and the search will continue. Otherwise the search will stop.
@@ -37,12 +38,20 @@
 #' \item alpha: [numeric 0-1] the significance cutoff for the p-values.
 #' \item cv: whether the procedure has converged.
 #' } 
-#' 
+#'
+#' @concept modelsearch
+#' @export
+`modelsearch2` <-
+  function(object, ...) UseMethod("modelsearch2")
+
+
+## * modelsearch2 (example)
+#' @rdname modelsearch2
 #' @examples
 #'
-#' #### LVM ####
+#' ## simulate data
 #' mSim <- lvm()
-#' regression(mSim) <- c(y1,y2,y3)~u
+#' regression(mSim) <- c(y1,y2,y3,y4)~u
 #' regression(mSim) <- u~x1+x2
 #' categorical(mSim,labels=c("A","B","C")) <- "x2"
 #' latent(mSim) <- ~u
@@ -50,27 +59,55 @@
 #' transform(mSim, Id~u) <- function(x){1:NROW(x)}
 #' df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 #' 
+#' ## only identifiable extensions
+#' m <- lvm(c(y1,y2,y3,y4)~u)
+#' latent(m) <- ~u
+#' addvar(m) <- ~x1+x2
+#' 
+#' e <- estimate(m, df.data)
+#'
+#' \dontrun{
+#' resSearch <- modelsearch(e)
+#' resSearch
+#'
+#' resSearch2 <- modelsearch2(e, nStep = 2)
+#' resSearch2
+#' }
+#' \dontshow{
+#' search.link <- c("u~x1","u~x2","y1~x1","y1~x2","y1~~y2","y1~~y3")
+#' resSearch2 <- modelsearch2(e, nStep = 2, link = search.link)
+#' resSearch2
+#' }
+#'
+#' ## some extensions are not identifiable
 #' m <- lvm(c(y1,y2,y3)~u)
 #' latent(m) <- ~u
 #' addvar(m) <- ~x1+x2 
 #'
 #' e <- estimate(m, df.data)
 #'
+#' \dontrun{
 #' resSearch <- modelsearch(e)
 #' resSearch
 #' resSearch2 <- modelsearch2(e)
 #' resSearch2
+#' }
 #'
-#' @concept modelsearch
-#' @export
-`modelsearch2` <-
-  function(object, ...) UseMethod("modelsearch2")
+#' ## for instance
+#' mNI <- lvm(c(y1,y2,y3)~u)
+#' latent(mNI) <- ~u
+#' covariance(mNI) <- y1~y2
+#' ## estimate(mNI, data = df.data)
+#' ## does not converge
+#'
+#' 
+#' 
 
 ## * modelsearch2.lvmfit (code)
 #' @rdname modelsearch2
 #' @export
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
-                                method.p.adjust = "fastmax", alpha = 0.05, 
+                                method.p.adjust = "fastmax", type.information = "E", alpha = 0.05, 
                                 nStep = NULL, na.omit = TRUE, 
                                 trace = TRUE, cpus = 1,  
                                 ...){
@@ -130,7 +167,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         directive <- resLink$directive
         restricted <- resLink$restricted
     }    
-
+    
     ## ** initialization
     if(is.null(nStep)){
         nStep <- NROW(restricted)
@@ -203,10 +240,9 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## ** Forward search
     while(iStep <= nStep && NROW(iRestricted)>0 && cv==FALSE){
         if(trace >= 1){cat("Step ",iStep,":\n",sep="")}
-
         resStep <- .oneStep_scoresearch(iObject, data = data,
                                         restricted = iRestricted, link = iLink, directive = iDirective,
-                                        method.p.adjust = method.p.adjust, 
+                                        method.p.adjust = method.p.adjust, type.information = type.information,
                                         cl = cl, trace = trace)
         
         ## ** update according the most significant p.value
@@ -315,66 +351,85 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 .initializeLinks <- function(object, data, link){
     restricted <- do.call(cbind,initVarLinks(link))
     directive <- rep(TRUE, length(link))
+
+    ## ** identify covariance link
     index.Ndir <- grep(lava.options()$symbols[2],link,fixed=TRUE)
     if(length(index.Ndir)>0){
         directive[index.Ndir] <- FALSE
     }
-
+   
     ## ** get all vars
     if(is.null(data)){            
-        data <- evalInParentEnv(object$call$data, envir = environment())             
+        data <- evalInParentEnv(object$call$data)             
         if(is.null(data)){
             data <- lava::sim(object,1)
         }            
     }
     ## ** take care of categorical variables
-    ls.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){
-        data.frame(Y = restricted[row,1],
-                   X = var2dummy(object$model,
-                                 data = data,
-                                 var = restricted[row,2]),
+    iData <- try(eval(object$call$d), silent = TRUE)
+    if(!inherits(iData, "data.frame")){
+        iData <- evalInParentEnv(object$call$data)
+        if(!inherits(iData, "data.frame")){
+            stop("Could not identify argument data in object$call \n")
+        }
+    }
+
+    M.linkvar <- do.call(rbind,lapply(1:NROW(restricted), function(row){ ## row <- 2
+        data.frame(Y = unname(restricted[row,1]),
+                   X = unname(var2dummy(object$model,
+                                        data = iData,
+                                        var = restricted[row,2])),
                    dir = directive[row],
                    stringsAsFactors = FALSE)
     }))
-    restricted2 <- as.matrix(ls.linkvar[,1:2,drop=FALSE])
-    directive <- ls.linkvar[,3]
+
+    ## check no missing covariance links
+    index.regression <- which(M.linkvar[,"dir"]==TRUE)
+    if(length(index.regression)>0){
+        index.covariance <- which(M.linkvar[index.regression,"X"] %in% lava::endogenous(object) + M.linkvar[index.regression,"X"] %in% lava::endogenous(object) ==2)
+        if(length(index.covariance)>0){
+            stop("Covariance links must be indicated with the symbol \"",lava.options()$symbols[2],"\" \n",
+                 "Possible covariance links: ",paste0(link[index.regression][index.covariance], collapse = " "),"\n")
+        }
+    }
+    restricted2 <- as.matrix(M.linkvar[,1:2,drop=FALSE])
+    directive <- M.linkvar[,3]
     link <- paste0(restricted2[,1],lava.options()$symbols[2-directive],restricted2[,2])
 
     ## ** check links
-    allVars.link <- unique(as.vector(restricted2))
-    allVars.model <- vars(object$model)
+    allVars.link <- setdiff(unique(as.vector(restricted2)), lava::latent(object$model))
+    allVars.model <- lava::vars(object$model)
     allVars.data <- names(data)
-        
+
     if(any(allVars.link %in% allVars.model == FALSE)){
         missing.var <- allVars.link[allVars.link %in% allVars.model == FALSE]
-            
-            if(any(allVars.link %in% allVars.data == FALSE)){
-                missing.var <- allVars.link[allVars.link %in% allVars.data == FALSE]
-                stop("Some links contains variables that are not in the latent variable model \n",
-                     "variables(s) : \"",paste(missing.var,collapse ="\" \""),"\"\n")
-            }
+        if(any(allVars.link %in% allVars.data == FALSE)){
+            missing.var <- allVars.link[allVars.link %in% allVars.data == FALSE]
+            stop("Some links contains variables that are not in the latent variable model \n",
+                 "variables(s) : \"",paste(missing.var,collapse ="\" \""),"\"\n")
+        }
 
     }
     
     ## ** check covariance links
     if(any(directive==FALSE)){
-        if(any(restricted2[directive==FALSE,1] %in% exogenous(object)) || any(restricted2[directive==FALSE,2] %in% exogenous(object))){
+        if(any(restricted2[directive==FALSE,1] %in% lava::exogenous(object)) || any(restricted2[directive==FALSE,2] %in% lava::exogenous(object))){
             wrong <- union(which(restricted2[directive==FALSE,1] %in% exogenous(object)),
                            which(restricted2[directive==FALSE,2] %in% exogenous(object)))
-            stop("covariance link with a exogenous variable: \n",
-                 paste(link[wrong], collapse = " ; "),"\n")
+            stop("Covariance links can only relate endogenous variables \n",
+                 "Covariance link(s) involving exogenous variables: ,", paste(link[wrong], collapse = " ; "),"\n")
         }
     }
     
      return(list(object = object,
                 link = link,
                 directive = directive,
-                restricted = restricted))
+                restricted = restricted2))
 }
 ## * .oneStep_scoresearch
 .oneStep_scoresearch  <- function(object, data,
                                   restricted, link, directive,
-                                  method.p.adjust, alpha,
+                                  method.p.adjust, alpha, type.information,
                                   cl, trace){
 
     ## ** initialization
@@ -382,6 +437,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     coef.object <- coef(object)
     namecoef.object <- names(coef.object)
     ncoef.object <- length(coef.object)
+
     
     ## ** warper
     warper <- function(iterI){ # iterI <- 1
@@ -390,6 +446,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                        se = as.numeric(NA),
                                        p.value = as.numeric(NA),
                                        adjusted.p.value = as.numeric(NA),
+                                       dp.Info = as.numeric(NA),
                                        stringsAsFactors = FALSE),
                     iid = NULL)
 
@@ -397,28 +454,52 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         newModel <- addLink(object$model, var1 = restricted[iterI,1], var2 = restricted[iterI,2],
                             covariance = 1-directive[iterI])
 
+        ## *** remove useless variables
+        Mlink <- newModel$M + (newModel$cov - diag(1, NROW(newModel$cov), NCOL(newModel$cov)))
+        noLink.var <- names(which((rowSums(Mlink)==0)+(colSums(Mlink)==0)==2))
+        if(length(noLink.var)>0){
+            rmvar(newModel) <- noLink.var
+        }
+
         ## *** define constrained coefficients
         coef0.new <- setNames(rep(0, ncoef.object+1), coef(newModel))
         coef0.new[namecoef.object] <- coef.object
 
-        ## *** compute the iid decomposition
-        iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
-        Info <- lava::information(newModel, p = coef0.new, n = NROW(data), data = data)
+        ## *** compute the iid decomposition and statistic
+        ## eigen(lava::information(estimate(newModel, data = data), p = coef0.new, data = data, type = "E"))
+        Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
 
-        ## inverse of the information matrix
-        sqrt.InfoM1 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15)
-        ## sqrt.InfoM1 <- solve(chol(Info))
+        if(method.p.adjust %in% c("max","fastmax")){
+            iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
 
-        ## iid decomposition of the normalized score (follows a standard normal distribution)
-        iid.normScore <- (iid.score %*% sqrt.InfoM1)
-        ## normalized score
-        normScore <- colSums(iid.normScore)        
+            ## inverse of the information matrix
+            sqrt.InfoM1 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
+            out$table$dp.Info <- !("warning" %in% names(attributes(sqrt.InfoM1)))
+            ## sqrt.InfoM1 <- solve(chol(Info))
 
-        ## *** store statistics, se, and iid decomposition, and p.value
-        out$iid <- rowSums(sweep(iid.normScore, MARGIN = 2, STATS = normScore, FUN = "*"))
-        out$iid <- out$iid/sqrt(sum(out$iid^2))
-        out$table$statistic <- sqrt(crossprod(normScore))
-        out$table$se <- sqrt(sum(out$iid^2))
+            ## iid decomposition of the normalized score (follows a standard normal distribution)
+            iid.normScore <- (iid.score %*% sqrt.InfoM1)
+            ## normalized score
+            normScore <- colSums(iid.normScore)        
+
+            out$iid <- rowSums(sweep(iid.normScore, MARGIN = 2, STATS = normScore, FUN = "*"))
+            out$iid <- out$iid/sqrt(sum(out$iid^2))
+            out$table$statistic <- sqrt(crossprod(normScore))
+            out$table$se <- sqrt(sum(out$iid^2))
+        }else{
+            ## ee.lvm <- estimate(newModel, data = data)
+            ## SS <- score(ee.lvm, p = coef0.new)
+            ## II <- information(ee.lvm, p = coef0.new)
+            ## SS %*% solve(I) %*% t(SS)
+            InfoM1 <- matrixPower(Info, power  = -1, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
+
+            out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
+            score <- lava::score(newModel, p = coef0.new, indiv = FALSE, data = data)
+            out$table$statistic <- sqrt(as.double(score %*% InfoM1 %*% t(score)))
+            ## range(Info - II)
+            ## range(score - SS)
+        }
+            
         return(out)
     }
 
@@ -460,9 +541,8 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                     iid = lapply(resApply,"[[","iid"))
         
     }
-
     ## index.iid <- unlist(lapply(1:n.link, function(iL){ ## iL <- 1
-        ## rep(iL,times = NCOL(res$iid[[iL]]))
+    ## rep(iL,times = NCOL(res$iid[[iL]]))
     ## }))
     table.test <- data.frame(link = link, res$table, stringsAsFactors = FALSE)
     iid.link <- do.call(cbind,res$iid)
