@@ -62,7 +62,7 @@
 #' ## only identifiable extensions
 #' m <- lvm(c(y1,y2,y3,y4)~u)
 #' latent(m) <- ~u
-#' addvar(m) <- ~x1+x2
+#' addvar(m) <- ~x1+x2R
 #' 
 #' e <- estimate(m, df.data)
 #'
@@ -480,10 +480,10 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             ## iid decomposition of the normalized score (follows a standard normal distribution)
             iid.normScore <- (iid.score %*% sqrt.InfoM1)
             ## normalized score
-            normScore <- colSums(iid.normScore)        
-
-            out$iid <- rowSums(sweep(iid.normScore, MARGIN = 2, STATS = normScore, FUN = "*"))
-            out$iid <- out$iid/sqrt(sum(out$iid^2))
+            normScore <- colSums(iid.normScore)
+            ## delta method            
+            out$iid <-  - iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
+            ## out$iid <- out$iid/sqrt(sum(out$iid^2))
             out$table$statistic <- sqrt(crossprod(normScore))
             out$table$se <- sqrt(sum(out$iid^2))
         }else{
