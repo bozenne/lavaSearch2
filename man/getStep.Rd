@@ -7,8 +7,8 @@
 \usage{
 getStep(object, ...)
 
-\method{getStep}{modelsearch2}(object, step = nStep(object), slot = NULL,
-  ...)
+\method{getStep}{modelsearch2}(object, step = nStep(object),
+  slot = NULL, ...)
 }
 \arguments{
 \item{object}{a \code{modelsearch2} object}
@@ -38,8 +38,5 @@ getStep(res, slot = "sequenceTest")
 getStep(res, step = 1)
 }
 }
-\concept{
-modelsearch
-
-extractor
-}
+\concept{extractor}
+\concept{modelsearch}

@@ -10,10 +10,10 @@ calibrateType1(object, ...)
 
 \method{calibrateType1}{lvm}(object, null, n, n.rep, F.test = FALSE,
   cluster = NULL, generative.object = NULL, generative.coef = NULL,
-  true.coef = NULL, n.true = 1e+06, round.true = 2, bootstrap = FALSE,
-  n.bootstrap = 1000, checkType1 = FALSE, checkType2 = FALSE,
-  dir.save = NULL, label.file = NULL, seed = NULL, cpus = 1,
-  trace = 2, ...)
+  true.coef = NULL, n.true = 1e+06, round.true = 2,
+  bootstrap = FALSE, n.bootstrap = 1000, checkType1 = FALSE,
+  checkType2 = FALSE, dir.save = NULL, label.file = NULL,
+  seed = NULL, cpus = 1, trace = 2, ...)
 
 \method{calibrateType1}{lvmfit}(object, null, n.rep, F.test = FALSE,
   bootstrap = FALSE, n.bootstrap = 1000, seed = NULL, trace = 2,

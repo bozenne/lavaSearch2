@@ -83,6 +83,4 @@ mean(residuals2(e.lvm)^2)
 \seealso{
 \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
 }
-\concept{
-small sample inference
-}
+\concept{small sample inference}

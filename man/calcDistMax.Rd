@@ -12,8 +12,8 @@ calcDistMaxIntegral(statistic, iid, df, iid.previous = NULL,
   cpus = 1, cl = NULL, trace)
 
 calcDistMaxBootstrap(statistic, iid, iid.previous = NULL,
-  quantile.previous = NULL, method, alpha, cpus = 1, cl = NULL, n.sim,
-  trace, n.repmax = 100)
+  quantile.previous = NULL, method, alpha, cpus = 1, cl = NULL,
+  n.sim, trace, n.repmax = 100)
 }
 \arguments{
 \item{statistic}{[numeric vector] the observed Wald statistic.
@@ -116,8 +116,5 @@ rbind(integration = c(r1c$p.adjust, quantile = r1c$z),
       bootWild    = c(r4c$p.adjust, quantile = r4c$z))
 }
 }
-\concept{
-modelsearch
-
-post-selection inference
-}
+\concept{modelsearch}
+\concept{post-selection inference}

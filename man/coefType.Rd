@@ -105,6 +105,4 @@ eG <- estimate(list(m,m), list(lava::sim(m, 1e2), lava::sim(m, 1e2)))
 coefType(eG)
 
 }
-\concept{
-extractor
-}
+\concept{extractor}

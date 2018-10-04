@@ -37,7 +37,8 @@ coefCov(object, ...)
 
 \method{coefCov}{lvmfit}(object, value = FALSE, keep.var = FALSE, ...)
 
-\method{coefCov}{multigroup}(object, value = FALSE, keep.var = FALSE, ...)
+\method{coefCov}{multigroup}(object, value = FALSE, keep.var = FALSE,
+  ...)
 
 coefExtra(object, ...)
 
@@ -171,6 +172,4 @@ eG <- estimate(list(m,m), list(lava::sim(m, 1e2), lava::sim(m, 1e2)))
 coefIndexModel(eG)
 
 }
-\concept{
-extractor
-}
+\concept{extractor}

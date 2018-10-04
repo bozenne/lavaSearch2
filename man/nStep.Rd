@@ -32,8 +32,5 @@ nStep(res)
 }
 
 }
-\concept{
-modelsearch
-
-extractor
-}
+\concept{extractor}
+\concept{modelsearch}

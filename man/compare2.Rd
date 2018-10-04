@@ -33,9 +33,9 @@ compare2(object, ...)
 
 \method{compare2}{lvmfit2}(object, ...)
 
-.compare2(object, par = NULL, contrast = NULL, null = NULL, rhs = NULL,
-  robust = FALSE, cluster = NULL, df = TRUE, as.lava = TRUE,
-  F.test = TRUE, level = 0.95)
+.compare2(object, par = NULL, contrast = NULL, null = NULL,
+  rhs = NULL, robust = FALSE, cluster = NULL, df = TRUE,
+  as.lava = TRUE, F.test = TRUE, level = 0.95)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}
@@ -134,6 +134,4 @@ compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
 \code{\link{createContrast}} to create contrast matrices. \cr
 \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 }
-\concept{
-small sample inference
-}
+\concept{small sample inference}

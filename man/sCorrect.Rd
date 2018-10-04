@@ -24,26 +24,30 @@
 sCorrect(object, ...)
 
 \method{sCorrect}{lm}(object, adjust.Omega = TRUE, adjust.n = TRUE,
-  score = TRUE, df = TRUE, numeric.derivative = FALSE, param = NULL,
-  data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
+  score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0,
+  ...)
 
 \method{sCorrect}{lm2}(object, ...)
 
 \method{sCorrect}{gls}(object, cluster, adjust.Omega = TRUE,
-  adjust.n = TRUE, score = TRUE, df = TRUE, numeric.derivative = FALSE,
-  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
+  adjust.n = TRUE, score = TRUE, df = TRUE,
+  numeric.derivative = FALSE, param = NULL, data = NULL,
+  tol = 1e-05, n.iter = 20, trace = 0, ...)
 
 \method{sCorrect}{gls2}(object, ...)
 
 \method{sCorrect}{lme}(object, cluster, adjust.Omega = TRUE,
-  adjust.n = TRUE, score = TRUE, df = TRUE, numeric.derivative = FALSE,
-  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
+  adjust.n = TRUE, score = TRUE, df = TRUE,
+  numeric.derivative = FALSE, param = NULL, data = NULL,
+  tol = 1e-05, n.iter = 20, trace = 0, ...)
 
 \method{sCorrect}{lme2}(object, ...)
 
 \method{sCorrect}{lvmfit}(object, adjust.Omega = TRUE, adjust.n = TRUE,
-  score = TRUE, df = TRUE, numeric.derivative = FALSE, param = NULL,
-  data = NULL, tol = 1e-05, n.iter = 20, trace = 0, ...)
+  score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0,
+  ...)
 
 \method{sCorrect}{lvmfit2}(object, ...)
 
@@ -104,10 +108,7 @@ Correct the bias of the ML estimate of the variance and compute the first deriva
 \details{
 The argument \code{value} is equivalent to the argument \code{bias.correct} of the function \code{summary2}.
 }
-\concept{
-small sample inference
-
-derivative of the score equation
+\concept{derivative of the score equation
 n <- 5e1
 p <- 3
 X.name <- paste0("X",1:p)
@@ -134,5 +135,5 @@ summary2(e.gls)
 ## latent variable model
 e.lvm <- estimate(lvm(formula.lvm),data=d)
 sCorrect(e.lvm) <- TRUE ## i.e. bias.correct = TRUE
-summary2(e.lvm)
-}
+summary2(e.lvm)}
+\concept{small sample inference}

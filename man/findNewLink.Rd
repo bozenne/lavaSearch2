@@ -8,8 +8,8 @@
 findNewLink(object, ...)
 
 \method{findNewLink}{lvm}(object, data = NULL, exclude.var = NULL,
-  rm.latent_latent = FALSE, rm.endo_endo = FALSE, rm.latent_endo = FALSE,
-  output = "names", ...)
+  rm.latent_latent = FALSE, rm.endo_endo = FALSE,
+  rm.latent_endo = FALSE, output = "names", ...)
 }
 \arguments{
 \item{object}{a \code{lvm} object.}
@@ -59,6 +59,4 @@ findNewLink(m, rm.endo = TRUE)
 findNewLink(m, rm.endo = TRUE, output = "index")
 
 }
-\concept{
-modelsearch
-}
+\concept{modelsearch}

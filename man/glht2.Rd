@@ -84,8 +84,5 @@ summary(e.glht2)
 \code{\link{createContrast}} to create contrast matrices. \cr
 \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 }
-\concept{
-multiple comparisons
-
-multiple comparison
-}
+\concept{multiple comparison}
+\concept{multiple comparisons}

@@ -12,7 +12,5 @@ evalInParentEnv(name)
 \description{
 Search an object in the parent environments. For internal use.
 }
-\concept{
-extractor
-}
+\concept{extractor}
 \keyword{internal}

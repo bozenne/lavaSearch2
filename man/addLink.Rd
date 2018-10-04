@@ -56,6 +56,4 @@ newM <- addLink(m, "y1", "y2", covariance = TRUE)
 coef(newM)
 
 }
-\concept{
-setter
-}
+\concept{setter}
