@@ -53,5 +53,5 @@ devtools::install_github("bozenne/lavaSearch2")
 * Functionalities
 
 See the vignette "Overview of the functionalities of the package
-lavaSearch2" in [[./vignettes/functionalities-lavaSearch2.pdf]]
+lavaSearch2" in [[./vignettes/overview.pdf]]
 
