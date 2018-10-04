@@ -62,7 +62,7 @@
 #' ## only identifiable extensions
 #' m <- lvm(c(y1,y2,y3,y4)~u)
 #' latent(m) <- ~u
-#' addvar(m) <- ~x1+x2R
+#' addvar(m) <- ~x1+x2
 #' 
 #' e <- estimate(m, df.data)
 #'
