@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: sep 21 2018 (16:21) 
+## Last-Updated: okt  4 2018 (16:09) 
 ##           By: Brice Ozenne
-##     Update #: 475
+##     Update #: 479
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -82,8 +82,7 @@ estfun.lvmfit <- function(x, ...){
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
-##' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
-#' @param ... [internal] Only used by the generic method.
+#' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
 #'
 #' @details
 #' Whenever the argument linfct is not a matrix, it is passed to the function \code{createContrast} to generate the contrast matrix and, if not specified, rhs. \cr \cr
@@ -135,24 +134,19 @@ estfun.lvmfit <- function(x, ...){
 #' @concept multiple comparison
 #' @export
 `glht2` <-
-  function(model, ...) UseMethod("glht2")
+    function(model, linfct, rhs,
+             bias.correct, df, robust, cluster) UseMethod("glht2")
+
 
 ## * glht2.lvmfit
 #' @rdname glht2
 #' @export
 glht2.lvmfit <- function(model, linfct, rhs = 0,
-                         bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL, ...){
+                         bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL){
 
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
     }
-    dots <- list(...)
-    if(length(dots)>0){
-        txt.names <- names(dots)
-        warning("Argument",if(length(txt.names)>1){"s"}else{""},
-                " \'",paste(txt.names, collapse = "\' \'"),"\' are ignored\n")
-    }
-
     
     ### ** define contrast matrix
     if(!is.matrix(linfct)){
@@ -213,17 +207,11 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 #' @rdname glht2
 #' @export
 glht2.mmm <- function (model, linfct, rhs = 0,
-                       bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL, ...){
+                       bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL){
 
 
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
-    }
-    dots <- list(...)
-    if(length(dots)>0){
-        txt.names <- names(dots)
-        warning("Argument",if(length(txt.names)>1){"s"}else{""},
-                " \'",paste(txt.names, collapse = "\' \'"),"\' are ignored\n")
     }
     
     ### ** check the class of each model

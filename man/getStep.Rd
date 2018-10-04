@@ -5,15 +5,13 @@
 \alias{getStep.modelsearch2}
 \title{Extract one Step From the Sequential Procedure}
 \usage{
-getStep(object, ...)
+getStep(object, step, slot)
 
 \method{getStep}{modelsearch2}(object, step = nStep(object),
-  slot = NULL, ...)
+  slot = NULL)
 }
 \arguments{
 \item{object}{a \code{modelsearch2} object}
-
-\item{...}{[internal] only used by the generic method.}
 
 \item{step}{[integer >0] which test should be extracted?}
 

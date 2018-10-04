@@ -6,19 +6,17 @@
 \alias{glht2.mmm}
 \title{General Linear Hypothesis}
 \usage{
-glht2(model, ...)
+glht2(model, linfct, rhs, bias.correct, df, robust, cluster)
 
 \method{glht2}{lvmfit}(model, linfct, rhs = 0, bias.correct = TRUE,
-  df = TRUE, robust = FALSE, cluster = NULL, ...)
+  df = TRUE, robust = FALSE, cluster = NULL)
 
 \method{glht2}{mmm}(model, linfct, rhs = 0, bias.correct = TRUE,
-  df = TRUE, robust = FALSE, cluster = NULL, ...)
+  df = TRUE, robust = FALSE, cluster = NULL)
 }
 \arguments{
 \item{model}{a \code{lvmfit} or \code{mmm} object.
 The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.}
-
-\item{...}{[internal] Only used by the generic method.}
 
 \item{linfct}{[matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.}
 

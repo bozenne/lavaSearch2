@@ -16,7 +16,6 @@
 #' @param na.omit should tests leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
 #' @param trace [logical] should the execution of the function be traced?
 #' @param cpus the number of cpus that can be used for the computations.
-#' @param ... additional arguments to be passed to \code{\link{findNewLink}} see details.
 #'
 #' @details
 #' method.p.adjust = \code{"max"} computes the p-values based on the distribution of the max statistic.
@@ -33,6 +32,7 @@
 #' \item sequenceQuantile: the sequence of rejection threshold. Optional. 
 #' \item sequenceIID: the influence functions relative to each test. Optional. 
 #' \item sequenceSigma: the covariance matrix relative to each test. Optional. 
+#' \item initialModel: the model before the sequential search.
 #' \item statistic: the argument \code{statistic}.
 #' \item method.p.adjust: the argument \code{method.p.adjust}.
 #' \item alpha: [numeric 0-1] the significance cutoff for the p-values.
@@ -42,7 +42,10 @@
 #' @concept modelsearch
 #' @export
 `modelsearch2` <-
-  function(object, ...) UseMethod("modelsearch2")
+    function(object, link, data,
+             method.p.adjust, type.information, alpha, 
+             nStep, na.omit, 
+             trace, cpus) UseMethod("modelsearch2")
 
 
 ## * modelsearch2 (example)
@@ -109,8 +112,7 @@
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
                                 method.p.adjust = "fastmax", type.information = "E", alpha = 0.05, 
                                 nStep = NULL, na.omit = TRUE, 
-                                trace = TRUE, cpus = 1,  
-                                ...){
+                                trace = TRUE, cpus = 1){
 
     ## ** check arguments
     ## methods
@@ -134,12 +136,12 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         }
     }
 
-    ## extra arguments 
-    dots <- list(...)
-    if(length(dots)>0){
-        stop("modelsearch2 does not take any extra arguments \n",
-             "name of the extra arguments: \"",paste(names(dots), collapse = "\" \""),"\" \n")
-    }
+    ## ## extra arguments 
+    ## dots <- list(...)
+    ## if(length(dots)>0){
+    ##     stop("modelsearch2 does not take any extra arguments \n",
+    ##          "name of the extra arguments: \"",paste(names(dots), collapse = "\" \""),"\" \n")
+    ## }
 
     ## ** prepare
     ## *** data
@@ -340,6 +342,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                    sequenceQuantile = vec.seqQuantile,
                    sequenceIID = ls.seqIID,
                    sequenceSigma = ls.seqSigma,
+                   initialModel = object,
                    method.p.adjust = method.p.adjust,
                    alpha = alpha,
                    cv = cv)

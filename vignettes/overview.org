@@ -1,7 +1,8 @@
 #+TITLE: Overview of the functionalities of the package lavaSearch2
 #+Author: Brice Ozenne
-#+LaTeX_HEADER: %\VignetteIndexEntry{Overview-lavaSearch2}
-#+LaTeX_HEADER: %\VignetteEngine{knitr::knitr}
+#+LaTeX_HEADER: %\VignetteIndexEntry{overview}
+#+LaTeX_HEADER: %\VignetteEngine{R.rsp::tex}
+#+LaTeX_HEADER: %\VignetteKeyword{R}
 #+BEGIN_SRC R :exports none :results output :session *R* :cache no
 options(width = 90)
 #+END_SRC
@@ -9,8 +10,8 @@ options(width = 90)
 #+RESULTS:
 
 Load *lavaSearch2* in the R session:
-#+BEGIN_SRC R :exports code :results output :session *R* :cache no
-suppressPackageStartupMessages(library(lavaSearch2))
+#+BEGIN_SRC R :exports code :results silent :session *R* :cache no
+library(lavaSearch2)
 #+END_SRC 
 
 #+RESULTS:
@@ -798,14 +799,13 @@ especially in small samples:
   generative model.
 - it is hard to define a meaningful significance threshold since
   p-values should be adjusted for multiple comparisons and sequential
-  testing. However traditional methods like Bonferonni-Holm tend to
+  testing. However traditional methods like Bonferroni-Holm tend to
   over corrected and therefore reduce the power of the procedure since
   they assume that the test are independent.
 
 The function =modelsearch2= in *lavaSearch2* partially solves the
-second issue by adjusting the p-values for multiple testing.
-
-Let's see an example:
+second issue by adjusting the p-values for multiple testing. Let's see
+an example:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
 ## simulate data
 mSim <- lvm(c(y1,y2,y3)~u, u~x1+x2)
@@ -877,6 +877,44 @@ data.frame(link = displayScore$table[,"link"],
 : 1   u~x2 1.577228e-09 1.577228e-08 5.008615e-08
 : 2 y2~~y3 8.559198e-03 8.559198e-02 6.055947e-02
 : 3  y3~x1 7.656118e-02 7.656118e-01 2.814424e-01
+
+In theory, the correction based on the max statistic should give a p
+value that is smaller or equal than the p value adjusted using
+Bonferroni. However for for very small p-values, the max-correction
+can be numerically inaccurate and result in p-values that are slightly
+larger. The evolution of the estimation of a given coefficient across
+the sequential search can be displayed using =autoplot=:
+   
+#+BEGIN_SRC R :results graphics :file "c:/Users/hpl802/Documents/GitHub/lavaSearch2/vignettes/modelsearch.png" :exports results :session *R* :cache no
+autoplot(resScore, param = "u~x1")
+#+END_SRC
+
+#+RESULTS:
+[[file:./modelsearch.png]]
+
+In many cases, all links are not plausible so the user should
+indicates which links should be investigated by =modelsearch2=. This
+can be done via the argument =link=:
+
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+modelsearch2(e.lvm, link = c("y1~~y2","y1~~y3","y2~~y3"), trace = FALSE)
+#+END_SRC
+
+#+RESULTS:
+: Sequential search for local dependence using the score statistic 
+: The variable selection procedure did not retain any variable 
+:     link statistic    p.value adjusted.p.value dp.Info selected nTests
+: 1 y1~~y3  1.754102 0.07941299        0.1819309       1    FALSE      3
+: Confidence level: 0.95 (two sided, adjustement: fastmax)
+
+The function =findNewLink= can help the user to identify the set of
+relevant links:
+#+BEGIN_SRC R :exports both :results output :session *R* :cache no
+findNewLink(e.lvm$model, type = "covariance")$link
+#+END_SRC
+
+#+RESULTS:
+: [1] "y1~~y2" "y1~~y3" "y2~~y3"
 
 ** Checking that the names of the variables in the model match those of the data
 

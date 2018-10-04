@@ -21,7 +21,8 @@
 \alias{sCorrect<-.lvmfit2}
 \title{Satterthwaite Correction and Small Sample Correction}
 \usage{
-sCorrect(object, ...)
+sCorrect(object, adjust.Omega, adjust.n, score, df, numeric.derivative,
+  param, data, tol, n.iter, trace, ...)
 
 \method{sCorrect}{lm}(object, adjust.Omega = TRUE, adjust.n = TRUE,
   score = TRUE, df = TRUE, numeric.derivative = FALSE,
@@ -30,17 +31,17 @@ sCorrect(object, ...)
 
 \method{sCorrect}{lm2}(object, ...)
 
-\method{sCorrect}{gls}(object, cluster, adjust.Omega = TRUE,
-  adjust.n = TRUE, score = TRUE, df = TRUE,
-  numeric.derivative = FALSE, param = NULL, data = NULL,
-  tol = 1e-05, n.iter = 20, trace = 0, ...)
+\method{sCorrect}{gls}(object, adjust.Omega = TRUE, adjust.n = TRUE,
+  score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0,
+  cluster, ...)
 
 \method{sCorrect}{gls2}(object, ...)
 
-\method{sCorrect}{lme}(object, cluster, adjust.Omega = TRUE,
-  adjust.n = TRUE, score = TRUE, df = TRUE,
-  numeric.derivative = FALSE, param = NULL, data = NULL,
-  tol = 1e-05, n.iter = 20, trace = 0, ...)
+\method{sCorrect}{lme}(object, adjust.Omega = TRUE, adjust.n = TRUE,
+  score = TRUE, df = TRUE, numeric.derivative = FALSE,
+  param = NULL, data = NULL, tol = 1e-05, n.iter = 20, trace = 0,
+  cluster, ...)
 
 \method{sCorrect}{lme2}(object, ...)
 
@@ -72,8 +73,6 @@ sCorrect(x, ...) <- value
 \arguments{
 \item{object, x}{a \code{gls}, \code{lme}, or \code{lvm} object.}
 
-\item{...}{[internal] only used by the generic method or by the <- methods.}
-
 \item{adjust.Omega}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
 
 \item{adjust.n}{[logical] should the correction for the degree of freedom be performed?}
@@ -96,6 +95,8 @@ Below this value, the algorithm used to estimate the bias stop.}
 \item{n.iter}{[integer >0] the maximum number of iterations used to estimate the small sample bias of the residual variance-covariance matrix.}
 
 \item{trace}{[logical] should the execution of the function be traced.}
+
+\item{...}{[internal] only used by the generic method or by the <- methods.}
 
 \item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.
 Only required for \code{gls} models with no correlation argument.}

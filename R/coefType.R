@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: aug  6 2018 (15:28) 
+## last-updated: okt  4 2018 (16:16) 
 ##           By: Brice Ozenne
-##     Update #: 510
+##     Update #: 513
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,12 +103,12 @@
 #' @concept extractor
 #' @export
 `coefType` <-
-  function(object,...) UseMethod("coefType")
+  function(object, as.lava, ...) UseMethod("coefType")
 
 ## * coefType.lvm
 #' @rdname coefType
 #' @export
-coefType.lvm <- function(object, data = NULL, as.lava = TRUE, ...){
+coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
 
     externalLink <- type <- NULL ## [:for CRAN check] subset
     

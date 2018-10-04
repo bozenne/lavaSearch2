@@ -5,16 +5,15 @@
 \alias{modelsearch2.lvmfit}
 \title{Data-driven Extension of a Latent Variable Model}
 \usage{
-modelsearch2(object, ...)
+modelsearch2(object, link, data, method.p.adjust, type.information, alpha,
+  nStep, na.omit, trace, cpus)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
   method.p.adjust = "fastmax", type.information = "E", alpha = 0.05,
-  nStep = NULL, na.omit = TRUE, trace = TRUE, cpus = 1, ...)
+  nStep = NULL, na.omit = TRUE, trace = TRUE, cpus = 1)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}
-
-\item{...}{additional arguments to be passed to \code{\link{findNewLink}} see details.}
 
 \item{link}{[character, optional for \code{lvmfit} objects] the name of the additional relationships to consider when expanding the model. Should be a vector containing strings like "Y~X". See the details section.}
 
@@ -45,6 +44,7 @@ A list containing:
 \item sequenceQuantile: the sequence of rejection threshold. Optional. 
 \item sequenceIID: the influence functions relative to each test. Optional. 
 \item sequenceSigma: the covariance matrix relative to each test. Optional. 
+\item initialModel: the model before the sequential search.
 \item statistic: the argument \code{statistic}.
 \item method.p.adjust: the argument \code{method.p.adjust}.
 \item alpha: [numeric 0-1] the significance cutoff for the p-values.
