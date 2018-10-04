@@ -8,6 +8,7 @@
 #' @param object a \code{lvm} object.
 #' @param data [optional] a dataset used to identify the categorical variables when not specified in the \code{lvm} object.
 #' @param exclude.var [character vector] all links related to these variables will be ignore.
+#' @param type [character vector] the type of links to be considered: \code{"regression"}, \code{"covariance"}, or \code{"both"}, .
 #' @param rm.latent_latent [logical] should the links relating two latent variables be ignored?
 #' @param rm.endo_endo [logical] should the links relating two endogenous variables be ignored?
 #' @param rm.latent_endo [logical] should the links relating one endogenous variable and one latent variable be ignored?
@@ -39,6 +40,8 @@
 #' findNewLink(m, rm.endo = FALSE)
 #' findNewLink(m, rm.endo = TRUE)
 #' findNewLink(m, rm.endo = TRUE, output = "index")
+#' findNewLink(m, type = "covariance")
+#' findNewLink(m, type = "regression")
 #' 
 #' @concept modelsearch
 #' @export
@@ -48,8 +51,9 @@
 ## ** method findNewLink.lvm
 #' @export
 #' @rdname findNewLink
-findNewLink.lvm <- function(object,
+findNewLink.lvm <- function(object,                            
                             data = NULL,
+                            type = "both",
                             exclude.var = NULL,
                             rm.latent_latent= FALSE,
                             rm.endo_endo= FALSE,
@@ -58,6 +62,7 @@ findNewLink.lvm <- function(object,
                             ...){
 
     match.arg(output, choices = c("names","index"))
+    match.arg(type, choices = c("both","covariance","regression"))
     if(is.null(data)){        
         data <- lava::sim(object, n = 1)
     }
@@ -111,10 +116,17 @@ findNewLink.lvm <- function(object,
             if(rm.latent_endo && ( (isLatent.i && isEndogenous.j) || (isEndogenous.i && isLatent.j) )){
                 next
             }
+            iDirectional <- (isExogenous.i+isExogenous.j)>0
+            if(type == "regression" && iDirectional == FALSE){
+                next
+            }
+            if(type == "covariance" && iDirectional == TRUE){
+                next
+            }
             
             if (AP[j, i] == 0){
                 restricted <- rbind(restricted, c(i, j))
-                directional <- c(directional, (isExogenous.i+isExogenous.j)>0 )
+                directional <- c(directional, iDirectional)
             }
         }
     }
