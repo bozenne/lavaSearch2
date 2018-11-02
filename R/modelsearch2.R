@@ -214,8 +214,8 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             cl <- parallel::makeCluster(cpus)
         }
         doParallel::registerDoParallel(cl)
-
-        vec.packages <- c("lavaSearch2")
+        
+        vec.packages <- c("lavaSearch2","lava")
         parallel::clusterCall(cl, fun = function(x){
             sapply(vec.packages, function(iP){
                 suppressPackageStartupMessages(attachNamespace(iP)) ## requireNamespace did not worked
@@ -527,7 +527,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link,
                                              .combine = function(res1,res2){
-                                                 res <- list(df = rbind(res1$table,res2$table),
+                                                 res <- list(table = rbind(res1$table,res2$table),
                                                              iid = cbind(res1$iid,res2$iid))
                                                  return(res)
                                              }), {
@@ -545,14 +545,14 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             resApply <- lapply(1:n.link, warper)
         }
         res <- list(table = do.call(rbind, lapply(resApply,"[[","table")),
-                    iid = lapply(resApply,"[[","iid"))
+                    iid = do.call(cbind,lapply(resApply,"[[","iid")))
         
     }
     ## index.iid <- unlist(lapply(1:n.link, function(iL){ ## iL <- 1
     ## rep(iL,times = NCOL(res$iid[[iL]]))
     ## }))
-    table.test <- data.frame(link = link, res$table, stringsAsFactors = FALSE)
-    iid.link <- do.call(cbind,res$iid)
+    table.test <- data.frame(link = link, res$table, error = NA, stringsAsFactors = FALSE)
+    iid.link <- res$iid
 
     ## ** p.value
     statistic <- as.numeric(table.test[,"statistic"])
@@ -569,6 +569,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 
         table.test[index.max, "adjusted.p.value"] <- resQmax$p.adjust
         table.test[index.max, "quantile"] <- resQmax$z
+        table.test[index.max, "error"] <- resQmax$error
         Sigma <- resQmax$Sigma
 
     }else if(method.p.adjust == "max"){
@@ -579,6 +580,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 
         table.test[, "adjusted.p.value"] <- resQmax$p.adjust
         table.test[, "quantile"] <- resQmax$z
+        table.test[, "error"] <- resQmax$error
         Sigma <- resQmax$Sigma
                 
     }else{
