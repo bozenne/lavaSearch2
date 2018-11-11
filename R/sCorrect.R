@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: nov  1 2018 (12:30) 
+## Last-Updated: nov 11 2018 (14:32) 
 ##           By: Brice Ozenne
-##     Update #: 1334
+##     Update #: 1350
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -217,6 +217,10 @@ sCorrect.gls <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     if(is.null(data)){
         data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
                             envir = parent.env(environment()))
+        
+        if(length(object$na.action)>0){ ## remove rows corresponding to missing values
+            data <- data[setdiff(1:NROW(data),object$na.action),,drop=FALSE]
+        }
     }
     
     ## *** endogenous variable
@@ -248,6 +252,14 @@ sCorrect.gls <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
                                 cluster = cluster)
     n.cluster <- res.cluster$n.cluster
     cluster <- res.cluster$cluster
+    if(length(cluster) != NROW(data)){
+        if(length(object$na.action)>0){
+            stop("Number of rows of \'data\' does not match length of cluster \n",
+                 "Consider removing the rows of \'data\' containing NA before fitting the model \n")
+        }else{
+            stop("Number of rows of data does not match length of cluster \n")
+        }
+    }
     if(trace>0){
         cat("- done \n")
     }
@@ -283,7 +295,7 @@ sCorrect.gls <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     if(trace>0){
         cat("- done \n")
     }
-
+    
     ## *** sort data by group
     vec.endogenous <- rep(NA, length(cluster))
     for(iC in 1:n.cluster){ ## iC <- 1        
@@ -293,8 +305,8 @@ sCorrect.gls <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     order.obs <- order(cluster,vec.endogenous)
     if(is.unsorted(order.obs)==TRUE){
         test.reorder <- TRUE
-
         data <- data[order.obs,,drop=FALSE]
+
         cluster <- cluster[order.obs]
         vec.endogenous <- vec.endogenous[order.obs]
         res.cluster$levels.cluster <- unique(cluster)        
