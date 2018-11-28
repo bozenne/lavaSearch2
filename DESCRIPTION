@@ -18,7 +18,7 @@ License: GPL-3
 VignetteBuilder: R.rsp
 Depends:
     R (>= 2.10),
-    lava (>= 3.6.4),
+    lava (>= 1.6.4),
     ggplot2
 Imports:
     doParallel,
