@@ -1,3 +1,7 @@
+## * hook
+lavaSearch2.env <- new.env()
+assign("clean.hooks",c(),envir=lavaSearch2.env)
+
 ## * .onLoad
 .onLoad <- function(lib, pkg="lavaSearch2") {
 
@@ -16,3 +20,4 @@
 
 lava_categorical2dummy <- get("categorical2dummy", envir = asNamespace("lava"), inherits = FALSE)
 lava_estimate.lvm <- get("estimate.lvm", envir = asNamespace("lava"), inherits = FALSE)
+
