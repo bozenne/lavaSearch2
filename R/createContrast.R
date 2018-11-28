@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: nov 20 2018 (18:29) 
+## Last-Updated: nov 28 2018 (11:41) 
 ##           By: Brice Ozenne
-##     Update #: 236
+##     Update #: 237
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -79,8 +79,8 @@
 #' m <- lava::lvm(Y~Age+Treatment)
 #' e <- lava::estimate(list(m,m), data = split(df.data, df.data$Gender))
 #' print(coef(e))
-#' createContrast(e, par = "1@Y~TreatmentSSRI - 2@Y~TreatmentSSRI = 0")
-#' createContrast(e, par = "2@Y~TreatmentSSRI - 1@Y~TreatmentSSRI = 0")
+#' createContrast(e, par = "Y~TreatmentSSRI@1 - Y~TreatmentSSRI@2 = 0")
+#' createContrast(e, par = "Y~TreatmentSSRI@2 - Y~TreatmentSSRI@1 = 0")
 #' @concept small sample inference
 #' 
 #' @export
