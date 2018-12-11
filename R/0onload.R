@@ -1,7 +1,3 @@
-## * hook
-lavaSearch2.env <- new.env()
-assign("clean.hooks",c(),envir=lavaSearch2.env)
-
 ## * .onLoad
 .onLoad <- function(lib, pkg="lavaSearch2") {
 

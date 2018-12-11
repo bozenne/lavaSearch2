@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 27 2018 (14:35) 
 ## Version: 
-## Last-Updated: nov 28 2018 (11:32) 
+## Last-Updated: nov 28 2018 (15:34) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 13
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,9 +21,9 @@
 #' @name clean
 #' 
 #' @param x \code{lvm}-object
-#' @param rm.exo  should the exogenous variables with no links be removed from the object ? 
-#' @param rm.endo  should the endogenous variables with no links be removed from the object ?
-#' @param rm.latent  should the latent variables with no links be removed from the object ?
+#' @param rm.exo  should exogenous variables with no links be removed from the object? 
+#' @param rm.endo  should endogenous variables with no links be removed from the object?
+#' @param rm.latent  should latent variables with no links be removed from the object?
 #' @param ... additional arguments to lower level functions
 #'
 #' @export
@@ -57,22 +57,14 @@
 #' @export
 clean.lvm <- function(x, rm.exo = TRUE, rm.endo = TRUE, rm.latent = TRUE, ...){
 
-    myhooks <- gethook_lavaSearch2("clean.hooks")
-    for (f in myhooks) {
-        res <- do.call(f, list(x=x, rm.exo=rm.exo,...))
-        if("x" %in% names(res)){ x <- res$x }
-        if("rm.exo" %in% names(res)){ rm.exo <- res$rm.exo }
-        if("rm.endo" %in% names(res)){ rm.endo <- res$rm.endo }
-    }  
-    
     var.latent <- latent(x)
     var.exogenous <- exogenous(x)
     var.endogenous <- endogenous(x)
 
     M.reg <- x$index$A
     M.cov <- x$index$P - diag(diag(x$index$P))
-    
     varClean <- NULL
+
     if(rm.exo && length(var.exogenous) > 0){
         indexClean.reg <- which(rowSums(M.reg[var.exogenous,,drop = FALSE]!=0)==0)
         indexClean.cov <- which(rowSums(M.cov[var.exogenous,,drop = FALSE]!=0)==0)
@@ -94,7 +86,7 @@ clean.lvm <- function(x, rm.exo = TRUE, rm.endo = TRUE, rm.latent = TRUE, ...){
                                 intersect(indexClean.Creg, indexClean.Ccov))
         varClean <- c(varClean, var.latent[indexClean])
     }
-    
+
     if(length(varClean)>0){
         x <- kill(x, value =  varClean, ...)
     }
