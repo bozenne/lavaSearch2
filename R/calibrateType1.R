@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: jan 21 2019 (14:09) 
+## Last-Updated: jan 22 2019 (13:44) 
 ##           By: Brice Ozenne
-##     Update #: 657
+##     Update #: 658
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,7 +24,7 @@
 ##' @name calibrateType1
 ##' 
 ##' @param object a \code{lvm} object defining the model to be fitted.
-##' @param warmup[list of lvm] a list of \code{lvm} objects that will be sequentially fitted with for
+##' @param warmup [list of lvm] a list of \code{lvm} objects that will be sequentially fitted with for
 ##' starting values the parameter of the previous model in the list (if any). The parameters of the final
 ##' model of the list are used to initialize the fit of the model of interest (i.e. object).
 ##' @param param [character vector] names of the coefficient whose value will be tested. 
