@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: okt  4 2018 (16:09) 
+## Last-Updated: dec 11 2018 (15:50) 
 ##           By: Brice Ozenne
-##     Update #: 479
+##     Update #: 502
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,10 +16,11 @@
 ### Code:
 
 
-## * estfun.lvmfit
+## * estfun
 #' @title Extract Empirical Estimating Functions (lvmfit Object)
 #' @description Extract the empirical estimating functions of a lvmfit object.
 #' This function is for internal use but need to be public to enable its use by \code{multcomp::glht}.
+#' @name estfun
 #' 
 #' @param x an \code{lvmfit} object.
 #' @param ... arguments passed to methods.
@@ -59,15 +60,42 @@
 #' #### adjust for multiple comparisons ####
 #' e.glht <- glht(e.mmm, linfct = resC$mlf)
 #' summary(e.glht)
-#' 
-#' @method estfun lvmfit
 #' @concept multiple comparison
+
+## * estfun.lvmfit
+#' @rdname estfun
+#' @method estfun lvmfit
 #' @export
 estfun.lvmfit <- function(x, ...){
     U <- lava::score(x, indiv = TRUE)
     return(U)
 }
 
+## * estfun.gls
+#' @rdname estfun
+#' @method estfun gls
+#' @export
+estfun.gls <- function(x, ...){
+    if(inherits(x,"gls2")){
+        U <- score2(x)
+    }else{
+        U <- score2(x, bias.correct = FALSE)
+    }
+    return(U)
+}
+
+## * estfun.lme
+#' @rdname estfun
+#' @method estfun lme
+#' @export
+estfun.lme <- function(x, ...){
+    if(inherits(x,"lme2")){
+        U <- score2(x)
+    }else{
+        U <- score2(x, bias.correct = FALSE)
+    }
+    return(U)
+}
 
 ## * Documentation - glht2
 #' @title General Linear Hypothesis
@@ -182,7 +210,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
     if(robust){
         vcov.model <- crossprod(iid2(model, cluster = cluster))
     }else{
-        vcov.model <- model$sCorrect$vcov.param
+        vcov.model <- vcov2(model)
     }
 
 ### ** convert to the appropriate format
@@ -231,7 +259,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
              "Incorrect element(s): ",paste(index.wrong, collapse = " "),".\n")
     }
 
-    ### ** define the contrast matrix
+### ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
         resC <- createContrast(model, par = linfct, add.variance = TRUE)
@@ -241,11 +269,11 @@ glht2.mmm <- function (model, linfct, rhs = 0,
             rhs <- resC$null
         }
     }else if(is.matrix(linfct)){
-        
+
         ls.contrast <- lapply(name.model, function(x){ ## x <- name.model[2]
             
-            iRownames <- grep(paste0(x,": "), rownames(linfct), value = FALSE, fixed = TRUE)
             iColnames <- grep(paste0(x,": "), colnames(linfct), value = FALSE, fixed = TRUE)
+            iRownames <- rowSums(linfct[,iColnames]!=0)>0
             linfct[iRownames, iColnames,drop=FALSE]            
         })
         names(ls.contrast) <- name.model
@@ -254,6 +282,15 @@ glht2.mmm <- function (model, linfct, rhs = 0,
         stop("Argument \'linfct\' must be a matrix or a vector of characters. \n",
              "Consider using  out <- createContrast(...) and pass out$contrast to linfct. \n")
     }
+
+    ## ** check whether it is possible to compute df
+    M.testModel <- do.call(cbind,lapply(ls.contrast, function(iC){
+        1:NROW(contrast) %in% which(rowSums(contrast[,colnames(iC)]!=0)>0)        
+    }))
+    if(any(rowSums(M.testModel)>1) && df){
+        stop("Cannot compute the degrees of freedom for tests performed across several models \n",
+             "Consider setting the argument \'df\' to FALSE \n")
+        }
 
     ## ** Extract influence functions from all models    
     ls.res <- lapply(1:n.model, function(iM){ ## iM <- 1
@@ -269,9 +306,9 @@ glht2.mmm <- function (model, linfct, rhs = 0,
         
 ### *** Compute df for each test
         if(df){
-        ## here null does not matter since we only extract the degrees of freedom
-        iContrast <- ls.contrast[[iM]]
-        colnames(iContrast) <- name.param
+            ## here null does not matter since we only extract the degrees of freedom
+            iContrast <- ls.contrast[[iM]]
+            colnames(iContrast) <- name.param
         
             iWald <- compare2(model[[iM]], contrast = iContrast, as.lava = FALSE)
             out$df <- iWald[1:(NROW(iWald)-1),"df"]

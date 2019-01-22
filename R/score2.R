@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: apr  4 2018 (09:33) 
+## last-updated: dec 11 2018 (10:58) 
 ##           By: Brice Ozenne
-##     Update #: 2260
+##     Update #: 2261
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - score2
-#' @title  Extract The Individual Score
-#' @description  Extract The Individual Score from a gaussian linear model.
+#' @title  Extract the Individual Score
+#' @description  Extract the individual score from a Gaussian linear model.
 #' @name score2
 #'
 #' @param object a linear model or a latent variable model

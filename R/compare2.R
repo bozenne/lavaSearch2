@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: okt  4 2018 (16:17) 
+## Last-Updated: dec 11 2018 (11:13) 
 ##           By: Brice Ozenne
-##     Update #: 382
+##     Update #: 389
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -184,10 +184,10 @@ compare2.lvmfit2 <- function(object, ...){
     if(robust){
         vcov.param <- crossprod(iid2(object, cluster = cluster))
     }else{
-        vcov.param <- object$sCorrect$vcov.param
+        vcov.param <- vcov2(object)
         attr(vcov.param, "warning") <- NULL
     }
-    warn <- attr(object$sCorrect$vcov.param, "warning")
+    warn <- attr(vcov2(object), "warning")
     keep.param <- dimnames(dVcov.param)[[3]]
 
     n.param <- length(param)
@@ -259,7 +259,7 @@ compare2.lvmfit2 <- function(object, ...){
         df.Wald <- rep(Inf, n.hypo)
         df.F <- Inf
     }else{
-        vcov.tempo <- object$sCorrect$vcov.param
+        vcov.tempo <- vcov2(object)
         attr(vcov.tempo, "warning") <- NULL
         ## univariate
         if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)

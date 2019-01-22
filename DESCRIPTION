@@ -1,8 +1,8 @@
 Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
-Version: 1.4.3
-Date: 2018-12-10
+Version: 1.5
+Date: 2019-01-22
 Authors@R: c(
     person("Brice", "Ozenne", role = c("aut", "cre"), email = "brice.ozenne@orange.fr", comment = c(ORCID = "0000-0001-9694-2956"))
 	)

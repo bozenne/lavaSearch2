@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: nov 28 2018 (11:41) 
+## Last-Updated: dec 11 2018 (11:56) 
 ##           By: Brice Ozenne
-##     Update #: 237
+##     Update #: 253
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -221,7 +221,7 @@ createContrast.gls <- function(object, par, add.variance, ...){
 ## * createContrast.lme
 #' @rdname createContrast
 #' @export
-createContrast.lme <- createContrast.lm
+createContrast.lme <- createContrast.gls
 
 ## * createContrast.lvmfit
 #' @rdname createContrast
@@ -286,7 +286,7 @@ createContrast.list <- function(object, par = NULL, add.variance = NULL, var.tes
     }
 
     ## ** create contrast matrix relative to each model
-    out$mlf <- lapply(name.model, function(iModel){ ## iModel <- name.model[1]        
+    out$mlf <- lapply(name.model, function(iModel){ ## iModel <- name.model[1]
         ## only keep columns corresponding to coefficients belonging the the current model
         iContrast <- out$contrast[,ls.object.coefname[[iModel]],drop=FALSE]
 
@@ -303,14 +303,17 @@ createContrast.list <- function(object, par = NULL, add.variance = NULL, var.tes
     })
     names(out$mlf) <- name.model    
     class(out$mlf) <- "mlf"
-    
+
     ## remove right hand side from the names (like in multicomp)
     if(length(par)>0){
         rownames(out$contrast) <- .contrast2name(out$contrast, null = NULL)
         out$mlf <- lapply(out$mlf, function(x){ ## x <- name.model[1]
-            rownames(x) <- .contrast2name(x, null = NULL)
+            if(NROW(x)>0){
+                rownames(x) <- .contrast2name(x, null = NULL)
+            }
             return(x)
         })
+            
         class(out$mlf) <- "mlf"
         names(out$null) <- rownames(out$contrast)
     }
@@ -338,7 +341,6 @@ createContrast.mmm <- createContrast.list
 #' 
 #' @keywords internal
 .contrast2name <- function(contrast, null = NULL){
-
     contrast.names <- colnames(contrast)
     
     df.index <- as.data.frame(which(contrast != 0, arr.ind = TRUE))

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: apr  4 2018 (10:51) 
+## Last-Updated: dec 11 2018 (15:51) 
 ##           By: Brice Ozenne
-##     Update #: 158
+##     Update #: 182
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,6 +14,89 @@
 ##----------------------------------------------------------------------
 ## 
 ### Code:
+
+## * Documentation - information2
+#' @title  Extract The full Information Matrix
+#' @description  Extract the full information matrix from a Gaussian linear model.
+#' @name information2
+#'
+#' @param object a linear model or a latent variable model
+#' @param ... arguments to be passed to \code{vcov2}.
+#'
+#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#'
+#' @return A matrix.
+#' 
+#' @examples
+#' n <- 5e1
+#' p <- 3
+#' X.name <- paste0("X",1:p)
+#' link.lvm <- paste0("Y~",X.name)
+#' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
+#'
+#' m <- lvm(formula.lvm)
+#' distribution(m,~Id) <- sequence.lvm(0)
+#' set.seed(10)
+#' d <- lava::sim(m,n)
+#'
+#' ## linear model
+#' e.lm <- lm(formula.lvm,data=d)
+#' info.tempo <- vcov2(e.lm, bias.correct = TRUE)
+#' info.tempo[names(coef(e.lm)),names(coef(e.lm))] - vcov(e.lm)
+#'
+#' ## latent variable model
+#' e.lvm <- estimate(lvm(formula.lvm),data=d)
+#' vcov.tempo <- vcov2(e.lvm, bias.correct = FALSE)
+#' round(vcov.tempo %*% information(e.lvm), 5)
+#'
+#' @concept small sample inference
+#' @export
+`information2` <-
+  function(object, ...) UseMethod("information2")
+
+## * information2.lm
+#' @rdname information2
+#' @export
+information2.lm <- function(object, ...){
+    return(solve(vcov2(object, ...)))
+}
+
+## * information2.gls
+#' @rdname information2
+#' @export
+information2.gls <- information2.lm
+
+## * information2.lme
+#' @rdname information2
+#' @export
+information2.lme <- information2.lm
+
+## * information2.lvmfit
+#' @rdname information2
+#' @export
+information2.lvmfit <- information2.lm
+
+## * information2.lm2
+#' @rdname information2
+#' @export
+information2.lm2 <- function(object, ...){
+    return(solve(vcov2(object, ...)))
+}
+
+## * information2.gls2
+#' @rdname information2
+#' @export
+information2.gls2 <- information2.lm2
+
+## * information2.lme2
+#' @rdname information2
+#' @export
+information2.lme2 <- information2.lm2
+
+## * information2.lvmfit
+#' @rdname information2
+#' @export
+information2.lvmfit2 <- information2.lm2
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments

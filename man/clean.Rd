@@ -15,11 +15,11 @@ clean(x, ...)
 
 \item{...}{additional arguments to lower level functions}
 
-\item{rm.exo}{should the exogenous variables with no links be removed from the object ?}
+\item{rm.exo}{should exogenous variables with no links be removed from the object?}
 
-\item{rm.endo}{should the endogenous variables with no links be removed from the object ?}
+\item{rm.endo}{should endogenous variables with no links be removed from the object?}
 
-\item{rm.latent}{should the latent variables with no links be removed from the object ?}
+\item{rm.latent}{should latent variables with no links be removed from the object?}
 }
 \description{
 Remove variables with no link.
