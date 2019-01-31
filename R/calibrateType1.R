@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: jan 22 2019 (13:44) 
+## Last-Updated: jan 31 2019 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 658
+##     Update #: 662
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -90,7 +90,8 @@
 ## * calibrateType1.lvm
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1.lvm <- function(object, warmup = NULL, param, null = NULL, n.rep, n, F.test = FALSE, cluster = NULL,
+calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NULL,
+                               F.test = FALSE, cluster = NULL,
                                generative.object = NULL, generative.coef = NULL, 
                                true.coef = NULL, n.true = 1e6, round.true = 2,              
                                bootstrap = FALSE, n.bootstrap = 1e3,
@@ -439,7 +440,7 @@ calibrateType1.lvm <- function(object, warmup = NULL, param, null = NULL, n.rep,
 ## * calibrateType1.lvmfit
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1.lvmfit <- function(object, param, F.test = FALSE,
+calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
                                   bootstrap = FALSE, n.bootstrap = 1e3,
                                   seed = NULL, trace = 2, cpus = 1, ...){
 
@@ -465,6 +466,7 @@ calibrateType1.lvmfit <- function(object, param, F.test = FALSE,
     ## ** Run
     out <- calibrateType1(object.model,
                           param = param,
+                          n.rep = n.rep,
                           n = n,
                           F.test = F.test,
                           generative.object = object.model,

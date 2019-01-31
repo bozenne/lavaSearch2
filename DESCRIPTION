@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
 Version: 1.5
-Date: 2019-01-22
+Date: 2019-01-31
 Authors@R: c(
     person("Brice", "Ozenne", role = c("aut", "cre"), email = "brice.mh.ozenne@gmail.com", comment = c(ORCID = "0000-0001-9694-2956"))
 	)
@@ -17,8 +17,8 @@ License: GPL-3
 VignetteBuilder: R.rsp
 Depends:
     R (>= 2.10),
-    lava (>= 1.6.4),
-    ggplot2
+    ggplot2,
+    lava (>= 1.6.4)
 Imports:
     doParallel,
     MASS,
@@ -28,7 +28,8 @@ Imports:
     mvtnorm,
     nlme,
     parallel,
-    reshape2,
+	Rcpp,
+    reshape2,	
     sandwich,
     stats,
     utils
@@ -46,4 +47,6 @@ Suggests:
     riskRegression,
     survival,
     testthat
-RoxygenNote: 6.1.0.9000
+LinkingTo: Rcpp, RcppArmadillo
+NeedsCompilation: yes
+RoxygenNote: 6.1.1
