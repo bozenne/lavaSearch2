@@ -17,5 +17,4 @@
 
 lava_categorical2dummy <- get("categorical2dummy", envir = asNamespace("lava"), inherits = FALSE)
 lava_estimate.lvm <- get("estimate.lvm", envir = asNamespace("lava"), inherits = FALSE)
-stats_C_Cdqrls <- get("C_Cdqrls", envir = asNamespace("stats"), inherits = FALSE)
 
