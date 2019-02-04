@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 31 2019 (15:38) 
+## Last-Updated: feb  4 2019 (09:38) 
 ##           By: Brice Ozenne
-##     Update #: 847
+##     Update #: 852
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -499,16 +499,23 @@
 
     ## ** solve equation
     ## microbenchmark::microbenchmark(svd = {asvd <- svd(A) ; asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs;},
-                                   ## qr = qr.coef(qr(A), eq.rhs),
-                                   ## Rcpp = OLS_cpp(A, eq.rhs),
-                                   ## RcppTry = try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE),
-                                   ## Rcpp2 = OLS2_cpp(A, eq.rhs),
-                                   ## OLS1 = solve(crossprod(A), crossprod(A, eq.rhs)),
-                                   ## OLS2 = solve(t(A) %*% A) %*% t(A) %*% eq.rhs,
-                                   ## OLS_stats = stats::lsfit(x = A, y = eq.rhs),
-                                   ## OLS_LINPACK = .Call(stats:::C_Cdqrls, x = A, y = eq.rhs, tolerance = 1e-7, FALSE)$coefficients, times = 500)
-
-    iSolution <- try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE)
+    ## qr = qr.coef(qr(A), eq.rhs),
+    ## Rcpp = OLS_cpp(A, eq.rhs),
+    ## RcppTry = try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE),
+    ## Rcpp2 = OLS2_cpp(A, eq.rhs),
+    ## OLS1 = solve(crossprod(A), crossprod(A, eq.rhs)),
+    ## OLS2 = solve(t(A) %*% A) %*% t(A) %*% eq.rhs,
+    ## OLS_stats = stats::lsfit(x = A, y = eq.rhs),
+    ## OLS_LINPACK = .Call(stats:::C_Cdqrls, x = A, y = eq.rhs, tolerance = 1e-7, FALSE)$coefficients, times = 500)
+    if(lava.options()$method.estimate2=="svd"){
+        asvd <- svd(A)
+        iSolution <- try((asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs)[,1], silent = TRUE)
+    }else if(lava.options()$method.estimate2=="ols"){
+        iSolution <- try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE)
+    }else{
+        stop("unknown OLS methods \n")
+    }
+    
     if(inherits(iSolution, "try-error")){
         if(abs(det(t(A) %*% A)) <  1e-10){            
             stop("Singular matrix: cannot update the estimates \n")

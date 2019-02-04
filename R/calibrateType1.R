@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: jan 31 2019 (13:45) 
+## Last-Updated: feb  4 2019 (10:14) 
 ##           By: Brice Ozenne
-##     Update #: 662
+##     Update #: 686
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,9 +155,12 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
             cat("  Check true coefficients ")
         }
         n.true <- n[n.n]
-        e.true <- lava::estimate(object, cluster = cluster,
-                                 data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE))
+        e.true <- suppressWarnings(lava::estimate(object, cluster = cluster,
+                                                  data = lava::sim(generative.object, n = n.true, p = generative.coef, latent = FALSE)))
         name.test <- names(coef(e.true))
+        if(e.true$opt$convergence>0 && trace>1){
+            cat("(incorrect convergence of the model) ")
+        }
         
         if(!identical(sort(name.test),sort(names(true.coef)))){
             extraNames <- setdiff(names(true.coef),name.test)
@@ -497,13 +500,13 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
                          seed,
                          ...){
 
+    ls.iE <- list(estimate.truth = coef.true)  ## temporary
     ls.iP <- list()  ## temporary
     out <- list()
     dots <- list(...)
     if("control" %in%  names(dots) == FALSE){
         dots$control <- list()
     }
-    
     ## ** simulation
     dt.sim <- lava::sim(generative.object, n = n, p = generative.coef, latent = FALSE)
 
@@ -531,7 +534,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
     e.lvm.KR <- e.lvm
     testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
-            
+
     ## ** no correction
     ## get Wald tests
     eS.ML <- try(compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
@@ -546,50 +549,66 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
                             F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
 
     ## store results
-    coef.original <- summary(e.lvm)$coef[name.coef,"Estimate"]
-    se.original <- summary(e.lvm)$coef[name.coef,"Std. Error"]
-    se.robust <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE)$coef[name.coef,"robust SE"]
+    ls.iE$estimate.ML <- summary(e.lvm)$coef[name.coef,"Estimate"]
+    if(is.null(cluster)){
+        ls.iE$se.ML <- summary(e.lvm)$coef[name.coef,"Std. Error"]
+    }
+    ls.iE$se.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE)$coef[name.coef,"robust SE"]
 
-    ls.iP$p.Ztest <- eS.ML[store.coef,"p-value"]
+    if(is.null(cluster)){
+        ls.iP$p.Ztest <- eS.ML[store.coef,"p-value"]
+    }
     ls.iP$p.robustZtest <-  eS.robustML[store.coef,"p-value"]
 
     ## ** Sattterwaith correction
     if(!inherits(testError.Satt,"try-error")){
         ## get Wald tests
-        eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
-                            contrast = contrast, null = rhs,
-                            F.test = F.test, as.lava = FALSE)
+        if(is.null(cluster)){
+            eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
+                                contrast = contrast, null = rhs,
+                                F.test = F.test, as.lava = FALSE)
+        }
         eS.robustSatt <- compare2(e.lvm.Satt, robust = TRUE, df = TRUE,
-                                  contrast = contrast, null = rhs,
+                                  contrast = contrast, null = rhs, 
                                   F.test = F.test, as.lava = FALSE)
 
         ## store results
-        df.original <- summary2(e.lvm.Satt)$coef[name.coef,"df"]
-        ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
+        ls.iE$df.ML <- summary2(e.lvm.Satt)$coef[name.coef,"df"]
+        if(is.null(cluster)){
+            ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
+        }
         ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"p-value"]
     }else{
-        df.original <- rep(as.numeric(NA), n.coef)
-        ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
+        ls.iE$df.ML <- rep(as.numeric(NA), n.coef)
+        if(is.null(cluster)){
+            ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
+        }
         ls.iP$p.robustSatt <- rep(as.numeric(NA), n.store)
     }
 
     ## ** small sample correction
     if(!inherits(testError.KR,"try-error")){
         ## get Wald tests
-        eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
-                           contrast = contrast, null = rhs,
-                           F.test = F.test, as.lava = FALSE)
+        if(is.null(cluster)){
+            eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                               contrast = contrast, null = rhs,
+                               F.test = F.test, as.lava = FALSE)
+        }
         eS.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
                                  contrast = contrast, null = rhs,
                                  F.test = F.test, as.lava = FALSE)
         ## store results
-        ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
+        if(is.null(cluster)){
+            ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
+        }
         ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"p-value"]
         
         test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
         niter.correct <- e.lvm.KR$sCorrect$opt$iterations
     }else{
-        ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
+        if(is.null(cluster)){
+            ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
+        }
         ls.iP$p.robustSSC <- rep(as.numeric(NA), n.store)
         
         niter.correct <- NA
@@ -599,26 +618,36 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     ## ** Sattterwaith correction with small sample correction
     if(!inherits(testError.KR,"try-error")){
         ## get Wald tests
-        eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
-                          contrast = contrast, null = rhs,
-                          F.test = F.test, as.lava = FALSE)
+        if(is.null(cluster)){
+            eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
+                              contrast = contrast, null = rhs,
+                              F.test = F.test, as.lava = FALSE)
+        }
         eS.robustKR <- compare2(e.lvm.KR, robust = TRUE, df = TRUE,
                                 contrast = contrast, null = rhs,
                                 F.test = F.test, as.lava = FALSE)
                 
         ## store results
-        coef.corrected <- summary2(e.lvm.KR)$coef[name.coef,"Estimate"]
-        se.SSC <- summary2(e.lvm.KR)$coef[name.coef,"Std. Error"]
-        se.robustSSC <- summary2(e.lvm.KR, robust = TRUE)$coef[name.coef,"robust SE"]
-        df.SSC <- summary2(e.lvm.KR)$coef[name.coef,"df"]
-        ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
+        ls.iE$estimate.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"Estimate"]
+        if(is.null(cluster)){
+            ls.iE$se.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"Std. Error"]
+        }
+        ls.iE$se.robustMLcorrected <- summary2(e.lvm.KR, robust = TRUE)$coef[name.coef,"robust SE"]
+        ls.iE$df.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"df"]
+        if(is.null(cluster)){
+            ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
+        }
         ls.iP$p.robustKR <- eS.robustKR[store.coef,"p-value"]
     }else{
-        coef.corrected <- rep(as.numeric(NA), n.coef)
-        se.SSC <- rep(as.numeric(NA), n.coef)
-        se.robustSSC <- rep(as.numeric(NA), n.coef)
-        df.SSC <- rep(as.numeric(NA), n.coef)
-        ls.iP$p.KR <- rep(as.numeric(NA), n.store)
+        ls.iE$estimate.MLcorrected <- rep(as.numeric(NA), n.coef)
+        if(is.null(cluster)){
+            ls.iE$se.MLcorrected <- rep(as.numeric(NA), n.coef)
+        }
+        ls.iE$se.robustMLcorrected  <- rep(as.numeric(NA), n.coef)
+        ls.iE$df.MLcorrected <- rep(as.numeric(NA), n.coef)
+        if(is.null(cluster)){
+            ls.iP$p.KR <- rep(as.numeric(NA), n.store)
+        }
         ls.iP$p.robustKR <- rep(as.numeric(NA), n.store)
     }
 
@@ -640,23 +669,15 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
 
     ## ** collect results
     ## estimates
-    out$estimate <- data.frame(n = n,
-                               rep = iRep,
-                               seed = seed,
-                               niter = niter.correct,
-                               warning = test.warning,
-                               estimate.truth = as.double(coef.true),
-                               estimate.ML = as.double(coef.original),
-                               estimate.MLcorrected = as.double(coef.corrected),
-                               se.ML = as.double(se.original),
-                               se.robustML = as.double(se.robust),
-                               se.MLcorrected = as.double(se.SSC),
-                               se.robustMLcorrected = as.double(se.robustSSC),
-                               df.ML = as.double(df.original),
-                               df.MLcorrected = as.double(df.SSC),
-                               name = names(coef.true),
-                               type = type.coef[name.coef],
-                               stringsAsFactors = FALSE)
+    out$estimate <- cbind(data.frame(n = n,
+                                     rep = iRep,
+                                     seed = seed,
+                                     niter = niter.correct,
+                                     warning = test.warning,
+                                     name = names(coef.true),
+                                     type = type.coef[name.coef],
+                                     stringsAsFactors = FALSE),
+                          do.call(cbind,ls.iE))
     rownames(out$estimate) <- NULL
 
     ## p.value
@@ -670,7 +691,6 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
                                    stringsAsFactors = FALSE),
                         do.call(cbind,ls.iP))
     rownames(out$pvalue) <- NULL
-
 
     ## ** export
     return(out)
