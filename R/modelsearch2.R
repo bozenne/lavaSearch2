@@ -115,6 +115,11 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                 trace = TRUE, cpus = 1){
 
     ## ** check arguments
+    ## object
+    if(any(is.na(model.frame(object))) && method.p.adjust %in% c("max","fastmax")){
+        warning("Missing values - the iid decomposition of the test statistics will only be computed on complete data \n")
+    }
+    
     ## methods
     method.p.adjust <- match.arg(method.p.adjust, lava.options()$search.p.adjust)    
 
@@ -474,9 +479,10 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         ## *** compute the iid decomposition and statistic
         ## eigen(lava::information(estimate(newModel, data = data), p = coef0.new, data = data, type = "E"))
         Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
-
         if(method.p.adjust %in% c("max","fastmax")){
             iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
+            ## rm na
+            iid.score <- iid.score[rowSums(is.na(iid.score))==0,]
 
             ## inverse of the information matrix
             sqrt.InfoM1 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
@@ -491,6 +497,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             out$iid <-  - iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
             ## out$iid <- out$iid/sqrt(sum(out$iid^2))
             out$table$statistic <- sqrt(crossprod(normScore))
+
             out$table$se <- sqrt(sum(out$iid^2))
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
