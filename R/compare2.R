@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: dec 11 2018 (11:13) 
+## Last-Updated: feb  8 2019 (17:07) 
 ##           By: Brice Ozenne
-##     Update #: 389
+##     Update #: 463
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -166,32 +166,82 @@ compare2.lvmfit2 <- function(object, ...){
                       robust = FALSE, cluster = NULL, df = TRUE,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
-    ## ** extract information
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
 
-    if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
-        dVcov.param <- NA ## necessary to pass the test after
-        score <- object$sCorrect$score
-    }else if(df>0){        
-        dVcov.param <- object$sCorrect$dVcov.param
-    }else{
-        dVcov.param <- NULL
-    }
-    
-    param <- object$sCorrect$param
     if(robust){
-        vcov.param <- crossprod(iid2(object, cluster = cluster))
-    }else{
-        vcov.param <- vcov2(object)
-        attr(vcov.param, "warning") <- NULL
+        if(!is.null(cluster)){
+            if(stats::nobs(object)!=length(cluster)){
+                stop("length of argument \'cluster\' does not match number of rows of the score matrix \n")
+            }
+            ls.indexCluster <- tapply(1:length(cluster),cluster,list)
+            n.cluster <- length(ls.indexCluster)
+        }else{
+            n.cluster <- stats::nobs(object)
+        }
     }
-    warn <- attr(vcov2(object), "warning")
-    keep.param <- dimnames(dVcov.param)[[3]]
+
+    
+    ## ** extract information
+    ## 0-order: param
+    param <- object$sCorrect$param
 
     n.param <- length(param)
     name.param <- names(param)
+
+    ## 1-order: score
+    if(robust){
+        score <- object$sCorrect$score
+    }
+    
+    ## 2-order: variance covariance
+    vcov.param <- vcov2(object)
+    attr(vcov.param, "warning") <- NULL
+    warn <- attr(vcov2(object), "warning")
+    
+    if(robust){
+        rvcov.param <- crossprod(iid2(object, cluster = cluster))
+        hessian <- object$sCorrect$hessian
+    }
+
+    ## 3-order: derivative of the variance covariance
+    dVcov.param <- object$sCorrect$dVcov.param
+    keep.param <- dimnames(dVcov.param)[[3]]
+    
+    ## ** Prepare for the robust case 
+    if(robust){
+
+        ## update the score/hessian/derivative at the cluster level
+        if(!is.null(cluster)){
+            scoreSave <- score
+            hessianSave <- hessian
+
+            score <- matrix(NA, nrow = n.cluster, ncol = NCOL(score),
+                            dimnames = list(NULL, colnames(score)))
+            hessian <- array(NA, dim = c(NCOL(score), NCOL(score), n.cluster),
+                             dimnames = list(colnames(score), colnames(score), NULL))            
+            for(iCluster in 1:n.cluster){ ## iCluster <- 1
+                score[iCluster,] <- colSums(scoreSave[ls.indexCluster[[iCluster]],,drop=FALSE])
+                hessian[,,iCluster] <- apply(hessianSave[,,ls.indexCluster[[iCluster]],drop=FALSE],1:2,sum)
+            }
+
+            ## compute derivative
+            name.3deriv <- dimnames(dVcov.param)[[3]]
+            dRvcov.param <- array(NA, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
+            for(iP in 1:n.param){ ## iP <- 1
+                if(name.param[iP] %in% name.3deriv){
+                    term1 <- dVcov.param[,,name.param[iP]] %*% crossprod(score) %*% vcov.param
+                }else{
+                    term1 <- matrix(0, nrow = n.param, ncol = n.param)
+                }
+                term1 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
+                dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
+            }
+        }else{
+            dRvcov.param <- object$sCorrect$dRvcov.param
+        }
+    }
 
     ### ** normalize linear hypotheses
     if(!is.null(par)){
@@ -253,40 +303,56 @@ compare2.lvmfit2 <- function(object, ...){
                                                      c("estimate","std","statistic","df","p-value"))
                                      ))
 
-### ** Compute degrees of freedom
+    ## ** Compute statistics
+    C.p <- (contrast %*% param) - null
+    if(robust){
+        C.vcov.C <- contrast %*% rvcov.param %*% t(contrast)
+    }else{
+        C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
+    }
+    sd.C.p <- sqrt(diag(C.vcov.C))
+    stat.Wald <- C.p/sd.C.p
 
+    ## store
+    df.table$estimate <- as.numeric(C.p)
+    df.table$std <- as.numeric(sd.C.p)
+    df.table$statistic <- as.numeric(stat.Wald)
+
+    ## ** Compute degrees of freedom
     if(is.null(dVcov.param)){
         df.Wald <- rep(Inf, n.hypo)
         df.F <- Inf
     }else{
-        vcov.tempo <- vcov2(object)
-        attr(vcov.tempo, "warning") <- NULL
         ## univariate
-        if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
-            df.Wald  <- dfSigmaRobust(contrast = contrast,
-                                      vcov = vcov.tempo,
-                                      score = score)
+        if(robust){
+            df.Wald  <- dfSigma(contrast = contrast,
+                                vcov = rvcov.param,
+                                dVcov = dRvcov.param,
+                                keep.param = name.param)
+            ## dfSigmaRobust(contrast = contrast, vcov = rvcov.param, score = score)
+            
         }else{
             df.Wald  <- dfSigma(contrast = contrast,
-                                vcov = vcov.tempo,
+                                vcov = vcov.param,
                                 dVcov = dVcov.param,
                                 keep.param = keep.param)
         }
 
         ## multivariate
-        svd.tempo <- eigen(solve(contrast %*% vcov.tempo %*% t(contrast)))
+        svd.tempo <- eigen(solve(C.vcov.C))
         D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
         P.svd <- svd.tempo$vectors
      
         C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
         ## Fstat - crossprod(C.anova %*% p)/n.hypo
-        if(robust && df > 1){ ## hidden option: df for robust standard error computed by (Pan, 2002)
-            nu_m  <- dfSigmaRobust(contrast = C.anova,
-                                   vcov = vcov.tempo,
-                                   score = score)
+        if(robust){
+            nu_m <- dfSigma(contrast = C.anova,
+                            vcov = rvcov.param,
+                            dVcov = dRvcov.param,
+                            keep.param = keep.param) ## degree of freedom of the independent t statistics
         }else{
             nu_m <- dfSigma(contrast = C.anova,
-                            vcov = vcov.tempo,
+                            vcov = vcov.param,
                             dVcov = dVcov.param,
                             keep.param = keep.param) ## degree of freedom of the independent t statistics
         }    
@@ -295,21 +361,11 @@ compare2.lvmfit2 <- function(object, ...){
 
     }
 
-### ** Wald test
-    ## statistic
-    C.p <- (contrast %*% param) - null
-    C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
-    sd.C.p <- sqrt(diag(C.vcov.C))
-    stat.Wald <- C.p/sd.C.p
-    
     ## store
-    df.table$estimate <- as.numeric(C.p)
-    df.table$std <- as.numeric(sd.C.p)
-    df.table$statistic <- as.numeric(stat.Wald)
     df.table$df <- as.numeric(df.Wald)
     df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
     
-### ** multivariate F test
+    ## ** F-test
     df.table <- rbind(df.table, global = rep(NA,5))
     error <- NULL
      
@@ -382,7 +438,7 @@ compare2.lvmfit2 <- function(object, ...){
 ##' 
 dfSigma <- function(contrast, vcov, dVcov, keep.param){
     C.vcov.C <- rowSums(contrast %*% vcov * contrast) ## variance matrix of the linear combination
-    
+
     C.dVcov.C <- sapply(keep.param, function(x){
         rowSums(contrast %*% dVcov[,,x] * contrast)
     })
@@ -435,14 +491,14 @@ dfSigmaRobust <- function(contrast, vcov, score){
 
     ## ** compute moments of Vs = (Vm x Vm) P
     E_Vs <- n *(vcov.S %x% vcov.S) %*% Q
-    Sigma_Vs <- n * (vcov.S %x% vcov.S) %*% T %*% (vcov.S %x% vcov.S) ## missing n factor compared to (Pan, 2002) so it cancels out with the previous missing factor
+    Sigma_Vs <- n * (vcov.S %x% vcov.S) %*% T %*% (vcov.S %x% vcov.S) ## missing n factor compared to formula 3 in (Pan, 2002) so it cancels out with the previous missing factor
 
     ## ** compute parameters of the chi-square distribution
     sigma <- as.double(E_Vs)
     tau <- diag(Sigma_Vs)
 
     df <- matrix((2*sigma^2)/tau, nrow = p, ncol = p)
-    return(diag(df))
+    return(setNames(diag(df), rownames(contrast)))
 }
 
 

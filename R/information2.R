@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: dec 11 2018 (15:51) 
+## Last-Updated: feb  8 2019 (14:55) 
 ##           By: Brice Ozenne
-##     Update #: 182
+##     Update #: 239
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -112,8 +112,7 @@ information2.lvmfit2 <- information2.lm2
                           index.Omega, leverage, n.cluster,
                           grid.meanparam, n.grid.meanparam,
                           grid.varparam, n.grid.varparam,
-                          name.param, name.meanparam, name.varparam,
-                          param2index, n.param){
+                          name.param, n.param){
 
 ### ** Prepare
     test.global <- is.null(index.Omega)
@@ -158,7 +157,7 @@ information2.lvmfit2 <- information2.lm2
         }
     }
 
-### ** Individual specific
+### ** Individual specific (missing data)
     if(!test.global){
         ## *** Information relative to the mean parameters
         for(iC in 1:n.cluster){ # iC <- 1
@@ -168,7 +167,7 @@ information2.lvmfit2 <- information2.lm2
                 iP1 <- grid.meanparam[iG,1]
                 iP2 <- grid.meanparam[iG,2]
 
-                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iP1]][iC,iIndex] %*% OmegaM1[[iC]] * dmu[[iP2]][iC,iIndex])            
+                Info[iP1,iP2] <- Info[iP1,iP2] + sum(dmu[[iP1]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] * dmu[[iP2]][iC,iIndex,drop=FALSE])            
             }
 
             ## *** Information relative to the variance parameters
@@ -181,11 +180,189 @@ information2.lvmfit2 <- information2.lm2
         }        
     }
 
-### ** Make Info a symmetric matrix
+    ## ** Make Info a symmetric matrix
     Info <- symmetrize(Info, update.upper = NULL)
         
-### ** export
+    ## ** export
     return(Info)
+}
+
+## * .hessian2
+#' @title Compute the Hessian Matrix From the Conditional Moments
+#' @description Compute the Hessian matrix from the conditional moments.
+#' @name information2-internal
+#' 
+#' @details \code{.hessian} will perform the computation individually when the
+#' argument \code{index.Omega} is not null.
+#' 
+#' @keywords internal
+.hessian2 <- function(dmu, d2mu, dOmega, d2Omega, 
+                      Omega, n.corrected,
+                      index.Omega, leverage, n.cluster,
+                      grid.meanparam, n.grid.meanparam,
+                      grid.varparam, n.grid.varparam,
+                      name.param, n.param, residuals){
+
+    ## ** Prepare
+    test.global <- is.null(index.Omega)
+    if(!test.global){
+        OmegaM1 <- lapply(1:n.cluster, function(iC){
+            return(chol2inv(chol(Omega[index.Omega[[iC]],index.Omega[[iC]]])))
+        })
+    }else{
+        OmegaM1 <- chol2inv(chol(Omega))
+    }
+    
+    hessian <- array(0, dim = c(n.param, n.param, n.cluster),
+                     dimnames = list(name.param,name.param,NULL))
+    if(length(dmu)>0){
+        index.meanparam <- 1:n.grid.meanparam
+    }else{
+        index.meanparam <- NULL
+    }
+    if(length(dOmega)>0){
+        index.varparam <- 1:n.grid.varparam
+    }else{
+        index.varparam <- NULL
+    }
+
+    if((n.grid.meanparam>0) && (n.grid.varparam>0)){
+        name.meanparam <- unique(unlist(grid.meanparam[,c("Var1","Var2")]))
+        name.varparam <- unique(unlist(grid.varparam[,c("Var1","Var2")]))
+        
+        grid.hybridparam <- .combination(name.meanparam,name.varparam)
+        n.hybridparam <- NROW(grid.hybridparam)
+        index.hybridparam <- 1:n.hybridparam
+    }else{
+        grid.hybridparam <- NULL
+        n.hybridparam <- 0
+        index.hybridparam <- NULL
+    }
+
+    ## ** Global    
+    if(test.global){
+        ## *** second derivative relative to the mean parameters
+        for(iG in index.meanparam){ # iG <- 1
+            iP1 <- grid.meanparam[iG,1]
+            iP2 <- grid.meanparam[iG,2]
+
+            if(grid.meanparam[iG,"deriv12"]){
+                term1 <- rowSums((d2mu[[iP1]][[iP2]] %*% OmegaM1) * residuals)
+            }else if(grid.meanparam[iG,"deriv21"]){
+                term1 <- rowSums((d2mu[[iP2]][[iP1]] %*% OmegaM1) * residuals)
+            }else{
+                term1 <- 0
+            }
+            term2 <- -rowSums((dmu[[iP1]] %*% OmegaM1) * dmu[[iP2]])
+            hessian[iP1,iP2,] <- term1 + term2
+            hessian[iP2,iP1,] <- hessian[iP1,iP2,]
+        }
+
+        ## *** second derivative relative to the variance parameters
+        for(iG in index.varparam){ # iG <- 1
+            iP1 <- grid.varparam[iG,1]
+            iP2 <- grid.varparam[iG,2]
+
+            term1a <- - diag(OmegaM1 %*% dOmega[[iP1]] %*% OmegaM1 %*% dOmega[[iP2]])
+            term2 <- - rowSums((residuals %*% OmegaM1 %*% dOmega[[iP2]] %*% OmegaM1 %*% dOmega[[iP1]] %*% OmegaM1) * residuals)
+            if(grid.varparam[iG,"deriv12"]){
+                term1b <- diag(OmegaM1 %*% d2Omega[[iP1]][[iP2]])
+                term3 <- 1/2 * rowSums((residuals %*% OmegaM1 %*% d2Omega[[iP1]][[iP2]] %*% OmegaM1) * residuals)
+            }else if(grid.varparam[iG,"deriv21"]){
+                term1b <- diag(OmegaM1 %*% d2Omega[[iP2]][[iP1]])
+                term3 <- 1/2 * rowSums((residuals %*% OmegaM1 %*% d2Omega[[iP2]][[iP1]] %*% OmegaM1) * residuals)
+            }else{
+                term1b <- 0
+                term3 <- 0
+            }
+            hessian[iP1,iP2,] <- - 1/2 * rowSums( sweep(1-leverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+            hessian[iP2,iP1,] <- hessian[iP1,iP2,]
+        }
+
+        ## *** second derivative relative to the mean and variance parameters
+        for(iG in index.hybridparam){ # iG <- 1
+            iP1 <- grid.hybridparam[iG,1]
+            iP2 <- grid.hybridparam[iG,2]
+
+            term1 <- - rowSums((dmu[[iP1]] %*% OmegaM1 %*% dOmega[[iP2]] %*% OmegaM1) * residuals)
+            if(!is.null(dmu[[iP2]]) && !is.null(dOmega[[iP1]])){
+                term2 <- - rowSums((dmu[[iP2]] %*% OmegaM1 %*% dOmega[[iP1]] %*% OmegaM1) * residuals)
+            }else{
+                term2 <- 0
+            }
+            
+            hessian[iP1,iP2,] <- term1 + term2
+            hessian[iP2,iP1,] <- hessian[iP1,iP2,]
+        }
+    }
+
+    ## ** Individual specific (missing data)
+    if(!test.global){
+        ## *** Information relative to the mean parameters
+        for(iC in 1:n.cluster){ # iC <- 1
+            iIndex <- index.Omega[[iC]]
+            browser()
+            
+            ## *** second derivative relative to the mean parameters
+            for(iG in index.meanparam){ # iG <- 1
+                iP1 <- grid.meanparam[iG,1]
+                iP2 <- grid.meanparam[iG,2]
+
+            
+                if(grid.meanparam[iG,"deriv12"]){
+                    term1 <- rowSums((d2mu[[iP1]][[iP2]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                }else if(grid.meanparam[iG,"deriv21"]){
+                    term1 <- rowSums((d2mu[[iP2]][[iP1]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                }else{
+                    term1 <- 0
+                }
+                term2 <- -((dmu[[iP1]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * dmu[[iP2]][iC,iIndex,drop=FALSE])
+                hessian[iP1,iP2,iC] <- term1 + term2
+                hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
+            }
+
+            ## *** second derivative relative to the variance parameters
+            for(iG in index.varparam){ # iG <- 1
+                iP1 <- grid.varparam[iG,1]
+                iP2 <- grid.varparam[iG,2]
+
+                term1a <- - diag(OmegaM1[[iC]] %*% dOmega[[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP2]][iIndex,iIndex,drop=FALSE])
+                term2 <- - rowSums((residuals[iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP2]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                if(grid.varparam[iG,"deriv12"]){
+                    term1b <- diag(OmegaM1[[iC]] %*% d2Omega[[iP1]][[iP2]][iIndex,iIndex,drop=FALSE])
+                    term3 <- 1/2 * rowSums((residuals[iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% d2Omega[[iP1]][[iP2]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                }else if(grid.varparam[iG,"deriv21"]){
+                    term1b <- diag(OmegaM1[[iC]] %*% d2Omega[[iP2]][[iP1]][iIndex,iIndex,drop=FALSE])
+                    term3 <- 1/2 * rowSums((residuals[iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% d2Omega[[iP2]][[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                }else{
+                    term1b <- 0
+                    term3 <- 0
+                }
+                hessian[iP1,iP2,iC] <- - 1/2 * rowSums( sweep(1-leverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+                hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
+            }
+
+            ## *** second derivative relative to the mean and variance parameters
+            for(iG in index.hybridparam){ # iG <- 1
+                iP1 <- grid.hybridparam[iG,1]
+                iP2 <- grid.hybridparam[iG,2]
+
+                term1 <- - rowSums((dmu[[iP1]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP2]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                if(!is.null(dmu[[iP2]]) && !is.null(dOmega[[iP1]])){
+                    term2 <- - rowSums((dmu[[iP2]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]] %*% dOmega[[iP1]][iIndex,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * residuals[iC,iIndex,drop=FALSE])
+                }else{
+                    term2 <- 0
+                }
+                
+                hessian[iP1,iP2,iC] <- term1 + term2
+                hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
+            }
+        }        
+    }
+
+
+    ## ** export
+    return(hessian)
 }
 
 ## * .dInformation2

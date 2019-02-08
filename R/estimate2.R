@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb  4 2019 (09:38) 
+## Last-Updated: feb  7 2019 (14:16) 
 ##           By: Brice Ozenne
-##     Update #: 852
+##     Update #: 858
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -57,8 +57,6 @@
     }
     ##
     
-    param2index <- setNames(1:n.param, name.param)
-
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL, name.endogenous))
     ls.dmu <- vector(mode = "list", length = n.cluster)
@@ -107,9 +105,7 @@
                            grid.varparam = grid.varparam,
                            n.grid.varparam = n.grid.varparam,
                            name.param = name.param,
-                           name.meanparam = name.meanparam,
-                           name.varparam = name.varparam,
-                           param2index = param2index, n.param = n.param)
+                           n.param = n.param)
     iVcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
     if(inherits(iVcov.param, "try-error")){
         iVcov.param <- solve(iInfo)
@@ -212,9 +208,7 @@
                                grid.varparam = grid.varparam,
                                n.grid.varparam = n.grid.varparam,
                                name.param = name.param,
-                               name.meanparam = name.meanparam,
-                               name.varparam = name.varparam,
-                               param2index = param2index, n.param = n.param)
+                               n.param = n.param)
         iVcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
         if(inherits(iVcov.param, "try-error")){
             iVcov.param <- solve(iInfo)
@@ -262,7 +256,7 @@
                          residuals = epsilon.adj,
                          leverage = leverage,
                          n.corrected = rep(n.cluster, n.endogenous) - colSums(leverage, na.rm = TRUE),
-                         opt = list(objective = iTol, iterations = iIter, convergence = (iTol <= tol)))
+                         opt = list(objective = iTol, iterations = iIter, convergence = (iTol <= tol), grid.meanparam = grid.meanparam, grid.varparam = grid.varparam))
 
     ## ** Export
     return(object)
