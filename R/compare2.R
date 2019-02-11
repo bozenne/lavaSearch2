@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 11 2019 (17:05) 
+## Last-Updated: feb 11 2019 (17:35) 
 ##           By: Brice Ozenne
-##     Update #: 543
+##     Update #: 549
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -321,7 +321,7 @@ compare2.lvmfit2 <- function(object, ...){
                                                      c("estimate","std","statistic","df","p-value"))
                                      ))
 
-    ## ** Compute statistics
+    ## ** Univariate Wald test
     C.p <- (contrast %*% param) - null
     if(robust){
         C.vcov.C <- contrast %*% rvcov.param %*% t(contrast)
@@ -336,7 +336,7 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$std <- as.numeric(sd.C.p)
     df.table$statistic <- as.numeric(stat.Wald)
 
-    ## ** Compute degrees of freedom
+    ##  degrees of freedom
     if(is.null(dVcov.param)){
         df.Wald <- rep(Inf, n.hypo)
         df.F <- Inf
@@ -358,60 +358,61 @@ compare2.lvmfit2 <- function(object, ...){
                                      rvcov = rvcov.param,
                                      score = score)
         }
-
-        ## multivariate
-        svd.tempo <- eigen(solve(C.vcov.C))
-        D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
-        P.svd <- svd.tempo$vectors
-     
-        C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
-        ## Fstat - crossprod(C.anova %*% p)/n.hypo
-        if(robust == FALSE){
-            nu_m <- dfSigma(contrast = C.anova,
-                            vcov = vcov.param,
-                            dVcov = dVcov.param,
-                            keep.param = keep.param) ## degree of freedom of the independent t statistics
-        } else if(robust == TRUE){
-            nu_m <- dfSigma(contrast = C.anova,
-                            vcov = rvcov.param,
-                            dVcov = dRvcov.param,
-                            keep.param = keep.param) ## degree of freedom of the independent t statistics
-        } else if(robust == 2){
-            nu_m <- dfSigmaRobust(contrast = C.anova,
-                                  vcov = vcov.param,
-                                  rvcov = rvcov.param,
-                                  score = score)
-        }
-        
-        EQ <- sum(nu_m/(nu_m-2))
-        df.F <- 2*EQ / (EQ - n.hypo)
-
     }
 
     ## store
     df.table$df <- as.numeric(df.Wald)
     df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
     
-    ## ** F-test
+    ## ** Multivariate Wald test
     df.table <- rbind(df.table, global = rep(NA,5))
     error <- NULL
      
     if(F.test){
         ## statistic
-        stat.F <- try(t(C.p) %*% solve(C.vcov.C)%*% (C.p) / n.hypo, silent = TRUE)
+        iC.vcov.C <- try(solve(C.vcov.C), silent = TRUE)
+        
+        if(!inherits(iC.vcov.C,"try-error")){
+            stat.F <- t(C.p) %*% iC.vcov.C %*% (C.p) / n.hypo
+
+            ## df (independent t statistics)
+            svd.tempo <- eigen(iC.vcov.C)
+            D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
+            P.svd <- svd.tempo$vectors
      
-        ## store
-        if(!inherits(stat.F,"try-error")){
+            C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
+
+            if(robust == FALSE){
+                nu_m <- dfSigma(contrast = C.anova,
+                                vcov = vcov.param,
+                                dVcov = dVcov.param,
+                                keep.param = keep.param)
+            } else if(robust == TRUE){
+                nu_m <- dfSigma(contrast = C.anova,
+                                vcov = rvcov.param,
+                                dVcov = dRvcov.param,
+                                keep.param = keep.param)
+            } else if(robust == 2){
+                nu_m <- dfSigmaRobust(contrast = C.anova,
+                                      vcov = vcov.param,
+                                      rvcov = rvcov.param,
+                                      score = score)
+            }
+        
+            EQ <- sum(nu_m/(nu_m-2))
+            df.F <- 2*EQ / (EQ - n.hypo)
+
+            ## store
             df.table["global", "statistic"] <- as.numeric(stat.F)
             df.table["global", "df"] <- df.F
             df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
                                                            df1 = n.hypo,
                                                            df2 = df.table["global", "df"])
         }else{
-            error <- df.table
+            error <- iC.vcov.C
         }
     }
-    
+
     ## ** export
     if(as.lava == TRUE){
         level.inf <- (1-level)/2
