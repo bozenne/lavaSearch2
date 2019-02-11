@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  8 2019 (17:08) 
+## Last-Updated: feb 11 2019 (14:24) 
 ##           By: Brice Ozenne
-##     Update #: 1499
+##     Update #: 1519
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -684,15 +684,18 @@ sCorrect.lvmfit2 <- function(object, ...){
             return(as.double(vcov.param))
             ## return(solve(vcov.param))
         }
+
         calcRvcov <- function(iParam){
             pp <- param
             pp[names(iParam)] <- iParam
             iObject <- do.call(sCorrect,
-                              args = c(list(object, param = pp), args.tempo))
+                               args = c(list(object, param = pp), args.tempo))
             rvcov.param <- crossprod(iObject$score %*% iObject$vcov.param)
             ## rvcov.param <- crossprod(iObject$score %*% object$dVcov$vcov.param)
+            ## rvcov.param <- crossprod(iObject$score)
             return(as.double(rvcov.param))
         }
+
         calcScore <- function(iParam){
             pp <- param
             pp[names(iParam)] <- iParam
@@ -700,9 +703,6 @@ sCorrect.lvmfit2 <- function(object, ...){
                              args = c(list(object, param = pp), args.tempo))$score
             return(as.double(score))
         }
-        ## calcVcov(param) - calcVcov(param+1)
-        ## calcRvcov(param)
-        ## calcScore(param) - calcScore(param+1)
 
         ## *** numerical derivative
         jac.param <- param[name.3deriv]
@@ -711,19 +711,19 @@ sCorrect.lvmfit2 <- function(object, ...){
                                           dim = c(n.param,n.param,length(name.3deriv)),
                                           dimnames = list(name.param, name.param, name.3deriv))
 
-        jac.param <- param
-        res.numDeriv <- numDeriv::jacobian(calcRvcov, x = jac.param, method = "Richardson")
-        object$dVcov$dRvcov.param <- array(res.numDeriv,
-                                           dim = c(n.param,n.param,n.param),
-                                           dimnames = list(name.param, name.param, name.param))
+        ## jac.param <- param
+        ## res.numDeriv <- numDeriv::jacobian(calcRvcov, x = jac.param, method = "Richardson")
+        ## object$dVcov$dRvcov.param <- array(res.numDeriv, 
+                                           ## dim = c(n.param,n.param,n.param),
+                                           ## dimnames = list(name.param, name.param, name.param))
 
-        jac.param <- param
-        res.numDeriv <- numDeriv::jacobian(calcScore, x = jac.param, method = "Richardson")
-        object$dVcov$hessian <- aperm(array(res.numDeriv,
-                                            dim = c(n.cluster,n.param,n.param),
-                                            dimnames = list(NULL, name.param, name.param)),
-                                      perm = 3:1)
-
+        ## jac.param <- param
+        ## res.numDeriv <- numDeriv::jacobian(calcScore, x = jac.param, method = "Richardson")
+        ## object$dVcov$hessian <- aperm(array(res.numDeriv,
+        ##                                     dim = c(n.cluster,n.param,n.param),
+        ##                                     dimnames = list(NULL, name.param, name.param)),
+        ##                               perm = 3:1)
+        
         if(trace>0){
             cat("- done \n")
         }
@@ -788,21 +788,18 @@ sCorrect.lvmfit2 <- function(object, ...){
         }
         object$dVcov$dRvcov.param <- array(NA, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
         for(iP in 1:n.param){ ## iP <- 1
-            if(name.param[iP] %in% name.3deriv){
-                term1 <- object$dVcov$dVcov.param[,,name.param[iP]] %*% crossprod(object$dVcov$score) %*% object$dVcov$vcov.param
-            }else{
-                term1 <- matrix(0, nrow = n.param, ncol = n.param)
-            }
+            ## if(name.param[iP] %in% name.3deriv){
+            ##     term1 <- object$dVcov$dVcov.param[,,name.param[iP]] %*% crossprod(object$dVcov$score) %*% object$dVcov$vcov.param
+            ## }else{
+            ##     term1 <- matrix(0, nrow = n.param, ncol = n.param)
+            ## }
+            ## term2 <- object$dVcov$vcov.param %*% object$dVcov$hessian[iP,,] %*% object$dVcov$score %*% object$dVcov$vcov.param
+            ## object$dVcov$dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
+
             term2 <- object$dVcov$vcov.param %*% object$dVcov$hessian[iP,,] %*% object$dVcov$score %*% object$dVcov$vcov.param
-            object$dVcov$dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
-
-            ## term2 <- matrixPower(object$dVcov$vcov.param, power =  2, symmetric = TRUE) %*% object$dVcov$hessian[iP,,] %*% object$dVcov$score %*% matrixPower(object$dVcov$vcov.param, power = 2, symmetric = TRUE)
-            ## term2 <- object$dVcov$hessian[iP,,] %*% object$dVcov$score
-            ## object$dVcov$dRvcov.param[,,iP] <- term2 + t(term2)
-
-            
+            Reduce("+",lapply(1:NROW(object$dVcov$score), function(iObs){object$dVcov$hessian[iP,,iObs] %*% t(object$dVcov$score[iObs,])}))
+            object$dVcov$dRvcov.param[,,iP] <- term2 + t(term2)
         }
-
 
         if(trace>0){
             cat("- done \n")

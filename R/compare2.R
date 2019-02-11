@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  8 2019 (17:07) 
+## Last-Updated: feb 11 2019 (13:09) 
 ##           By: Brice Ozenne
-##     Update #: 463
+##     Update #: 522
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,7 +59,8 @@
 #' 
 #' @return If \code{as.lava=TRUE} an object of class \code{htest}.
 #' Otherwise a \code{data.frame} object.
-#' 
+
+## * example - compare2
 #' @examples
 #' #### simulate data ####
 #' set.seed(10)
@@ -98,6 +99,7 @@
 #' e.lvm <- estimate(m, df.data)
 #' 
 #' compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
+#' compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"), robust = TRUE)
 #' @concept small sample inference
 #' @export
 `compare2` <-
@@ -169,10 +171,24 @@ compare2.lvmfit2 <- function(object, ...){
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
-
     if(robust){
         if(!is.null(cluster)){
-            if(stats::nobs(object)!=length(cluster)){
+            
+            if(length(cluster)==1){
+                ## reconstruct cluster variable
+                if(inherits(object,"lvmfit")){
+                    data <- object$data$model.frame
+                }else{
+                    data <- extractData(object)
+                }
+                
+                if(cluster %in%  names(data) == FALSE){
+                    stop("Could not find variable ",cluster," (argument \'cluster\') in argument \'data\' \n")
+                }else{
+                    cluster <- data[[cluster]]
+                }            
+                
+            }else if(stats::nobs(object)!=length(cluster)){
                 stop("length of argument \'cluster\' does not match number of rows of the score matrix \n")
             }
             ls.indexCluster <- tapply(1:length(cluster),cluster,list)
@@ -235,7 +251,7 @@ compare2.lvmfit2 <- function(object, ...){
                 }else{
                     term1 <- matrix(0, nrow = n.param, ncol = n.param)
                 }
-                term1 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
+                term2 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
                 dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
             }
         }else{
@@ -324,18 +340,21 @@ compare2.lvmfit2 <- function(object, ...){
         df.F <- Inf
     }else{
         ## univariate
-        if(robust){
-            df.Wald  <- dfSigma(contrast = contrast,
-                                vcov = rvcov.param,
-                                dVcov = dRvcov.param,
-                                keep.param = name.param)
-            ## dfSigmaRobust(contrast = contrast, vcov = rvcov.param, score = score)
-            
-        }else{
+        if(robust == FALSE){
             df.Wald  <- dfSigma(contrast = contrast,
                                 vcov = vcov.param,
                                 dVcov = dVcov.param,
                                 keep.param = keep.param)
+        }else if(robust == TRUE){
+            df.Wald  <- dfSigma(contrast = contrast,
+                                vcov = rvcov.param,
+                                dVcov = dRvcov.param,
+                                keep.param = name.param)
+        }else if(robust == 2){
+            df.Wald <- dfSigmaRobust(contrast = contrast,
+                                     vcov = vcov.param,
+                                     rvcov = rvcov.param,
+                                     score = score)
         }
 
         ## multivariate
@@ -345,17 +364,23 @@ compare2.lvmfit2 <- function(object, ...){
      
         C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
         ## Fstat - crossprod(C.anova %*% p)/n.hypo
-        if(robust){
-            nu_m <- dfSigma(contrast = C.anova,
-                            vcov = rvcov.param,
-                            dVcov = dRvcov.param,
-                            keep.param = keep.param) ## degree of freedom of the independent t statistics
-        }else{
+        if(robust == FALSE){
             nu_m <- dfSigma(contrast = C.anova,
                             vcov = vcov.param,
                             dVcov = dVcov.param,
                             keep.param = keep.param) ## degree of freedom of the independent t statistics
-        }    
+        } else if(robust == TRUE){
+            nu_m <- dfSigma(contrast = C.anova,
+                            vcov = rvcov.param,
+                            dVcov = dRvcov.param,
+                            keep.param = keep.param) ## degree of freedom of the independent t statistics
+        } else if(robust == 2){
+            nu_m <- dfSigmaRobust(contrast = C.anova,
+                                  vcov = vcov.param,
+                                  rvcov = rvcov.param,
+                                  score = score)
+        }
+        
         EQ <- sum(nu_m/(nu_m-2))
         df.F <- 2*EQ / (EQ - n.hypo)
 
@@ -455,6 +480,7 @@ dfSigma <- function(contrast, vcov, dVcov, keep.param){
 ##'
 ##' @param contrast [numeric vector] the linear combination of parameters to test
 ##' @param vcov [numeric matrix] the variance-covariance matrix of the parameters.
+##' @param rvcov [numeric matrix] the robust variance-covariance matrix of the parameters.
 ##' @param score [numeric matrix] the individual score for each parameter.
 ##'
 ##' @details When contrast is the identity matrix, this function compute the moments of the sandwich estimator
@@ -463,42 +489,34 @@ dfSigma <- function(contrast, vcov, dVcov, keep.param){
 ##' @references
 ##' Wei Pan and Melanie M. Wall, Small-sample adjustments in using the sandwich variance estiamtor in generalized estimating equations. Statistics in medicine (2002) 21:1429-1441.
 ##' 
-dfSigmaRobust <- function(contrast, vcov, score){
+dfSigmaRobust <- function(contrast, vcov, rvcov, score){
     
     ## ** prepare
     n <- NROW(score)
-    p <- NCOL(contrast)
-        
+
     ## apply contrasts
-    score.S <- score %*% contrast
-    vcov.S <- vcov %*% contrast
+    vcov.S <- vcov %*% t(contrast)
+
+    ## ** compute moments of rvcov
+    ## fast
+    E.score2 <- crossprod(score)
+    iid.score2 <- lapply(1:n, function(iRow){
+        (tcrossprod(score[iRow,]) - E.score2/n)^2
+    })
+
+    var.rvcov <- t(vcov.S^2) %*% Reduce("+",iid.score2) %*% vcov.S^2
+
+    ## slow    
+    E.rvcov <- contrast %*% rvcov %*% t(contrast)
+    ## iid.rvcov <- lapply(1:n, function(iRow){
+    ##     (t(vcov.S) %*% tcrossprod(score[iRow,]) %*% vcov.S - E.rvcov/n)^2
+    ## })
+    ## var.rvcov <- Reduce("+",iid.rvcov)
+
+    ## ** export
+    df.rvcov <- (2*E.rvcov^2)/var.rvcov
     
-    M.vecPi <- t(apply(score.S, 1, function(iRow){
-        as.vector(tcrossprod(iRow))
-    }))
-    ## dim(M.vecPi) ## (n,p)
-
-    #### ** check
-    ## vcov %*% t(score) %*% score %*% vcov
-    ## (vcov %x% vcov) %*% colSums(M.vecPi)
-
-    ## ** compute moments of P
-    Q <- colMeans(M.vecPi)
-    T <- stats::var(M.vecPi) ## missing 1/n factor compared to (Pan, 2002)
-    
-    ## vec.Pcenter <- sweep(vec.P, FUN = "-", MARGIN = 2, STATS = Q)
-    ## crossprod(vec.Pcenter)/(99)
-
-    ## ** compute moments of Vs = (Vm x Vm) P
-    E_Vs <- n *(vcov.S %x% vcov.S) %*% Q
-    Sigma_Vs <- n * (vcov.S %x% vcov.S) %*% T %*% (vcov.S %x% vcov.S) ## missing n factor compared to formula 3 in (Pan, 2002) so it cancels out with the previous missing factor
-
-    ## ** compute parameters of the chi-square distribution
-    sigma <- as.double(E_Vs)
-    tau <- diag(Sigma_Vs)
-
-    df <- matrix((2*sigma^2)/tau, nrow = p, ncol = p)
-    return(setNames(diag(df), rownames(contrast)))
+    return(setNames(diag(df.rvcov), rownames(contrast)))
 }
 
 

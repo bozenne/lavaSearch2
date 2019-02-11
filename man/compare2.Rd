@@ -129,6 +129,7 @@ m <- lvm(Y~X1+X2)
 e.lvm <- estimate(m, df.data)
 
 compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
+compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"), robust = TRUE)
 }
 \seealso{
 \code{\link{createContrast}} to create contrast matrices. \cr

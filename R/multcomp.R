@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: dec 11 2018 (15:50) 
+## Last-Updated: feb 11 2019 (09:30) 
 ##           By: Brice Ozenne
-##     Update #: 502
+##     Update #: 503
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -187,7 +187,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
 
 ### ** pre-compute quantities for the small sample correction
     if(!inherits(model,"lvmfit2")){
-        sCorrect(model, df = df, score = robust) <- bias.correct
+        sCorrect(model, df = df) <- bias.correct
     }
 
 ### ** Wald test with small sample correction
@@ -297,7 +297,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
 
 ### *** Pre-compute quantities
         if(!inherits(model[[iM]],"lm2") && !inherits(model[[iM]],"gls2") && !inherits(model[[iM]],"lme2") && !inherits(model[[iM]],"lvmfit2")){
-            sCorrect(model[[iM]], df = df, score = TRUE) <- bias.correct
+            sCorrect(model[[iM]], df = df) <- bias.correct
         }
         out$param <- model[[iM]]$sCorrect$param
         name.param <- names(out$param)
