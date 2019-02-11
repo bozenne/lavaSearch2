@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: feb 11 2019 (15:57) 
+## Last-Updated: feb 11 2019 (16:50) 
 ##           By: Brice Ozenne
-##     Update #: 260
+##     Update #: 275
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -229,7 +229,7 @@ information2.lvmfit2 <- information2.lm2
     if((n.grid.meanparam>0) && (n.grid.varparam>0)){
         name.meanparam <- unique(unlist(grid.meanparam[,c("Var1","Var2")]))
         name.varparam <- unique(unlist(grid.varparam[,c("Var1","Var2")]))
-        
+
         grid.hybridparam <- .combination(name.meanparam,name.varparam)
         n.hybridparam <- NROW(grid.hybridparam)
         index.hybridparam <- 1:n.hybridparam
@@ -254,7 +254,7 @@ information2.lvmfit2 <- information2.lm2
                 term1 <- 0
             }
             term2 <- -rowSums((dmu[[iP1]] %*% OmegaM1) * dmu[[iP2]])
-            hessian[iP1,iP2,] <- term1 + term2
+            hessian[iP1,iP2,] <- hessian[iP1,iP2,] + term1 + term2
             hessian[iP2,iP1,] <- hessian[iP1,iP2,]
         }
 
@@ -275,10 +275,9 @@ information2.lvmfit2 <- information2.lm2
                 term1b <- 0
                 term3 <- 0
             }
-            hessian[iP1,iP2,] <- - 1/2 * rowSums( sweep(1-leverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+            hessian[iP1,iP2,] <- hessian[iP1,iP2,] - 1/2 * rowSums( sweep(1-leverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
             hessian[iP2,iP1,] <- hessian[iP1,iP2,]
         }
-
         ## *** second derivative relative to the mean and variance parameters
         for(iG in index.hybridparam){ # iG <- 1
             iP1 <- grid.hybridparam[iG,1]
@@ -291,7 +290,7 @@ information2.lvmfit2 <- information2.lm2
                 term2 <- 0
             }
             
-            hessian[iP1,iP2,] <- term1 + term2
+            hessian[iP1,iP2,] <- hessian[iP1,iP2,] + term1 + term2
             hessian[iP2,iP1,] <- hessian[iP1,iP2,]
         }
     }
@@ -316,7 +315,7 @@ information2.lvmfit2 <- information2.lm2
                     term1 <- 0
                 }
                 term2 <- -sum((dmu[[iP1]][iC,iIndex,drop=FALSE] %*% OmegaM1[[iC]]) * dmu[[iP2]][iC,iIndex,drop=FALSE])
-                hessian[iP1,iP2,iC] <- term1 + term2
+                hessian[iP1,iP2,iC] <- hessian[iP1,iP2,iC] + term1 + term2
                 hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
             }
 
@@ -337,7 +336,7 @@ information2.lvmfit2 <- information2.lm2
                     term1b <- 0
                     term3 <- 0
                 }
-                hessian[iP1,iP2,iC] <- - 1/2 * sum( (1-leverage[iC,iIndex,drop=FALSE]) * (term1a + term1b) ) + term2 + term3
+                hessian[iP1,iP2,iC] <- hessian[iP1,iP2,iC] - 1/2 * sum( (1-leverage[iC,iIndex,drop=FALSE]) * (term1a + term1b) ) + term2 + term3
                 hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
             }
 
@@ -353,7 +352,7 @@ information2.lvmfit2 <- information2.lm2
                     term2 <- 0
                 }
 
-                hessian[iP1,iP2,iC] <- term1 + term2
+                hessian[iP1,iP2,iC] <- hessian[iP1,iP2,iC] + term1 + term2
                 hessian[iP2,iP1,iC] <- hessian[iP1,iP2,iC]
             }
         }        

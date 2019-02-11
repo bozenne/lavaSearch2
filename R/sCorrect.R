@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb 11 2019 (14:24) 
+## Last-Updated: feb 11 2019 (16:55) 
 ##           By: Brice Ozenne
-##     Update #: 1519
+##     Update #: 1526
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -690,8 +690,8 @@ sCorrect.lvmfit2 <- function(object, ...){
             pp[names(iParam)] <- iParam
             iObject <- do.call(sCorrect,
                                args = c(list(object, param = pp), args.tempo))
-            rvcov.param <- crossprod(iObject$score %*% iObject$vcov.param)
-            ## rvcov.param <- crossprod(iObject$score %*% object$dVcov$vcov.param)
+            ## rvcov.param <- crossprod(iObject$score %*% iObject$vcov.param)
+            rvcov.param <- crossprod(iObject$score %*% object$dVcov$vcov.param)
             ## rvcov.param <- crossprod(iObject$score)
             return(as.double(rvcov.param))
         }
@@ -710,13 +710,13 @@ sCorrect.lvmfit2 <- function(object, ...){
         object$dVcov$dVcov.param <- array(res.numDeriv,
                                           dim = c(n.param,n.param,length(name.3deriv)),
                                           dimnames = list(name.param, name.param, name.3deriv))
-
         ## jac.param <- param
         ## res.numDeriv <- numDeriv::jacobian(calcRvcov, x = jac.param, method = "Richardson")
         ## object$dVcov$dRvcov.param <- array(res.numDeriv, 
-                                           ## dim = c(n.param,n.param,n.param),
-                                           ## dimnames = list(name.param, name.param, name.param))
-
+        ##                                    dim = c(n.param,n.param,n.param),
+        ##                                    dimnames = list(name.param, name.param, name.param))
+        ## ## browser()
+        ## ## round(e2$sCorrect$dRvcov.param - object$dVcov$dRvcov.param, 10)
         ## jac.param <- param
         ## res.numDeriv <- numDeriv::jacobian(calcScore, x = jac.param, method = "Richardson")
         ## object$dVcov$hessian <- aperm(array(res.numDeriv,
