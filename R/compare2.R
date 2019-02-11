@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 11 2019 (16:54) 
+## Last-Updated: feb 11 2019 (17:05) 
 ##           By: Brice Ozenne
-##     Update #: 538
+##     Update #: 543
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -229,7 +229,7 @@ compare2.lvmfit2 <- function(object, ...){
     if(robust){
 
         ## update the score/hessian/derivative at the cluster level
-        if(!is.null(cluster)){
+        if(!is.null(cluster)){            
             scoreSave <- score
             hessianSave <- hessian
 
@@ -241,24 +241,26 @@ compare2.lvmfit2 <- function(object, ...){
                 score[iCluster,] <- colSums(scoreSave[ls.indexCluster[[iCluster]],,drop=FALSE])
                 hessian[,,iCluster] <- apply(hessianSave[,,ls.indexCluster[[iCluster]],drop=FALSE],1:2,sum)
             }
-
             ## compute derivative
             name.3deriv <- dimnames(dVcov.param)[[3]]
             dRvcov.param <- array(NA, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
             for(iP in 1:n.param){ ## iP <- 1
-                if(name.param[iP] %in% name.3deriv){
-                    term1 <- dVcov.param[,,name.param[iP]] %*% crossprod(score) %*% vcov.param
-                }else{
-                    term1 <- matrix(0, nrow = n.param, ncol = n.param)
-                }
+                ## if(name.param[iP] %in% name.3deriv){
+                    ## term1 <- dVcov.param[,,name.param[iP]] %*% crossprod(score) %*% vcov.param
+                ## }else{
+                    ## term1 <- matrix(0, nrow = n.param, ncol = n.param)
+                ## }
+                ## term2 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
+                ## dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
+
                 term2 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
-                dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
+                dRvcov.param[,,iP] <- term2 + t(term2)
             }
         }else{
             dRvcov.param <- object$sCorrect$dRvcov.param
         }
     }
-
+    
     ### ** normalize linear hypotheses
     if(!is.null(par)){
         
