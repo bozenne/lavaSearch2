@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 11 2019 (17:35) 
+## Last-Updated: feb 12 2019 (09:44) 
 ##           By: Brice Ozenne
-##     Update #: 549
+##     Update #: 562
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -168,10 +168,13 @@ compare2.lvmfit2 <- function(object, ...){
                       robust = FALSE, cluster = NULL, df = TRUE,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
+    
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
     if(robust){
+        factor.dRvcov <- lava.options()$factor.dRvcov
+
         if(!is.null(cluster)){
             
             if(length(cluster)==1){
@@ -337,10 +340,7 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$statistic <- as.numeric(stat.Wald)
 
     ##  degrees of freedom
-    if(is.null(dVcov.param)){
-        df.Wald <- rep(Inf, n.hypo)
-        df.F <- Inf
-    }else{
+    if(!is.null(dVcov.param) && df){
         ## univariate
         if(robust == FALSE){
             df.Wald  <- dfSigma(contrast = contrast,
@@ -350,7 +350,7 @@ compare2.lvmfit2 <- function(object, ...){
         }else if(robust == TRUE){
             df.Wald  <- dfSigma(contrast = contrast,
                                 vcov = rvcov.param,
-                                dVcov = dRvcov.param,
+                                dVcov = dRvcov.param * factor.dRvcov,
                                 keep.param = name.param)
         }else if(robust == 2){
             df.Wald <- dfSigmaRobust(contrast = contrast,
@@ -358,6 +358,9 @@ compare2.lvmfit2 <- function(object, ...){
                                      rvcov = rvcov.param,
                                      score = score)
         }
+    }else{
+        df.Wald <- rep(Inf, n.hypo)
+        df.F <- Inf
     }
 
     ## store
@@ -376,32 +379,36 @@ compare2.lvmfit2 <- function(object, ...){
             stat.F <- t(C.p) %*% iC.vcov.C %*% (C.p) / n.hypo
 
             ## df (independent t statistics)
-            svd.tempo <- eigen(iC.vcov.C)
-            D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
-            P.svd <- svd.tempo$vectors
+            if(df){
+                svd.tempo <- eigen(iC.vcov.C)
+                D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
+                P.svd <- svd.tempo$vectors
      
-            C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
+                C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
 
-            if(robust == FALSE){
-                nu_m <- dfSigma(contrast = C.anova,
-                                vcov = vcov.param,
-                                dVcov = dVcov.param,
-                                keep.param = keep.param)
-            } else if(robust == TRUE){
-                nu_m <- dfSigma(contrast = C.anova,
-                                vcov = rvcov.param,
-                                dVcov = dRvcov.param,
-                                keep.param = keep.param)
-            } else if(robust == 2){
-                nu_m <- dfSigmaRobust(contrast = C.anova,
-                                      vcov = vcov.param,
-                                      rvcov = rvcov.param,
-                                      score = score)
-            }
+                if(robust == FALSE){
+                    nu_m <- dfSigma(contrast = C.anova,
+                                    vcov = vcov.param,
+                                    dVcov = dVcov.param,
+                                    keep.param = keep.param)
+                } else if(robust == TRUE){
+                    nu_m <- dfSigma(contrast = C.anova,
+                                    vcov = rvcov.param,
+                                    dVcov = dRvcov.param * factor.dRvcov,
+                                    keep.param = keep.param)
+                } else if(robust == 2){
+                    nu_m <- dfSigmaRobust(contrast = C.anova,
+                                          vcov = vcov.param,
+                                          rvcov = rvcov.param,
+                                          score = score)
+                }
         
             EQ <- sum(nu_m/(nu_m-2))
             df.F <- 2*EQ / (EQ - n.hypo)
-
+            }else{
+                df.F <- Inf
+            }
+            
             ## store
             df.table["global", "statistic"] <- as.numeric(stat.F)
             df.table["global", "df"] <- df.F

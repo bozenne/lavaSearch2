@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  4 2018 (13:29) 
 ## Version: 
-## Last-Updated: feb 11 2019 (17:12) 
+## Last-Updated: feb 12 2019 (09:47) 
 ##           By: Brice Ozenne
-##     Update #: 47
+##     Update #: 49
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -87,11 +87,16 @@ test_that("linear regression: robust SE", {
     eS2 <- summary2(e.lvm, robust = TRUE, cluster = 1:n)$coef
     expect_equal(eS1,eS2)
     
-    df <- c("Y1~X1" = 10.798,
-            "Y1~X2" = 12.191,
-            "Y1~GenderFemale" = 13.1718,
-            "Y1~~Y1" = 2.4237,
-            "Y1" = 10.5934)
+    ## df <- c("Y1~X1" = 10.798,
+    ## "Y1~X2" = 12.191,
+    ## "Y1~GenderFemale" = 13.1718,
+    ## "Y1~~Y1" = 2.4237,
+    ## "Y1" = 10.5934)
+    df <- c("Y1~X1" = 43.194962,   
+            "Y1~X2" = 48.765588,
+            "Y1~GenderFemale" = 52.687514,
+            "Y1~~Y1" = 9.694972,
+            "Y1" = 42.373871)
     expect_equal(as.double(df),
                  eS1$df, tol = 1e-2)
 })
