@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb  7 2019 (14:16) 
+## Last-Updated: feb 15 2019 (14:08) 
 ##           By: Brice Ozenne
-##     Update #: 858
+##     Update #: 864
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -327,6 +327,7 @@
         }
         ## derivative of the score regarding Y
         scoreY <- ls.dmu[[iC]] %*% iOmegaM1
+
         for(iP in 1:n.varparam){ ## iP <- 1
             scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon[iC,iIndex] %*% iOmegaM1.dOmega.OmegaM1[[name.varparam[iP]]]
         }
