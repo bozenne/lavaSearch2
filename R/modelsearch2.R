@@ -7,7 +7,8 @@
 #' @param data [data.frame, optional] the dataset used to identify the model
 #' @param link [character, optional for \code{lvmfit} objects] the name of the additional relationships to consider when expanding the model. Should be a vector containing strings like "Y~X". See the details section.
 #' @param method.p.adjust [character] the method used to adjust the p.values for multiple comparisons.
-#' Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}), or \code{"max"} or \code{"fastmax"}.
+#' Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).
+#' Can also be \code{"max"}, \code{"fastmax"}, or \code{"gof"}.
 #' @param type.information [character] the method used by \code{lava::information} to compute the information matrix.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
 #' When the p-value is below, the corresponding link will be added to the model
@@ -25,6 +26,7 @@
 #' method.p.adjust = \code{"fastmax"} only compute the p-value for the largest statistic.
 #' It is faster than \code{"max"} and lead to identical results.
 #' 
+#' method.p.adjust = \code{"gof"} keep adding links until the chi-squared test (of correct specification of the covariance matrix) is no longer significant.
 #' @return A list containing:
 #' \itemize{
 #' \item sequenceTest: the sequence of test that has been performed.
@@ -122,7 +124,13 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     
     ## methods
     method.p.adjust <- match.arg(method.p.adjust, lava.options()$search.p.adjust)    
-
+    if(method.p.adjust == "gof" ){
+        method.p.adjust <- "none"
+        stop.gof <- TRUE
+    }else{
+        stop.gof <- FALSE
+    }
+    
     ## cpus
     if(is.null(cpus)){ cpus <- parallel::detectCores()}
 
@@ -245,8 +253,20 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     }
 
     ## ** Forward search
+    if(stop.gof){
+        if(trace>0){
+            cat("p.Chi-squared test = ",gof(iObject)$fit$p.value,"\n", sep = "")
+        }
+        if(gof(iObject)$fit$p.value >= alpha){
+            cv <- TRUE
+        }
+    }
+        
     while(iStep <= nStep && NROW(iRestricted)>0 && cv==FALSE){
         if(trace >= 1){cat("Step ",iStep,":\n",sep="")}
+
+        
+        
         resStep <- .oneStep_scoresearch(iObject, data = data,
                                         restricted = iRestricted, link = iLink, directive = iDirective,
                                         method.p.adjust = method.p.adjust, type.information = type.information,
@@ -254,7 +274,10 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         
         ## ** update according the most significant p.value
         ## *** check convergence
-        if(na.omit || method.p.adjust == "fastmax"){
+        if(stop.gof){
+            cv <- FALSE
+            test.na <- FALSE
+        }else if(na.omit || method.p.adjust == "fastmax"){
             cv <- all(stats::na.omit(resStep$test$adjusted.p.value) > alpha)
             test.na <- FALSE
         }else{
@@ -301,7 +324,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             ## update links
             iLink <- iLink[-index.maxTest]
             iRestricted <- iRestricted[-index.maxTest,,drop=FALSE]
-            iDirective <- iDirective[-index.maxTest]            
+            iDirective <- iDirective[-index.maxTest]
         }
         
 
@@ -335,6 +358,19 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 }
             }
         }
+
+        ## *** check convergence gof
+        if(stop.gof){
+            if(trace>0){
+                cat("p.Chi-squared test = ",gof(iObject)$fit$p.value,"\n", sep = "")
+            }
+            if(gof(iObject)$fit$p.value >= alpha){
+                cv <- TRUE
+            }
+        }
+    
+
+        
         iStep <- iStep + 1
     }
 
@@ -590,7 +626,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         table.test[, "error"] <- resQmax$error
         Sigma <- resQmax$Sigma
                 
-    }else{
+    }else{        
         table.test[, "adjusted.p.value"] <- stats::p.adjust(table.test$p.value, method = method.p.adjust)
         table.test[, "quantile"] <- as.numeric(NA)
         Sigma <- NULL        
