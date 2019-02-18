@@ -102,6 +102,7 @@ m <- lvm(Y1~eta,
          eta~Group+Gender)
 e <- lava::estimate(m, data = d)
 res <- calibrateType1(e, param = "eta~Group", n.rep = 100)
+res <- calibrateType1(e, param = c("eta~Group","Y1~eta"), F.test = TRUE, n.rep = 100)
 res <- calibrateType1(e, param = "eta~Group", n.rep = 100, cpus = 4)
 summary(res)
 }

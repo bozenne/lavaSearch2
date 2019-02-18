@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb 11 2019 (14:32) 
+## Last-Updated: feb 18 2019 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 304
+##     Update #: 310
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,7 +77,7 @@
 #' @export
 summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct
-    return(summary2(object, ...))
+    return(summary2(object, df = df, ...))
 }
 ## * summary2.gls
 #' @rdname summary2
@@ -85,7 +85,7 @@ summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
 #' @export
 summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
     sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(summary2(object, ...))
+    return(summary2(object, df = df, ...))
 }
 
 ## * summary2.lme

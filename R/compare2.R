@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 12 2019 (09:44) 
+## Last-Updated: feb 18 2019 (14:31) 
 ##           By: Brice Ozenne
-##     Update #: 562
+##     Update #: 570
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -165,10 +165,10 @@ compare2.lvmfit2 <- function(object, ...){
 ## * .compare2
 #' @rdname compare2
 .compare2 <- function(object, par = NULL, contrast = NULL, null = NULL, rhs = NULL,
-                      robust = FALSE, cluster = NULL, df = TRUE,
+                      robust = FALSE, cluster = NULL, df = object$sCorrect$args$df,
                       as.lava = TRUE, F.test = TRUE, level = 0.95){
 
-    
+
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
@@ -225,11 +225,13 @@ compare2.lvmfit2 <- function(object, ...){
     }
 
     ## 3-order: derivative of the variance covariance
-    dVcov.param <- object$sCorrect$dVcov.param
-    keep.param <- dimnames(dVcov.param)[[3]]
+    if(df){
+        dVcov.param <- object$sCorrect$dVcov.param
+        keep.param <- dimnames(dVcov.param)[[3]]
+    }
     
     ## ** Prepare for the robust case 
-    if(robust){
+    if(df && robust){
 
         ## update the score/hessian/derivative at the cluster level
         if(!is.null(cluster)){            
@@ -340,7 +342,8 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$statistic <- as.numeric(stat.Wald)
 
     ##  degrees of freedom
-    if(!is.null(dVcov.param) && df){
+    if(df && !is.null(dVcov.param)){
+
         ## univariate
         if(robust == FALSE){
             df.Wald  <- dfSigma(contrast = contrast,

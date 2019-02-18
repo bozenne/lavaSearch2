@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: feb 12 2019 (09:59) 
+## Last-Updated: feb 18 2019 (13:49) 
 ##           By: Brice Ozenne
-##     Update #: 688
+##     Update #: 730
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -79,6 +79,7 @@
 ##'          eta~Group+Gender)
 ##' e <- lava::estimate(m, data = d)
 ##' res <- calibrateType1(e, param = "eta~Group", n.rep = 100)
+##' res <- calibrateType1(e, param = c("eta~Group","Y1~eta"), F.test = TRUE, n.rep = 100)
 ##' res <- calibrateType1(e, param = "eta~Group", n.rep = 100, cpus = 4)
 ##' summary(res)
 ##' }
@@ -520,137 +521,138 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
         }
     }
     
-    ## ** model adjustement
+    ## ** model fit
     e.lvm <- suppressWarnings(do.call(lava::estimate, args = c(list(object, data = dt.sim, cluster = cluster), dots)))
-
+    eS.lvm <- suppressWarnings(try(summary(e.lvm)$coef, silent = TRUE))
+    
     ## check correct convergence of the latent variable model
     if(("convergence" %in% names(e.lvm$opt)) && (e.lvm$opt$convergence==1)){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm that has not converged
     if(any(eigen(getVarCov2(e.lvm))$values<=0)){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where the residual covariance matrix is not semipositive definite
     ratio_sd_beta <- sqrt(diag(vcov(e.lvm)))/(abs(coef(e.lvm))+1)
     if(max(na.omit(ratio_sd_beta))>1e3){return(list(pvalue=NULL,estimate=NULL))} ## exclude if standard error much larger than coefficient
-    ## if(min(1/eigen(e.lvm$vcov, symmetric = TRUE)$values)<0.00001){    browser() ;return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm if the eigen values of the information matrix are too small 
-    ## if(e.lvm$opt$message!="both X-convergence and relative convergence (5)"){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm that has not converged
+    if(inherits(eS.lvm, "try-error")){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where we cannot compute the summary
+
+    ## ** corrections
     e.lvm.Satt <- e.lvm
     testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
     e.lvm.KR <- e.lvm
     testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
 
-    ## ** no correction
-    ## get Wald tests
-    eS.ML <- try(compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
-                          contrast = contrast, null = rhs,
-                          F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")], silent = TRUE)
-    ## same as
-    ## summary(e.lvm)$coef
-    if("try-error" %in% class(eS.ML)){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where we cannot compute the summary
-
-    eS.robustML <- compare2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE,
-                            contrast = contrast, null = rhs,
-                            F.test = F.test, as.lava = FALSE)[,c("estimate","p-value")]
-
-    ## store results
-    ls.iE$estimate.ML <- summary(e.lvm)$coef[name.coef,"Estimate"]
-    if(is.null(cluster)){
-        ls.iE$se.ML <- summary(e.lvm)$coef[name.coef,"Std. Error"]
+    ## ** extract statistics
+    eS.ML <- summary2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE, adjust.n = FALSE)$coef
+    eS.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE, adjust.n = FALSE)$coef
+    if(F.test){
+        F.ML <- compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
+                         contrast = contrast, null = rhs, F.test = F.test)
+        F.robustML <- compare2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE,
+                               contrast = contrast, null = rhs, F.test = F.test)
     }
-    ls.iE$se.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE)$coef[name.coef,"robust SE"]
+    
 
-    if(is.null(cluster)){
-        ls.iP$p.Ztest <- eS.ML[store.coef,"p-value"]
+    if(!inherits(e.lvm.Satt,"try-error")){
+        eS.Satt <- summary2(e.lvm.Satt, robust = FALSE)$coef
+        eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE)$coef
+        if(F.test){            
+            eS.Satt <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                   unlist(compare2(e.lvm.Satt, robust = FALSE,
+                                                                   contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                   ))
+            eS.robustSatt <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                         unlist(compare2(e.lvm.Satt, robust = TRUE,
+                                                                         contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                         ))
+        }
     }
-    ls.iP$p.robustZtest <-  eS.robustML[store.coef,"p-value"]
+    
+    if(!inherits(e.lvm.KR,"try-error")){
+        eS.SSC <- summary2(e.lvm.KR, robust = FALSE, df = FALSE)$coef
+        eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
 
-    ## ** Sattterwaith correction
-    if(!inherits(testError.Satt,"try-error")){
-        ## get Wald tests
-        if(is.null(cluster)){
-            eS.Satt <- compare2(e.lvm.Satt, robust = FALSE, df = TRUE,
-                                contrast = contrast, null = rhs,
-                                F.test = F.test, as.lava = FALSE)
-        }
-        eS.robustSatt <- compare2(e.lvm.Satt, robust = TRUE, df = TRUE,
-                                  contrast = contrast, null = rhs, 
-                                  F.test = F.test, as.lava = FALSE)
+        eS.KR <- summary2(e.lvm.KR, robust = FALSE)$coef
+        eS.robustKR <- summary2(e.lvm.KR, robust = TRUE)$coef
 
-        ## store results
-        ls.iE$df.ML <- summary2(e.lvm.Satt)$coef[name.coef,"df"]
-        if(is.null(cluster)){
-            ls.iP$p.Satt <- eS.Satt[store.coef,"p-value"]
+        if(F.test){
+            eS.SSC <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                  unlist(compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                                                                  contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                  ))
+            eS.robustSSC <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                        unlist(compare2(e.lvm.KR, robust = TRUE, df = FALSE,
+                                                                        contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                        ))
+            
+            eS.KR <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                 unlist(compare2(e.lvm.KR, robust = FALSE,
+                                                                 contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                 ))
+            eS.robustKR <- rbind(eS.Satt, "global" = c(NA,NA,
+                                                       unlist(compare2(e.lvm.KR, robust = TRUE,
+                                                                       contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                       ))
         }
-        ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"p-value"]
+    }
+    
+    ## ** store
+
+    ## *** estimates
+    ls.iE$estimate.ML <- eS.ML[name.coef,"Estimate"]
+    if(!inherits(e.lvm.KR,"try-error")){
+        ls.iE$estimate.MLcorrected <- eS.KR[name.coef,"Estimate"]
     }else{
-        ls.iE$df.ML <- rep(as.numeric(NA), n.coef)
-        if(is.null(cluster)){
-            ls.iP$p.Satt <- rep(as.numeric(NA), n.store)
-        }
-        ls.iP$p.robustSatt <- rep(as.numeric(NA), n.store)
+        ls.iE$estimate.MLcorrected <- rep(NA, n.coef)
     }
 
-    ## ** small sample correction
-    if(!inherits(testError.KR,"try-error")){
-        ## get Wald tests
-        if(is.null(cluster)){
-            eS.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
-                               contrast = contrast, null = rhs,
-                               F.test = F.test, as.lava = FALSE)
+    ## *** standard errors
+    if(is.null(cluster)){
+        ls.iE$se.ML <- eS.ML[name.coef,"Std. Error"]
+        if(!inherits(e.lvm.KR,"try-error")){
+            ls.iE$se.MLcorrected <- eS.KR[name.coef,"Std. Error"]
+        }else{
+            ls.iE$se.MLcorrected <- rep(NA, n.coef)
         }
-        eS.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
-                                 contrast = contrast, null = rhs,
-                                 F.test = F.test, as.lava = FALSE)
-        ## store results
-        if(is.null(cluster)){
-            ls.iP$p.SSC <- eS.SSC[store.coef,"p-value"]
+
+        ls.iE$se.robustML <- eS.robustML[name.coef,"robust SE"]
+        if(!inherits(e.lvm.KR,"try-error")){
+            ls.iE$se.robustMLcorrected <- eS.robustKR[name.coef,"robust SE"]
+        }else{
+            ls.iE$se.robustMLcorrected <- rep(NA, n.coef)
         }
-        ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"p-value"]
-        
+    }
+
+    ## *** degree of freedom
+    if(is.null(cluster)){
+        ls.iE$df.ML <- eS.Satt[name.coef,"df"]
+    }
+    ls.iE$df.robustML <- eS.robustSatt[name.coef,"df"]
+
+    if(!inherits(e.lvm.KR,"try-error")){
+        if(is.null(cluster)){
+            ls.iE$df.MLcorrected <- eS.KR[name.coef,"df"]
+        }
+        ls.iE$df.robustMLcorrected <- eS.robustKR[name.coef,"df"]
+    }
+
+    ## *** p-value
+    if(is.null(cluster)){
+        ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
+        ls.iP$p.Satt <- eS.Satt[store.coef,"P-value"]
+        ls.iP$p.SSC <- eS.SSC[store.coef,"P-value"]
+        ls.iP$p.KR <- eS.KR[store.coef,"P-value"]
+    }
+    ls.iP$p.robustZtest <- eS.robustML[store.coef,"P-value"]
+    ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"P-value"]
+    ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"P-value"]
+    ls.iP$p.robustKR <- eS.robustKR[store.coef,"P-value"]
+
+    ## *** niter.correct / warning
+    if(!inherits(e.lvm.KR,"try-error")){
         test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
         niter.correct <- e.lvm.KR$sCorrect$opt$iterations
     }else{
-        if(is.null(cluster)){
-            ls.iP$p.SSC <- rep(as.numeric(NA), n.store)
-        }
-        ls.iP$p.robustSSC <- rep(as.numeric(NA), n.store)
-        
-        niter.correct <- NA
         test.warning <- NA
-    }
+        niter.correct <- NA
+        }
     
-    ## ** Sattterwaith correction with small sample correction
-    if(!inherits(testError.KR,"try-error")){
-        ## get Wald tests
-        if(is.null(cluster)){
-            eS.KR <- compare2(e.lvm.KR, robust = FALSE, df = TRUE,
-                              contrast = contrast, null = rhs,
-                              F.test = F.test, as.lava = FALSE)
-        }
-        eS.robustKR <- compare2(e.lvm.KR, robust = TRUE, df = TRUE,
-                                contrast = contrast, null = rhs,
-                                F.test = F.test, as.lava = FALSE)
-                
-        ## store results
-        ls.iE$estimate.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"Estimate"]
-        if(is.null(cluster)){
-            ls.iE$se.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"Std. Error"]
-        }
-        ls.iE$se.robustMLcorrected <- summary2(e.lvm.KR, robust = TRUE)$coef[name.coef,"robust SE"]
-        ls.iE$df.MLcorrected <- summary2(e.lvm.KR)$coef[name.coef,"df"]
-        if(is.null(cluster)){
-            ls.iP$p.KR <- eS.KR[store.coef,"p-value"]
-        }
-        ls.iP$p.robustKR <- eS.robustKR[store.coef,"p-value"]
-    }else{
-        ls.iE$estimate.MLcorrected <- rep(as.numeric(NA), n.coef)
-        if(is.null(cluster)){
-            ls.iE$se.MLcorrected <- rep(as.numeric(NA), n.coef)
-        }
-        ls.iE$se.robustMLcorrected  <- rep(as.numeric(NA), n.coef)
-        ls.iE$df.MLcorrected <- rep(as.numeric(NA), n.coef)
-        if(is.null(cluster)){
-            ls.iP$p.KR <- rep(as.numeric(NA), n.store)
-        }
-        ls.iP$p.robustKR <- rep(as.numeric(NA), n.store)
-    }
-
     ## ** bootstrap
     if(bootstrap>0){
         e.boot <- eval(parse(text = "butils::bootReg(e.lvm, type = \"coef\", n.boot = n.bootstrap"))
