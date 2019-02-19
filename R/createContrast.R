@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: dec 11 2018 (11:56) 
+## Last-Updated: feb 19 2019 (15:05) 
 ##           By: Brice Ozenne
-##     Update #: 253
+##     Update #: 256
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -275,7 +275,8 @@ createContrast.list <- function(object, par = NULL, add.variance = NULL, var.tes
             if(length(var.test)!=1){
                 stop("Argument \'var.test\' must have length 1 \n")
             }
-            par <- grep(var.test, object.coefname, value = TRUE)
+            object.coefname.red <- unlist(lapply(object.coefname, function(iName){strsplit(iName, split = ": ", fixed = TRUE)[[1]][2]}))
+            par <- object.coefname[grep(var.test, object.coefname.red, value = FALSE)]
         }
     }
 
