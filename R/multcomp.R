@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb 20 2019 (09:58) 
+## Last-Updated: feb 25 2019 (09:40) 
 ##           By: Brice Ozenne
-##     Update #: 530
+##     Update #: 547
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -157,7 +157,7 @@ estfun.lme <- function(x, ...){
 #' resC <- createContrast(e.mmm, var.test = "E", add.variance = TRUE)
 #'
 #' #### adjust for multiple comparisons ####
-#' e.glht2 <- glht2(e.mmm, linfct = resC$contrast)
+#' e.glht2 <- glht2(e.mmm, linfct = resC$contrast, df = FALSE)
 #' summary(e.glht2)
 #'
 #' @concept multiple comparison
@@ -286,16 +286,23 @@ glht2.mmm <- function (model, linfct, rhs = 0,
 
     ## ** check whether it is possible to compute df
     if(identical(df, TRUE)){
+           
         ## does each model has the same df?
-        vecDF <- try(lapply(model, df.residual), silent = TRUE)
-        if(inherits(vecDF, "try-error")){
-            stop("Cannot check the degrees of freedom for each model - no \'df.residual\' method available \n",
-                 "Consider setting the argument \'df\' to FALSE \n")
-        }
-        if(length(unique(vecDF))>1){
-            stop("Residual degrees of freedom differ across models \n",
-                 "Consider setting the argument \'df\' to FALSE \n")
-        }
+        ## test.df <- try(lapply(model, df.residual), silent = TRUE)
+        ## if(inherits(test.df, "try-error")){
+        ##     stop("Cannot check the degrees of freedom for each model - no \'df.residual\' method available \n",
+        ##          "Consider setting the argument \'df\' to FALSE \n")
+        ## }
+        
+        ## if(any(sapply(test.df,is.null))){
+        ##     stop("Cannot compute residual degrees of freedom for all models \n",
+        ##          "Consider setting the argument \'df\' to FALSE \n")
+        ## }
+
+        ## if(length(unique(unlist(test.df)))>1){
+        ##     stop("Residual degrees of freedom differ across models \n",
+        ##          "Consider setting the argument \'df\' to FALSE \n")
+        ## }
 
         ## are linear hypothesis model specific?
         ls.testPerModel <- lapply(ls.contrast, function(iModel){
@@ -333,7 +340,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
         }
 ### *** get iid decomposition
         index.missing <- model[[iM]]$na.action
-        n.obs <- nobs(model[[iM]]) + length(index.missing)
+        n.obs <- stats::nobs(model[[iM]]) + length(index.missing)
 
         out$iid <- matrix(NA, nrow = n.obs, ncol = length(name.param),
                           dimnames = list(NULL, name.param))
@@ -347,7 +354,12 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     })
     seq.df <- unlist(lapply(ls.res,"[[","df"))
     seq.param <- unlist(lapply(ls.res,"[[","param"))
+
     if(df){
+        if(length(unique(seq.df))>1){
+            warning("Unequal degrees of freedom for the Wald statistics \n",
+                    "The median of the degrees of freedom is used.")
+        }
         df.global <- round(stats::median(seq.df), digits = 0)
     }else{
         df.global <- 0
