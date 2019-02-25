@@ -1,11 +1,12 @@
+
 ### mlf2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb 11 2019 (09:30) 
+## Last-Updated: feb 20 2019 (09:58) 
 ##           By: Brice Ozenne
-##     Update #: 503
+##     Update #: 530
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -259,6 +260,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
              "Incorrect element(s): ",paste(index.wrong, collapse = " "),".\n")
     }
 
+
 ### ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
@@ -271,8 +273,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     }else if(is.matrix(linfct)){
 
         ls.contrast <- lapply(name.model, function(x){ ## x <- name.model[2]
-            
-            iColnames <- grep(paste0(x,": "), colnames(linfct), value = FALSE, fixed = TRUE)
+            iColnames <- grep(paste0("^",x,": "), colnames(linfct), value = FALSE, fixed = FALSE)
             iRownames <- rowSums(linfct[,iColnames]!=0)>0
             linfct[iRownames, iColnames,drop=FALSE]            
         })
@@ -284,14 +285,29 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     }
 
     ## ** check whether it is possible to compute df
-    M.testModel <- do.call(cbind,lapply(ls.contrast, function(iC){
-        1:NROW(contrast) %in% which(rowSums(contrast[,colnames(iC)]!=0)>0)        
-    }))
-    if(any(rowSums(M.testModel)>1) && df){
-        stop("Cannot compute the degrees of freedom for tests performed across several models \n",
-             "Consider setting the argument \'df\' to FALSE \n")
+    if(identical(df, TRUE)){
+        ## does each model has the same df?
+        vecDF <- try(lapply(model, df.residual), silent = TRUE)
+        if(inherits(vecDF, "try-error")){
+            stop("Cannot check the degrees of freedom for each model - no \'df.residual\' method available \n",
+                 "Consider setting the argument \'df\' to FALSE \n")
+        }
+        if(length(unique(vecDF))>1){
+            stop("Residual degrees of freedom differ across models \n",
+                 "Consider setting the argument \'df\' to FALSE \n")
         }
 
+        ## are linear hypothesis model specific?
+        ls.testPerModel <- lapply(ls.contrast, function(iModel){
+            rowSums(contrast[,colnames(iModel)]!=0)>0
+        })
+        
+        if(any(Reduce("+",ls.testPerModel)>1)){
+            stop("Cannot compute the degrees of freedom for tests performed across several models \n",
+                 "Consider setting the argument \'df\' to FALSE \n")
+        }    
+    }
+    
     ## ** Extract influence functions from all models    
     ls.res <- lapply(1:n.model, function(iM){ ## iM <- 1
 
@@ -316,7 +332,14 @@ glht2.mmm <- function (model, linfct, rhs = 0,
             out$df <- Inf
         }
 ### *** get iid decomposition
-        out$iid <- iid2(model[[iM]], robust = robust, cluster = cluster)
+        index.missing <- model[[iM]]$na.action
+        n.obs <- nobs(model[[iM]]) + length(index.missing)
+
+        out$iid <- matrix(NA, nrow = n.obs, ncol = length(name.param),
+                          dimnames = list(NULL, name.param))
+        
+        out$iid[setdiff(1:n.obs,index.missing),] <- iid2(model[[iM]], robust = robust, cluster = cluster)
+        
         colnames(out$iid) <- name.object.param
             
         return(out)
@@ -329,8 +352,21 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     }else{
         df.global <- 0
     }
-    vcov.model <- crossprod(do.call(cbind,lapply(ls.res,"[[","iid")))
-
+        
+    ls.iid <- lapply(ls.res,"[[","iid")
+    n.obs <- unique(unlist(lapply(ls.iid, NROW)))
+    if(length(n.obs)>1){
+        stop("Mismatch between the number of observations in the iid \n",
+                "Likely to be due to the presence of missing values \n")
+        
+    }
+    M.iid <- do.call(cbind,ls.iid)
+    if(any(is.na(M.iid))){
+        M.iid[is.na(M.iid)] <- 0
+    }
+    vcov.model <- crossprod(M.iid)
+    
+    
 ### ** convert to the appropriate format
     out <- list(model = model,
                 linfct = linfct,
