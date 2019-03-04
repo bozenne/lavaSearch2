@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: feb 19 2019 (15:41) 
+## Last-Updated: mar  4 2019 (11:14) 
 ##           By: Brice Ozenne
-##     Update #: 262
+##     Update #: 264
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -144,10 +144,13 @@ createContrast.character <- function(object, name.param, diff.first = FALSE,
                 if(iName %in% name.param == FALSE){
                     txt.message <- paste0("unknown coefficient ",iName," in hypothesis ",iH,"\n")
                     possibleMatch <- pmatch(iName, table = name.param)
-                    if(identical(possibleMatch, as.integer(NA))){
+                    if(all(is.na(possibleMatch))){
                         possibleMatch <- grep(iName, name.param, fixed = TRUE, value = TRUE)
                     }
-                    if(!identical(possibleMatch, as.integer(NA))){
+                    if(length(possibleMatch)==0){
+                        possibleMatch <- agrep(iName, name.param, ignore.case = TRUE,value = TRUE)
+                    }
+                    if(length(possibleMatch)>0){
                         txt.message <- c(txt.message,
                                          paste0("candidates: \"",paste(possibleMatch, collapse = "\" \""),"\"\n"))
                     }

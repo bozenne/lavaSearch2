@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 18 2019 (14:31) 
+## Last-Updated: mar  4 2019 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 570
+##     Update #: 577
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -475,13 +475,18 @@ compare2.lvmfit2 <- function(object, ...){
 ##' @param keep.param [character vector] the name of the parameters with non-zero first derivative of their variance parameter.
 ##' 
 dfSigma <- function(contrast, vcov, dVcov, keep.param){
+    ## iLink <- "LogCau~eta"
     C.vcov.C <- rowSums(contrast %*% vcov * contrast) ## variance matrix of the linear combination
+    ## C.vcov.C - vcov[iLink,iLink]
 
     C.dVcov.C <- sapply(keep.param, function(x){
         rowSums(contrast %*% dVcov[,,x] * contrast)
     })
+    ## C.dVcov.C - dVcov[iLink,iLink,]
     numerator <- 2 *(C.vcov.C)^2
+    ## numerator - 2*vcov[iLink,iLink]^2
     denom <- rowSums(C.dVcov.C %*% vcov[keep.param,keep.param,drop=FALSE] * C.dVcov.C)
+    ## denom - t(dVcov[iLink,iLink,]) %*% vcov[keep.param,keep.param,drop=FALSE] %*% dVcov[iLink,iLink,]
     df <- numerator/denom
     return(df)
 }
