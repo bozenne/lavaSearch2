@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar  4 2019 (11:40) 
+## Last-Updated: mar  4 2019 (18:52) 
 ##           By: Brice Ozenne
-##     Update #: 577
+##     Update #: 585
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -172,6 +172,13 @@ compare2.lvmfit2 <- function(object, ...){
     if(!is.null(null) && !is.null(rhs)){
         stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
     }
+    if(!is.logical(robust)){ 
+        stop("Argument \'robust\' should be TRUE or FALSE \n")
+    }
+    if(!is.logical(df) && (robust == FALSE || df %in% c(0:3) == FALSE)){     ## 2-3 hidden values
+        stop("Argument \'df\' should be TRUE or FALSE \n")
+    }
+
     if(robust){
         factor.dRvcov <- lava.options()$factor.dRvcov
 
@@ -225,13 +232,13 @@ compare2.lvmfit2 <- function(object, ...){
     }
 
     ## 3-order: derivative of the variance covariance
-    if(df){
+    if(df>0){
         dVcov.param <- object$sCorrect$dVcov.param
         keep.param <- dimnames(dVcov.param)[[3]]
     }
     
     ## ** Prepare for the robust case 
-    if(df && robust){
+    if(df>1 && robust){ ## not used if df=1
 
         ## update the score/hessian/derivative at the cluster level
         if(!is.null(cluster)){            
@@ -342,7 +349,7 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$statistic <- as.numeric(stat.Wald)
 
     ##  degrees of freedom
-    if(df && !is.null(dVcov.param)){
+    if(df>0 && !is.null(dVcov.param)){
 
         ## univariate
         if(robust == FALSE){
@@ -351,15 +358,23 @@ compare2.lvmfit2 <- function(object, ...){
                                 dVcov = dVcov.param,
                                 keep.param = keep.param)
         }else if(robust == TRUE){
-            df.Wald  <- dfSigma(contrast = contrast,
-                                vcov = rvcov.param,
-                                dVcov = dRvcov.param * factor.dRvcov,
-                                keep.param = name.param)
-        }else if(robust == 2){
-            df.Wald <- dfSigmaRobust(contrast = contrast,
-                                     vcov = vcov.param,
-                                     rvcov = rvcov.param,
-                                     score = score)
+
+            if(df == TRUE){
+                df.Wald <- dfSigma(contrast = contrast,
+                                   vcov = vcov.param,
+                                   dVcov = dVcov.param,
+                                   keep.param = keep.param)
+            }else if(df == 2){
+                df.Wald  <- dfSigma(contrast = contrast,
+                                    vcov = rvcov.param,
+                                    dVcov = dRvcov.param * factor.dRvcov,
+                                    keep.param = name.param)
+            }else if(df == 3){
+                df.Wald <- dfSigmaRobust(contrast = contrast,
+                                         vcov = vcov.param,
+                                         rvcov = rvcov.param,
+                                         score = score)
+            }
         }
     }else{
         df.Wald <- rep(Inf, n.hypo)
@@ -382,24 +397,24 @@ compare2.lvmfit2 <- function(object, ...){
             stat.F <- t(C.p) %*% iC.vcov.C %*% (C.p) / n.hypo
 
             ## df (independent t statistics)
-            if(df){
+            if(df>0){
                 svd.tempo <- eigen(iC.vcov.C)
                 D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
                 P.svd <- svd.tempo$vectors
      
                 C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
 
-                if(robust == FALSE){
+                if(df == TRUE){
                     nu_m <- dfSigma(contrast = C.anova,
                                     vcov = vcov.param,
                                     dVcov = dVcov.param,
                                     keep.param = keep.param)
-                } else if(robust == TRUE){
+                } else if(df == 2){
                     nu_m <- dfSigma(contrast = C.anova,
                                     vcov = rvcov.param,
                                     dVcov = dRvcov.param * factor.dRvcov,
                                     keep.param = keep.param)
-                } else if(robust == 2){
+                } else if(df == 3){
                     nu_m <- dfSigmaRobust(contrast = C.anova,
                                           vcov = vcov.param,
                                           rvcov = rvcov.param,

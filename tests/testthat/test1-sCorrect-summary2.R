@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  4 2018 (13:29) 
 ## Version: 
-## Last-Updated: feb 18 2019 (14:31) 
+## Last-Updated: mar  4 2019 (18:52) 
 ##           By: Brice Ozenne
-##     Update #: 50
+##     Update #: 51
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -83,15 +83,19 @@ test_that("linear regression: Satterthwaite + SSC (df)", {
 ## ** robust standard error
 test_that("linear regression: robust SE", {
     ## printDF(e.lvm, bias.correct = TRUE)
-    eS1 <- summary2(e.lvm, robust = TRUE)$coef
-    eS2 <- summary2(e.lvm, robust = TRUE, cluster = 1:n)$coef
+    eS0 <- summary2(e.lvm, robust = TRUE, df = TRUE)$coef
+    eS1 <- summary2(e.lvm, robust = TRUE, df = 2)$coef
+    eS2 <- summary2(e.lvm, robust = TRUE, df = 2, cluster = 1:n)$coef
     expect_equal(eS1,eS2)
     
-    ## df <- c("Y1~X1" = 10.798,
-    ## "Y1~X2" = 12.191,
-    ## "Y1~GenderFemale" = 13.1718,
-    ## "Y1~~Y1" = 2.4237,
-    ## "Y1" = 10.5934)
+    df <- c("Y1~X1" =   46,
+            "Y1~X2" =   46,
+            "Y1~GenderFemale" =   46,
+            "Y1~~Y1" = 11.5,
+            "Y1" =   46)
+    expect_equal(as.double(df),
+                 eS0$df, tol = 1e-2)
+    
     df <- c("Y1~X1" = 43.194962,   
             "Y1~X2" = 48.765588,
             "Y1~GenderFemale" = 52.687514,

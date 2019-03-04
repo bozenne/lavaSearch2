@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar  4 2019 (12:11) 
+## Last-Updated: mar  4 2019 (18:57) 
 ##           By: Brice Ozenne
-##     Update #: 48
+##     Update #: 51
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,19 +23,20 @@
 #' @name effects
 #'
 #' @param object an object that inherits from lvmfit.
-#' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B")),
+#' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
 #'  
 #' @concept small sample inference
 #' @export
 `effects2` <-
-  function(object, ...) UseMethod("effects2")
+  function(object, link) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
 
 ## * effects2 (code)
 ##' @rdname effects2
+##' @export
 effects2.lvmfit2 <- function(object, link){
     n.link <- length(link)
 
