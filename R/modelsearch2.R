@@ -206,7 +206,11 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                   subset(as.data.frame(data), select = index.cols))
         }
     }
-    ls.call$control <- object$control
+    if(is.null(object$control)){
+        ls.call$control <- list()
+    }else{
+        ls.call$control <- object$control
+    }
     ls.call$control$trace <- FALSE
     
     ## output
@@ -303,13 +307,13 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                  covariance = 1-iDirective[index.maxTest])
 
             ## first attempt
-            ls.call$start <- stats::coef(iObject)
+            ls.call$control$start <- stats::coef(iObject)
             suppressWarnings(
                 iObject <- tryCatch(do.call(lava::estimate, args = ls.call),
-                                      error = function(x){x},
-                                      finally = function(x){x})
+                                    error = function(x){x},
+                                    finally = function(x){x})
             )
-        
+
             ## second attempt
             if(inherits(iObject,"error") || iObject$opt$convergence>0){
                 ls.call$control$start <- NULL
