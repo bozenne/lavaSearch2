@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar  4 2019 (18:57) 
+## Last-Updated: mar  5 2019 (10:51) 
 ##           By: Brice Ozenne
-##     Update #: 51
+##     Update #: 52
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@
 #' @description Test whether a path in the latent variable model correspond to a null effect.
 #' Similar to \code{lava::effects} but with small sample correction.
 #' So far it only work for paths composed of two edges.
-#' @name effects
+#' @name effects2
 #'
 #' @param object an object that inherits from lvmfit.
 #' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
