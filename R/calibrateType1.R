@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: feb 18 2019 (13:49) 
+## Last-Updated: mar  5 2019 (10:48) 
 ##           By: Brice Ozenne
-##     Update #: 730
+##     Update #: 732
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -572,20 +572,20 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
         eS.robustKR <- summary2(e.lvm.KR, robust = TRUE)$coef
 
         if(F.test){
-            eS.SSC <- rbind(eS.Satt, "global" = c(NA,NA,
-                                                  unlist(compare2(e.lvm.KR, robust = FALSE, df = FALSE,
-                                                                  contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                  ))
-            eS.robustSSC <- rbind(eS.Satt, "global" = c(NA,NA,
-                                                        unlist(compare2(e.lvm.KR, robust = TRUE, df = FALSE,
-                                                                        contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                        ))
+            eS.SSC <- rbind(eS.SSC, "global" = c(NA,NA,
+                                                 unlist(compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                                                                 contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                 ))
+            eS.robustSSC <- rbind(eS.robustSSC, "global" = c(NA,NA,
+                                                             unlist(compare2(e.lvm.KR, robust = TRUE, df = FALSE,
+                                                                             contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
+                                                             ))
             
-            eS.KR <- rbind(eS.Satt, "global" = c(NA,NA,
+            eS.KR <- rbind(eS.KR, "global" = c(NA,NA,
                                                  unlist(compare2(e.lvm.KR, robust = FALSE,
                                                                  contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
                                                  ))
-            eS.robustKR <- rbind(eS.Satt, "global" = c(NA,NA,
+            eS.robustKR <- rbind(eS.robustKR, "global" = c(NA,NA,
                                                        unlist(compare2(e.lvm.KR, robust = TRUE,
                                                                        contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
                                                        ))
@@ -631,7 +631,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
         }
         ls.iE$df.robustMLcorrected <- eS.robustKR[name.coef,"df"]
     }
-
+    
     ## *** p-value
     if(is.null(cluster)){
         ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
