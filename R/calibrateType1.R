@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: mar  5 2019 (10:48) 
+## Last-Updated: mar  7 2019 (11:07) 
 ##           By: Brice Ozenne
-##     Update #: 732
+##     Update #: 742
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -538,58 +538,50 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     e.lvm.KR <- e.lvm
     testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
 
-    ## ** extract statistics
-    eS.ML <- summary2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE, adjust.n = FALSE)$coef
-    eS.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE, adjust.n = FALSE)$coef
-    if(F.test){
-        F.ML <- compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
-                         contrast = contrast, null = rhs, F.test = F.test)
-        F.robustML <- compare2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE,
-                               contrast = contrast, null = rhs, F.test = F.test)
-    }
+    ## ** extract p.values
+    eS.ML <- summary2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE)$coef
+    F.ML <- compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
+                     contrast = contrast, null = rhs, F.test = F.test, as.lava = FALSE)
+    
+    eS.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE)$coef
+    F.robustML <- compare2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE,
+                           contrast = contrast, null = rhs, F.test = F.test, as.lava = FALSE)
     
 
     if(!inherits(e.lvm.Satt,"try-error")){
+        
         eS.Satt <- summary2(e.lvm.Satt, robust = FALSE)$coef
+        F.Satt <- compare2(e.lvm.Satt, robust = FALSE,
+                           contrast = contrast, null = rhs, F.test = F.test,
+                           as.lava = FALSE)
+            
         eS.robustSatt <- summary2(e.lvm.Satt, robust = TRUE)$coef
-        if(F.test){            
-            eS.Satt <- rbind(eS.Satt, "global" = c(NA,NA,
-                                                   unlist(compare2(e.lvm.Satt, robust = FALSE,
-                                                                   contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                   ))
-            eS.robustSatt <- rbind(eS.Satt, "global" = c(NA,NA,
-                                                         unlist(compare2(e.lvm.Satt, robust = TRUE,
-                                                                         contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                         ))
-        }
+        F.robustSatt <- compare2(e.lvm.Satt, robust = TRUE,
+                                  contrast = contrast, null = rhs, F.test = F.test,
+                                  as.lava = FALSE)
     }
     
     if(!inherits(e.lvm.KR,"try-error")){
-        eS.SSC <- summary2(e.lvm.KR, robust = FALSE, df = FALSE)$coef
-        eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
+
+        ## eS.SSC <- summary2(e.lvm.KR, robust = FALSE, df = FALSE)$coef
+        F.SSC <- compare2(e.lvm.KR, robust = FALSE, df = FALSE,
+                           contrast = contrast, null = rhs, F.test = F.test,
+                          as.lava = FALSE)
+        
+        ## eS.robustSSC <- summary2(e.lvm.KR, robust = TRUE, df = FALSE)$coef
+        F.robustSSC <- compare2(e.lvm.KR, robust = TRUE, df = FALSE,
+                                 contrast = contrast, null = rhs, F.test = F.test,
+                                 as.lava = FALSE)
 
         eS.KR <- summary2(e.lvm.KR, robust = FALSE)$coef
+        F.KR <- compare2(e.lvm.KR, robust = FALSE,
+                          contrast = contrast, null = rhs, F.test = F.test,
+                          as.lava = FALSE)
+        
         eS.robustKR <- summary2(e.lvm.KR, robust = TRUE)$coef
-
-        if(F.test){
-            eS.SSC <- rbind(eS.SSC, "global" = c(NA,NA,
-                                                 unlist(compare2(e.lvm.KR, robust = FALSE, df = FALSE,
-                                                                 contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                 ))
-            eS.robustSSC <- rbind(eS.robustSSC, "global" = c(NA,NA,
-                                                             unlist(compare2(e.lvm.KR, robust = TRUE, df = FALSE,
-                                                                             contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                             ))
-            
-            eS.KR <- rbind(eS.KR, "global" = c(NA,NA,
-                                                 unlist(compare2(e.lvm.KR, robust = FALSE,
-                                                                 contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                 ))
-            eS.robustKR <- rbind(eS.robustKR, "global" = c(NA,NA,
-                                                       unlist(compare2(e.lvm.KR, robust = TRUE,
-                                                                       contrast = contrast, null = rhs, F.test = F.test)[c("statistic","p.value","parameter")])
-                                                       ))
-        }
+        F.robustKR <- compare2(e.lvm.KR, robust = TRUE,
+                                contrast = contrast, null = rhs, F.test = F.test,
+                                as.lava = FALSE)
     }
     
     ## ** store
@@ -620,11 +612,13 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     }
 
     ## *** degree of freedom
-    if(is.null(cluster)){
-        ls.iE$df.ML <- eS.Satt[name.coef,"df"]
+    if(!inherits(e.lvm.Satt,"try-error")){
+        if(is.null(cluster)){
+            ls.iE$df.ML <- eS.Satt[name.coef,"df"]
+        }
+        ls.iE$df.robustML <- eS.robustSatt[name.coef,"df"]
     }
-    ls.iE$df.robustML <- eS.robustSatt[name.coef,"df"]
-
+    
     if(!inherits(e.lvm.KR,"try-error")){
         if(is.null(cluster)){
             ls.iE$df.MLcorrected <- eS.KR[name.coef,"df"]
@@ -634,15 +628,15 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     
     ## *** p-value
     if(is.null(cluster)){
-        ls.iP$p.Ztest <- eS.ML[store.coef,"P-value"]
-        ls.iP$p.Satt <- eS.Satt[store.coef,"P-value"]
-        ls.iP$p.SSC <- eS.SSC[store.coef,"P-value"]
-        ls.iP$p.KR <- eS.KR[store.coef,"P-value"]
+        ls.iP$p.Ztest <- F.ML[store.coef,"p-value"]
+        ls.iP$p.Satt <- F.Satt[store.coef,"p-value"]
+        ls.iP$p.SSC <- F.SSC[store.coef,"p-value"]
+        ls.iP$p.KR <- F.KR[store.coef,"p-value"]
     }
-    ls.iP$p.robustZtest <- eS.robustML[store.coef,"P-value"]
-    ls.iP$p.robustSatt <- eS.robustSatt[store.coef,"P-value"]
-    ls.iP$p.robustSSC <- eS.robustSSC[store.coef,"P-value"]
-    ls.iP$p.robustKR <- eS.robustKR[store.coef,"P-value"]
+    ls.iP$p.robustZtest <- F.robustML[store.coef,"p-value"]
+    ls.iP$p.robustSatt <- F.robustSatt[store.coef,"p-value"]
+    ls.iP$p.robustSSC <- F.robustSSC[store.coef,"p-value"]
+    ls.iP$p.robustKR <- F.robustKR[store.coef,"p-value"]
 
     ## *** niter.correct / warning
     if(!inherits(e.lvm.KR,"try-error")){

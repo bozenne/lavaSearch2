@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar  4 2019 (18:52) 
+## Last-Updated: mar  7 2019 (10:49) 
 ##           By: Brice Ozenne
-##     Update #: 585
+##     Update #: 586
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -424,6 +424,7 @@ compare2.lvmfit2 <- function(object, ...){
             EQ <- sum(nu_m/(nu_m-2))
             df.F <- 2*EQ / (EQ - n.hypo)
             }else{
+                warning("Unable to compute the degrees of freedom for the F-test \n")
                 df.F <- Inf
             }
             
