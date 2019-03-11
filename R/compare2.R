@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar  7 2019 (10:49) 
+## Last-Updated: mar  7 2019 (11:41) 
 ##           By: Brice Ozenne
-##     Update #: 586
+##     Update #: 592
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -388,7 +388,6 @@ compare2.lvmfit2 <- function(object, ...){
     ## ** Multivariate Wald test
     df.table <- rbind(df.table, global = rep(NA,5))
     error <- NULL
-     
     if(F.test){
         ## statistic
         iC.vcov.C <- try(solve(C.vcov.C), silent = TRUE)
@@ -421,13 +420,11 @@ compare2.lvmfit2 <- function(object, ...){
                                           score = score)
                 }
         
-            EQ <- sum(nu_m/(nu_m-2))
-            df.F <- 2*EQ / (EQ - n.hypo)
+                EQ <- sum(nu_m/(nu_m-2))
+                df.F <- 2*EQ / (EQ - n.hypo)
             }else{
-                warning("Unable to compute the degrees of freedom for the F-test \n")
                 df.F <- Inf
             }
-            
             ## store
             df.table["global", "statistic"] <- as.numeric(stat.F)
             df.table["global", "df"] <- df.F
@@ -435,6 +432,7 @@ compare2.lvmfit2 <- function(object, ...){
                                                            df1 = n.hypo,
                                                            df2 = df.table["global", "df"])
         }else{
+            warning("Unable to compute the degrees of freedom for the F-test \n")
             error <- iC.vcov.C
         }
     }
@@ -475,7 +473,6 @@ compare2.lvmfit2 <- function(object, ...){
         attr(out, "warning") <- warn
         attr(out, "contrast") <- contrast
     }
-
     attr(out,"error") <- error
     return(out)
 }

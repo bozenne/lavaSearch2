@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: mar  7 2019 (11:07) 
+## Last-Updated: mar 11 2019 (15:03) 
 ##           By: Brice Ozenne
-##     Update #: 742
+##     Update #: 810
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -34,6 +34,7 @@
 ##' @param n.rep [integer, >0] number of simulations per sample size.
 ##' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
 ##' Will be passed to \code{lava::estimate}.
+##' @param correction [logical] should the type 1 error after correction be computed?
 ##' @param generative.object [lvm] object defining the statistical model generating the data.
 ##' @param generative.coef [name numeric vector] values for the parameters of the generative model.
 ##' Can also be \code{NULL}: in such a case the coefficients are set to default values decided by lava (usually 0 or 1).
@@ -91,7 +92,7 @@
 ## * calibrateType1.lvm
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NULL,
+calibrateType1.lvm <- function(object, param, n.rep, n, correction = TRUE, warmup = NULL, null = NULL,
                                F.test = FALSE, cluster = NULL,
                                generative.object = NULL, generative.coef = NULL, 
                                true.coef = NULL, n.true = 1e6, round.true = 2,              
@@ -258,9 +259,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
         cat("\n")
         cat(" Perform simulation: \n")
     }
-
     if(cpus>1){
-
         ## *** define cluster
         if(trace>0){
             cl <- suppressMessages(parallel::makeCluster(cpus, outfile = ""))
@@ -283,7 +282,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
             return(myName)
         }))
         if(length(seed)==0){
-            seed <- rep(NA, cpus)
+            seed <- rep(as.numeric(NA), cpus)
         }else if(length(seed)==1){
             set.seed(seed)
             seed <- sample(1:1e5,size=cpus,replace=FALSE)                
@@ -301,12 +300,13 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
         iRep <- NULL # [:for CRAN check] foreach
         resSim <- foreach::`%dopar%`(
                                foreach::foreach(iRep = 1:n.rep,
-                                                .export = toExport),{ # iRep <- 1
+                                                .export = toExport,
+                                                .packages = c("lavaSearch2")),{ # iRep <- 1
 
                                                     if(trace>0){utils::setTxtProgressBar(pb, iRep)}
 
                                                     myName <- paste(Sys.info()[['nodename']], Sys.getpid(), sep='-')
-                                                    iSeed <- seed[myName]
+                                                    iSeed <- as.double(seed[myName])
                                                     
                                                     ls.pvalue <- vector(mode = "list", length = n.n)
                                                     ls.estimate <- vector(mode = "list", length = n.n)
@@ -315,6 +315,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
                                                     for(iN in n){ # iN <- n[1]
                                                         iRes <- .warperType1(iRep,
                                                                              n = iN,
+                                                                             correction = correction,
                                                                              generative.object = generative.object,
                                                                              generative.coef = generative.coef,
                                                                              object = object,
@@ -343,10 +344,9 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
                                                     return(list(pvalue = do.call("rbind",ls.pvalue),
                                                                 estimate = do.call("rbind",ls.estimate)))
                                                 })
-    
+        
         parallel::stopCluster(cl)
         if(trace>0){close(pb)}
-        
         ## *** post process
         dt.pvalue <- do.call("rbind",lapply(resSim,"[[","pvalue"))
         dt.pvalue <- dt.pvalue[order(dt.pvalue$n,dt.pvalue$rep),,drop=FALSE]
@@ -383,7 +383,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
         if(!is.null(seed)){
             set.seed(seed)
         }else{
-            seed <- NA
+            seed <- as.numeric(NA)
         }
         
         ## *** sequential simulation
@@ -399,6 +399,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
             resSim <- do.call(FCTapply, args = list(X = 1:n.rep, FUN = function(iRep){
                 .warperType1(iRep,
                              n = iN,
+                             correction = correction,
                              generative.object = generative.object,
                              generative.coef = generative.coef,
                              object = object, warmup = warmup, cluster = cluster,                             
@@ -414,7 +415,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
                                do.call("rbind",lapply(resSim,"[[","pvalue"))
                                )
             dt.estimate <- rbind(dt.estimate,
-                             do.call("rbind",lapply(resSim,"[[","estimate")))
+                                 do.call("rbind",lapply(resSim,"[[","estimate")))
                              
             
             ## export (tempo)
@@ -444,7 +445,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, warmup = NULL, null = NU
 ## * calibrateType1.lvmfit
 ##' @rdname calibrateType1
 ##' @export
-calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
+calibrateType1.lvmfit <- function(object, param, n.rep, correction = TRUE, F.test = FALSE,
                                   bootstrap = FALSE, n.bootstrap = 1e3,
                                   seed = NULL, trace = 2, cpus = 1, ...){
 
@@ -472,6 +473,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
                           param = param,
                           n.rep = n.rep,
                           n = n,
+                          correction = correction,
                           F.test = F.test,
                           generative.object = object.model,
                           generative.coef = coef.true, 
@@ -493,7 +495,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
 }
 
 ## * .warperType1
-.warperType1 <- function(iRep, n, generative.object, generative.coef,
+.warperType1 <- function(iRep, n, correction, generative.object, generative.coef,
                          object, warmup, cluster,
                          coef.true, type.coef, name.coef, store.coef, n.coef, n.store,
                          F.test, param, contrast, rhs,
@@ -533,16 +535,23 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     if(inherits(eS.lvm, "try-error")){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where we cannot compute the summary
 
     ## ** corrections
-    e.lvm.Satt <- e.lvm
-    testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
-    e.lvm.KR <- e.lvm
-    testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
-
+    if(correction){
+        e.lvm.Satt <- e.lvm    
+        testError.Satt <- try(sCorrect(e.lvm.Satt) <- FALSE, silent = TRUE)
+        e.lvm.KR <- e.lvm
+        testError.KR <- try(suppressWarnings(sCorrect(e.lvm.KR, safeMode = TRUE) <- TRUE), silent = TRUE)
+    }else{
+        e.lvm.Satt <- 1
+        class(e.lvm.Satt) <- "try-error"
+        e.lvm.KR <- 1
+        class(e.lvm.KR) <- "try-error"
+    }
+    
     ## ** extract p.values
     eS.ML <- summary2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE)$coef
     F.ML <- compare2(e.lvm, robust = FALSE, df = FALSE, bias.correct = FALSE,
                      contrast = contrast, null = rhs, F.test = F.test, as.lava = FALSE)
-    
+
     eS.robustML <- summary2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE)$coef
     F.robustML <- compare2(e.lvm, robust = TRUE, df = FALSE, bias.correct = FALSE,
                            contrast = contrast, null = rhs, F.test = F.test, as.lava = FALSE)
@@ -591,7 +600,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     if(!inherits(e.lvm.KR,"try-error")){
         ls.iE$estimate.MLcorrected <- eS.KR[name.coef,"Estimate"]
     }else{
-        ls.iE$estimate.MLcorrected <- rep(NA, n.coef)
+        ls.iE$estimate.MLcorrected <- rep(as.numeric(NA), n.coef)
     }
 
     ## *** standard errors
@@ -600,14 +609,14 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
         if(!inherits(e.lvm.KR,"try-error")){
             ls.iE$se.MLcorrected <- eS.KR[name.coef,"Std. Error"]
         }else{
-            ls.iE$se.MLcorrected <- rep(NA, n.coef)
+            ls.iE$se.MLcorrected <- rep(as.numeric(NA), n.coef)
         }
 
         ls.iE$se.robustML <- eS.robustML[name.coef,"robust SE"]
         if(!inherits(e.lvm.KR,"try-error")){
             ls.iE$se.robustMLcorrected <- eS.robustKR[name.coef,"robust SE"]
         }else{
-            ls.iE$se.robustMLcorrected <- rep(NA, n.coef)
+            ls.iE$se.robustMLcorrected <- rep(as.numeric(NA), n.coef)
         }
     }
 
@@ -629,23 +638,31 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
     ## *** p-value
     if(is.null(cluster)){
         ls.iP$p.Ztest <- F.ML[store.coef,"p-value"]
-        ls.iP$p.Satt <- F.Satt[store.coef,"p-value"]
-        ls.iP$p.SSC <- F.SSC[store.coef,"p-value"]
-        ls.iP$p.KR <- F.KR[store.coef,"p-value"]
+        if(!inherits(e.lvm.Satt,"try-error")){
+            ls.iP$p.Satt <- F.Satt[store.coef,"p-value"]
+        }
+        if(!inherits(e.lvm.KR,"try-error")){
+            ls.iP$p.SSC <- F.SSC[store.coef,"p-value"]
+            ls.iP$p.KR <- F.KR[store.coef,"p-value"]
+        }
     }
     ls.iP$p.robustZtest <- F.robustML[store.coef,"p-value"]
-    ls.iP$p.robustSatt <- F.robustSatt[store.coef,"p-value"]
-    ls.iP$p.robustSSC <- F.robustSSC[store.coef,"p-value"]
-    ls.iP$p.robustKR <- F.robustKR[store.coef,"p-value"]
+    if(!inherits(e.lvm.Satt,"try-error")){
+        ls.iP$p.robustSatt <- F.robustSatt[store.coef,"p-value"]
+    }
+    if(!inherits(e.lvm.KR,"try-error")){
+        ls.iP$p.robustSSC <- F.robustSSC[store.coef,"p-value"]
+        ls.iP$p.robustKR <- F.robustKR[store.coef,"p-value"]
+    }
 
     ## *** niter.correct / warning
     if(!inherits(e.lvm.KR,"try-error")){
         test.warning <- inherits(attr(e.lvm.KR$sCorrect,"warning"),"try-error")
-        niter.correct <- e.lvm.KR$sCorrect$opt$iterations
+        niter.correct <- as.double(e.lvm.KR$sCorrect$opt$iterations)
     }else{
         test.warning <- NA
-        niter.correct <- NA
-        }
+        niter.correct <- as.double(NA)
+    }
     
     ## ** bootstrap
     if(bootstrap>0){
@@ -660,33 +677,49 @@ calibrateType1.lvmfit <- function(object, param, n.rep, F.test = FALSE,
         ls.iP$p.bootStud <- boot.stud[store.coef,"p.value"]
         ls.iP$p.bootBca <- boot.bca[store.coef,"p.value"]
     }else{
-        n.bootstrap <- NA
+        n.bootstrap <- as.numeric(NA)
     }
 
     ## ** collect results
     ## estimates
-    out$estimate <- cbind(data.frame(n = n,
-                                     rep = iRep,
-                                     seed = seed,
-                                     niter = niter.correct,
-                                     warning = test.warning,
-                                     name = names(coef.true),
-                                     type = type.coef[name.coef],
-                                     stringsAsFactors = FALSE),
-                          do.call(cbind,ls.iE))
-    rownames(out$estimate) <- NULL
+    ## use rep to avoid warning
+    ## return(list(n = n,
+                ## rep = iRep,
+                ## seed = seed,
+                ## ninter = niter.correct,
+                ## warning = test.warning,
+                ## name = names(coef.true),
+                ## type = type.coef[name.coef]))
+    df1 <- data.frame(n = n,
+                      rep = iRep, n.coef,
+                      seed = seed, n.coef,
+                      niter = niter.correct,
+                      warning = test.warning,
+                      name = names(coef.true),
+                      type = unname(type.coef[name.coef]),
+                      stringsAsFactors = FALSE)
+    rownames(df1) <- NULL
+
+    df2 <- do.call(cbind,ls.iE)
+    rownames(df2) <- NULL
+
+    out$estimate <- cbind(df1, df2)
 
     ## p.value
-    out$pvalue <- cbind(data.frame(n = n,
-                                   rep = iRep,
-                                   seed = seed,
-                                   nboot = n.bootstrap,
-                                   niter = niter.correct,
-                                   warning = test.warning,
-                                   link = store.coef,
-                                   stringsAsFactors = FALSE),
-                        do.call(cbind,ls.iP))
-    rownames(out$pvalue) <- NULL
+    df1 <- data.frame(n = n,
+                      rep = iRep,
+                      seed = seed,
+                      nboot = n.bootstrap,
+                      niter = niter.correct,
+                      warning = test.warning,
+                      link = unname(store.coef),
+                      stringsAsFactors = FALSE)
+    rownames(df1) <- NULL
+
+    df2 <- do.call(cbind,ls.iP)
+    rownames(df2) <- NULL
+
+    out$pvalue <- cbind(df1, df2)
 
     ## ** export
     return(out)

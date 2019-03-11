@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar  5 2019 (10:51) 
+## Last-Updated: mar 11 2019 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 52
+##     Update #: 72
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,14 +25,24 @@
 #' @param object an object that inherits from lvmfit.
 #' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
-#'  
+#' @param ... Arguments passed to \code{sCorrect} for \code{lvmfit} objects.
+#' Ignored for \code{lvmfit2} objects.
+#' 
 #' @concept small sample inference
 #' @export
 `effects2` <-
-  function(object, link) UseMethod("effects2")
+  function(object, link, ...) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
+
+## * compare2.lvmfit
+#' @rdname compare2
+#' @export
+effects2.lvmfit <- function(object, df = TRUE, bias.correct = TRUE, ...){
+    sCorrect(object, df = df) <- bias.correct    
+    return(effects2.lvmfit2(object, ...))
+}
 
 ## * effects2 (code)
 ##' @rdname effects2
@@ -123,16 +133,20 @@ effects2.lvmfit2 <- function(object, link){
     effect.se <- sqrt(effect.var)
     effect.Wald <- effect/effect.se
 
-    keep.param <- dimnames(dSigma)[[3]]
-    Ilink1 <- as.numeric(keep.param %in% link1)
-    Ilink2 <- as.numeric(keep.param %in% link2)
+    if(!is.null(dSigma)){
+        keep.param <- dimnames(dSigma)[[3]]
+        Ilink1 <- as.numeric(keep.param %in% link1)
+        Ilink2 <- as.numeric(keep.param %in% link2)
     
-    dvar1 <- dSigma[link1,link1,] * mu[link2]^2 + Sigma[link1,link1] * 2 * Ilink2 * mu[link2]
-    dvar2 <- dSigma[link2,link2,] * mu[link1]^2 + Sigma[link2,link2] * 2 * Ilink1 * mu[link1]
-    dvar12 <- 2 * dSigma[link1,link2,] * mu[link1] * mu[link2] + 2 * Sigma[link1,link2] * (Ilink2 * mu[link2] + mu[link1] * Ilink1)
-    dvar <- dvar1 + dvar2 + dvar12
+        dvar1 <- dSigma[link1,link1,] * mu[link2]^2 + Sigma[link1,link1] * 2 * Ilink2 * mu[link2]
+        dvar2 <- dSigma[link2,link2,] * mu[link1]^2 + Sigma[link2,link2] * 2 * Ilink1 * mu[link1]
+        dvar12 <- 2 * dSigma[link1,link2,] * mu[link1] * mu[link2] + 2 * Sigma[link1,link2] * (Ilink2 * mu[link2] + mu[link1] * Ilink1)
+        dvar <- dvar1 + dvar2 + dvar12
 
-    effect.df <- 2 * effect.var^2 / (t(dvar) %*% Sigma[keep.param,keep.param,drop=FALSE] %*% dvar)[1,1]
+        effect.df <- 2 * effect.var^2 / (t(dvar) %*% Sigma[keep.param,keep.param,drop=FALSE] %*% dvar)[1,1]
+    }else{
+        effect.df <- Inf
+    }
     
     return(c("Estimate" = effect,
              "Std. Error" = effect.se,
