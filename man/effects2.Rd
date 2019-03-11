@@ -5,7 +5,7 @@
 \alias{effects2.lvmfit2}
 \title{Effects from a fitted model}
 \usage{
-effects2(object, link)
+effects2(object, link, ...)
 
 \method{effects2}{lvmfit2}(object, link)
 }
@@ -14,6 +14,9 @@ effects2(object, link)
 
 \item{link}{[character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 i.e. the effect of the right variable (B) on the left variable (A).}
+
+\item{...}{Arguments passed to \code{sCorrect} for \code{lvmfit} objects.
+Ignored for \code{lvmfit2} objects.}
 }
 \description{
 Test whether a path in the latent variable model correspond to a null effect.
