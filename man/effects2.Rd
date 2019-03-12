@@ -2,12 +2,16 @@
 % Please edit documentation in R/effects2.R
 \name{effects2}
 \alias{effects2}
+\alias{effects2.lvmfit}
 \alias{effects2.lvmfit2}
 \title{Effects from a fitted model}
 \usage{
 effects2(object, link, ...)
 
-\method{effects2}{lvmfit2}(object, link)
+\method{effects2}{lvmfit}(object, link, df = TRUE, bias.correct = TRUE,
+  ...)
+
+\method{effects2}{lvmfit2}(object, link, ...)
 }
 \arguments{
 \item{object}{an object that inherits from lvmfit.}
@@ -15,8 +19,12 @@ effects2(object, link, ...)
 \item{link}{[character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 i.e. the effect of the right variable (B) on the left variable (A).}
 
-\item{...}{Arguments passed to \code{sCorrect} for \code{lvmfit} objects.
-Ignored for \code{lvmfit2} objects.}
+\item{...}{[internal] only used by the generic method.}
+
+\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.}
+
+\item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
 }
 \description{
 Test whether a path in the latent variable model correspond to a null effect.

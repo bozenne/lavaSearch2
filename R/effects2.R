@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar 12 2019 (15:38) 
+## Last-Updated: mar 12 2019 (16:24) 
 ##           By: Brice Ozenne
-##     Update #: 73
+##     Update #: 75
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,8 +25,10 @@
 #' @param object an object that inherits from lvmfit.
 #' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
-#' @param ... Arguments passed to \code{sCorrect} for \code{lvmfit} objects.
-#' Ignored for \code{lvmfit2} objects.
+#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
+#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param ...  [internal] only used by the generic method.
 #' 
 #' @concept small sample inference
 #' @export
@@ -37,7 +39,7 @@
 ## TODO
 
 ## * compare2.lvmfit
-#' @rdname compare2
+#' @rdname effects2
 #' @export
 effects2.lvmfit <- function(object, link, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct    
@@ -47,7 +49,7 @@ effects2.lvmfit <- function(object, link, df = TRUE, bias.correct = TRUE, ...){
 ## * effects2 (code)
 ##' @rdname effects2
 ##' @export
-effects2.lvmfit2 <- function(object, link){
+effects2.lvmfit2 <- function(object, link, ...){
     n.link <- length(link)
 
     name.coef <- names(coef(object))
