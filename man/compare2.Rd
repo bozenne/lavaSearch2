@@ -39,7 +39,8 @@ compare2(object, df, bias.correct, ...)
   df = object$sCorrect$args$df, as.lava = TRUE, F.test = TRUE,
   level = 0.95)
 
-\method{effects2}{lvmfit}(object, df = TRUE, bias.correct = TRUE, ...)
+\method{effects2}{lvmfit}(object, link, df = TRUE, bias.correct = TRUE,
+  ...)
 }
 \arguments{
 \item{object}{an object that inherits from lm/gls/lme/lvmfit.}

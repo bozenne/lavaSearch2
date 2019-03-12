@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar 11 2019 (11:40) 
+## Last-Updated: mar 12 2019 (15:38) 
 ##           By: Brice Ozenne
-##     Update #: 72
+##     Update #: 73
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,9 +39,9 @@
 ## * compare2.lvmfit
 #' @rdname compare2
 #' @export
-effects2.lvmfit <- function(object, df = TRUE, bias.correct = TRUE, ...){
+effects2.lvmfit <- function(object, link, df = TRUE, bias.correct = TRUE, ...){
     sCorrect(object, df = df) <- bias.correct    
-    return(effects2.lvmfit2(object, ...))
+    return(effects2.lvmfit2(object, link = link))
 }
 
 ## * effects2 (code)
