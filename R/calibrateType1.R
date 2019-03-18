@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: mar 11 2019 (15:03) 
+## Last-Updated: mar 13 2019 (11:55) 
 ##           By: Brice Ozenne
-##     Update #: 810
+##     Update #: 813
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -727,3 +727,18 @@ calibrateType1.lvmfit <- function(object, param, n.rep, correction = TRUE, F.tes
     
 ######################################################################
 ### calibrateType1.R ends here
+
+## * .mergeCalibrateType1
+.mergeCalibrateType1 <- function(list){
+
+    
+    if(any(sapply(list,function(iL){inherits(iL,"calibrateType1")})==FALSE)){
+        stop("Argument \'list\' must only contain \"calibrateType1\" objects \n")
+    }
+
+    newObject <- list[[1]]
+    newObject$estimate <- do.call(rbind,lapply(list,"[[","estimate"))
+    newObject$p.value <- do.call(rbind,lapply(list,"[[","p.value"))
+
+    return(newObject)
+}
