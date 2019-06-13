@@ -512,6 +512,26 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             rmvar(newModel) <- noLink.var
         }
 
+        ## *** compute sufficient statistics
+        ## necessary otherwise information can have a weird behavior, e.g.
+        ## library(lava)
+        ##
+        ## mSim <- lvm(Y ~ X1, X2 ~ eta, X3 ~ eta, X4 ~ eta)
+        ## latent(mSim) <- ~eta
+        ## d <- sim(mSim, 100)
+        ##
+        ## m <- lvm(Y~X1+X2) 
+        ## e <- estimate(m, d)
+        ## information(e, data = d, p = coef(e)) ## gold standard
+        ## information(m, data = d, p = coef(e)) ## issue
+        ##
+        ## fix
+        ## ss <- lava:::procdata.lvm(m, data = d, missing = FALSE) 
+        ## mm <- lava::fixsome(m, measurement.fix=TRUE, S=ss$S, mu=ss$mu, n = ss$n, debug=FALSE)
+        ## information(mm, data = d, p = coef(e)) ## ok
+        suffStat <- lava_procdata.lvm(newModel, data = data, missing = inherits(object,"lvm.missing")) 
+        newModel <- lava::fixsome(newModel, measurement.fix=TRUE, S=suffStat$S, mu=suffStat$mu, n = suffStat$n, debug=FALSE)
+
         ## *** define constrained coefficients
         coef0.new <- setNames(rep(0, ncoef.object+1), coef(newModel))
         coef0.new[namecoef.object] <- coef.object
