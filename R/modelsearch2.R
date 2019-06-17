@@ -538,32 +538,22 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         ## *** compute the iid decomposition and statistic
         ## eigen(lava::information(estimate(newModel, data = data), p = coef0.new, data = data, type = "E"))
         Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
+        InfoM1 <- matrixPower(Info, power  = -1, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
+        out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
+
         if(method.p.adjust %in% c("max","fastmax")){
             iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
             ## rm na
             iid.score <- iid.score[rowSums(is.na(iid.score))==0,]
-
-            ## inverse of the information matrix
-            sqrt.InfoM1 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
-            out$table$dp.Info <- !("warning" %in% names(attributes(sqrt.InfoM1)))
-            ## sqrt.InfoM1 <- solve(chol(Info))
-
-            ## iid decomposition of the normalized score (follows a standard normal distribution)
-            iid.normScore <- (iid.score %*% sqrt.InfoM1)
-            ## normalized score
-            normScore <- colSums(iid.normScore)
-            ## decomposition used to compute the score
-            out$iid <-  iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
+            ## compute decomposition
+            out$iid <-  iid.score %*% InfoM1 %*% cbind(colSums(iid.score))
             ## out$iid <- out$iid/sqrt(sum(out$iid^2))
-            out$table$statistic <- crossprod(normScore)
+            out$table$statistic <- sum(out$iid)
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
             ## SS <- score(ee.lvm, p = coef0.new)
             ## II <- information(ee.lvm, p = coef0.new)
             ## SS %*% solve(I) %*% t(SS)
-            InfoM1 <- matrixPower(Info, power  = -1, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
-
-            out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
             score <- lava::score(newModel, p = coef0.new, indiv = FALSE, data = data)
             
             out$table$statistic <- as.double(score %*% InfoM1 %*% t(score))
