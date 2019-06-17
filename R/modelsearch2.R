@@ -494,7 +494,6 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     warper <- function(iterI){ # iterI <- 1
 
         out <- list(table = data.frame(statistic = as.numeric(NA),
-                                       se = as.numeric(NA),
                                        p.value = as.numeric(NA),
                                        adjusted.p.value = as.numeric(NA),
                                        dp.Info = as.numeric(NA),
@@ -556,9 +555,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             ## delta method            
             out$iid <-  - iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
             ## out$iid <- out$iid/sqrt(sum(out$iid^2))
-            out$table$statistic <- sqrt(crossprod(normScore))
-
-            out$table$se <- sqrt(sum(out$iid^2))
+            out$table$statistic <- crossprod(normScore)
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
             ## SS <- score(ee.lvm, p = coef0.new)
@@ -627,12 +624,12 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         stop("Negative score statistic \n")
     }
     ## univariate rejection area
-    table.test[,"p.value"] <- 2*(1-stats::pnorm(statistic))
+    table.test[,"p.value"] <- 1-stats::pchisq(statistic, df = 1)
 
     ## ** adjusted p.value
     if(method.p.adjust == "fastmax"){
         index.max <- which.max(statistic)
-        resQmax <- calcDistMaxIntegral(statistic = statistic[index.max[1]], iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
+        resQmax <- calcDistMaxIntegral(statistic = sqrt(statistic[index.max[1]]), iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
 
         table.test[index.max, "adjusted.p.value"] <- resQmax$p.adjust
         table.test[index.max, "quantile"] <- resQmax$z
@@ -640,7 +637,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         Sigma <- resQmax$Sigma
 
     }else if(method.p.adjust == "max"){
-        resQmax <- calcDistMaxIntegral(statistic = statistic, iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
+        resQmax <- calcDistMaxIntegral(statistic = sqrt(statistic), iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
         ## resQmax <- calcDistMaxResampling(statistic = statistic, iid = iid.link, index.iid = index.iid,
         ## method.resampling = method.resampling, type.statistic = "chisq",
         ## n.sim = n.sim, alpha = alpha, cl = cl, trace = trace)
