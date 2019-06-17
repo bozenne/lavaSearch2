@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 22 2018 (11:45) 
 ## Version: 
-## Last-Updated: sep 21 2018 (17:45) 
+## Last-Updated: jun 17 2019 (16:24) 
 ##           By: Brice Ozenne
-##     Update #: 22
+##     Update #: 23
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,7 +45,7 @@ test_that("Score 1 link",{
     ## c("E", "hessian", "varS", "outer", "sandwich", "robust", "num"),   "outer"
     
     expect_equal(as.double(GS.score$test[index.coef,"Test Statistic"]),
-                 as.double(test.score$table[1,"statistic"]^2), tol = 1e-9)
+                 as.double(test.score$table[1,"statistic"]), tol = 1e-9)
     expect_equal(as.double(GS.score$test[index.coef,"P-value"]),
                  as.double(test.score$table[1,"p.value"]), tol = 1e-9)
 })

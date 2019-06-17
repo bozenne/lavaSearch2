@@ -565,12 +565,12 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 
             out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
             score <- lava::score(newModel, p = coef0.new, indiv = FALSE, data = data)
-            out$table$statistic <- sqrt(as.double(score %*% InfoM1 %*% t(score)))
+            
+            out$table$statistic <- as.double(score %*% InfoM1 %*% t(score))
             ## if(is.na(out$table$statistic)) browser()
             ## range(Info - II)
             ## range(score - SS)
         }
-            
         return(out)
     }
 
