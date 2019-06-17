@@ -552,8 +552,8 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             iid.normScore <- (iid.score %*% sqrt.InfoM1)
             ## normalized score
             normScore <- colSums(iid.normScore)
-            ## delta method            
-            out$iid <-  - iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
+            ## decomposition used to compute the score
+            out$iid <-  iid.normScore %*% normScore / sqrt(crossprod(normScore)[1,1])
             ## out$iid <- out$iid/sqrt(sum(out$iid^2))
             out$table$statistic <- crossprod(normScore)
         }else{
