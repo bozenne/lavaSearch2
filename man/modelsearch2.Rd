@@ -67,7 +67,7 @@ method.p.adjust = \code{"gof"} keep adding links until the chi-squared test (of 
 }
 \examples{
 
-## simulate data
+## simulate data 
 mSim <- lvm()
 regression(mSim) <- c(y1,y2,y3,y4)~u
 regression(mSim) <- u~x1+x2
@@ -75,6 +75,8 @@ categorical(mSim,labels=c("A","B","C")) <- "x2"
 latent(mSim) <- ~u
 covariance(mSim) <- y1~y2
 transform(mSim, Id~u) <- function(x){1:NROW(x)}
+
+set.seed(10)
 df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 
 ## only identifiable extensions

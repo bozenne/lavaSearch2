@@ -54,7 +54,7 @@
 #' @rdname modelsearch2
 #' @examples
 #'
-#' ## simulate data
+#' ## simulate data 
 #' mSim <- lvm()
 #' regression(mSim) <- c(y1,y2,y3,y4)~u
 #' regression(mSim) <- u~x1+x2
@@ -62,6 +62,8 @@
 #' latent(mSim) <- ~u
 #' covariance(mSim) <- y1~y2
 #' transform(mSim, Id~u) <- function(x){1:NROW(x)}
+#'
+#' set.seed(10)
 #' df.data <- lava::sim(mSim, n = 1e2, latent = FALSE)
 #' 
 #' ## only identifiable extensions
@@ -617,31 +619,74 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     table.test[,"p.value"] <- 1-stats::pchisq(statistic, df = 1)
 
     ## ** adjusted p.value
-    if(method.p.adjust == "fastmax"){
-        index.max <- which.max(statistic)
-        resQmax <- calcDistMaxIntegral(statistic = sqrt(statistic[index.max[1]]), iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
+    if(method.p.adjust %in% c("fastmax","max")){
+        Sigma <- cor(iid.link)
+        dimnames(Sigma) <- list(link,link)
+    
+        if(method.p.adjust == "fastmax"){
+            index.maxstat <- which.max(statistic)
+        
+            resInt <- .calcPmaxIntegration(statistic = sqrt(statistic[index.maxstat]), p = n.link,
+                                           Sigma = Sigma, df = NULL, distribution = "gaussian")
+        
+            table.test[index.maxstat, "adjusted.p.value"] <- as.double(resInt)
+            table.test[index.maxstat, "error"] <- attr(resInt,"error")
+        }else if(method.p.adjust == "max"){
 
-        table.test[index.max, "adjusted.p.value"] <- resQmax$p.adjust
-        table.test[index.max, "quantile"] <- resQmax$z
-        table.test[index.max, "error"] <- resQmax$error
-        Sigma <- resQmax$Sigma
+            if(is.null(cl)){
+                if(trace>0){      
+                    ls.resInt <- pbapply::pblapply(1:n.link, function(i){
+                        .calcPmaxIntegration(statistic = sqrt(statistic[i]), p = n.link,
+                                             Sigma = Sigma, df = NULL, distribution = "gaussian")
+                    })            
+                }else{
+                    ls.resInt <- lapply(1:n.link, function(i){
+                        .calcPmaxIntegration(statistic = sqrt(statistic[i]), p = n.link,
+                                             Sigma = Sigma, df = NULL, distribution = "gaussian")
+                    })            
+                }
+            }else{
+            
+                if(trace>0){
+                    pb <- utils::txtProgressBar(max = n.link, style = 3)                   
+                }
 
-    }else if(method.p.adjust == "max"){
-        resQmax <- calcDistMaxIntegral(statistic = sqrt(statistic), iid = iid.link, df = NULL, alpha = alpha, cl  = cl, trace = trace)
-        ## resQmax <- calcDistMaxResampling(statistic = statistic, iid = iid.link, index.iid = index.iid,
-        ## method.resampling = method.resampling, type.statistic = "chisq",
-        ## n.sim = n.sim, alpha = alpha, cl = cl, trace = trace)
+                ## export package
+                parallel::clusterCall(cl, fun = function(x){
+                    suppressPackageStartupMessages(requireNamespace("mvtnorm", quietly = TRUE))
+                })
+        
+                value <- NULL # [:for CRAN check] foreach
+                ls.resInt <- foreach::`%dopar%`(
+                                          foreach::foreach(value = 1:n.link,
+                                                           .export = c(".calcPmaxIntegration","lava_procdata.lvm"),
+                                                           .combine = "list"),
+                                          {
+                                              if(trace>0){utils::setTxtProgressBar(pb, value)}
+                                              return(.calcPmaxIntegration(statistic = sqrt(statistic[value]), p = n.link,
+                                                                          Sigma = Sigma, df = NULL, distribution = "gaussian"))
+                                          })
 
-        table.test[, "adjusted.p.value"] <- resQmax$p.adjust
-        table.test[, "quantile"] <- resQmax$z
-        table.test[, "error"] <- resQmax$error
-        Sigma <- resQmax$Sigma
-                
+                if(trace>0){close(pb)}
+            }
+            names(ls.resInt) <- link
+        
+            table.test[, "adjusted.p.value"] <- unlist(lapply(ls.resInt,as.double))
+            table.test[, "error"] <- unlist(lapply(ls.resInt,attr,"error"))
+        }
+        
+        if(lava.options()$search.calc.quantile.int){
+            table.test[, "quantile"] <- .calcQmaxIntegration(alpha = alpha, p = n.link,
+                                                             Sigma = Sigma,
+                                                             df = NULL, distribution = "gaussian")
+        }
+
     }else{        
         table.test[, "adjusted.p.value"] <- stats::p.adjust(table.test$p.value, method = method.p.adjust)
         table.test[, "quantile"] <- as.numeric(NA)
         Sigma <- NULL        
-    }    
+    }
+
 
     return(list(test = table.test,
                 Sigma = Sigma,
