@@ -582,6 +582,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         i <- NULL # [:for CRAN check] foreach
         res <- foreach::`%dopar%`(
                             foreach::foreach(i = 1:n.link,
+                                             .export = c("lava_procdata.lvm"),
                                              .combine = function(res1,res2){
                                                  res <- list(table = rbind(res1$table,res2$table),
                                                              iid = cbind(res1$iid,res2$iid))
@@ -659,8 +660,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 value <- NULL # [:for CRAN check] foreach
                 ls.resInt <- foreach::`%dopar%`(
                                           foreach::foreach(value = 1:n.link,
-                                                           .export = c(".calcPmaxIntegration","lava_procdata.lvm"),
-                                                           .combine = "list"),
+                                                           .export = c(".calcPmaxIntegration")),
                                           {
                                               if(trace>0){utils::setTxtProgressBar(pb, value)}
                                               return(.calcPmaxIntegration(statistic = sqrt(statistic[value]), p = n.link,
