@@ -277,7 +277,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                         restricted = iRestricted, link = iLink, directive = iDirective,
                                         method.p.adjust = method.p.adjust, type.information = type.information,
                                         cl = cl, trace = trace)
-        
+
         ## ** update according the most significant p.value
         ## *** check convergence
         if(stop.gof){
