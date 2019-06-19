@@ -6,11 +6,12 @@
 \title{Data-driven Extension of a Latent Variable Model}
 \usage{
 modelsearch2(object, link, data, method.p.adjust, type.information, alpha,
-  nStep, na.omit, trace, cpus)
+  method.maxdist, nStep, na.omit, trace, cpus)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
-  method.p.adjust = "fastmax", type.information = "E", alpha = 0.05,
-  nStep = NULL, na.omit = TRUE, trace = TRUE, cpus = 1)
+  method.p.adjust = "fastmax", type.information = "E",
+  method.maxdist = "approximate", alpha = 0.05, nStep = NULL,
+  na.omit = TRUE, trace = TRUE, cpus = 1)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}

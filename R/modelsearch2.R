@@ -45,7 +45,7 @@
 #' @export
 `modelsearch2` <-
     function(object, link, data,
-             method.p.adjust, type.information, alpha, 
+             method.p.adjust, type.information, alpha, method.maxdist,
              nStep, na.omit, 
              trace, cpus) UseMethod("modelsearch2")
 
@@ -114,7 +114,7 @@
 #' @rdname modelsearch2
 #' @export
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
-                                method.p.adjust = "fastmax", type.information = "E", alpha = 0.05, 
+                                method.p.adjust = "fastmax", type.information = "E", method.maxdist = "approximate", alpha = 0.05, 
                                 nStep = NULL, na.omit = TRUE, 
                                 trace = TRUE, cpus = 1){
 
@@ -132,7 +132,9 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     }else{
         stop.gof <- FALSE
     }
-    
+
+    method.maxdist <- match.arg(method.maxdist, c("approximate","permutation"))    
+
     ## cpus
     if(is.null(cpus)){ cpus <- parallel::detectCores()}
 
@@ -275,7 +277,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         
         resStep <- .oneStep_scoresearch(iObject, data = data,
                                         restricted = iRestricted, link = iLink, directive = iDirective,
-                                        method.p.adjust = method.p.adjust, type.information = type.information,
+                                        method.p.adjust = method.p.adjust, type.information = type.information, method.maxdist = method.maxdist,
                                         cl = cl, trace = trace)
 
         ## ** update according the most significant p.value
@@ -482,7 +484,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 ## * .oneStep_scoresearch
 .oneStep_scoresearch  <- function(object, data,
                                   restricted, link, directive,
-                                  method.p.adjust, alpha, type.information,
+                                  method.p.adjust, alpha, type.information, method.maxdist,
                                   cl, trace){
 
     ## ** initialization
@@ -542,15 +544,29 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
         InfoM1 <- matrixPower(Info, power  = -1, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
         out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
-
         if(method.p.adjust %in% c("max","fastmax")){
             iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
             ## rm na
             iid.score <- iid.score[rowSums(is.na(iid.score))==0,]
-            ## compute decomposition
-            out$iid <-  iid.score %*% InfoM1 %*% cbind(colSums(iid.score))
-            ## out$iid <- out$iid/sqrt(sum(out$iid^2))
-            out$table$statistic <- sum(out$iid)
+            if(method.maxdist == "approximate"){
+                ## compute decomposition
+                out$iid <-  iid.score %*% InfoM1 %*% cbind(colSums(iid.score))
+                colnames(out$iid) <- link[iterI]
+                ## out$iid <- out$iid/sqrt(sum(out$iid^2))
+                out$table$statistic <- sum(out$iid)
+            }else if(method.maxdist == "permutation"){
+                namecoef.newobject <- names(coef0.new)
+                n.sample <- NROW(iid.score)
+
+                dimnames(Info) <- list(namecoef.newobject,namecoef.newobject)
+                linComb <- cbind(1, solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
+                out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject]))/sqrt(n.sample)
+                colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
+                
+                score <- colSums(iid.score)
+                out$table$statistic <- as.double(score %*% InfoM1 %*% cbind(score))
+                ## sum(out$iid)    
+            }
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
             ## SS <- score(ee.lvm, p = coef0.new)
@@ -621,17 +637,48 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 
     ## ** adjusted p.value
     if(method.p.adjust %in% c("fastmax","max")){
-        Sigma <- cor(iid.link)
+        if(method.maxdist == "approximate"){
+            outDistMax <- .approxMaxDistChi2(table = table.test, iid = iid.link, statistic = statistic, method.p.adjust = method.p.adjust,
+                                            link = link, n.link = n.link,
+                                            search.calc.quantile.int = lava.options()$search.calc.quantile.int, alpha = alpha,
+                                            cl = cl, trace = trace)
+        }else if(method.maxdist == "permutation"){
+            outDistMax <- .permMaxDistChi2(table = table.test, iid = iid.link, statistic = statistic, method.p.adjust = method.p.adjust,
+                                        link = link, n.link = n.link,
+                                        cl = cl, trace = trace)
+        }
+
+        table.test <- outDistMax$table
+        Sigma <- outDistMax$Sigma
+
+    }else{        
+        table.test[, "adjusted.p.value"] <- stats::p.adjust(table.test$p.value, method = method.p.adjust)
+        table.test[, "quantile"] <- as.numeric(NA)
+        Sigma <- NULL        
+    }
+
+
+    return(list(test = table.test,
+                Sigma = Sigma,
+                iid = iid.link))
+}
+
+
+## ** approxMaxDistChi2
+.approxMaxDistChi2 <- function(table, iid, statistic, method.p.adjust,
+                               link, n.link,
+                               search.calc.quantile.int, alpha,
+                               cl, trace){
+        Sigma <- cor(iid)
         dimnames(Sigma) <- list(link,link)
-    
         if(method.p.adjust == "fastmax"){
             index.maxstat <- which.max(statistic)
         
             resInt <- .calcPmaxIntegration(statistic = sqrt(statistic[index.maxstat]), p = n.link,
                                            Sigma = Sigma, df = NULL, distribution = "gaussian")
         
-            table.test[index.maxstat, "adjusted.p.value"] <- as.double(resInt)
-            table.test[index.maxstat, "error"] <- attr(resInt,"error")
+            table[index.maxstat, "adjusted.p.value"] <- as.double(resInt)
+            table[index.maxstat, "error"] <- attr(resInt,"error")
         }else if(method.p.adjust == "max"){
 
             if(is.null(cl)){
@@ -671,28 +718,74 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             }
             names(ls.resInt) <- link
         
-            table.test[, "adjusted.p.value"] <- unlist(lapply(ls.resInt,as.double))
-            table.test[, "error"] <- unlist(lapply(ls.resInt,attr,"error"))
+            table[, "adjusted.p.value"] <- unlist(lapply(ls.resInt,as.double))
+            table[, "error"] <- unlist(lapply(ls.resInt,attr,"error"))
         }
         
         if(lava.options()$search.calc.quantile.int){
-            table.test[, "quantile"] <- .calcQmaxIntegration(alpha = alpha, p = n.link,
+            table[, "quantile"] <- .calcQmaxIntegration(alpha = alpha, p = n.link,
                                                              Sigma = Sigma,
                                                              df = NULL, distribution = "gaussian")
         }
 
-    }else{        
-        table.test[, "adjusted.p.value"] <- stats::p.adjust(table.test$p.value, method = method.p.adjust)
-        table.test[, "quantile"] <- as.numeric(NA)
-        Sigma <- NULL        
-    }
+        return(list(table = table,
+                    Sigma = Sigma))
+}
+## ** permMaxDistChi2
+.permMaxDistChi2 <- function(table, iid, statistic, method.p.adjust,
+                             link, n.link, n.perm = lava.options()$search.n.perm,
+                             cl, trace){
+    p <- NCOL(iid)
+    ls.name <- strsplit(colnames(iid), split = ":")
+    vec.model <- unlist(lapply(ls.name,"[[",1))
+    Umodel <- unique(vec.model)
+    ls.indexModel <- tapply(1:length(vec.model),vec.model,list)
 
+    Sigma <- crossprod(iid)
+    sample <- mvtnorm::rmvnorm(n.perm, mean = rep(0,p), sigma = Sigma)
 
-    return(list(test = table.test,
-                Sigma = Sigma,
-                iid = iid.link))
+    M.scoreStat <- do.call(cbind,lapply(1:n.link, function(iModel){ ## iModel <- 1
+        iScoreStat <- rowSums(sample[,ls.indexModel[[iModel]],drop=FALSE]*sample[,ls.indexModel[[iModel]],drop=FALSE])
+        ## 1 - mean(iScoreStat <= qchisq(0.95, df = 1))
+        return(iScoreStat)
+    }))
+    maxScoreStat <- apply(M.scoreStat,1,max)
+    vec.p.value <- sapply(statistic, function(iT){mean( maxScoreStat>iT + 0.5*(maxScoreStat==iT))})
+
+    table[, "adjusted.p.value"] <- vec.p.value
+    table[, "error"] <- NA
+    return(list(table = table,
+                Sigma = Sigma))
+
 }
 
 
 
+## ** iidConstrainscore (obsolete)
+## iidConstrainScore <- function(object, newobject){
+##     if(all(sapply(newobject$mean,function(x){all(is.na(x))}))){
+##         suffStat <- lava:::procdata.lvm(newobject, data = object$data$model.frame, missing = FALSE) 
+##         newobject <- lava::fixsome(newobject, measurement.fix=TRUE, S=suffStat$S, mu=suffStat$mu, n = suffStat$n, debug=FALSE)
+##     }
+    
+##     param0 <- coef(object)
+##     name.param0 <- names(param0)
+##     name.param <- coef(newobject)
+##     n.param <- length(name.param)
+
+##     newparam <- setNames(rep(0,n.param), name.param)
+##     newparam[name.param0] <- param0
+##     extraparam <- setdiff(name.param, name.param0)
+
+##     S <- score(newobject, p = newparam, data = object$data$model.frame, indiv = TRUE)
+##     I <- information(newobject, p = newparam, data = object$data$model.frame)
+##     dimnames(I) <- list(name.param,name.param)
+    
+##     linComb <- cbind(1, solve(I[extraparam,extraparam,drop=FALSE]) %*% I[extraparam,name.param0,drop=FALSE]) %*% I[c(extraparam,name.param0),c(extraparam,name.param0)]
+##     print(linComb)
+##     iid <- S %*% solve(I)
+##     print(head(iid))
+##     out <- sweep(iid, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,name.param]))
+##     return(out/sqrt(object$data$n))
+## }
 
