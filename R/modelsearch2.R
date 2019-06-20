@@ -558,6 +558,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 colnames(out$iid) <- link[iterI]
                 ## out$iid <- out$iid/sqrt(sum(out$iid^2))
                 out$table$statistic <- sum(out$iid)
+                out$table$dp.Info <- TRUE
                 
             }else if(method.maxdist == "permutation"){
                 InfoM12 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
@@ -568,10 +569,13 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 n.sample <- NROW(iid.score)
 
                 dimnames(Info) <- list(namecoef.newobject,namecoef.newobject)
-                linComb <- cbind(1, solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
-                out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
-                colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
+                linComb <- cbind(-1, solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
 
+                iid.theta <- iid.score %*% InfoM1
+                colnames(iid.theta) <- namecoef.newobject
+                out$iid <- iid.theta[,link[iterI]] %*% linComb[,namecoef.newobject,drop=FALSE] %*% InfoM12
+                ## out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
+                
                 score <- colSums(iid.score)
                 out$table$statistic <- as.double(score %*% InfoM1 %*% cbind(score))
                 ## sum(out$iid)    
@@ -583,7 +587,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             ## SS %*% solve(I) %*% t(SS)
             score <- lava::score(newModel, p = coef0.new, indiv = FALSE, data = data)
             
-            out$table$statistic <- as.double(score %*% InfoM1 %*% t(score))
+            out$table$statistic <- as.double(score %*% solve(Info) %*% t(score))
             ## range(Info - II)
             ## range(score - SS)
         }
@@ -762,7 +766,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## Sigma <- crossprod(iidNorm)
     Sigma <- crossprod(iid)
     ## Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]]
-    ## round(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]],2)
+    ## round(Sigma[ls.indexModel[[1]],ls.indexModel[[1]]],2)
     ## fields::image.plot(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]])
     ## ** sampling under H0
     sample <- mvtnorm::rmvnorm(n.perm, mean = rep(0,p), sigma = Sigma)
@@ -787,7 +791,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## ** p-value for the max statistic
     maxScoreStat <- apply(M.scoreStat,1,max)
     p.value.max <- sapply(statistic, function(iT){mean( maxScoreStat>iT + 0.5*(maxScoreStat==iT))})
-    
+    ## p.value.max / p.value
     table[, "p.value"] <- p.value
     table[, "adjusted.p.value"] <- p.value.max
     table[, "error"] <- NA
