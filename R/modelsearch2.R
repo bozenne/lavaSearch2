@@ -574,6 +574,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 iid.theta <- iid.score %*% InfoM1
                 colnames(iid.theta) <- namecoef.newobject
                 out$iid <- iid.theta[,link[iterI]] %*% linComb[,namecoef.newobject,drop=FALSE] %*% InfoM12
+                colnames(out$iid) <- namecoef.newobject
                 ## out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
                 
                 score <- colSums(iid.score)
