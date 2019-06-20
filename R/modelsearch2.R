@@ -548,27 +548,30 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         ## *** compute the iid decomposition and statistic
         ## eigen(lava::information(estimate(newModel, data = data), p = coef0.new, data = data, type = "E"))
         Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
-        InfoM1 <- matrixPower(Info, power  = -1, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
-        out$table$dp.Info <- !("warning" %in% names(attributes(InfoM1)))
         if(method.p.adjust %in% c("max","fastmax")){
             iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
             ## rm na
             iid.score <- iid.score[rowSums(is.na(iid.score))==0,]
             if(method.maxdist == "approximate"){
                 ## compute decomposition
-                out$iid <-  iid.score %*% InfoM1 %*% cbind(colSums(iid.score))
+                out$iid <-  iid.score %*% solve(Info) %*% cbind(colSums(iid.score))
                 colnames(out$iid) <- link[iterI]
                 ## out$iid <- out$iid/sqrt(sum(out$iid^2))
                 out$table$statistic <- sum(out$iid)
+                
             }else if(method.maxdist == "permutation"){
+                InfoM12 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
+                InfoM1 <- crossprod(InfoM12)
+                out$table$dp.Info <- !("warning" %in% names(attributes(InfoM12)))
+
                 namecoef.newobject <- names(coef0.new)
                 n.sample <- NROW(iid.score)
 
                 dimnames(Info) <- list(namecoef.newobject,namecoef.newobject)
                 linComb <- cbind(1, solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
-                out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject]))/sqrt(n.sample)
+                out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
                 colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
-                
+
                 score <- colSums(iid.score)
                 out$table$statistic <- as.double(score %*% InfoM1 %*% cbind(score))
                 ## sum(out$iid)    
@@ -581,7 +584,6 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
             score <- lava::score(newModel, p = coef0.new, indiv = FALSE, data = data)
             
             out$table$statistic <- as.double(score %*% InfoM1 %*% t(score))
-            ## if(is.na(out$table$statistic)) browser()
             ## range(Info - II)
             ## range(score - SS)
         }
@@ -748,14 +750,17 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ls.indexModel <- tapply(1:length(vec.model),vec.model,list)
 
     ## ** covariance matrix
-    Sigma0 <- crossprod(iid)
-    iidNorm <- iid
-    for(iM in 1:n.link){ ## normalisation to variance 1 per model (to ensure chi2, 1 df)
+    ## Sigma0 <- crossprod(iid)
+    ## iidNorm <- iid
+    ## for(iM in 1:n.link){ ## normalisation to variance 1 per model (to ensure chi2, 1 df)
         ## seems to divide by residual variance
-        iVarTot <- sum(Sigma0[ls.indexModel[[iM]],ls.indexModel[[iM]]]) 
-        iidNorm[,ls.indexModel[[iM]]] <- sweep(iidNorm[,ls.indexModel[[iM]]], FUN = "/", MARGIN = 2, STATS = sqrt(iVarTot))
-    }
-    Sigma <- crossprod(iidNorm)
+        ## browser()
+        ## iVarTot <- sum(Sigma0[ls.indexModel[[iM]],ls.indexModel[[iM]]])
+        ## print(iVarTot)
+        ## iidNorm[,ls.indexModel[[iM]]] <- sweep(iidNorm[,ls.indexModel[[iM]]], FUN = "/", MARGIN = 2, STATS = sqrt(iVarTot))
+    ## }
+    ## Sigma <- crossprod(iidNorm)
+    Sigma <- crossprod(iid)
     ## Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]]
     ## round(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]],2)
     ## fields::image.plot(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]])
