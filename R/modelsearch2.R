@@ -117,7 +117,7 @@
 #' @rdname modelsearch2
 #' @export
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
-                                method.p.adjust = "fastmax", method.maxdist = "approximate", n.perm = 1e5, na.omit = TRUE, 
+                                method.p.adjust = "fastmax", method.maxdist = "approximate", n.perm = 1e4, na.omit = TRUE, 
                                 alpha = 0.05, nStep = NULL, 
                                 trace = TRUE, cpus = 1){
 
@@ -574,7 +574,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 iid.theta <- iid.score %*% InfoM1
                 colnames(iid.theta) <- namecoef.newobject
                 out$iid <- iid.theta[,link[iterI]] %*% linComb[,namecoef.newobject,drop=FALSE] %*% InfoM12
-                colnames(out$iid) <- namecoef.newobject
+                colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
                 ## out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
                 
                 score <- colSums(iid.score)
@@ -767,7 +767,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## Sigma <- crossprod(iidNorm)
     Sigma <- crossprod(iid)
     ## Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]]
-    ## round(Sigma[ls.indexModel[[1]],ls.indexModel[[1]]],2)
+    ## round(Sigma[ls.indexModel[[2]],ls.indexModel[[2]]],2)
     ## fields::image.plot(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]])
     ## ** sampling under H0
     sample <- mvtnorm::rmvnorm(n.perm, mean = rep(0,p), sigma = Sigma)
@@ -788,7 +788,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     ## ** p-value for each statistic
     p.value <- colMeans(sweep(M.scoreStat, MARGIN = 2, FUN = ">", STATS = statistic)) + 1/2 * colMeans(sweep(M.scoreStat, MARGIN = 2, FUN = "==", STATS = statistic))
     ## mean(M.scoreStat[,1] > statistic[1])
-    
+
     ## ** p-value for the max statistic
     maxScoreStat <- apply(M.scoreStat,1,max)
     p.value.max <- sapply(statistic, function(iT){mean( maxScoreStat>iT + 0.5*(maxScoreStat==iT))})
