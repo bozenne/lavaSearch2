@@ -41,8 +41,7 @@ that has been registered using \code{registerDoParallel}.}
 
 \item{trace}{[logical] should the execution of the function be traced?}
 
-\item{method}{[character] the method used to compute the p-values.
-See the output of \code{lava.options()$search.calcMaxDist} for the possible values.}
+\item{method}{[character] the method used to compute the p-values.}
 
 \item{n.sim}{[integer >0] the number of bootstrap simulations used to compute each p-values.
 Disregarded when the p-values are computed using numerical integration.}

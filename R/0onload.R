@@ -1,11 +1,8 @@
 ## * .onLoad
 .onLoad <- function(lib, pkg="lavaSearch2") {
 
-    # available methods to compute the distribution of the max statistic
-    lava::lava.options(search.calcMaxDist = c("integration","boot-residual","boot-wild"),
-                       search.p.adjust = c("fastmax", "max", "holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none","gof"),
-                       search.calc.quantile.int = FALSE,
-                       search.n.perm = 1e6,
+    lava::lava.options(search.calc.quantile.int = FALSE, ## hidden argument for modelsearch2
+                       search.type.information = "E", ## hidden argument for modelsearch2
                        method.estimate2 = "ols",
                        factor.dRvcov = 1/2
                        )
