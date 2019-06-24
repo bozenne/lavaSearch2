@@ -3,6 +3,7 @@
 
     lava::lava.options(search.calc.quantile.int = FALSE, ## hidden argument for modelsearch2
                        search.type.information = "E", ## hidden argument for modelsearch2
+                       ## search.perm.stat = "exact", ## hidden argument for modelsearch2 (otherwise "exact")
                        method.estimate2 = "ols",
                        factor.dRvcov = 1/2
                        )

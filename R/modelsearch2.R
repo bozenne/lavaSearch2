@@ -10,10 +10,11 @@
 #' Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \code{"fdr"}).
 #' Can also be \code{"max"}, \code{"fastmax"}, or \code{"gof"}.
 #' @param method.maxdist [character] the method used to estimate the distribution of the max statistic.
-#' \code{"permutation"} resample the score under the null to estimate the null distribution.
+#' \code{"resampling"} resample the score under the null to estimate the null distribution.
+#' \code{"bootstrap"} performs a wild bootstrap of the iid decomposition of the score to estimate the null distribution.
 #' \code{"approximate"} attemps to identify the latent gaussian variable corresponding to each score statistic (that is chi-2 distributed).
 #' It approximates the correlation matrix between these latent gaussian variables and uses numerical integration to compute the distribution of the max.
-#' @param n.perm [integer, >0] number of samples used in the permutation approach.
+#' @param n.sample [integer, >0] number of samples used in the resampling approach.
 #' @param na.omit should tests leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.
 #' @param alpha [numeric 0-1] the significance cutoff for the p-values.
 #' When the p-value is below, the corresponding link will be added to the model
@@ -49,7 +50,7 @@
 #' @export
 `modelsearch2` <-
     function(object, link, data,
-             method.p.adjust, method.maxdist, n.perm, na.omit, 
+             method.p.adjust, method.maxdist, n.sample, na.omit, 
              alpha,  nStep, trace, cpus) UseMethod("modelsearch2")
 
 
@@ -117,7 +118,7 @@
 #' @rdname modelsearch2
 #' @export
 modelsearch2.lvmfit <- function(object, link = NULL, data = NULL, 
-                                method.p.adjust = "fastmax", method.maxdist = "approximate", n.perm = 1e4, na.omit = TRUE, 
+                                method.p.adjust = "fastmax", method.maxdist = "approximate", n.sample = 1e5, na.omit = TRUE, 
                                 alpha = 0.05, nStep = NULL, 
                                 trace = TRUE, cpus = 1){
 
@@ -136,10 +137,10 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         stop.gof <- FALSE
     }
 
-    if(n.perm<0 || (n.perm %% 1 != 0) ){
-        stop("Argument \'n.perm\' must be a positive integer \n")
+    if(n.sample<0 || (n.sample %% 1 != 0) ){
+        stop("Argument \'n.sample\' must be a positive integer \n")
     }
-    method.maxdist <- match.arg(method.maxdist, c("approximate","permutation"))    
+    method.maxdist <- match.arg(method.maxdist, c("approximate","resampling","bootstrap"))    
 
     ## cpus
     if(is.null(cpus)){ cpus <- parallel::detectCores()}
@@ -283,7 +284,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         
         resStep <- .oneStep_scoresearch(iObject, data = data,
                                         restricted = iRestricted, link = iLink, directive = iDirective,
-                                        method.p.adjust = method.p.adjust, method.maxdist = method.maxdist, n.perm = n.perm,
+                                        method.p.adjust = method.p.adjust, method.maxdist = method.maxdist, n.sample = n.sample,
                                         cl = cl, trace = trace)
 
         ## ** update according the most significant p.value
@@ -490,7 +491,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 ## * .oneStep_scoresearch
 .oneStep_scoresearch  <- function(object, data,
                                   restricted, link, directive,
-                                  method.p.adjust, alpha, method.maxdist, n.perm,
+                                  method.p.adjust, alpha, method.maxdist, n.sample,
                                   cl, trace){
 
     ## ** initialization
@@ -499,6 +500,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
     namecoef.object <- names(coef.object)
     ncoef.object <- length(coef.object)
     type.information <- lava.options()$search.type.information
+    type.statistic <- lava.options()$search.sample.stat
     
     ## ** warper
     warper <- function(iterI){ # iterI <- 1
@@ -546,8 +548,10 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         coef0.new[namecoef.object] <- coef.object
 
         ## *** compute the iid decomposition and statistic
-        ## eigen(lava::information(estimate(newModel, data = data), p = coef0.new, data = data, type = "E"))
+        namecoef.newobject <- names(coef0.new)
         Info <- lava::information(newModel, p = coef0.new, n = NROW(data), type = type.information, data = data)
+        dimnames(Info) <- list(namecoef.newobject,namecoef.newobject)
+        
         if(method.p.adjust %in% c("max","fastmax")){
             iid.score <- lava::score(newModel, p = coef0.new, data = data, indiv = TRUE)
             ## rm na
@@ -560,26 +564,62 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 out$table$statistic <- sum(out$iid)
                 out$table$dp.Info <- TRUE
                 
-            }else if(method.maxdist == "permutation"){
-                InfoM12 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
-                InfoM1 <- crossprod(InfoM12)
-                out$table$dp.Info <- !("warning" %in% names(attributes(InfoM12)))
-
-                namecoef.newobject <- names(coef0.new)
+            }else if(method.maxdist %in% c("resampling","bootstrap")){
                 n.sample <- NROW(iid.score)
 
-                dimnames(Info) <- list(namecoef.newobject,namecoef.newobject)
-                linComb <- cbind(-1, solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
-
-                iid.theta <- iid.score %*% InfoM1
-                colnames(iid.theta) <- namecoef.newobject
-                out$iid <- iid.theta[,link[iterI]] %*% linComb[,namecoef.newobject,drop=FALSE] %*% InfoM12
-                colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
-                ## out$iid <- sweep(iid.score %*% InfoM1, MARGIN = 2, FUN = "*", STATS = as.double(linComb[,namecoef.newobject])) %*% InfoM12
+                InfoM12 <- matrixPower(Info, power  = -1/2, symmetric = TRUE, tol = 1e-15, print.warning = FALSE)
+                out$table$dp.Info <- !("warning" %in% names(attributes(InfoM12)))
+                dimnames(InfoM12) <- list(namecoef.newobject,namecoef.newobject)
                 
-                score <- colSums(iid.score)
-                out$table$statistic <- as.double(score %*% InfoM1 %*% cbind(score))
-                ## sum(out$iid)    
+                ## initial version
+                ## linComb <- cbind(1, -solve(Info[link[iterI],link[iterI],drop=FALSE]) %*% Info[link[iterI],namecoef.object,drop=FALSE]) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
+                if(FALSE){
+                    InfoM1 <- crossprod(InfoM12)
+                    dimnames(InfoM1) <- list(namecoef.newobject,namecoef.newobject)
+                    linComb <- cbind(1, -Info[link[iterI],namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE])) %*% Info[c(link[iterI],namecoef.object),c(link[iterI],namecoef.object)]
+                    iid.theta <- iid.score %*% InfoM1
+                    colnames(iid.theta) <- namecoef.newobject
+                    out$iid <- iid.theta[,link[iterI]] %*% linComb[,namecoef.newobject,drop=FALSE] %*% InfoM12
+                    colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
+                }
+                ## short version
+                out$iid <- (iid.score[,link[iterI],drop=FALSE] - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]) %*% InfoM12[link[iterI],,drop=FALSE]
+                colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
+
+                ## sum(round(crossprod(out$iid),2))
+                ## term1 <- iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE]
+                ## term2 <-  - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]
+                ## range(out$iid - (term1 + term2))
+
+                ## (iid.score %*% InfoM1)[,link[iterI],drop=FALSE] - (iid.score %*% InfoM1[,link[iterI],drop=FALSE])
+                ## range((iid.score %*% InfoM1)[,link[iterI],drop=FALSE] - (iid.score[,link[iterI]] %*% InfoM1[link[iterI],link[iterI],drop=FALSE]+iid.score[,namecoef.object] %*% InfoM1[namecoef.object,link[iterI],drop=FALSE]))
+                
+                ## dim(iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE])
+                ## iid.score[,link[iterI],drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]
+                
+                ## dim(solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE])
+
+                
+                
+                ##     ## InfoM1_M <- rbind(1,InfoM1[namecoef.object,link[iterI],drop=FALSE] %*% solve(InfoM1[link[iterI],link[iterI],drop=FALSE]))
+                ##     InfoM1_M <- rbind(1,- solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE])
+                ##     rownames(InfoM1_M)[1] <- link[iterI]
+                ##     range(InfoM1_M[namecoef.newobject,,drop=FALSE] - (InfoM1[,link[iterI],drop=FALSE] %*% term1)[,link[iterI]] )
+
+                ##     range(out$iid - iid.score %*% InfoM1_M[namecoef.newobject,,drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE])
+                ##     range(out$iid - (iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE]  - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]))
+                    
+                ##     term1 <- Info[link[iterI],link[iterI],drop=FALSE] - Info[link[iterI],namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI]]
+                ##     linComb.ter <- c(term1, rep(0, length(namecoef.object)))
+                ##     range(linComb.ter - linComb)
+
+                ## if(type.statistic == "approximation"){
+                out$table$statistic <- crossprod(colSums(out$iid)) ## first order approximation (almost identical to exact value)
+                ## }else if(type.statistic == "exact"){
+                ## score <- colSums(iid.score)
+                ## out$table$statistic <- as.double(score %*% solve(Info) %*% cbind(score))
+                ## }
+
             }
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
@@ -655,9 +695,9 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                                             link = link, n.link = n.link,
                                             search.calc.quantile.int = lava.options()$search.calc.quantile.int, alpha = alpha,
                                             cl = cl, trace = trace)
-        }else if(method.maxdist == "permutation"){
-            outDistMax <- .permMaxDistChi2(table = table.test, iid = iid.link, statistic = statistic, method.p.adjust = method.p.adjust,
-                                        link = link, n.link = n.link, n.perm = n.perm,
+        }else if(method.maxdist %in% c("resampling","bootstrap")){
+            outDistMax <- .sampleMaxDistChi2(table = table.test, iid = iid.link, statistic = statistic, method.p.adjust = method.p.adjust,
+                                        link = link, n.link = n.link, n.sample = n.sample, method = method.maxdist,
                                         cl = cl, trace = trace)
         }
 
@@ -744,43 +784,39 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
         return(list(table = table,
                     Sigma = Sigma))
 }
-## * permMaxDistChi2
-.permMaxDistChi2 <- function(table, iid, statistic, method.p.adjust,
-                             link, n.link, n.perm,
-                             cl, trace){
+## * sampleMaxDistChi2
+.sampleMaxDistChi2 <- function(table, iid, statistic, method.p.adjust,
+                               link, n.link, n.sample, method,
+                               cl, trace){
     p <- NCOL(iid)
+    n <- NROW(iid)
     ls.name <- strsplit(colnames(iid), split = ":")
     vec.model <- unlist(lapply(ls.name,"[[",1))
     Umodel <- unique(vec.model)
     ls.indexModel <- tapply(1:length(vec.model),vec.model,list)
 
-    ## ** covariance matrix
-    ## Sigma0 <- crossprod(iid)
-    ## iidNorm <- iid
-    ## for(iM in 1:n.link){ ## normalisation to variance 1 per model (to ensure chi2, 1 df)
-        ## seems to divide by residual variance
-        ## browser()
-        ## iVarTot <- sum(Sigma0[ls.indexModel[[iM]],ls.indexModel[[iM]]])
-        ## print(iVarTot)
-        ## iidNorm[,ls.indexModel[[iM]]] <- sweep(iidNorm[,ls.indexModel[[iM]]], FUN = "/", MARGIN = 2, STATS = sqrt(iVarTot))
-    ## }
-    ## Sigma <- crossprod(iidNorm)
-    Sigma <- crossprod(iid)
-    ## Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]]
-    ## round(Sigma[ls.indexModel[[2]],ls.indexModel[[2]]],2)
-    ## fields::image.plot(Sigma[ls.indexModel[[iM]],ls.indexModel[[iM]]])
     ## ** sampling under H0
-    sample <- mvtnorm::rmvnorm(n.perm, mean = rep(0,p), sigma = Sigma)
 
-    ## ** compute score statistic
-    M.scoreStat <- do.call(cbind,lapply(1:n.link, function(iModel){ ## iModel <- 1
-        iScoreStat <- rowSums(sample[,ls.indexModel[[iModel]],drop=FALSE]*sample[,ls.indexModel[[iModel]],drop=FALSE])
-        ## 1 - mean(iScoreStat <= qchisq(0.95, df = 1))
-        return(iScoreStat)
-    }))
-    ## 1 - mean(M.scoreStat[,1] <= qchisq(0.95, df = 1))
-    ##
-    
+    ## *** resampling    
+    if(method == "resampling"){
+        Sigma <- crossprod(iid)
+        sample2 <- mvtnorm::rmvnorm(n.sample, mean = rep(0,p), sigma = Sigma)^2
+        M.scoreStat <- do.call(cbind,lapply(1:n.link, function(iModel){ ## iModel <- 1
+            return(rowSums(sample2[,ls.indexModel[[iModel]],drop=FALSE]))
+        }))
+    }
+
+    ## *** wild bootstrap
+    if(method == "bootstrap"){
+        M.scoreStat <- wildBoot_cpp(iid = iid,
+                                    lsIndexModel = lapply(ls.indexModel, function(x){x-1}),
+                                    nSample = n.sample,
+                                    nObs = n,
+                                    nModel = n.link,
+                                    p = p)
+    }
+    ## *** check
+    ## apply(M.scoreStat,2, function(x){1-mean(x <= qchisq(0.95, df = 1))})
     ## hist(M.scoreStat[,1], freq = FALSE)
     ## points(seq(0,15,0.1), dchisq(seq(0,15,0.1), df = 1), col = "red", type = "l")
     
