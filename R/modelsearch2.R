@@ -586,40 +586,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
                 out$iid <- (iid.score[,link[iterI],drop=FALSE] - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]) %*% InfoM12[link[iterI],,drop=FALSE]
                 colnames(out$iid) <- paste0(link[iterI],":",namecoef.newobject)
 
-                ## sum(round(crossprod(out$iid),2))
-                ## term1 <- iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE]
-                ## term2 <-  - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]
-                ## range(out$iid - (term1 + term2))
-
-                ## (iid.score %*% InfoM1)[,link[iterI],drop=FALSE] - (iid.score %*% InfoM1[,link[iterI],drop=FALSE])
-                ## range((iid.score %*% InfoM1)[,link[iterI],drop=FALSE] - (iid.score[,link[iterI]] %*% InfoM1[link[iterI],link[iterI],drop=FALSE]+iid.score[,namecoef.object] %*% InfoM1[namecoef.object,link[iterI],drop=FALSE]))
-                
-                ## dim(iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE])
-                ## iid.score[,link[iterI],drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]
-                
-                ## dim(solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE])
-
-                
-                
-                ##     ## InfoM1_M <- rbind(1,InfoM1[namecoef.object,link[iterI],drop=FALSE] %*% solve(InfoM1[link[iterI],link[iterI],drop=FALSE]))
-                ##     InfoM1_M <- rbind(1,- solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE])
-                ##     rownames(InfoM1_M)[1] <- link[iterI]
-                ##     range(InfoM1_M[namecoef.newobject,,drop=FALSE] - (InfoM1[,link[iterI],drop=FALSE] %*% term1)[,link[iterI]] )
-
-                ##     range(out$iid - iid.score %*% InfoM1_M[namecoef.newobject,,drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE])
-                ##     range(out$iid - (iid.score[,link[iterI],drop=FALSE] %*% InfoM12[link[iterI],,drop=FALSE]  - iid.score[,namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI],drop=FALSE]  %*% InfoM12[link[iterI],,drop=FALSE]))
-                    
-                ##     term1 <- Info[link[iterI],link[iterI],drop=FALSE] - Info[link[iterI],namecoef.object,drop=FALSE] %*% solve(Info[namecoef.object,namecoef.object,drop=FALSE]) %*% Info[namecoef.object,link[iterI]]
-                ##     linComb.ter <- c(term1, rep(0, length(namecoef.object)))
-                ##     range(linComb.ter - linComb)
-
-                ## if(type.statistic == "approximation"){
-                out$table$statistic <- crossprod(colSums(out$iid)) ## first order approximation (almost identical to exact value)
-                ## }else if(type.statistic == "exact"){
-                ## score <- colSums(iid.score)
-                ## out$table$statistic <- as.double(score %*% solve(Info) %*% cbind(score))
-                ## }
-
+                out$table$statistic <- as.double(crossprod(colSums(out$iid))) ## first order approximation (almost identical to exact value)
             }
         }else{
             ## ee.lvm <- estimate(newModel, data = data)
@@ -808,6 +775,7 @@ modelsearch2.lvmfit <- function(object, link = NULL, data = NULL,
 
     ## *** wild bootstrap
     if(method == "bootstrap"){
+        Sigma <- NULL
         M.scoreStat <- wildBoot_cpp(iid = iid,
                                     lsIndexModel = lapply(ls.indexModel, function(x){x-1}),
                                     nSample = n.sample,

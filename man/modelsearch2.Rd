@@ -5,12 +5,12 @@
 \alias{modelsearch2.lvmfit}
 \title{Data-driven Extension of a Latent Variable Model}
 \usage{
-modelsearch2(object, link, data, method.p.adjust, method.maxdist, n.perm,
+modelsearch2(object, link, data, method.p.adjust, method.maxdist, n.sample,
   na.omit, alpha, nStep, trace, cpus)
 
 \method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
   method.p.adjust = "fastmax", method.maxdist = "approximate",
-  n.perm = 1e+05, na.omit = TRUE, alpha = 0.05, nStep = NULL,
+  n.sample = 1e+05, na.omit = TRUE, alpha = 0.05, nStep = NULL,
   trace = TRUE, cpus = 1)
 }
 \arguments{
@@ -25,11 +25,12 @@ Can be any method that is valid for the \code{stats::p.adjust} function (e.g. \c
 Can also be \code{"max"}, \code{"fastmax"}, or \code{"gof"}.}
 
 \item{method.maxdist}{[character] the method used to estimate the distribution of the max statistic.
-\code{"permutation"} resample the score under the null to estimate the null distribution.
+\code{"resampling"} resample the score under the null to estimate the null distribution.
+\code{"bootstrap"} performs a wild bootstrap of the iid decomposition of the score to estimate the null distribution.
 \code{"approximate"} attemps to identify the latent gaussian variable corresponding to each score statistic (that is chi-2 distributed).
 It approximates the correlation matrix between these latent gaussian variables and uses numerical integration to compute the distribution of the max.}
 
-\item{n.perm}{[integer, >0] number of samples used in the permutation approach.}
+\item{n.sample}{[integer, >0] number of samples used in the resampling approach.}
 
 \item{na.omit}{should tests leading to NA for the test statistic be ignored. Otherwise this will stop the selection process.}
 
