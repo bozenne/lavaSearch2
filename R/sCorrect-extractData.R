@@ -1,17 +1,26 @@
 ## * Documentation
 #' @title Extract Data From a Model
-#' 
-#' @description Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.. 
+#' @description Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.
 #' If it fails it will try to extract it by its name according to \code{model$call$data}.
+#' @name extractData
 #' 
 #' @param object the fitted model.
 #' @param design.matrix [logical] should the data be extracted after transformation (e.g. conversion of categorical variables to dummy variables)?
 #' Otherwise the original data will be returned.
 #' @param as.data.frame [logical] should the output be converted into a \code{data.frame} object?
+#' @param rm.na [logical] should the lines containing missing values in the dataset be removed?
 #' @param envir [environment] the environment from which to search the data.
 #'
 #' @return a dataset.
-#' 
+#' @concept extractor
+#' @export
+`extractData` <-
+    function(object, design.matrix, as.data.frame, envir, rm.na){
+        UseMethod("extractData", object)
+    }
+
+## * Example
+#' @rdname extractData
 #' @examples
 #' set.seed(10)
 #' n <- 101
@@ -26,13 +35,15 @@
 #' m.lm <- lm(Y ~ G, data = data.df)
 #' a <- extractData(m.lm, design.matrix = TRUE)
 #' b <- extractData(m.lm, design.matrix = FALSE)
-#' 
+#'
+#' #### mixed models ####
 #' library(nlme)
 #' m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = data.df)
 #' c <- extractData(m.gls)
 #' m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
 #' d <- extractData(m.lme)
-#' 
+#'
+#' #### latent variable models ####
 #' library(lava)
 #' e.lvm <- estimate(lvm(Y ~ G), data = data.df)
 #' e <- extractData(e.lvm)
@@ -51,7 +62,7 @@
 #'   f <- extractData(m.cox, design.matrix = TRUE)
 #' }
 #' 
-#' #### nested fuuctions ####
+#' #### nested functions ####
 #' fct1 <- function(m){
 #'    fct2(m)
 #' }
@@ -59,21 +70,19 @@
 #'    extractData(m)
 #' }
 #' g <- fct1(m.gls)
-#' @concept extractor
-#' @export
-`extractData` <-
-    function(object, design.matrix, as.data.frame, envir){
-        UseMethod("extractData", object)
-    }
 
-## * method extractData.lm
+## * extractData.lm
 #' @rdname extractData
 #' @export
 extractData.lm <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
-                           envir = environment()){
+                           envir = environment(), rm.na = TRUE){
     ## ** check arguments
-    validLogical(design.matrix, valid.length = 1)
-    validLogical(as.data.frame, valid.length = 1)
+    if(!is.logical(design.matrix)){
+        stop("Argument \'design.matrix\' must be of type logical")
+    }
+    if(!is.logical(as.data.frame)){
+        stop("Argument \'as.data.frame\' must be of type logical")
+    }
 
     ## ** extract data
     if(design.matrix){
@@ -98,18 +107,27 @@ extractData.lm <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
         data <- as.data.frame(data)        
     }
 
+    ## ** remove missing values
+    if(length(object$na.action)>0){ ## remove rows corresponding to missing values
+        data <- data[setdiff(1:NROW(data),object$na.action),,drop=FALSE]
+    }
+
     ## ** export
     return(data)
 }
 
-## * method extractData.coxph
+## * extractData.coxph
 #' @rdname extractData
 #' @export
 extractData.coxph <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
                               envir = environment()){
     ## ** check arguments
-    validLogical(design.matrix, valid.length = 1)
-    validLogical(as.data.frame, valid.length = 1)
+    if(!is.logical(design.matrix)){
+        stop("Argument \'design.matrix\' must be of type logical")
+    }
+    if(!is.logical(as.data.frame)){
+        stop("Argument \'as.data.frame\' must be of type logical")
+    }
 
     ## ** extract data
     if(design.matrix){
@@ -158,36 +176,33 @@ extractData.coxph <- function(object, design.matrix = FALSE, as.data.frame = TRU
     
 }
 
-## * method extractData.cph
+## * extractData.cph
 #' @rdname extractData
 #' @export
 extractData.cph <- extractData.coxph
 
-## * method extractData.lvmfit
+## * extractData.lvmfit
 #' @rdname extractData
 #' @export
 extractData.lvmfit <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
-                               envir = environment()){
+                               envir = environment(), rm.na = TRUE){
     ## ** check arguments
-    validLogical(design.matrix, valid.length = 1)
-    validLogical(as.data.frame, valid.length = 1)
+    if(!is.logical(design.matrix)){
+        stop("Argument \'design.matrix\' must be of type logical")
+    }
+    if(!is.logical(as.data.frame)){
+        stop("Argument \'as.data.frame\' must be of type logical")
+    }
 
     ## ** extract data
+    data <- object$data$model.frame
+    if(!inherits(data, "data.frame")){
+        data <- as.data.frame(data)
+    }
+
     if(design.matrix){
-        data <- object$data$model.frame
         keep.cols <- intersect(c("(Intercept)",lava::vars(object)), names(data))
         data <- data[,keep.cols,drop=FALSE]
-    }else{
-        data <- evalInParentEnv(object$call$data)
-        
-        if("function" %in% class(data)){
-            stop("data has the same name as a function \n",
-                 "consider renaming data before generating object \n")
-        }
-        
-        if(!inherits(data, "data.frame")){
-            data <- model.frame(object)
-        }
     }
 
     ## ** normalize data
@@ -195,19 +210,36 @@ extractData.lvmfit <- function(object, design.matrix = FALSE, as.data.frame = TR
         data <- as.data.frame(data)        
     }
 
+    ## ** remove missing values
+    test.na <- rowSums(is.na(data[,manifest(object)]))
+    if(rm.na == TRUE && any(test.na>0)){ ## remove rows corresponding to missing values
+        if(!inherits(object,"lvm.missing")){
+            data <- data[setdiff(1:NROW(data),which(test.na>0)),,drop=FALSE]
+        }else{
+            test.na <- rowSums(is.na(data[,exogenous(object)])) > 0
+            data <- data[setdiff(1:NROW(data),which(test.na>0)),,drop=FALSE]
+            warnings("Missing values in the exogenous variables \n",
+                     "May not extract the appropriate dataset \n")
+        }
+    }
+
     ## ** export
     return(data)
     
 }
 
-## * method extractData.gls
+## * extractData.gls
 #' @rdname extractData
 #' @export
 extractData.gls <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
-                            envir = environment()){
+                            envir = environment(), rm.na = TRUE){
     ## ** check arguments
-    validLogical(design.matrix, valid.length = 1)
-    validLogical(as.data.frame, valid.length = 1)
+    if(!is.logical(design.matrix)){
+        stop("Argument \'design.matrix\' must be of type logical")
+    }
+    if(!is.logical(as.data.frame)){
+        stop("Argument \'as.data.frame\' must be of type logical")
+    }
 
     ## ** extract data
     if(design.matrix){
@@ -237,12 +269,53 @@ extractData.gls <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
         data <- as.data.frame(data)        
     }
 
+    ## ** remove missing values
+    if(length(object$na.action)>0){ ## remove rows corresponding to missing values
+        data <- data[setdiff(1:NROW(data),object$na.action),,drop=FALSE]
+    }
+
     ## ** export
     return(data)
     
 }
 
-## * method extractData.lme
+## * extractData.lme
 #' @rdname extractData
 #' @export
 extractData.lme <- extractData.gls
+## * extractData.lmer
+#' @rdname extractData
+#' @export
+extractData.merMod <- function(object, design.matrix = FALSE, as.data.frame = TRUE){
+    ## ** check arguments
+    if(!is.logical(design.matrix)){
+        stop("Argument \'design.matrix\' must be of type logical")
+    }
+    if(!is.logical(as.data.frame)){
+        stop("Argument \'as.data.frame\' must be of type logical")
+    }
+
+    ## ** extract data
+    if(design.matrix){
+        data <- try(model.matrix(object), silent = TRUE)
+    }else{
+        data <- evalInParentEnv(object@call$data)
+        
+        if("function" %in% class(data)){
+            stop("data has the same name as a function \n",
+                 "consider renaming data before generating object \n")
+        }
+        if(!inherits(data, "data.frame")){
+            stop("Could not extract the data from the model \n")
+        } 
+    }
+
+    ## ** normalize data
+    if(as.data.frame){
+        data <- as.data.frame(data)        
+    }
+
+    ## ** export
+    return(data)
+    
+}

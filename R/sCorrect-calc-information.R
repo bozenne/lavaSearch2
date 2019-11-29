@@ -1,120 +1,38 @@
-### information2.R --- 
+### sCorrect-calc-information.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: feb 11 2019 (16:50) 
+## Last-Updated: nov 18 2019 (10:09) 
 ##           By: Brice Ozenne
-##     Update #: 275
+##     Update #: 305
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
-## 
+## Compute information, hessian, and first derivative of information
 ### Change Log:
 ##----------------------------------------------------------------------
 ## 
 ### Code:
 
-## * Documentation - information2
-#' @title  Extract The full Information Matrix
-#' @description  Extract the full information matrix from a Gaussian linear model.
-#' @name information2
-#'
-#' @param object a linear model or a latent variable model
-#' @param ... arguments to be passed to \code{vcov2}.
-#'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
-#'
-#' @return A matrix.
-#' 
-#' @examples
-#' n <- 5e1
-#' p <- 3
-#' X.name <- paste0("X",1:p)
-#' link.lvm <- paste0("Y~",X.name)
-#' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
-#'
-#' m <- lvm(formula.lvm)
-#' distribution(m,~Id) <- sequence.lvm(0)
-#' set.seed(10)
-#' d <- lava::sim(m,n)
-#'
-#' ## linear model
-#' e.lm <- lm(formula.lvm,data=d)
-#' info.tempo <- vcov2(e.lm, bias.correct = TRUE)
-#' info.tempo[names(coef(e.lm)),names(coef(e.lm))] - vcov(e.lm)
-#'
-#' ## latent variable model
-#' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' vcov.tempo <- vcov2(e.lvm, bias.correct = FALSE)
-#' round(vcov.tempo %*% information(e.lvm), 5)
-#'
-#' @concept small sample inference
-#' @export
-`information2` <-
-  function(object, ...) UseMethod("information2")
 
-## * information2.lm
-#' @rdname information2
-#' @export
-information2.lm <- function(object, ...){
-    return(solve(vcov2(object, ...)))
-}
-
-## * information2.gls
-#' @rdname information2
-#' @export
-information2.gls <- information2.lm
-
-## * information2.lme
-#' @rdname information2
-#' @export
-information2.lme <- information2.lm
-
-## * information2.lvmfit
-#' @rdname information2
-#' @export
-information2.lvmfit <- information2.lm
-
-## * information2.lm2
-#' @rdname information2
-#' @export
-information2.lm2 <- function(object, ...){
-    return(solve(vcov2(object, ...)))
-}
-
-## * information2.gls2
-#' @rdname information2
-#' @export
-information2.gls2 <- information2.lm2
-
-## * information2.lme2
-#' @rdname information2
-#' @export
-information2.lme2 <- information2.lm2
-
-## * information2.lvmfit
-#' @rdname information2
-#' @export
-information2.lvmfit2 <- information2.lm2
-
-## * .information2
+## * calc_information
 #' @title Compute the Expected Information Matrix From the Conditional Moments
 #' @description Compute the expected information matrix from the conditional moments.
-#' @name information2-internal
+#' @name calc_information-internal
 #' 
-#' @details \code{.information2} will perform the computation individually when the
+#' @details \code{calc_information} will perform the computation individually when the
 #' argument \code{index.Omega} is not null.
 #' 
 #' @keywords internal
-.information2 <- function(dmu, dOmega,
-                          Omega, n.corrected,
-                          index.Omega, leverage, n.cluster,
-                          grid.meanparam, n.grid.meanparam,
-                          grid.varparam, n.grid.varparam,
-                          name.param, n.param){
+calc_information <- function(dmu, dOmega,
+                            Omega, n.corrected,
+                            index.Omega, leverage, n.cluster,
+                            grid.meanparam, n.grid.meanparam,
+                            grid.varparam, n.grid.varparam,
+                            name.param, n.param){
 
-### ** Prepare
+    ## ** Prepare
     test.global <- is.null(index.Omega)
     if(!test.global){
         OmegaM1 <- lapply(1:n.cluster, function(iC){
@@ -137,7 +55,7 @@ information2.lvmfit2 <- information2.lm2
         index.varparam <- NULL
     } 
 
-### ** Global    
+    ## ** Global    
     if(test.global){
         ## *** Information relative to the mean parameters
         for(iG in index.meanparam){ # iG <- 1
@@ -157,7 +75,7 @@ information2.lvmfit2 <- information2.lm2
         }
     }
 
-### ** Individual specific (missing data)
+    ## ** Individual specific (missing data)
     if(!test.global){
         ## *** Information relative to the mean parameters
         for(iC in 1:n.cluster){ # iC <- 1
@@ -187,21 +105,21 @@ information2.lvmfit2 <- information2.lm2
     return(Info)
 }
 
-## * .hessian2
+## * calc_hessian
 #' @title Compute the Hessian Matrix From the Conditional Moments
 #' @description Compute the Hessian matrix from the conditional moments.
-#' @name information2-internal
+#' @name calc_hessian-internal
 #' 
-#' @details \code{.hessian} will perform the computation individually when the
+#' @details \code{calc_hessian} will perform the computation individually when the
 #' argument \code{index.Omega} is not null.
 #' 
 #' @keywords internal
-.hessian2 <- function(dmu, d2mu, dOmega, d2Omega, 
-                      Omega, n.corrected,
-                      index.Omega, leverage, n.cluster,
-                      grid.meanparam, n.grid.meanparam,
-                      grid.varparam, n.grid.varparam,
-                      name.param, n.param, residuals){
+calc_hessian <- function(dmu, d2mu, dOmega, d2Omega, 
+                         Omega, n.corrected,
+                         index.Omega, leverage, n.cluster,
+                         grid.meanparam, n.grid.meanparam,
+                         grid.varparam, n.grid.varparam,
+                         name.param, n.param, residuals){
 
     ## ** Prepare
     test.global <- is.null(index.Omega)
@@ -363,19 +281,19 @@ information2.lvmfit2 <- information2.lm2
     return(hessian)
 }
 
-## * .dInformation2
+## * calc_dinformation
 #' @title Compute the First Derivative of the Expected Information Matrix
 #' @description Compute the first derivative of the expected information matrix.
-#' @name dInformation2-internal
+#' @name calc_dinformation-internal
 #' 
-#' @details \code{.dInformation2} will perform the computation individually when the
+#' @details \code{calc_dinformation} will perform the computation individually when the
 #' argument \code{index.Omega} is not null.
 #' 
 #' @keywords internal
-.dInformation2 <- function(dmu, d2mu, dOmega, d2Omega,
-                           Omega, OmegaM1, n.corrected,
-                           index.Omega, leverage, n.cluster,
-                           name.param, name.3deriv){
+calc_dinformation <- function(dmu, d2mu, dOmega, d2Omega,
+                              Omega, OmegaM1, n.corrected,
+                              index.Omega, leverage, n.cluster,
+                              name.param, name.3deriv){
     n.param <- length(name.param)
     index.deriv <- match(name.3deriv, name.param)
 
@@ -533,3 +451,18 @@ information2.lvmfit2 <- information2.lm2
 }
 
 
+
+## * .gridInformation
+.gridInformation <- function(param, param.mean, param.var){
+
+    grid.mean <- .combination(param.mean, param.mean)    
+    grid.var <- .combination(param.var, param.var)    
+    grid.hybrid <- .combination(param.mean,param.var)
+
+    return(list(mean = grid.mean,
+                n.mean = NROW(grid.mean),
+                var = grid.var,
+                n.var = NROW(grid.var),
+                hybrid = grid.hybrid,
+                n.hybrid = NROW(grid.hybrid)))
+}

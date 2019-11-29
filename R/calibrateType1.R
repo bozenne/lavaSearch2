@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: mar 13 2019 (11:55) 
+## Last-Updated: nov 18 2019 (10:44) 
 ##           By: Brice Ozenne
-##     Update #: 813
+##     Update #: 814
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -363,7 +363,13 @@ calibrateType1.lvm <- function(object, param, n.rep, n, correction = TRUE, warmu
         filename.estimate <- gsub("\\(tempo\\)","",filename_tempo.estimate)
 
         if(!is.null(dir.save)){
-            validPath(dir.save, type = "dir")
+            if (dir.exists(dir.save) == FALSE) {
+                stop("Argument \'dir.save\' does not lead to an existing directory \n")
+            }
+            if (substr(dir.save, start = nchar(value1), stop = nchar(value1)) != "/") {
+                warning("Argument \'dir.save' may not be correct \n",
+                        "it should end with a fsep (e.g. \"/\") \n")
+            }
         }
 
         if(!is.null(dir.save)){

@@ -1,11 +1,11 @@
-### prepareScore2.R --- 
+### latent.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
-## Created: feb 19 2018 (17:01) 
+## Created: nov 18 2019 (13:48) 
 ## Version: 
-## Last-Updated: feb 19 2018 (18:52) 
+## Last-Updated: nov 18 2019 (13:50) 
 ##           By: Brice Ozenne
-##     Update #: 1
+##     Update #: 3
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,11 @@
 ## 
 ### Code:
 
+latent.lm <- function (x, ...){
+    return(NULL)
+}
+latent.gls <- latent.lm
+latent.lme <- latent.lm
 
-
-##----------------------------------------------------------------------
-### prepareScore2.R ends here
+######################################################################
+### latent.R ends here

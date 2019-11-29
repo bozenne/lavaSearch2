@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: mar 12 2019 (16:24) 
+## Last-Updated: aug  2 2019 (11:03) 
 ##           By: Brice Ozenne
-##     Update #: 75
+##     Update #: 80
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,9 +16,9 @@
 ### Code:
 
 ## * effects2 (documentation)
-#' @title Effects from a fitted model
+#' @title Effects From a Fitted Model After Small Sample Correction 
 #' @description Test whether a path in the latent variable model correspond to a null effect.
-#' Similar to \code{lava::effects} but with small sample correction.
+#' Similar to \code{lava::effects} but with small sample correction (if any).
 #' So far it only work for paths composed of two edges.
 #' @name effects2
 #'

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: dec 10 2018 (23:44) 
+## Last-Updated: aug 21 2019 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 69
+##     Update #: 70
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,17 +43,19 @@ dL$time.num <- as.numeric(dL$time)
 ## * t.test
 test_that("invariant to the order in the dataset", {
     e1.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Id),],
-                  weights = varIdent(form = ~1|Gender),
+                  weights = varIdent(form = ~Id|Gender),
                   method = "ML")
-
-    out1 <- getVarCov2(e1.gls, cluster = dW$Id)
-    index.cluster <- as.numeric(names(out1$index.Omega))
+    
+    outGroup <- getGroups2(e1.gls, cluster = dW$Id)
+    outOmega <- getVarCov2(e1.gls, cluster = dW$Id)
+    index.cluster <- as.numeric(names(outGroup$index.endogenous))
     expect_true(all(diff(index.cluster)>0))
 
     e2.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Gender),],
                   weights = varIdent(form = ~1|Gender),
                   method = "ML")
-    out2 <- getVarCov2(e2.gls, cluster = dW$Id)
+    outGroup2 <- getGroups2(e2.gls, cluster = dW$Id)
+    outOmega2 <- getVarCov2(e2.gls, cluster = dW$Id)
     index.cluster <- as.numeric(names(out2$index.Omega))
     expect_true(all(diff(index.cluster)>0))
 })

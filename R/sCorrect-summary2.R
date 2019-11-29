@@ -1,11 +1,11 @@
-### summary2.R --- 
+### sCorrect-summary2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb 18 2019 (13:36) 
+## Last-Updated: nov 18 2019 (10:12) 
 ##           By: Brice Ozenne
-##     Update #: 310
+##     Update #: 313
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,11 +16,12 @@
 ### Code:
 
 ## * Documentation - summary2
-#' @title Summary with Small Sample Correction
-#' @description Summary with small sample correction.
+#' @title Summary After Small Sample Correction
+#' @description Summary of the estimates, standard errors, and p-values based on Wald tests for \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' Similar to \code{summary} but with small sample correction (if any).
 #' @name summary2
 #'
-#' @param object a \code{gls}, \code{lme} or \code{lvm} object.
+#' @param object a \code{lm}, \code{gls}, \code{lme} or \code{lvm} object.
 #' @param digit [integer > 0] the number of decimal places to use when displaying the summary.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
@@ -291,5 +292,5 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
 
 
 ##----------------------------------------------------------------------
-### summary2.R ends here
+### Scorrect-summary2.R ends here
 

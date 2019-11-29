@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: mar  4 2019 (11:14) 
+## Last-Updated: aug  2 2019 (11:18) 
 ##           By: Brice Ozenne
-##     Update #: 264
+##     Update #: 265
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -212,7 +212,7 @@ createContrast.gls <- function(object, par, add.variance, ...){
         stop("Argument \'par\' must be a character \n")
     }
     if(add.variance){
-        name.coef <- names(.coef2(object))
+        name.coef <- names(coef2(object))
     }else{
         name.coef <- names(coef(object))
     }

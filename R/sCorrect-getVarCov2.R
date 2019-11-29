@@ -1,11 +1,11 @@
-### getVarCov2.R --- 
+### sCorrect-getVarCov2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
-## Created: mar 27 2018 (09:55) 
+## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: jul 25 2019 (10:13) 
+## Last-Updated: nov 18 2019 (15:37) 
 ##           By: Brice Ozenne
-##     Update #: 33
+##     Update #: 13
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,10 +16,11 @@
 ### Code:
 
 ## * getVarCov2
-
-#' @title Reconstruct the Conditional Variance Covariance Matrix
-#' @description Reconstruct the conditional variance covariance matrix from a nlme or lvm model.
-#' Only compatible with specific correlation and variance structure.
+#' @title Reconstruct the Conditional Variance Covariance Matrix After Small Sample Correction.
+#' @description Reconstruct the conditional variance covariance matrix from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects. 
+#' For \code{gls} and \code{lme} object, it is only compatible with specific correlation and variance structure.
+#' It is similar to \code{nlme::getVarCov} but with small sample correction (if any).
+#' 
 #' @name getVarCov2
 #'
 #' @param object a \code{gls} or \code{lme} object
@@ -58,6 +59,10 @@
 #' dL <- dL[order(dL$Id),,drop=FALSE]
 #' dL$Z1 <- rnorm(NROW(dL))
 #' dL$time.num <- as.numeric(as.factor(dL$time))
+#'
+#' #### linear regression ####
+#' e1.lm <- lm(Y1 ~ G, data = dW)
+#' getVarCov2(e1.lm)
 #' 
 #' #### iid model #### 
 #' e1.gls <- nlme::gls(Y1 ~ G, data = dW, method = "ML")
@@ -101,94 +106,103 @@
 `getVarCov2` <-
     function(object, ...) UseMethod("getVarCov2")
 
+## * getVarCov2.lm
+#' @rdname getVarCov2
+#' @export
+getVarCov2.lm <- function(object, ...){
+
+    if(!inherits(object,"sCorrect")){
+        .convert_sCorrect(object) <- FALSE
+    }
+    return(object$sCorrect$Omega)
+
+}
+
 ## * getVarCov2.gls
 #' @rdname getVarCov2
 #' @export
-getVarCov2.gls <- function(object, data = NULL, cluster, ...){
-
-    ## ** data
-    if(is.null(data)){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
-                            envir = parent.env(environment()))
-    }
-
-    ## ** endogenous variable
-    formula.object <- .getFormula2(object)
-    name.Y <- all.vars(stats::update(formula.object, ".~1"))
-
-    ## ** extractors   
-    res.cluster <- .getCluster2(object, data = data, cluster = cluster)
-    res.param <- .coef2(object)
-    res.index <- .getIndexOmega2(object,
-                                 param = res.param,
-                                 attr.param = attributes(res.param),
-                                 name.Y = name.Y,
-                                 cluster = res.cluster$cluster,
-                                 levels.cluster = res.cluster$levels.cluster,
-                                 data = data)
-    res.Omega <- .getVarCov2(object,
-                             param = res.param,
-                             attr.param = attributes(res.param),
-                             name.endogenous = res.index$name.endogenous,
-                             n.endogenous = res.index$n.endogenous,
-                             ref.group = res.index$ref.group)
-
-    ## ** export
-    return(c(res.cluster,
-             list(param = res.param),
-             res.index,
-             list(Omega = res.Omega))
-           )
-}
+getVarCov2.gls <- getVarCov2.lm
 
 ## * getVarCov2.lme
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lme <- getVarCov2.gls
+getVarCov2.lme <- getVarCov2.lm
 
 ## * getVarCov2.lvmfit
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lvmfit <- function(object, data = NULL, param = NULL, ...){
+getVarCov2.lvmfit <- getVarCov2.lm
 
-    if(inherits(object, "lvmfit2")){
-        return(object$sCorrect$Omega)
+## * .getVarCov2 [helper]
+#' @rdname getVarCov2-internal
+.getVarCov2 <- function(object, param, attr.param,
+                        name.endogenous, n.endogenous, ref.group, ...){
+
+    ## ** Compute Omega
+    if(n.latent>0){
+        Omega <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB %*% object$conditionalMoment$value$Lambda + object$conditionalMoment$value$Sigma
     }else{
-        name.latent <- latent(object)
-        n.latent <- length(name.latent)
-
-        ## ** Prepare
-        if(is.null(object$conditionalMoment)){
-            name.endogenous <- endogenous(object)
-            if(is.null(param)){
-                param <- coef(object)
-            }
-            if(is.null(data)){
-                data <- as.data.frame(object$data$model.frame)
-            }
-
-            object$conditionalMoment <- conditionalMoment(object,
-                                                          data = data,
-                                                          param = param,
-                                                          name.endogenous = name.endogenous,
-                                                          name.latent = name.latent,
-                                                          first.order = FALSE,
-                                                          second.order = FALSE,
-                                                          usefit = TRUE)
-        }
-
-        ## ** Compute Omega
-        if(n.latent>0){
-            Omega <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB %*% object$conditionalMoment$value$Lambda + object$conditionalMoment$value$Sigma
-        }else{
-            Omega <- object$conditionalMoment$value$Sigma
-        }
-
-        return(Omega)
+        Omega <- object$conditionalMoment$value$Sigma
     }
+    
+    ## ** Extract information
+    var.coef <- param[attr.param$var.coef]
+    cor.coef <- param[attr.param$cor.coef]
+
+    ## ** Diagonal terms
+    if(length(ref.group)>0){        
+        factor.varcoef <- setNames(c(1,var.coef[-1]),
+                                   attr(object$modelStruct$varStruct,"groupNames"))
+        sigma2.base <- var.coef["sigma2"] * factor.varcoef[ref.group]
+    }else{
+        sigma2.base <- rep(var.coef["sigma2"], n.endogenous)
+    }
+    ## re-order according to the order of the correlation coefficients (if possible)
+    if(length(cor.coef)>1 & length(var.coef)>1){
+        cor.level <- gsub("corCoef","",names(cor.coef))
+        var.level <- names(sigma2.base)
+        var.permlevel <- .allPermutations(var.level)
+
+        M.try <- apply(var.permlevel, MARGIN = 1, function(iLevel){
+            all(apply(utils::combn(iLevel, m = 2), MARGIN = 2, FUN = paste, collapse = "") == cor.level)
+        })
+        if(any(M.try)){
+            sigma2.base <- sigma2.base[var.permlevel[which(M.try),]]
+        }
+    }
+    
+    Omega <- diag(as.double(sigma2.base),
+                  nrow = n.endogenous, ncol = n.endogenous)
+
+    ## ** Extra-diagonal terms
+    if(length(cor.coef)>0){
+        index.lower <- which(lower.tri(Omega))
+        index.lower.arr <- which(lower.tri(Omega),arr.ind = TRUE)
+        vec.sigma.tempo <- apply(index.lower.arr,1,function(x){prod(sqrt(sigma2.base[x]))})        
+        Omega[index.lower] <- cor.coef*vec.sigma.tempo
+        Omega <- symmetrize(Omega, update.upper = TRUE)
+    }    
+
+    ## ** names
+    if(all(!duplicated(names(sigma2.base)))){
+        dimnames(Omega) <- list(names(sigma2.base), names(sigma2.base))
+    }else{
+        dimnames(Omega) <- list(name.endogenous, name.endogenous)
+    }
+
+    ## ** add contribution of the random effect
+    if(inherits(object,"lme")){
+        ran.coef <- param[attr.param$ran.coef]
+        Omega <- Omega + ran.coef
+    }
+
+    
+    ## ** export
+    return(Omega)
 }
 
 
 
-##----------------------------------------------------------------------
-### getVarCov2.R ends here
+
+######################################################################
+### sCorrect-getVarCov2.R ends here

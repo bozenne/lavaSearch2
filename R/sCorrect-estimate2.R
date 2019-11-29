@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb 15 2019 (14:08) 
+## Last-Updated: aug  2 2019 (11:26) 
 ##           By: Brice Ozenne
-##     Update #: 864
+##     Update #: 868
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,21 +95,19 @@
         cat("* Reconstruct estimated information matrix ")
     }
 
-    iInfo <- .information2(dmu = dmu,
-                           dOmega = dOmega,
-                           Omega = Omega,
-                           n.corrected = n.corrected,
-                           leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
-                           grid.meanparam = grid.meanparam,
-                           n.grid.meanparam = n.grid.meanparam,
-                           grid.varparam = grid.varparam,
-                           n.grid.varparam = n.grid.varparam,
-                           name.param = name.param,
-                           n.param = n.param)
-    iVcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
-    if(inherits(iVcov.param, "try-error")){
-        iVcov.param <- solve(iInfo)
-    }
+    iVcov.param <- .vcov2(dmu = dmu,
+                          dOmega = dOmega,
+                          Omega = Omega,
+                          n.corrected = n.corrected,
+                          leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
+                          grid.meanparam = grid.meanparam,
+                          n.grid.meanparam = n.grid.meanparam,
+                          grid.varparam = grid.varparam,
+                          n.grid.varparam = n.grid.varparam,
+                          name.param = name.param,
+                          n.param = n.param,
+                          attr.info = TRUE)
+    iInfo <- attr(iVcov.param,"information")
     if(trace>0){
         cat("- done \n")
     }
@@ -196,23 +194,19 @@
         }
 
         ## *** Step (vii): expected information matrix
-        iInfo <- .information2(dmu = dmu,
-                               dOmega = dOmega,
-                               Omega = Omega.adj,
-                               n.corrected = n.corrected,
-                               leverage = leverage,
-                               index.Omega = index.Omega,
-                               n.cluster = n.cluster,
-                               grid.meanparam = grid.meanparam,
-                               n.grid.meanparam = n.grid.meanparam,
-                               grid.varparam = grid.varparam,
-                               n.grid.varparam = n.grid.varparam,
-                               name.param = name.param,
-                               n.param = n.param)
-        iVcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
-        if(inherits(iVcov.param, "try-error")){
-            iVcov.param <- solve(iInfo)
-        }
+        iVcov.param <- .vcov2(dmu = dmu,
+                              dOmega = dOmega,
+                              Omega = Omega,
+                              n.corrected = n.corrected,
+                              leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
+                              grid.meanparam = grid.meanparam,
+                              n.grid.meanparam = n.grid.meanparam,
+                              grid.varparam = grid.varparam,
+                              n.grid.varparam = n.grid.varparam,
+                              name.param = name.param,
+                              n.param = n.param,
+                              attr.info = TRUE)
+        iInfo <- attr(iVcov.param,"information")
         
         ## *** Update cv
         iIter <- iIter + 1

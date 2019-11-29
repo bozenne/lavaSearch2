@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: mar  7 2019 (11:41) 
+## Last-Updated: aug  2 2019 (11:15) 
 ##           By: Brice Ozenne
-##     Update #: 592
+##     Update #: 595
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,11 +17,11 @@
 
 ## * Documentation - compare2
 #' @title Test Linear Hypotheses with small sample correction
-#' @description Test Linear Hypotheses using a multivariate Wald statistic.
-#' Similar to \code{lava::compare} but with small sample correction.
+#' @description Test Linear Hypotheses using a multivariate Wald statistic from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' Similar to \code{lava::compare} but with small sample correction (if any).
 #' @name compare2
 #'
-#' @param object an object that inherits from lm/gls/lme/lvmfit.
+#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.

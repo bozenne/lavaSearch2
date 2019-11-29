@@ -1,11 +1,11 @@
-### Utils-formula.R --- 
+### Utils.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 27 2018 (14:32) 
 ## Version: 
-## Last-Updated: nov 28 2018 (11:32) 
+## Last-Updated: nov 25 2019 (15:16) 
 ##           By: Brice Ozenne
-##     Update #: 3
+##     Update #: 155
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,8 @@
 ## 
 ### Code:
 
-## * selectResponse (Documentation)
+## * formula
+## ** selectResponse (Documentation)
 #' @title Response Variable of a Formula
 #' @description Return the response variable contained in the formula.
 #' @name selectResponse
@@ -49,7 +50,7 @@
 #' @keywords internal
 `selectResponse` <-  function(object, ...) UseMethod("selectResponse")
 
-## * selectResponse.formula
+## ** selectResponse.formula
 #' @rdname selectResponse
 #' @method selectResponse formula
 selectResponse.formula <- function(object, format = "call", ...){
@@ -68,7 +69,7 @@ selectResponse.formula <- function(object, format = "call", ...){
   return(res)
 }
 
-## * selectRegressor (Documentation)
+## ** selectRegressor (Documentation)
 #' @title Regressor of a Formula.
 #' @description Return the regressor variables contained in the formula
 #' @name selectRegressor
@@ -100,7 +101,7 @@ selectResponse.formula <- function(object, format = "call", ...){
 #' @keywords internal
 `selectRegressor` <-  function(object, ...) UseMethod("selectRegressor")
 
-## * selectRegressor.formula
+## ** selectRegressor.formula
 #' @rdname selectRegressor
 #' @method selectRegressor formula
 selectRegressor.formula <- function(object, format = "call", ...){
@@ -122,13 +123,7 @@ selectRegressor.formula <- function(object, format = "call", ...){
   return(res)
 }
 
-
-
-
-######################################################################
-### Utils-formula.R ends here
-
-## * combineFormula
+## ** combineFormula
 #' @title Combine formula
 #' @description Combine formula by outcome
 #' 
@@ -174,7 +169,7 @@ combineFormula <- function(ls.formula, as.formula = TRUE, as.unique = FALSE){
 
 
 
-## * formula2character
+## ** formula2character
 #' @title formula character conversion
 #' @description Conversion of formula into character string or vice versa
 #' @name convFormulaCharacter
@@ -203,3 +198,95 @@ formula2character <- function(f, type = "formula"){
   return(gsub("[[:blank:]]","",txt))
   
 }
+
+## * Miscellaneous
+## ** .allPermutations
+## .allPermutations(1:3)
+## .allPermutations(2:3)
+.allPermutations <- function(vec){
+    X <- lapply(vec, function(x){
+        cbind(x, .allPermutations(setdiff(vec, x)))
+    })
+    return(unname(do.call(rbind,X)))
+}
+## ** .combination
+#' @title Form all Unique Combinations Between two Vectors
+#' @description Form all unique combinations between two vectors (removing symmetric combinations).
+#' @name combination
+#'
+#' @param ... [vectors] elements to be combined.
+#'
+#' @return A matrix, each row being a different combination.
+#' 
+#' @examples
+#' .combination <- lavaSearch2:::.combination
+#' 
+#' .combination(1,1)
+#' .combination(1:2,1:2)
+#' .combination(c(1:2,1:2),1:2)
+#' 
+#' .combination(alpha = 1:2, beta = 3:4)
+#'
+#' @keywords internal
+.combination <- function(...){
+
+    ## ** normalize arguments
+    dots <- list(...)
+    if(length(dots)!=2){
+        stop("can only handle two vectors \n")
+    }
+    test.null <- unlist(lapply(dots,is.null))    
+    if(any(test.null)){
+        return(NULL)
+    }
+    dots <- lapply(dots,unique)
+
+    ## ** form all combinations
+    grid <- expand.grid(dots, stringsAsFactors = FALSE) 
+    
+    ## ** remove combinations (b,a) when (a,b) is already there
+    name1 <- paste0(grid[,1],grid[,2])
+    name2 <- paste0(grid[,2],grid[,1])
+
+    if(NROW(grid)>1 && any(name1 %in% name2)){ 
+
+        n.grid <- NROW(grid)
+        test.duplicated <- c(FALSE,sapply(2:n.grid, function(iG){
+            any(name2[iG] %in% name1[1:(iG-1)]) ## find duplicates
+        }))
+
+        grid <- grid[test.duplicated==FALSE,]
+    }
+
+    ## ** export
+    return(grid)        
+}
+
+
+## ** .combinationDF
+.combinationDF <- function(data,
+                           detail1, detail2,
+                           name1, name2){
+
+    detail <- NULL # [:for CRAN check] subset
+    
+    if(any(detail1 %in% data$detail) && any(detail2 %in% data$detail) ){
+        ls.args <- list(subset(data, subset = detail %in% detail1, select = "param", drop = TRUE),
+                        subset(data, subset = detail %in% detail2, select = "param", drop = TRUE))
+        names(ls.args) <- c(name1,name2)
+    
+        return(do.call(.combination, args = ls.args))
+        
+    }else{
+        
+        return(numeric(0))
+        
+    }
+}
+
+######################################################################
+### Utils.R ends here
+
+
+
+

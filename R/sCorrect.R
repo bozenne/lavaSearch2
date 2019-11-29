@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: maj 19 2019 (11:19) 
+## Last-Updated: aug  2 2019 (11:19) 
 ##           By: Brice Ozenne
-##     Update #: 1528
+##     Update #: 1531
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,11 +91,11 @@ sCorrect.lm <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.endogenous <- all.vars(stats::update(formula(object), ".~1"))
 
     if(is.null(param)){
-        param <- .coef2(object)
+        param <- coef2(object)
         param["sigma2"] <- mean(residuals(object)^2)
         model.param <- param
     }else{
-        model.param <- .coef2(object)
+        model.param <- coef2(object)
         if(any(names(param) %in% names(model.param) == FALSE)){
             stop("Argument \'param\' have appropriate names: \"",
                  paste(setdiff(names(param),names(model.param)), collapse = "\" \""),
@@ -227,7 +227,7 @@ sCorrect.gls <- function(object, adjust.Omega = TRUE, adjust.n = TRUE,
     name.Y <- all.vars(stats::update(formula.object, ".~1"))
     
     ## *** parameters
-    model.param <- .coef2(object)
+    model.param <- coef2(object)
     if(!is.null(param)){        
         if(any(names(param) %in% names(model.param) == FALSE)){
             stop("Argument \'param\' have appropriate names: \"",

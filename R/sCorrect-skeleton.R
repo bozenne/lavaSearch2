@@ -1,11 +1,11 @@
-### skeleton.R --- 
+### sCorrect-skeleton.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb  8 2019 (11:48) 
+## Last-Updated: nov 29 2019 (18:34) 
 ##           By: Brice Ozenne
-##     Update #: 1025
+##     Update #: 1149
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,197 +77,87 @@
 #' @concept small sample inference
 #' @concept derivative of the score equation
 #' @keywords internal
+`initSkeleton` <-
+    function(object, ...) UseMethod("initSkeleton")
 `skeleton` <-
     function(object, ...) UseMethod("skeleton")
+`initSkeletonDtheta` <-
+    function(object, ...) UseMethod("initSkeletonDtheta")
+`skeletonDtheta` <-
+    function(object, ...) UseMethod("skeletonDtheta")
+`initSkeletonDtheta2` <-
+    function(object, ...) UseMethod("initSkeletonDtheta2")
+`skeletonDtheta2` <-
+    function(object, ...) UseMethod("skeletonDtheta2")
 
 
-## * skeleton.lvm
+
+## * initSkeleton
+## ** initSkeleton.lm
 #' @rdname skeleton
-skeleton.lvm <- function(object, as.lava,
-                         name.endogenous, name.latent,
-                         ...){
-    detail <- Y <- NULL ## [:for CRAN check] subset
+initSkeleton.lm <- function(object, X, endogenous, latent, ...){
+    if(TRUE){cat("initSkeleton.lm \n")}
 
-    n.endogenous <- length(name.endogenous)
-    n.latent <- length(name.latent)
+    type <- coefType(object, attr.type = TRUE)
+    byType <- attr(type,"byType")
+    byTypebyEndo <- attr(type,"byTypebyEndo")
+    attr(type,"byType") <- NULL
+    attr(type,"byTypebyEndo") <- NULL
+
+    n.endogenous <- length(endogenous)
+    n.latent <- length(latent)
     
-### ** prepare
-    df.param.all  <- coefType(object, as.lava = FALSE)
-    if(as.lava){
-        param2originalLink <- subset(df.param.all, subset = !is.na(lava), select = c("originalLink", "param"))
-        param2originalLink <- stats::setNames(param2originalLink$originalLink, param2originalLink$param)
-    }else{
-        param2originalLink <- subset(df.param.all, subset = !is.na(lava), select = "param", drop = TRUE)
-        param2originalLink <- stats::setNames(param2originalLink, param2originalLink)
-    }
-    df.param.detail <- subset(df.param.all, subset = !is.na(detail)) ## important cannot be lava because we need to keep track of the constrained parameters
-    
-    skeleton <- list()
-    value <- list()
-    skeleton$type <- setNames(df.param.all[!is.na(df.param.all$lava),"detail"], df.param.all[!is.na(df.param.all$lava),"name"])
-    skeleton$toUpdate <- stats::setNames(c(rep(FALSE,8),TRUE,TRUE,TRUE,TRUE),
-                                         c("nu","K","Lambda","Sigma","alpha","Gamma","B","Psi",
-                                           "extra","mu","Omega","param"))
-   
-### ** Measurement model
-    
-    ## *** nu
-    df.param.nu <-  subset(df.param.detail, subset = detail=="nu", select = c("value", "param", "Y", "name"))
-    df.param.nu <- df.param.nu[order(df.param.nu$name),]
-    value$nu <- stats::setNames(df.param.nu$value,df.param.nu$Y)
-    skeleton$nu <- stats::setNames(param2originalLink[df.param.nu$param],df.param.nu$Y)
-    skeleton$toUpdate["nu"] <- any(is.na(value$nu))
-    
-    ## *** X K
-    df.param.K <- subset(df.param.detail, subset = detail == "K", select = c("value", "param", "X", "Y"))
-    df.param.K <- df.param.K[order(df.param.K$Y),]
+    ## *** create dmu.dtheta
+    n.obs <- NROW(X)
+    dmu.dtheta <- list()
 
-    if(NROW(df.param.K)>0){
-        value$K <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){ # iEndogenous <- 1
-            subset(df.param.K, subset = Y == name.endogenous[iEndogenous], select = "value", drop = TRUE)
-        }), name.endogenous)
-            
-        skeleton$K <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){
-            param2originalLink[subset(df.param.K, subset = Y == name.endogenous[iEndogenous], select = "param", drop = TRUE)]
-        }), name.endogenous)
-    
-        skeleton$XK <- stats::setNames(lapply(1:n.endogenous, function(iEndogenous){
-            subset(df.param.K, subset = Y == name.endogenous[iEndogenous], select = "X", drop = TRUE)
-        }), name.endogenous)
-        
-        skeleton$toUpdate["K"] <- any(unlist(lapply(value$K,is.na)))
-    }
-    
-    ## *** Lambda
-    if(n.latent>0){
-        ## define matrix
-        value$Lambda <- matrix(0,nrow = n.latent, ncol = n.endogenous,
-                               dimnames = list(name.latent,name.endogenous))
-        skeleton$Lambda <- matrix(as.character(NA),nrow = n.latent, ncol = n.endogenous,
-                                  dimnames = list(name.latent,name.endogenous))
-        ## update according to the model
-        df.param.Lambda <- subset(df.param.detail, subset = detail == "Lambda", select = c("X","Y","param","value","name"))
-        df.param.Lambda$index <- match(df.param.Lambda$X, name.latent) + n.latent * (match(df.param.Lambda$Y, name.endogenous)-1)
-        df.param.Lambda <- df.param.Lambda[order(df.param.Lambda$name),]
+    ## Nu
+    if("nu" %in% type$detail){
+        type.nu <- type[type$detail == "nu",]
+        Utype.nu <- unique(type.nu$param)
+        nUtype.nu <- length(Utype.nu)
+        dmu.dtheta$nu <- setNames(vector(mode = "list", length = nUtype.nu), Utype.nu)
 
-        ## store in the Lambda matrix the name of the coefficient and their pre-computed values
-        dfNA.tempo <- subset(df.param.Lambda, subset = is.na(value))
-        skeleton$Lambda[dfNA.tempo$index] <- stats::setNames(param2originalLink[dfNA.tempo$param],dfNA.tempo$Y)
-        dfNNA.tempo <- subset(df.param.Lambda, subset = !is.na(value))
-        value$Lambda[dfNNA.tempo$index] <- stats::setNames(dfNNA.tempo$value,dfNNA.tempo$Y)
-        value$Lambda[!is.na(skeleton$Lambda)] <- NA
-
-        skeleton$toUpdate["Lambda"] <- any(is.na(value$Lambda))
-    }
-
-    ## *** Sigma    
-    ## define matrix
-    value$Sigma <- matrix(0,nrow = n.endogenous, ncol = n.endogenous,
-                          dimnames = list(name.endogenous,name.endogenous))
-    skeleton$Sigma <- matrix(as.character(NA),nrow = n.endogenous, ncol = n.endogenous,
-                             dimnames = list(name.endogenous,name.endogenous))
-    
-    ## update according to the model
-    df.param.Sigma <- subset(df.param.detail,
-                             subset = detail %in% c("Sigma_var","Sigma_cov"),
-                             select = c("X","Y","param","value","name"))
-    df.param.Sigma$index <- match(df.param.Sigma$X, name.endogenous) + n.endogenous*(match(df.param.Sigma$Y, name.endogenous)-1)
-
-    dfNA.tempo <- subset(df.param.Sigma, subset = is.na(value))
-    skeleton$Sigma[dfNA.tempo$index] <- param2originalLink[dfNA.tempo$param]
-    dfNNA.tempo <- subset(df.param.Sigma, subset = !is.na(value))
-    value$Sigma[dfNNA.tempo$index] <- dfNNA.tempo$value
-
-    ## symmetrize
-    skeleton$Sigma <- symmetrize(skeleton$Sigma, update.upper = TRUE)
-    value$Sigma <- symmetrize(value$Sigma, update.upper = TRUE)
-    value$Sigma[!is.na(skeleton$Sigma)] <- NA
-
-    skeleton$toUpdate["Sigma"] <- any(is.na(value$Sigma))
-
-### ** Structural model
-    if(n.latent>0){
-        ## *** alpha 
-        df.param.alpha <-  subset(df.param.detail,
-                                  subset = detail=="alpha",
-                                  select = c("value","param","Y"))
-        value$alpha <- stats::setNames(df.param.alpha$value,df.param.alpha$Y)
-        skeleton$alpha <- param2originalLink[stats::setNames(df.param.alpha$param,df.param.alpha$Y)]
-
-        skeleton$toUpdate["alpha"] <- any(is.na(value$alpha))
-        
-        ## *** X Gamma
-        df.param.Gamma <- subset(df.param.detail,
-                                 subset = detail=="Gamma",
-                                 select = c("value","param","X","Y"))
-        
-        if(NROW(df.param.Gamma)>0){
-            
-            value$Gamma <- stats::setNames(lapply(1:n.latent, function(iLatent){
-                subset(df.param.Gamma, subset = Y==name.latent[iLatent], select = "value", drop = TRUE)
-            }), name.latent)
-            
-            skeleton$Gamma <- stats::setNames(lapply(1:n.latent, function(iLatent){ # iLatent <- 1
-                param2originalLink[subset(df.param.Gamma, subset = Y==name.latent[iLatent], select = "param", drop = TRUE)]
-            }), name.latent)
-    
-            skeleton$XGamma <- stats::setNames(lapply(1:n.latent, function(iLatent){
-                subset(df.param.Gamma, subset = Y==name.latent[iLatent], select = "X", drop = TRUE)
-            }), name.latent)
-
-            skeleton$toUpdate["Gamma"] <- any(unlist(lapply(value$Gamma,is.na)))
+        for(iNu in Utype.nu){ ## iNu <- Utype.nu[1]
+            dmu.dtheta$nu[[iNu]] <- matrix(as.numeric(endogenous %in% type.nu[type.nu$param==iNu,"Y"]),
+                                           nrow = n.obs, ncol = n.endogenous,
+                                           dimnames = list(NULL,endogenous))
         }
-        
-        ## *** B
-        ## define matrix
-        value$B <- matrix(0,nrow = n.latent, ncol = n.latent,
-                          dimnames = list(name.latent,name.latent))
-        skeleton$B <- matrix(as.character(NA),nrow = n.latent, ncol = n.latent,
-                             dimnames = list(name.latent,name.latent))
-
-        if(any("B" %in% df.param.all$detail)){
-            ## update according to the model
-            df.param.B <- subset(df.param.detail,
-                                 subset = detail == "B",
-                                 select = c("X", "Y", "param", "value", "name"))
-            df.param.B$index <- match(df.param.B$X, name.latent) + n.latent*(match(df.param.B$Y, name.latent)-1)
-            dfNA.tempo <- subset(df.param.B, subset = is.na(value))            
-            skeleton$B[dfNA.tempo$index] <- param2originalLink[dfNA.tempo$param]
-            dfNNA.tempo <- subset(df.param.B, subset = is.na(value))
-            value$B[dfNNA.tempo$index] <- dfNNA.tempo$value
-            value$B[!is.na(skeleton$B)] <- NA
-
-            skeleton$toUpdate["B"] <- any(is.na(value$B))
-        }
-    
-        ## *** Psi    
-        ## define matrix
-        value$Psi <- matrix(0,nrow = n.latent, ncol = n.latent,
-                            dimnames = list(name.latent,name.latent))
-        skeleton$Psi <- matrix(as.character(NA),nrow = n.latent, ncol = n.latent,
-                               dimnames = list(name.latent,name.latent))
-
-        ## update according to the model
-        df.param.Psi <- subset(df.param.all,
-                               subset = detail %in% c("Psi_var","Psi_cov"),
-                               select = c("X", "Y", "param", "value", "Y", "name"))
-                               
-        df.param.Psi$index <- match(df.param.Psi$X, name.latent) + n.latent*(match(df.param.Psi$Y, name.latent)-1)
-
-        dfNA.tempo <- subset(df.param.Psi, subset = is.na(value))      
-        skeleton$Psi[dfNA.tempo$index] <- param2originalLink[dfNA.tempo$param]
-        dfNNA.tempo <- subset(df.param.Psi, subset = is.na(value))
-        value$Psi[dfNNA.tempo$index] <- dfNNA.tempo$value
-
-        ## symmetrize
-        skeleton$Psi <- symmetrize(skeleton$Psi, update.upper = TRUE)
-        value$Psi <- symmetrize(value$Psi, update.upper = TRUE)
-        value$Psi[!is.na(skeleton$Psi)] <- NA
-
-        skeleton$toUpdate["Psi"] <- any(is.na(value$Psi))
     }
 
-### ** prepare matrix for updating the variance parameter according to the adjusted Omega
+    ## Lambda
+    ## same as K
+    
+    ## K
+    if("K" %in% type$detail){
+        type.K <- type[type$detail == "K",]
+        Utype.K <- unique(type.K$param)
+        Ktype.K <- length(Utype.K)
+        dmu.dtheta$K <- setNames(vector(mode = "list", length = Ktype.K), Utype.K)
+
+        for(iK in Utype.K){ ## iK <- Utype.K[1]
+            iType.K <- type.K[type.K$param==iK,]
+            dmu.dtheta$K[[iK]] <- matrix(0,
+                                         nrow = n.obs, ncol = n.endogenous,
+                                         dimnames = list(NULL,endogenous))
+
+            for(iY in 1:NROW(iType.K)){ ## iY <- 5
+                iEndo <- match(iType.K$Y[iY],endogenous)
+                dmu.dtheta$K[[iK]][,iEndo] <- X[X$XXendogenousXX==iEndo,iType.K$X[1]]
+            }
+        }
+    }
+    browser()
+    ## ** Export    
+    return(list(skeleton = skeleton,
+                value = value,
+                df.param = df.param,
+                toUpdate = .toUpdate(skeleton$type),
+                param2originalLink = param2originalLink)
+           )
+
+
+    if(FALSE){
     index.matrix <- data.frame(index = which(upper.tri(skeleton$Sigma, diag = TRUE)),
                                which(upper.tri(skeleton$Sigma, diag = TRUE), arr.ind = TRUE)
                                )
@@ -298,19 +188,6 @@ skeleton.lvm <- function(object, as.lava,
         index.Psi <- NULL        
     }
 
-    toUpdate2 <- c(nu = FALSE,
-                   K = FALSE,
-                   Lambda = FALSE,
-                   Sigma = TRUE,
-                   alpha = FALSE,
-                   Gamma = FALSE,
-                   B = FALSE,
-                   Psi = TRUE,
-                   extra = TRUE,
-                   mu = FALSE,
-                   Omega = FALSE,
-                   param = FALSE)
-
     index.LambdaB <- names(skeleton$type)[which(skeleton$type %in% c("Lambda","B"))]
     adjustMoment <- list(index.matrix = index.matrix,
                          index.Psi = index.Psi,
@@ -322,22 +199,49 @@ skeleton.lvm <- function(object, as.lava,
                          name.var = name.var,
                          n.rhs = n.rhs)
 
+    adjustMoment <- list(index.matrix = NULL,
+                         index.Psi = NULL,
+                         index.LambdaB = NULL,
+                         toUpdate = NULL,
+                         A = NULL,
+                         n.rhs = NULL)
+    }
 
-### ** export
-    return(list(skeleton = skeleton,
-                value = value,
-                df.param = df.param.all,
-                adjustMoment = adjustMoment, 
-                param2originalLink = param2originalLink)
-           )
 }
 
+## ** initSkeleton.gls
+#' @rdname skeleton
+initSkeleton.gls <- initSkeleton.lm
 
-## * skeleton.lvmfit
+## ** initSkeleton.lme
+#' @rdname skeleton
+initSkeleton.lme <- initSkeleton.lm
+
+## ** initSkeleton.lvm
+#' @rdname skeleton
+initSkeleton.lvm <- initSkeleton.lm
+
+## ** initSkeleton.lvmfit
+#' @rdname skeleton
+initSkeleton.lvmfit <- initSkeleton.lm
+
+## * skeleton
+## ** skeleton.lm
+#' @rdname skeleton
+
+## ** skeleton.gls
+#' @rdname skeleton
+
+## ** skeleton.lme
+#' @rdname skeleton
+## skeleton.lme <- skeleton.gls
+
+## ** skeleton.lvmfit
 #' @rdname skeleton
 skeleton.lvmfit <- function(object, param, data,
                             name.endogenous, name.latent,
                             ...){
+    if(TRUE){cat("skeleton.lvmfit \n")}
     
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
@@ -347,7 +251,7 @@ skeleton.lvmfit <- function(object, param, data,
     toUpdate <- skeleton$toUpdate
     value <- object$conditionalMoment$value
     
-### ** Update skeleton with the current values
+    ## ** Update skeleton with the current values
     ## *** nu
     if(toUpdate["nu"]){
         index.update <- which(!is.na(skeleton$nu))
@@ -379,7 +283,7 @@ skeleton.lvmfit <- function(object, param, data,
     ## *** mu
     if(toUpdate["mu"]){ ## linear predictor (measurement model without latent variable)   
         value$nu.XK <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
-                                       dimnames = list(NULL,name.endogenous))
+                              dimnames = list(NULL,name.endogenous))
         for(iY in 1:n.endogenous){ # iY <- 1
             iY2 <- name.endogenous[iY]
             if(length(value$K[[iY2]])>0){
@@ -390,7 +294,7 @@ skeleton.lvmfit <- function(object, param, data,
         }
     }
         
-### ** Structural model
+    ## ** Structural model
     if(n.latent>0){
         ## *** alpha
         if(toUpdate["alpha"]){
@@ -445,16 +349,162 @@ skeleton.lvmfit <- function(object, param, data,
         }
     }
 
-### ** Export
+    ## ** Export
     return(value)
 }
 
 
-## * skeletonDtheta
+## * initSkeletonDtheta
+## ** initSkeletonDtheta.lm
 #' @rdname skeleton
-`skeletonDtheta` <-
-    function(object, ...) UseMethod("skeletonDtheta")
-## * skeletonDtheta.gls
+
+## ** initSkeletonDtheta.gls
+#' @rdname skeleton
+
+## ** initSkeletonDtheta.lme
+#' @rdname skeleton
+## initSkeletonDtheta.lme <- initSkeletonDtheta.gls
+
+## ** initSkeletonDtheta.lvm
+#' @rdname skeleton
+initSkeletonDtheta.lvm <- function(object, data,
+                               df.param.all, param2originalLink,
+                               name.endogenous, name.latent, ...){
+
+    factitious <- marginal <- param <- value <- X <- Y <- NULL ## [:for CRAN check] subset
+
+    n.endogenous <- length(name.endogenous)
+    n.latent <- length(name.latent)
+
+    df.param <- subset(df.param.all, subset = is.na(value) & marginal == FALSE & factitious == FALSE)
+    Utype.by.detail <- tapply(df.param$detail, df.param$param, function(x){length(unique(x))})
+    if(any(Utype.by.detail>1)){
+        stop("cannot constrain two coefficients of different types to be equal \n")
+    }
+    name.param <- subset(df.param, subset = !duplicated(param), select = param, drop = TRUE)
+    n.param <- length(name.param)
+
+    name.originalLink <- as.character(param2originalLink)
+
+    ## *** prepare
+    n.data <- NROW(data)
+    name.data <- colnames(data)
+    
+    mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
+    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
+    dmu <- list()
+    dOmega <- list()
+    dLambda <- list()
+    dB <- list()
+    dPsi <- list()
+
+    toUpdate <- stats::setNames(vector(mode = "logical", n.param),name.originalLink)
+    
+    ## *** Compute derivative or prepare for the derivative
+    for(iName in name.param){ # iName <- name.param[1]
+
+        iName2 <- as.character(param2originalLink[iName])
+        iType <- unique(subset(df.param, subset = (param == iName), select = "detail", drop = TRUE))
+        iY <- subset(df.param, subset = param %in% iName, select = Y, drop = TRUE)
+        iX <- subset(df.param, subset = param %in% iName, select = X, drop = TRUE)
+
+        ## **** derivative regarding the mean        
+        if(iType %in% mean.param){            
+            if(iType=="nu"){
+                dmu[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
+                                        nrow = n.data, ncol = n.endogenous, byrow = TRUE,
+                                        dimnames = list(NULL, name.endogenous))
+                toUpdate[iName2] <- FALSE
+            }else if(iType=="K"){
+                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
+                                        dimnames = list(NULL, name.endogenous))
+                for(Y.tempo in unique(iY)){                    
+                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                }
+                toUpdate[iName2] <- FALSE
+            }else if(iType=="alpha"){
+                dmu[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                        dimnames = list(NULL, name.latent))                
+                toUpdate[iName2] <- TRUE
+            }else if(iType=="Gamma"){
+                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                        dimnames = list(NULL, name.latent))
+                for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
+                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+                }
+                toUpdate[iName2] <- TRUE
+            }
+        }
+        
+        ## **** derivative regarding the residual variance covariance
+        if(iType %in% vcov.param){
+            
+            if(iType=="Sigma_var"){
+                dOmega[[iName2]] <- matrix(0,
+                                           nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
+                                           dimnames = list(name.endogenous, name.endogenous))
+                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                toUpdate[iName2] <- FALSE
+            }else if(iType=="Sigma_cov"){
+                dOmega[[iName2]] <- matrix(0,
+                                           nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
+                                           dimnames = list(name.endogenous, name.endogenous))
+                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
+                dOmega[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
+                toUpdate[iName2] <- FALSE
+            }
+            
+        }        
+
+        ## **** matrices
+        if(iType=="Lambda"){            
+            dLambda[[iName2]] <- matrix(0,
+                                        nrow = n.latent, ncol = n.endogenous, byrow = TRUE,
+                                        dimnames = list(name.latent, name.endogenous))
+            dLambda[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
+            toUpdate[iName2] <- TRUE
+        }else if(iType=="B"){
+            dB[[iName2]] <- matrix(0,
+                                   nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                   dimnames = list(name.latent, name.latent))
+            dB[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            toUpdate[iName2] <- TRUE
+        }else if(iType=="Psi_var"){
+            dPsi[[iName2]] <- matrix(0,
+                                     nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                     dimnames = list(name.latent, name.latent))
+            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            toUpdate[iName2] <- TRUE
+        }else if(iType=="Psi_cov"){
+            dPsi[[iName2]] <- matrix(0,
+                                     nrow = n.latent, ncol = n.latent, byrow = TRUE,
+                                     dimnames = list(name.latent, name.latent))
+            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
+            dPsi[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
+            toUpdate[iName2] <- TRUE
+        } 
+    }
+    ## *** export
+    return(list(
+        dmu = dmu,
+        dOmega = dOmega,
+        dLambda = dLambda,
+        dB = dB,
+        dPsi = dPsi,
+        toUpdate = toUpdate
+    ))
+}
+
+## ** initSkeletonDtheta.lvmfit
+#' @rdname skeleton
+initSkeletonDtheta.lvmfit <- initSkeletonDtheta.lvm
+
+
+## * skeletonDtheta
+## ** skeletonDtheta.lm
+#' @rdname skeleton
+
+## ** skeletonDtheta.gls
 #' @rdname skeleton
 skeletonDtheta.gls <- function(object, class.cor, class.var, X, 
                                sigma2.base0, Msigma2.base0, M.corcoef, ref.group,
@@ -527,7 +577,7 @@ skeletonDtheta.gls <- function(object, class.cor, class.var, X,
     return(out)
 }
 
-## * skeletonDtheta.lme
+## ** skeletonDtheta.lme
 #' @rdname skeleton
 skeletonDtheta.lme <- function(object, name.endogenous, n.endogenous,
                                name.rancoef, ...){
@@ -544,142 +594,13 @@ skeletonDtheta.lme <- function(object, name.endogenous, n.endogenous,
     return(out)
 }
 
-## * skeletonDtheta.lvm
-#' @rdname skeleton
-skeletonDtheta.lvm <- function(object, data,
-                               df.param.all, param2originalLink,
-                               name.endogenous, name.latent, ...){
-
-    factitious <- marginal <- param <- value <- X <- Y <- NULL ## [:for CRAN check] subset
-
-    n.endogenous <- length(name.endogenous)
-    n.latent <- length(name.latent)
-
-    df.param <- subset(df.param.all, subset = is.na(value) & marginal == FALSE & factitious == FALSE)
-    Utype.by.detail <- tapply(df.param$detail, df.param$param, function(x){length(unique(x))})
-    if(any(Utype.by.detail>1)){
-        stop("cannot constrain two coefficients of different types to be equal \n")
-    }
-    name.param <- subset(df.param, subset = !duplicated(param), select = param, drop = TRUE)
-    n.param <- length(name.param)
-
-    name.originalLink <- as.character(param2originalLink)
-
-### ** prepare
-    n.data <- NROW(data)
-    name.data <- colnames(data)
-    
-    mean.param <- c("nu","K","alpha","Gamma","Lambda","B")
-    vcov.param <- c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","Lambda","B")    
-    dmu <- list()
-    dOmega <- list()
-    dLambda <- list()
-    dB <- list()
-    dPsi <- list()
-
-    toUpdate <- stats::setNames(vector(mode = "logical", n.param),name.originalLink)
-    
-    ### ** Compute derivative or prepare for the derivative
-    for(iName in name.param){ # iName <- name.param[1]
-
-        iName2 <- as.character(param2originalLink[iName])
-        iType <- unique(subset(df.param, subset = (param == iName), select = "detail", drop = TRUE))
-        iY <- subset(df.param, subset = param %in% iName, select = Y, drop = TRUE)
-        iX <- subset(df.param, subset = param %in% iName, select = X, drop = TRUE)
-
-        ## *** derivative regarding the mean        
-        if(iType %in% mean.param){            
-            if(iType=="nu"){
-                dmu[[iName2]] <- matrix(as.numeric(name.endogenous %in% iY),
-                                        nrow = n.data, ncol = n.endogenous, byrow = TRUE,
-                                        dimnames = list(NULL, name.endogenous))
-                toUpdate[iName2] <- FALSE
-            }else if(iType=="K"){
-                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.endogenous, byrow = TRUE,
-                                        dimnames = list(NULL, name.endogenous))
-                for(Y.tempo in unique(iY)){                    
-                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-                }
-                toUpdate[iName2] <- FALSE
-            }else if(iType=="alpha"){
-                dmu[[iName2]] <- matrix(as.numeric(name.latent %in% unique(iY)), nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                        dimnames = list(NULL, name.latent))                
-                toUpdate[iName2] <- TRUE
-            }else if(iType=="Gamma"){
-                dmu[[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                        dimnames = list(NULL, name.latent))
-                for(Y.tempo in unique(iY)){ # Y.tempo <- "eta"
-                    dmu[[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-                }
-                toUpdate[iName2] <- TRUE
-            }
-        }
-        
-        ## *** derivative regarding the residual variance covariance
-        if(iType %in% vcov.param){
-            
-            if(iType=="Sigma_var"){
-                dOmega[[iName2]] <- matrix(0,
-                                           nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
-                                           dimnames = list(name.endogenous, name.endogenous))
-                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
-                toUpdate[iName2] <- FALSE
-            }else if(iType=="Sigma_cov"){
-                dOmega[[iName2]] <- matrix(0,
-                                           nrow = n.endogenous, ncol = n.endogenous, byrow = TRUE,
-                                           dimnames = list(name.endogenous, name.endogenous))
-                dOmega[[iName2]][match(iX, name.endogenous) + (match(iY, name.endogenous) - 1) * n.endogenous] <- 1
-                dOmega[[iName2]][match(iY, name.endogenous) + (match(iX, name.endogenous) - 1) * n.endogenous] <- 1
-                toUpdate[iName2] <- FALSE
-            }
-            
-        }        
-
-        ## *** matrices
-        if(iType=="Lambda"){            
-            dLambda[[iName2]] <- matrix(0,
-                                        nrow = n.latent, ncol = n.endogenous, byrow = TRUE,
-                                        dimnames = list(name.latent, name.endogenous))
-            dLambda[[iName2]][match(iX, name.latent) + (match(iY, name.endogenous) - 1) * n.latent] <- 1            
-            toUpdate[iName2] <- TRUE
-        }else if(iType=="B"){
-            dB[[iName2]] <- matrix(0,
-                                   nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                   dimnames = list(name.latent, name.latent))
-            dB[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            toUpdate[iName2] <- TRUE
-        }else if(iType=="Psi_var"){
-            dPsi[[iName2]] <- matrix(0,
-                                     nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                     dimnames = list(name.latent, name.latent))
-            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            toUpdate[iName2] <- TRUE
-        }else if(iType=="Psi_cov"){
-            dPsi[[iName2]] <- matrix(0,
-                                     nrow = n.latent, ncol = n.latent, byrow = TRUE,
-                                     dimnames = list(name.latent, name.latent))
-            dPsi[[iName2]][match(iX, name.latent) + (match(iY, name.latent) - 1) * n.latent] <- 1
-            dPsi[[iName2]][match(iY, name.latent) + (match(iX, name.latent) - 1) * n.latent] <- 1            
-            toUpdate[iName2] <- TRUE
-        } 
-    }
-### ** export
-    return(list(
-        dmu = dmu,
-        dOmega = dOmega,
-        dLambda = dLambda,
-        dB = dB,
-        dPsi = dPsi,
-        toUpdate = toUpdate
-    ))
-}
 
 
-## * skeletonDtheta.lvmfit
+## ** skeletonDtheta.lvmfit
 #' @rdname skeleton
 skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
 
-### ** Import information
+    ## *** Import information
     n.endogenous <- length(name.endogenous)
     n.latent <- length(name.latent)
 
@@ -699,9 +620,9 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
     name2Update <- names(toUpdate)
     type2Update <- type[name2Update]
     
-### ** Update partial derivatives
+    ## *** Update partial derivatives
 
-    ## *** mean coefficients
+    ## **** mean coefficients
     type2Update.meanparam <- type2Update[type2Update %in% c("alpha","Lambda","Gamma","B")]
     name2Update.meanparam <- names(type2Update.meanparam)
     n2Update.meanparam <- length(name2Update.meanparam)
@@ -725,7 +646,7 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
         }
     }
 
-    ## *** variance-covariance coefficients
+    ## **** variance-covariance coefficients
     type2Update.vcovparam <- type2Update[type2Update %in% c("Psi_var","Psi_cov","Lambda","B")]
     name2Update.vcovparam <- names(type2Update.vcovparam)
     n2Update.vcovparam <- length(name2Update.vcovparam)
@@ -752,17 +673,237 @@ skeletonDtheta.lvmfit <- function(object, name.endogenous, name.latent, ...){
         }
     }
 
-### ** Export
+    ## *** Export
     return(list(dmu = dmu, dOmega = dOmega))
 
 }
 
-## * skeletonDtheta2
-#' @rdname skeleton
-`skeletonDtheta2` <-
-    function(object, ...) UseMethod("skeletonDtheta2")
 
-## * skeletonDtheta2.gls
+## * initSkeletonDtheta2
+
+## ** initSkeletonDtheta2.lm
+#' @rdname skeleton
+
+## ** initSkeletonDtheta2.gls
+#' @rdname skeleton
+
+## ** initSkeletonDtheta2.lme
+#' @rdname skeleton
+## initSkeletonDtheta2.lme <- initSkeletonDtheta2.gls
+
+## ** initSkeletonDtheta2.lvm
+#' @rdname skeleton
+initSkeletonDtheta2.lvm <- function(object, data, df.param.all,
+                                param2originalLink, name.latent, ...){
+
+    detail <- factitious <- marginal <- param <- value <- Y <- NULL ## [:for CRAN check] subset
+    
+    df.param <- subset(df.param.all, is.na(value) & marginal == FALSE & factitious == FALSE)
+    dfred.param <- subset(df.param, subset = !duplicated(param))
+    
+    n.latent <- length(name.latent)
+    n.data <- NROW(data)
+
+    ## ** identify all combinations of coefficients with second derivative
+    grid.mean <- list()
+
+    grid.mean$alpha.B <- .combinationDF(dfred.param,
+                                        detail1 = "alpha", name1 = "alpha",
+                                        detail2 = "B", name2 = "B")
+
+    grid.mean$alpha.Lambda <- .combinationDF(dfred.param,
+                                             detail1 = "alpha", name1 = "alpha",
+                                             detail2 = "Lambda", name2 = "Lambda")
+
+    grid.mean$Gamma.B <- .combinationDF(dfred.param,
+                                        detail1 = "Gamma", name1 = "Gamma",
+                                        detail2 = "B", name2 = "B")
+
+    grid.mean$Gamma.Lambda <- .combinationDF(dfred.param,
+                                             detail1 = "Gamma", name1 = "Gamma",
+                                             detail2 = "Lambda", name2 = "Lambda")
+    
+    grid.mean$Lambda.B <- .combinationDF(dfred.param,
+                                        detail1 = "Lambda", name1 = "Lambda",
+                                        detail2 = "B", name2 = "B")
+
+    grid.mean$B.B <- .combinationDF(dfred.param,
+                                    detail1 = "B", name1 = "B1",
+                                    detail2 = "B", name2 = "B2")
+
+    n.mean <- lapply(grid.mean, NROW)
+    
+
+    grid.vcov <- list()
+    
+    grid.vcov$Psi.Lambda <- .combinationDF(dfred.param,
+                                           detail1 = c("Psi_var","Psi_cov"), name1 = "Psi",
+                                           detail2 = "Lambda", name2 = "Lambda")
+
+    grid.vcov$Psi.B <- .combinationDF(dfred.param,
+                                      detail1 = c("Psi_var","Psi_cov"), name1 = "Psi",
+                                      detail2 = "B", name2 = "B")
+
+    grid.vcov$Lambda.B <- .combinationDF(dfred.param,
+                                         detail1 = "Lambda", name1 = "Lambda",
+                                         detail2 = "B", name2 = "B")
+
+    grid.vcov$Lambda.Lambda <- .combinationDF(dfred.param,
+                                              detail1 = "Lambda", name1 = "Lambda1",
+                                              detail2 = "Lambda", name2 = "Lambda2")
+
+    grid.vcov$B.B <- .combinationDF(dfred.param,
+                                    detail1 = "B", name1 = "B1",
+                                    detail2 = "B", name2 = "B2")
+    
+    n.vcov <- lapply(grid.vcov, NROW)
+    
+    ## *** convert back to lava names
+    grid.mean <- lapply(grid.mean, function(x){ ## x <- grid.mean[[2]]
+        if(length(x)>0){
+            x[,1] <- param2originalLink[x[,1]]
+            x[,2] <- param2originalLink[x[,2]]
+        }
+        return(x)
+    })
+
+    grid.vcov <- lapply(grid.vcov, function(x){ ## x <- grid.vcov[[2]]
+        if(length(x)>0){
+            x[,1] <- param2originalLink[x[,1]]
+            x[,2] <- param2originalLink[x[,2]]
+        }
+        return(x)
+    })
+
+    ## *** prepare export
+    if(any(unlist(n.mean)>0)){
+        xx <- lapply(grid.mean, function(x){
+            if(NROW(x)>0){
+                colnames(x) <- c("x","y")
+            }
+            return(x)
+        })
+        collapseGrid <- do.call(rbind, xx)
+        name.tempo <- as.character(unique(collapseGrid[[1]]))
+        d2mu <- lapply(name.tempo, function(x){
+            iIndex <- which(collapseGrid[[1]]==x)
+            v <- vector(mode = "list", length(iIndex))
+            names(v) <- collapseGrid[[2]][iIndex]
+            return(v)
+        })
+        names(d2mu) <- name.tempo
+    }else{
+        d2mu <- list()
+    }
+    
+    if(any(unlist(n.vcov)>0)){
+        xx <- lapply(grid.vcov, function(x){
+            if(NROW(x)>0){
+                colnames(x) <- c("x","y")
+            }
+            return(x)
+        })
+        collapseGrid <- do.call(rbind, xx)
+        name.tempo <- as.character(unique(collapseGrid[[1]]))
+        d2Omega <- lapply(name.tempo, function(x){
+            iIndex <- which(collapseGrid[[1]]==x)
+            v <- vector(mode = "list", length(iIndex))
+            names(v) <- collapseGrid[[2]][iIndex]
+            return(v)
+        })
+        names(d2Omega) <- name.tempo
+    }else{
+        d2Omega <- list()
+    }
+    
+    ## *** prepare alpha.B and alpha.Lambda
+    if(any(df.param$detail == "alpha")){
+        name.alpha <- subset(df.param, subset = !duplicated(param) & detail == "alpha", select = "param", drop = TRUE)
+        ls.Malpha <- list()
+        for(iName in name.alpha){ # iName <- name.alpha[1]
+
+            iParam <- df.param[df.param$name == iName, "param"]
+            iY <- subset(df.param, subset = param %in% iParam, select = Y, drop = TRUE)
+            ls.Malpha[[iName]] <- matrix(as.numeric(name.latent %in% unique(iY)),
+                                         nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                         dimnames = list(NULL, name.latent))
+            
+        }
+    }
+    if(n.mean$alpha.B>0){
+        for(iP in 1:n.mean$alpha.B){ ## iP <- 1
+            iName1 <- grid.mean$alpha.B[iP,"alpha"]
+            iName2 <- grid.mean$alpha.B[iP,"B"]
+            
+            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+        }
+    }
+    if(n.mean$alpha.Lambda>0){
+        for(iP in 1:n.mean$alpha.Lambda){ ## iP <- 1
+            iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
+            iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
+            
+            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
+        }
+    }
+    
+    ## *** Store X for Gamma
+    if(n.mean$Gamma.Lambda>0){
+        for(iP in 1:n.mean$Gamma.Lambda){ ## iP <- 1
+            iName1 <- grid.mean$Gamma.Lambda[iP,"Gamma"]
+            iName2 <- grid.mean$Gamma.Lambda[iP,"Lambda"]
+
+            iParam <- df.param[df.param$name == iName1, "param"]
+            iX <- subset(df.param.all, subset = param %in% iParam, select = "X", drop = TRUE)
+            iY <- subset(df.param.all, subset = param %in% iParam, select = "Y", drop = TRUE)
+
+            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                               dimnames = list(NULL, name.latent))
+            for(Y.tempo in unique(iY)){
+                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+            }
+        }
+    }
+    
+    if(n.mean$Gamma.B>0){
+        for(iP in 1:n.mean$Gamma.B){ ## iP <- 1
+            iName1 <- grid.mean$Gamma.B[iP,"Gamma"]
+            iName2 <- grid.mean$Gamma.B[iP,"B"]
+            
+            iParam <- df.param[df.param$name == iName1, "param"]
+            iX <- subset(df.param.all, subset = param %in% iParam, select = "X", drop = TRUE)
+            iY <- subset(df.param.all, subset = param %in% iParam, select = "Y", drop = TRUE)
+
+            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
+                                               dimnames = list(NULL, name.latent))
+            for(Y.tempo in unique(iY)){
+                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
+            }
+        }
+    }
+
+    ## *** Export
+    toUpdate <- unlist(lapply(c(n.mean,n.vcov), function(x){x>0}))
+    return(list(grid.mean = grid.mean,
+                n.mean = n.mean,                
+                grid.vcov = grid.vcov,
+                n.vcov = n.vcov,
+                d2mu = d2mu,
+                d2Omega = d2Omega,
+                toUpdate = toUpdate
+                ))
+}
+
+
+
+## * skeletonDtheta2
+## ** skeletonDtheta2.lm
+#' @rdname skeleton
+skeletonDtheta2.lm <- function(object, ...){
+    return(list(d2mu = NULL, d2Omega = NULL))    
+}
+
+## ** skeletonDtheta2.gls
 #' @rdname skeleton
 skeletonDtheta2.gls <- function(object, dOmega = NULL,
                                 class.cor = NULL, class.var = NULL,
@@ -873,224 +1014,15 @@ skeletonDtheta2.gls <- function(object, dOmega = NULL,
     return(out)
 }
 
-## * skeletonDtheta2.lme
+## ** skeletonDtheta2.lme
 #' @rdname skeleton
 skeletonDtheta2.lme <- skeletonDtheta2.gls
 
-## * skeletonDtheta2.lm
-#' @rdname skeleton
-skeletonDtheta2.lm <- function(object, ...){
-    return(list(d2mu = NULL, d2Omega = NULL))    
-}
-
-## * skeletonDtheta2.lvm
-#' @rdname skeleton
-skeletonDtheta2.lvm <- function(object, data, df.param.all,
-                                param2originalLink, name.latent, ...){
-
-    detail <- factitious <- marginal <- param <- value <- Y <- NULL ## [:for CRAN check] subset
-    
-    df.param <- subset(df.param.all, is.na(value) & marginal == FALSE & factitious == FALSE)
-    dfred.param <- subset(df.param, subset = !duplicated(param))
-    
-    n.latent <- length(name.latent)
-    n.data <- NROW(data)
-
-### ** identify all combinations of coefficients with second derivative
-    grid.mean <- list()
-
-    grid.mean$alpha.B <- .combinationDF(dfred.param,
-                                        detail1 = "alpha", name1 = "alpha",
-                                        detail2 = "B", name2 = "B")
-
-    grid.mean$alpha.Lambda <- .combinationDF(dfred.param,
-                                             detail1 = "alpha", name1 = "alpha",
-                                             detail2 = "Lambda", name2 = "Lambda")
-
-    grid.mean$Gamma.B <- .combinationDF(dfred.param,
-                                        detail1 = "Gamma", name1 = "Gamma",
-                                        detail2 = "B", name2 = "B")
-
-    grid.mean$Gamma.Lambda <- .combinationDF(dfred.param,
-                                             detail1 = "Gamma", name1 = "Gamma",
-                                             detail2 = "Lambda", name2 = "Lambda")
-    
-    grid.mean$Lambda.B <- .combinationDF(dfred.param,
-                                        detail1 = "Lambda", name1 = "Lambda",
-                                        detail2 = "B", name2 = "B")
-
-    grid.mean$B.B <- .combinationDF(dfred.param,
-                                    detail1 = "B", name1 = "B1",
-                                    detail2 = "B", name2 = "B2")
-
-    n.mean <- lapply(grid.mean, NROW)
-    
-
-    grid.vcov <- list()
-    
-    grid.vcov$Psi.Lambda <- .combinationDF(dfred.param,
-                                           detail1 = c("Psi_var","Psi_cov"), name1 = "Psi",
-                                           detail2 = "Lambda", name2 = "Lambda")
-
-    grid.vcov$Psi.B <- .combinationDF(dfred.param,
-                                      detail1 = c("Psi_var","Psi_cov"), name1 = "Psi",
-                                      detail2 = "B", name2 = "B")
-
-    grid.vcov$Lambda.B <- .combinationDF(dfred.param,
-                                         detail1 = "Lambda", name1 = "Lambda",
-                                         detail2 = "B", name2 = "B")
-
-    grid.vcov$Lambda.Lambda <- .combinationDF(dfred.param,
-                                              detail1 = "Lambda", name1 = "Lambda1",
-                                              detail2 = "Lambda", name2 = "Lambda2")
-
-    grid.vcov$B.B <- .combinationDF(dfred.param,
-                                    detail1 = "B", name1 = "B1",
-                                    detail2 = "B", name2 = "B2")
-    
-    n.vcov <- lapply(grid.vcov, NROW)
-    
-### ** convert back to lava names
-    grid.mean <- lapply(grid.mean, function(x){ ## x <- grid.mean[[2]]
-        if(length(x)>0){
-            x[,1] <- param2originalLink[x[,1]]
-            x[,2] <- param2originalLink[x[,2]]
-        }
-        return(x)
-    })
-
-    grid.vcov <- lapply(grid.vcov, function(x){ ## x <- grid.vcov[[2]]
-        if(length(x)>0){
-            x[,1] <- param2originalLink[x[,1]]
-            x[,2] <- param2originalLink[x[,2]]
-        }
-        return(x)
-    })
-
-### ** prepare export
-    if(any(unlist(n.mean)>0)){
-        xx <- lapply(grid.mean, function(x){
-            if(NROW(x)>0){
-                colnames(x) <- c("x","y")
-            }
-            return(x)
-        })
-        collapseGrid <- do.call(rbind, xx)
-        name.tempo <- as.character(unique(collapseGrid[[1]]))
-        d2mu <- lapply(name.tempo, function(x){
-            iIndex <- which(collapseGrid[[1]]==x)
-            v <- vector(mode = "list", length(iIndex))
-            names(v) <- collapseGrid[[2]][iIndex]
-            return(v)
-        })
-        names(d2mu) <- name.tempo
-    }else{
-        d2mu <- list()
-    }
-    
-    if(any(unlist(n.vcov)>0)){
-        xx <- lapply(grid.vcov, function(x){
-            if(NROW(x)>0){
-                colnames(x) <- c("x","y")
-            }
-            return(x)
-        })
-        collapseGrid <- do.call(rbind, xx)
-        name.tempo <- as.character(unique(collapseGrid[[1]]))
-        d2Omega <- lapply(name.tempo, function(x){
-            iIndex <- which(collapseGrid[[1]]==x)
-            v <- vector(mode = "list", length(iIndex))
-            names(v) <- collapseGrid[[2]][iIndex]
-            return(v)
-        })
-        names(d2Omega) <- name.tempo
-    }else{
-        d2Omega <- list()
-    }
-    
-    ## ** prepare alpha.B and alpha.Lambda
-    if(any(df.param$detail == "alpha")){
-        name.alpha <- subset(df.param, subset = !duplicated(param) & detail == "alpha", select = "param", drop = TRUE)
-        ls.Malpha <- list()
-        for(iName in name.alpha){ # iName <- name.alpha[1]
-
-            iParam <- df.param[df.param$name == iName, "param"]
-            iY <- subset(df.param, subset = param %in% iParam, select = Y, drop = TRUE)
-            ls.Malpha[[iName]] <- matrix(as.numeric(name.latent %in% unique(iY)),
-                                         nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                         dimnames = list(NULL, name.latent))
-            
-        }
-    }
-    if(n.mean$alpha.B>0){
-        for(iP in 1:n.mean$alpha.B){ ## iP <- 1
-            iName1 <- grid.mean$alpha.B[iP,"alpha"]
-            iName2 <- grid.mean$alpha.B[iP,"B"]
-            
-            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
-        }
-    }
-    if(n.mean$alpha.Lambda>0){
-        for(iP in 1:n.mean$alpha.Lambda){ ## iP <- 1
-            iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
-            iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
-            
-            d2mu[[iName1]][[iName2]] <- ls.Malpha[[iName1]]
-        }
-    }
-    
-    ## ** Store X for Gamma
-    if(n.mean$Gamma.Lambda>0){
-        for(iP in 1:n.mean$Gamma.Lambda){ ## iP <- 1
-            iName1 <- grid.mean$Gamma.Lambda[iP,"Gamma"]
-            iName2 <- grid.mean$Gamma.Lambda[iP,"Lambda"]
-
-            iParam <- df.param[df.param$name == iName1, "param"]
-            iX <- subset(df.param.all, subset = param %in% iParam, select = "X", drop = TRUE)
-            iY <- subset(df.param.all, subset = param %in% iParam, select = "Y", drop = TRUE)
-
-            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                               dimnames = list(NULL, name.latent))
-            for(Y.tempo in unique(iY)){
-                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-            }
-        }
-    }
-    
-    if(n.mean$Gamma.B>0){
-        for(iP in 1:n.mean$Gamma.B){ ## iP <- 1
-            iName1 <- grid.mean$Gamma.B[iP,"Gamma"]
-            iName2 <- grid.mean$Gamma.B[iP,"B"]
-            
-            iParam <- df.param[df.param$name == iName1, "param"]
-            iX <- subset(df.param.all, subset = param %in% iParam, select = "X", drop = TRUE)
-            iY <- subset(df.param.all, subset = param %in% iParam, select = "Y", drop = TRUE)
-
-            d2mu[[iName1]][[iName2]] <- matrix(0, nrow = n.data, ncol = n.latent, byrow = TRUE,
-                                               dimnames = list(NULL, name.latent))
-            for(Y.tempo in unique(iY)){
-                d2mu[[iName1]][[iName2]][,Y.tempo] <- rowSums(data[,iX[iY == Y.tempo],drop=FALSE])
-            }
-        }
-    }
-
-### ** export
-    toUpdate <- unlist(lapply(c(n.mean,n.vcov), function(x){x>0}))
-    return(list(grid.mean = grid.mean,
-                n.mean = n.mean,                
-                grid.vcov = grid.vcov,
-                n.vcov = n.vcov,
-                d2mu = d2mu,
-                d2Omega = d2Omega,
-                toUpdate = toUpdate
-                ))
-}
-
-## * skeletonDtheta2.lvmfit
+## ** skeletonDtheta2.lvmfit
 #' @rdname skeleton
 skeletonDtheta2.lvmfit <- function(object, ...){
     
-### ** Import information
+    ## *** Import information
     n.endogenous <- NCOL(object$conditionalMoment$Omega)
 
     ## from Moment
@@ -1120,10 +1052,10 @@ skeletonDtheta2.lvmfit <- function(object, ...){
     toUpdate <- object$conditionalMoment$d2Moment.init$toUpdate
     ##    names(object$conditionalMoment$d2Moment)
     
-### ** second order partial derivatives
+    ## *** second order partial derivatives
     if(any(toUpdate)){
         
-        ## *** mean coefficients        
+        ## **** mean coefficients        
         if(toUpdate["alpha.B"]){
             for(iP in 1:n.mean$alpha.B){ # iP <- 1
                 iName1 <- grid.mean$alpha.B[iP,"alpha"]
@@ -1181,7 +1113,7 @@ skeletonDtheta2.lvmfit <- function(object, ...){
             }
         }
 
-        ## *** variance-covariance coefficients
+        ## **** variance-covariance coefficients
         if(toUpdate["Psi.Lambda"]){
             for(iP in 1:n.vcov$Psi.Lambda){ # iP <- 1
                 iName1 <- grid.vcov$Psi.Lambda[iP,"Psi"]
@@ -1238,88 +1170,50 @@ skeletonDtheta2.lvmfit <- function(object, ...){
 
     }
 
-### ** Export
+    ## *** Export
     return(list(d2mu = d2mu, d2Omega = d2Omega))
 
 }
 
-## * .combination
-#' @title Form all Unique Combinations Between two Vectors
-#' @description Form all unique combinations between two vectors (removing symmetric combinations).
-#' @name combination
-#'
-#' @param ... [vectors] elements to be combined.
-#'
-#' @return A matrix, each row being a different combination.
-#' 
-#' @examples
-#' .combination <- lavaSearch2:::.combination
-#' 
-#' .combination(1,1)
-#' .combination(1:2,1:2)
-#' .combination(c(1:2,1:2),1:2)
-#' 
-#' .combination(alpha = 1:2, beta = 3:4)
-#'
-#' @keywords internal
-.combination <- function(...){
 
-    ## ** normalize arguments
-    dots <- list(...)
-    if(length(dots)!=2){
-        stop("can only handle two vectors \n")
-    }
-    test.null <- unlist(lapply(dots,is.null))    
-    if(any(test.null)){
-        return(NULL)
-    }
-    dots <- lapply(dots,unique)
+.toUpdate <- function(type){
 
-    ## ** form all combinations
-    grid <- expand.grid(dots, stringsAsFactors = FALSE) 
+    out <- list(mean = NULL,
+                variance = NULL)
+
+    ## ** mean
+    out$mean <- c("mu" = NA,
+                  "nu" = FALSE,
+                  "K" = FALSE,
+                  "Lambda" = "Lambda" %in% type,
+                  "alpha" = "alpha" %in% type,
+                  "Gamma" = "Gamma" %in% type,
+                  "B" = "B" %in% type,
+                  "iIB.Lambda" = as.logical(NA))
     
-    ## ** remove combinations (b,a) when (a,b) is already there
-    name1 <- paste0(grid[,1],grid[,2])
-    name2 <- paste0(grid[,2],grid[,1])
+    out$mean$mu <- (out$mean$nu || out$mean$K || out$mean$Lambda || out$mean$alpha || out$mean$Gamma || out$mean$B)
+    out$mean$iIB.Lambda <- (out$mean$Lambda || out$mean$B)
 
-    if(NROW(grid)>1 && any(name1 %in% name2)){ 
-
-        n.grid <- NROW(grid)
-        test.duplicated <- c(FALSE,sapply(2:n.grid, function(iG){
-            any(name2[iG] %in% name1[1:(iG-1)]) ## find duplicates
-        }))
-
-        grid <- grid[test.duplicated==FALSE,]
-    }
+    ## ** variance
+    out$variance <- c("Omega" = NA,
+                      "Sigma" = FALSE,
+                      "sigma2" = "sigma2" %in% type,
+                      "sigma2k" = "sigma2k" %in% type,
+                      "cor" = "cor" %in% type,
+                      "Lambda" = "Lambda" %in% type,
+                      "B" = "B" %in% type,
+                      "Psi" = ("Psi_cov" %in% type) || ("Psi_var" %in% type),                      
+                      "Psi.iIB" = as.logical(NA),
+                      "tLambda.tiIB.Psi.iIB" = as.logical(NA))
+    
+    out$mean$Omega <- (out$variance$sigma2 || out$variance$sigma2k || out$variance$cor ||out$variance$Lambda || out$variance$B || out$variance$Psi)
+    out$mean$Psi.iIB <- (out$variance$B || out$variance$Psi)
+    out$mean$tLambda.tiIB.Psi.iIB <- (out$variance$Lambda || out$variance$B || out$variance$Psi)
 
     ## ** export
-    return(grid)        
+    return(out)
 }
-
-
-## * .combinationDF
-.combinationDF <- function(data,
-                           detail1, detail2,
-                           name1, name2){
-
-    detail <- NULL # [:for CRAN check] subset
-    
-    if(any(detail1 %in% data$detail) && any(detail2 %in% data$detail) ){
-        ls.args <- list(subset(data, subset = detail %in% detail1, select = "param", drop = TRUE),
-                        subset(data, subset = detail %in% detail2, select = "param", drop = TRUE))
-        names(ls.args) <- c(name1,name2)
-    
-        return(do.call(.combination, args = ls.args))
-        
-    }else{
-        
-        return(numeric(0))
-        
-    }
-}
-
-
 
 ##----------------------------------------------------------------------
-### skeleton.R ends here
+### sCorrect-skeleton.R ends here
 

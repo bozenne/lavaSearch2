@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb 11 2019 (13:33) 
+## last-updated: aug  2 2019 (11:15) 
 ##           By: Brice Ozenne
-##     Update #: 2262
+##     Update #: 2267
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,11 +16,12 @@
 ### Code:
 
 ## * Documentation - score2
-#' @title  Extract the Individual Score
-#' @description  Extract the individual score from a Gaussian linear model.
+#' @title  Extract the Individual Score After Small Sample Correction.
+#' @description  Extract the individual score from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' Similar to \code{lava::score} but with small sample correction.
 #' @name score2
 #'
-#' @param object a linear model or a latent variable model
+#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
 #' @param param [optional] the fitted parameters.
 #' @param data [optional] the data set.
 #' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
