@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: nov 18 2019 (11:22) 
+## Last-Updated: dec 10 2019 (16:07) 
 ##           By: Brice Ozenne
-##     Update #: 5
+##     Update #: 36
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,7 +50,7 @@
 #' @concept small sample inference
 #' @export
 `residuals2` <-
-    function(object, param, data, type) UseMethod("residuals2")
+    function(object, param, data, type, format) UseMethod("residuals2")
 
 ## * Examples
 #' @rdname residuals2
@@ -103,98 +103,62 @@
 ## * residuals2.lm
 #' @rdname residuals2
 #' @export
-residuals2.lm <- function(object, param = NULL, data = NULL, type = "response"){
+residuals2.lm <- function(object, param = NULL, data = NULL, type = "response", format = "wide"){
+
+    format <- match.arg(format, choices = c("long","wide"))
     
-    if(is.null(param) && is.null(data)){ ## default value
-        Omega <- getVarCov2(object)
-        
-        residuals <- cbind(stats::residuals(object))
-        colnames(residuals) <- colnames(Omega)
-    }else if(is.null(param)){ ## new dataset
-        response.var <- endogenous(object)
-        Omega <- getVarCov2(object)
-                                       
-        residuals <- cbind(stats::predict(object, newdata = data) - data[[response.var]])
-        colnames(residuals) <- colnames(Omega)
-    }else{ ## new parameter values (and possibly new dataset)
-        stop("Not yet implemented \n")
+    if(inherits(object,"sCorrect") && is.null(param) && is.null(data)){
+        cM <- object$sCorrect
+    }else{
+        cM <- conditionalMoment(object, param = param, data = data,
+                                initialize = !is.null(data) || !inherits(object,"sCorrect"),
+                                first.order = FALSE, second.order = FALSE, usefit = TRUE)
     }
-    
-    residuals <- .normalizeResiduals(residuals = residuals,
-                                     Omega = Omega,
-                                     type = type)
-    
-    return(residuals)
+
+    residuals <- .normalizeResiduals(residuals = cM$moment$residuals,
+                                     Omega = cM$moment$Omega,
+                                     type = type,
+                                     missing.pattern = cM$moment$missing.pattern,
+                                     Omega.missing.pattern = cM$moment$Omega.missing.pattern)
+    if(format == "wide"){
+        return(residuals)
+    }else if(format == "long"){
+        endogenous <- colnames(residuals)
+        n.endogenous <- length(endogenous)
+        
+        residualsW <- data.frame(cluster = 1:NROW(residuals), residuals)
+        residualsL <- stats::na.omit(stats::reshape(residualsW,
+                                                    idvar = "id",
+                                                    direction = "long",
+                                                    varying = list(endogenous),
+                                                    timevar = "endogenous",
+                                                    v.names = "residual"))
+        rownames(residualsL) <- NULL
+        residualsL$endogenous <- factor(residualsL$endogenous, levels = 1:n.endogenous, labels = endogenous)
+        reorder <- match(interaction(cM$original.order$XXclusterXX,cM$original.order$XXendogenousXX),
+                         interaction(residualsL$cluster,residualsL$endogenous))
+        return(residualsL[reorder,])
+    }
 }
 
 ## * residuals2.gls
 #' @rdname residuals2
 #' @export
-residuals2.gls <- function(object, param = NULL, data = NULL, type = "response", ...){
-    browser()
-    if(is.null(param) && is.null(data)){ ## default value
-        Omega <- getVarCov2(object)
-        
-        residuals <- stats::residuals(object)
-        info <- getGroups2(object, ...)
-
-        M.residuals <- matrix(NA, nrow = info$n.cluster, ncol = info$n.endogenous,
-                              dimnames = list(NULL,info$name.endogenous))
-        M.residuals[info$index.vec2mat] <- residuals
-    }else if(is.null(param)){ ## new dataset
-        response.var <- endogenous(object)
-        Omega <- getVarCov2(object)
-                                       
-        residuals <- cbind(stats::predict(object, newdata = data) - data[[response.var]])
-        colnames(residuals) <- colnames(Omega)
-    }else{ ## new parameter values (and possibly new dataset)
-        stop("Not yet implemented \n")
-    }
-    
-    residuals <- .normalizeResiduals(residuals = residuals,
-                                     Omega = Omega,
-                                     type = type)
-    
-    return(residuals)
-}
+residuals2.gls <- residuals2.lm
 
 ## * residuals2.lme
 #' @rdname residuals2
 #' @export
-residuals2.lme <- residuals2.gls
+residuals2.lme <- residuals2.lm
 
 ## * residuals2.lvmfit
 #' @rdname residuals2
 #' @export
-residuals2.lvmfit <- function(object, param = NULL, data = NULL, type = "response"){
-
-    res <- residuals(object, data = data, p = param)
-    return(res)
-}
-
-## * residuals2.sCorrect
-#' @rdname residuals2
-#' @export
-residuals2.sCorrect <- function(object, param = NULL, data = NULL, type = "response"){
-
-
-    if(!is.null(param) || !is.null(data)){
-        args <- object$sCorrect$args
-        args$df <- FALSE
-        object$sCorrect <- do.call(sCorrect,
-                                   args = c(list(object, param = param, data = data),
-                                            args))
-    }
-    
-    residuals <- .normalizeResiduals(residuals = object$sCorrect$residuals,
-                                     Omega = object$sCorrect$Omega,
-                                     type = type)
-    
-    return(residuals)
-}
+residuals2.lvmfit <- residuals2.lm
 
 ## * .normalizeResiduals
-.normalizeResiduals <- function(residuals, Omega, type){
+.normalizeResiduals <- function(residuals, Omega, type,
+                                missing.pattern, Omega.missing.pattern){
     type <- match.arg(type, choices = c("response","studentized","normalized"), several.ok = FALSE)
 
     if(type=="studentized"){
@@ -205,10 +169,16 @@ residuals2.sCorrect <- function(object, param = NULL, data = NULL, type = "respo
         ## object$sCorrect$residuals/residuals
     }else if(type=="normalized"){
         name.endogenous <- colnames(residuals)
-        residuals <- residuals %*% matrixPower(Omega, symmetric = TRUE, power = -1/2)
+        if(any(is.na(residuals))==FALSE){
+            residuals <- residuals %*% matrixPower(Omega, symmetric = TRUE, power = -1/2)
+        }else{
+            iOmegaHalf.missing.pattern <- lapply(Omega.missing.pattern,matrixPower,symmetric = TRUE, power = -1/2)
+            for(iC in 1:NROW(residuals)){ ## iC <- 1
+                iY <- which(!is.na(residuals[iC,]))
+                residuals[iC,iY] <- residuals[iC,iY] %*% iOmegaHalf.missing.pattern[[missing.pattern[iC]]]
+            }
+        }
         colnames(residuals) <- name.endogenous
-        ## object$sCorrect$residuals/residuals
-        ## var(residuals)        
     }
 
     return(residuals)

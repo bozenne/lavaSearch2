@@ -30,8 +30,9 @@
 #' Y2 <- rnorm(n, mean = 0.3)
 #' Id <- findInterval(runif(n), seq(0.1,1,0.1))
 #' data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
-#'            data.frame(Y=Y2,G="2",Id = Id)
+#'            data.frame(Y=Y2,G="2",Id = Id)#'            
 #'            )
+#' data.df$oh <- 1
 #' m.lm <- lm(Y ~ G, data = data.df)
 #' a <- extractData(m.lm, design.matrix = TRUE)
 #' b <- extractData(m.lm, design.matrix = FALSE)
@@ -43,6 +44,10 @@
 #' m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
 #' d <- extractData(m.lme)
 #'
+#' library(lme4)
+#' m.lmer <- lmer(Y ~ G + (1|Id), data = data.df)
+#' d <- extractData(m.lmer)
+#'
 #' #### latent variable models ####
 #' library(lava)
 #' e.lvm <- estimate(lvm(Y ~ G), data = data.df)
@@ -51,18 +56,17 @@
 #' 
 #' #### survival #### 
 #' library(survival)
+#' library(riskRegression) ## needs version >=1.4.3
+#' library(data.table)
 #'
-#' \dontrun{
-#'   library(riskRegression) ## needs version >=1.4.3
-#'   dt.surv <- sampleData(n, outcome = "survival")
-#'   m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-#'   f <- extractData(m.cox, design.matrix = FALSE)
-#'   f <- extractData(m.cox, design.matrix = TRUE)
-#'   m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-#'   f <- extractData(m.cox, design.matrix = TRUE)
-#' }
+#' dt.surv <- sampleData(n, outcome = "survival")
+#' m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
+#' f <- extractData(m.cox, design.matrix = FALSE)
+#' f <- extractData(m.cox, design.matrix = TRUE)
+#' m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
+#' f <- extractData(m.cox, design.matrix = TRUE)
 #' 
-#' #### nested functions ####
+#' #### nested fuuctions ####
 #' fct1 <- function(m){
 #'    fct2(m)
 #' }
@@ -131,22 +135,15 @@ extractData.coxph <- function(object, design.matrix = FALSE, as.data.frame = TRU
 
     ## ** extract data
     if(design.matrix){
-         tryPkg <- requireNamespace("riskRegression")
-         if("try-error" %in% class(tryPkg)){
+        tryPkg <- requireNamespace("riskRegression")
+        if("try-error" %in% class(tryPkg)){
             stop(tryPkg)
         }else if(utils::packageVersion("riskRegression")<="1.4.3"){
             stop("riskRegression version must be > 1.4.3 \n",
                  "latest version available on Github at tagteam/riskRegression \n")
         }else{
-            #### [:toUpdate]
-            ##  data <- try(riskRegression::coxDesign(object), silent = TRUE)
-            ##  strataVar <- riskRegression::coxVariableName(object)$stratavars.original
-
-            ## this is a temporary modification waiting for the update of riskRegression on CRAN
-            coxDesign.rr <- get("coxDesign", envir = asNamespace("riskRegression"), inherits = FALSE)
-            coxVariableName.rr <- get("coxVariableName", envir = asNamespace("riskRegression"), inherits = FALSE)
-            data <- try(coxDesign.rr(object), silent = TRUE)
-            strataVar <- coxVariableName.rr(object)$stratavars.original
+            data <- riskRegression::coxModelFrame(object)
+            strataVar <- riskRegression::coxVariableName(object, model.frame = data)$stratavars.original
         } 
       
         if(length(strataVar)>0){         
@@ -283,6 +280,7 @@ extractData.gls <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
 #' @rdname extractData
 #' @export
 extractData.lme <- extractData.gls
+
 ## * extractData.lmer
 #' @rdname extractData
 #' @export

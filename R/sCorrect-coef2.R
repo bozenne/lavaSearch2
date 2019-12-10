@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: nov 19 2019 (10:47) 
+## Last-Updated: dec 10 2019 (13:50) 
 ##           By: Brice Ozenne
-##     Update #: 10
+##     Update #: 14
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,15 +95,15 @@ coef2.gls <- function(object){
     var.coef <- c(sigma2 = stats::sigma(object)^2)
     if(!is.null(object$modelStruct$varStruct)){
         var.coef <- c(var.coef,
-                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)^2)          
+                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))          
     }
 
-    ## *** covariance coefficients
+    ## *** correlation coefficients
     if(!is.null(object$modelStruct$corStruct)){
         cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
 
-            n.var <- length(var.coef)
-            n.cor <- length(cor.coef)
+        n.var <- length(var.coef)
+        n.cor <- length(cor.coef)
 
         ## check unstructured covariance matrix
         if(!is.null(object$modelStruct$varStruct) && ((n.var*(n.var-1))/2 == n.cor)){
@@ -156,7 +156,7 @@ coef2.lme <- function(object){
     var.coef <- c(sigma2 = stats::sigma(object)^2)
     if(!is.null(object$modelStruct$varStruct)){
         var.coef <- c(var.coef,
-                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE)^2)   
+                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))   
     }
 
     ## *** random effect coefficients
@@ -166,10 +166,39 @@ coef2.lme <- function(object){
     ## *** correlation coefficients
     if(!is.null(object$modelStruct$corStruct)){
         cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
-        names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-    }else{
-        cor.coef <- NULL
-    }
+
+        n.var <- length(var.coef)
+        n.cor <- length(cor.coef)
+
+        ## check unstructured covariance matrix
+        if(!is.null(object$modelStruct$varStruct) && ((n.var*(n.var-1))/2 == n.cor)){
+
+            vecgroup <- attr(unclass(object$modelStruct$corStruct), "group")
+            veccov.cor <- unname(unlist(attr(object$modelStruct$corStruct, "covariate")))
+            veccov.var <- attr(object$modelStruct$varStruct, "groups")
+
+            table.covvar <- table(veccov.cor,veccov.var)
+            newlevels.cor <- colnames(table.covvar)[apply(table.covvar, 1, which.max)]
+            veccov.cor2 <- factor(veccov.cor, levels = 0:max(veccov.cor), labels = newlevels.cor)
+            
+            if(identical(as.character(veccov.cor2),as.character(veccov.var))){
+
+                cor.coefName <- apply(utils::combn(newlevels.cor, m = 2), MARGIN = 2, FUN = paste, collapse = "")
+                names(cor.coef) <- paste0("corCoef",cor.coefName)
+
+            }else{
+                names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
+            }
+            
+            
+        }else{
+            names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
+        }
+        
+        
+        }else{
+            cor.coef <- NULL
+        }
     
     out <- c(mean.coef, cor.coef, var.coef, random.coef)
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: nov 18 2019 (15:37) 
+## Last-Updated: dec 10 2019 (13:57) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 23
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,12 +109,16 @@
 ## * getVarCov2.lm
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lm <- function(object, ...){
+getVarCov2.lm <- function(object, param = NULL, data = NULL, ...){
 
-    if(!inherits(object,"sCorrect")){
-        .convert_sCorrect(object) <- FALSE
+    if(inherits(object,"sCorrect") && is.null(param) && is.null(data)){
+        Omega <- object$sCorrect$moment$Omega
+    }else{
+        Omega <- conditionalMoment(object, param = param, data = data,
+                                   initialize = !is.null(data) || !inherits(object,"sCorrect"),
+                                   first.order = FALSE, second.order = FALSE, usefit = TRUE)$moment$Omega
     }
-    return(object$sCorrect$Omega)
+    return(Omega)
 
 }
 
@@ -133,73 +137,6 @@ getVarCov2.lme <- getVarCov2.lm
 #' @export
 getVarCov2.lvmfit <- getVarCov2.lm
 
-## * .getVarCov2 [helper]
-#' @rdname getVarCov2-internal
-.getVarCov2 <- function(object, param, attr.param,
-                        name.endogenous, n.endogenous, ref.group, ...){
-
-    ## ** Compute Omega
-    if(n.latent>0){
-        Omega <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB %*% object$conditionalMoment$value$Lambda + object$conditionalMoment$value$Sigma
-    }else{
-        Omega <- object$conditionalMoment$value$Sigma
-    }
-    
-    ## ** Extract information
-    var.coef <- param[attr.param$var.coef]
-    cor.coef <- param[attr.param$cor.coef]
-
-    ## ** Diagonal terms
-    if(length(ref.group)>0){        
-        factor.varcoef <- setNames(c(1,var.coef[-1]),
-                                   attr(object$modelStruct$varStruct,"groupNames"))
-        sigma2.base <- var.coef["sigma2"] * factor.varcoef[ref.group]
-    }else{
-        sigma2.base <- rep(var.coef["sigma2"], n.endogenous)
-    }
-    ## re-order according to the order of the correlation coefficients (if possible)
-    if(length(cor.coef)>1 & length(var.coef)>1){
-        cor.level <- gsub("corCoef","",names(cor.coef))
-        var.level <- names(sigma2.base)
-        var.permlevel <- .allPermutations(var.level)
-
-        M.try <- apply(var.permlevel, MARGIN = 1, function(iLevel){
-            all(apply(utils::combn(iLevel, m = 2), MARGIN = 2, FUN = paste, collapse = "") == cor.level)
-        })
-        if(any(M.try)){
-            sigma2.base <- sigma2.base[var.permlevel[which(M.try),]]
-        }
-    }
-    
-    Omega <- diag(as.double(sigma2.base),
-                  nrow = n.endogenous, ncol = n.endogenous)
-
-    ## ** Extra-diagonal terms
-    if(length(cor.coef)>0){
-        index.lower <- which(lower.tri(Omega))
-        index.lower.arr <- which(lower.tri(Omega),arr.ind = TRUE)
-        vec.sigma.tempo <- apply(index.lower.arr,1,function(x){prod(sqrt(sigma2.base[x]))})        
-        Omega[index.lower] <- cor.coef*vec.sigma.tempo
-        Omega <- symmetrize(Omega, update.upper = TRUE)
-    }    
-
-    ## ** names
-    if(all(!duplicated(names(sigma2.base)))){
-        dimnames(Omega) <- list(names(sigma2.base), names(sigma2.base))
-    }else{
-        dimnames(Omega) <- list(name.endogenous, name.endogenous)
-    }
-
-    ## ** add contribution of the random effect
-    if(inherits(object,"lme")){
-        ran.coef <- param[attr.param$ran.coef]
-        Omega <- Omega + ran.coef
-    }
-
-    
-    ## ** export
-    return(Omega)
-}
 
 
 

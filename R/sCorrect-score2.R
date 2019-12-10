@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: aug  2 2019 (11:15) 
+## last-updated: dec 10 2019 (17:29) 
 ##           By: Brice Ozenne
-##     Update #: 2267
+##     Update #: 2268
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -132,12 +132,12 @@ score2.lvmfit2 <- score2.lm2
                     name.param, name.meanparam, name.varparam,
                     index.Omega, n.cluster, indiv){
 
-### ** Prepare
+    ## ** Prepare
     test.global <- is.null(index.Omega)
     out.score <- matrix(0, nrow = n.cluster, ncol = length(name.param),
                         dimnames = list(NULL,name.param))
             
-### ** global
+    ## ** global
     if(test.global){
         epsilon.OmegaM1 <- epsilon %*% OmegaM1
 
@@ -155,7 +155,7 @@ score2.lvmfit2 <- score2.lm2
     }
 
 
-### ** individual specific
+    ## ** individual specific
     if(!test.global){
 
         for(iC in 1:n.cluster){

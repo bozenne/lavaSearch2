@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: nov 28 2019 (11:35) 
+## last-updated: dec 10 2019 (11:00) 
 ##           By: Brice Ozenne
-##     Update #: 718
+##     Update #: 817
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,6 @@
 #' @param object a \code{lvm} or \code{lvmfit} object. 
 #' @param data [data.frame, optional] the dataset. Help to identify the categorical variables.
 #' @param as.lava [logical] export the type of coefficients mimicking \code{lava:::coef}.
-#' @param attr.type [logical] add as an attribute the list containing parameters by type.
 #' @param ... arguments to be passed to \code{lava::coef}
 #'
 #' @details A lvm can be written as a measurement model:
@@ -109,7 +108,7 @@
 ## * coefType.lm
 #' @rdname coefType
 #' @export
-coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, attr.type = FALSE, ...){
+coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ...){
 
     ## ** extract all coef
     if(is.null(data)){
@@ -129,6 +128,8 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
     name.endogenousW <- endogenous(object, format = "wide")
     n.endogenous <- length(name.endogenousW)
     name.exogenous <- exogenous(object)
+    name.latent <- latent(object)
+    n.latent <- length(name.latent)
     out <- NULL
 
     ## ** intercept
@@ -142,7 +143,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
                                 type = "intercept",
                                 value = as.double(coef2["(Intercept)"]),
                                 param = "(Intercept)",
-                                marignal = FALSE,
+                                marginal = FALSE,
                                 factitious = FALSE,
                                 level = as.character(NA),
                                 externalLink = as.character(NA),
@@ -174,7 +175,6 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
         ##         return(rownames(iC)[apply(iC==1,2,which)])
         ##     })
         ## }
-
         X <- model.matrix(formula.object,data)
         data.var <- setNames(attr(object.terms, "term.labels")[attr(X,"assign")[attr(X,"assign")!=0]],
                              setdiff(attr(coef2,"mean.coef"),"(Intercept)"))
@@ -197,7 +197,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
                                     type = "regression",
                                     value = as.double(coef2[iName.exogenous]),
                                     param = iName.exogenous,
-                                    marignal = FALSE,
+                                    marginal = FALSE,
                                     factitious = FALSE,
                                     level = as.character(NA),
                                     externalLink = as.character(NA),
@@ -211,39 +211,41 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
 
     ## ** random effect
     if(!is.null(object$modelStruct$reStruct)){
-        if(any("eta" %in% manifest(object))){
-            stop("The name \"eta\" is used internally. Variables used in the model should not have this name.")
+        if(any(name.latent %in% manifest(object))){
+            stop("The name(s) \"",paste(name.latent,collapse = "\" \""),"\" are used internally. Variables used in the model should not have this name.")
         }
-
-        df.lambda <- data.frame(name = paste0(name.endogenousW,"~eta"),
+        if(length(name.latent)>1){
+            stop("The current implementation only handles a single random effect \n")
+        }
+        df.lambda <- data.frame(name = paste0(name.endogenousW,"~",name.latent),
                                 Y = name.endogenousW,
-                                X = "eta",
+                                X = name.latent,
                                 data = as.character(NA),
                                 type = "variance",
                                 value = 1,
                                 param = as.character(NA),
-                                marignal = FALSE,
+                                marginal = FALSE,
                                 factitious = FALSE,
                                 level = as.character(NA),
                                 externalLink = as.character(NA),
-                                originalLink = paste0(name.endogenousW,"~eta"),
+                                originalLink = paste0(name.endogenousW,"~",name.latent),
                                 detail = "Lambda",
                                 lava = as.character(NA),
                                 stringsAsFactors = FALSE)
-        df.eta <- data.frame(name = "eta~eta",
-                             Y = "eta",
-                             X = "eta",
+        df.eta <- data.frame(name = paste0(name.latent,"~~",name.latent),
+                             Y = name.latent,
+                             X = name.latent,
                              data = as.character(NA),
                              type = "variance",
                              value = as.double(coef2[attr(coef2,"ran.coef")]),
                              param = attr(coef2,"ran.coef"),
-                             marignal = FALSE,
+                             marginal = FALSE,
                              factitious = FALSE,
                              level = as.character(NA),
                              externalLink = as.character(NA),
-                             originalLink = "eta~eta",
+                             originalLink = paste0(name.latent,"~~",name.latent),
                              detail = "Psi_var",
-                             lava = as.character("r1"),
+                             lava = as.character(NA),
                              stringsAsFactors = FALSE)
         out <- rbind(out, df.lambda, df.eta)
     }
@@ -262,7 +264,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
                                 type = "covariance",
                                 value = as.double(coef2[cor.coef]),
                                 param = cor.coef,
-                                marignal = FALSE,
+                                marginal = FALSE,
                                 factitious = FALSE,
                                 level = as.character(NA),
                                 externalLink = as.character(NA),
@@ -282,7 +284,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
                             type = "variance",
                             value = as.double(coef2["sigma2"]),
                             param = "sigma2",
-                            marignal = FALSE,
+                            marginal = FALSE,
                             factitious = FALSE,
                             level = as.character(NA),
                             externalLink = as.character(NA),
@@ -294,7 +296,28 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
 
     if(!is.null(object$modelStruct$varStruct)){
         k.coef <- setdiff(attr(coef2, "var.coef"), "sigma2")
+        refk.coef <- setdiff(names(stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)),k.coef)
 
+        ## reference 
+        out <- rbind(out,
+                     data.frame(name = paste0(paste0(name.endogenous,refk.coef),"~~",paste0(name.endogenous,refk.coef)),
+                                Y = paste0(name.endogenous,refk.coef),
+                                X = paste0(name.endogenous,refk.coef),
+                                data = name.endogenous,
+                                type = "variance",
+                                value = 1,
+                                param = as.character(NA),
+                                marginal = FALSE,
+                                factitious = FALSE,
+                                level = as.character(NA),
+                                externalLink = as.character(NA),
+                                originalLink = paste0(paste0(name.endogenous,refk.coef),"~~",paste0(name.endogenous,refk.coef)),
+                                detail = "sigma2k",
+                                lava = as.character(NA),
+                                stringsAsFactors = FALSE)
+                     )
+
+        ## multipliers
         out <- rbind(out,
                      data.frame(name = paste0(paste0(name.endogenous,k.coef),"~~",paste0(name.endogenous,k.coef)),
                                 Y = paste0(name.endogenous,k.coef),
@@ -303,7 +326,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
                                 type = "variance",
                                 value = as.double(coef2[k.coef]),
                                 param = k.coef,
-                                marignal = FALSE,
+                                marginal = FALSE,
                                 factitious = FALSE,
                                 level = as.character(NA),
                                 externalLink = as.character(NA),
@@ -316,18 +339,12 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, at
     
     ## ** export
     test.param <- !duplicated(out$param)
-    out$lava[test.param] <- paste0("p",cumsum(test.param[test.param]))
     rownames(out) <- NULL
 
     out$detail <- factor(out$detail,
                          levels = c("nu","alpha","K","Gamma","Lambda","B","Sigma_var","Sigma_cov","sigma2","sigma2k","cor","Psi_var","Psi_cov",NA))
     out <- out[order(out$detail,out$param),]
 
-    if(attr.type){
-        iTempo <- detailType(out, endogenous = endogenous(object), latent = latent(object))
-        attr(out, "byType") <- iTempo$byType
-        attr(out, "byTypebyEndo") <- iTempo$byTypebyEndo
-    }
     return(out)
 }
 
@@ -344,7 +361,7 @@ coefType.lme <- coefType.lm
 ## * coefType.lvm
 #' @rdname coefType
 #' @export
-coefType.lvm <- function(object, as.lava = TRUE, data = NULL, attr.type = FALSE, ...){
+coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
 
     externalLink <- type <- NULL ## [:for CRAN check] subset
     
@@ -549,11 +566,6 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, attr.type = FALSE,
         df.param$detail <- factor(df.param$detail,
                                   levels = c("nu","alpha","K","Gamma","Lambda","B","Sigma_var","Sigma_cov","sigma2","sigma2k","cor","Psi_var","Psi_cov",NA))
         df.param <- df.param[order(df.param$detail,df.param$param),]
-        if(attr.type){
-            iTempo <- detailType(df.param, endogenous = endogenous(object), latent = latent(object))
-            attr(df.param, "byType") <- iTempo$byType
-            attr(df.param, "byTypebyEndo") <- iTempo$byTypebyEndo
-        }
         return(df.param)
     }
 }
@@ -580,7 +592,7 @@ coefType.lvmfit <- function(object, as.lava = TRUE, ...){
 ## * coefType.multigroup
 #' @rdname coefType
 #' @export
-coefType.multigroup <- function(object, as.lava = TRUE, attr.type = FALSE, ...){
+coefType.multigroup <- function(object, as.lava = TRUE, ...){
 
     n.model <- length(object$lvm)
     df.param <- NULL
@@ -601,11 +613,6 @@ coefType.multigroup <- function(object, as.lava = TRUE, attr.type = FALSE, ...){
         out <- stats::setNames(out$type, out$name)
         return(out)
     }else{
-        if(attr.type){
-            iTempo <- detailType(df.param, endogenous = endogenous(object), latent = latent(object))
-            attr(df.param, "byType") <- iTempo$byType
-            attr(df.param, "byTypebyEndo") <- iTempo$byTypebyEndo
-        }
         return(df.param)
     }
 }
@@ -634,126 +641,6 @@ detailName <- function(object, name.coef, type.coef){
     }
     return(type.coef)
 }
-
-## * detailType (needed for coefType)
-detailType <- function(data, endogenous, latent){
-    n.endogenous <- length(endogenous)
-    n.latent <- length(latent)
-    
-    data <- data[!is.na(data$param),]
-    Utype <- levels(droplevels(data$detail))
-    
-    out <- list()
-    out$byType <- tapply(data$name,droplevels(data$detail),function(iVec){list(unique(iVec))})
-    out$byTypebyEndo <- list()
-
-    ## ** nu
-    if("nu" %in% data$detail){
-        data.nu <- data[data$detail=="nu",,drop=FALSE]
-        data.nu <- data.nu[match(endogenous,data.nu$Y),]
-        out$byTypebyEndo$nu <- setNames(data.nu$param,data.nu$Y)
-    }
-
-    ## ** Lambda
-    if("Lambda" %in% data$detail){
-        data.Lambda <- data[data$detail=="Lambda",,drop=FALSE]
-        data.Lambda <- data.Lambda[match(endogenous,data.Lambda$Y),]
-        out$byTypebyEndo$Lambda <- setNames(data.Lambda$param,data.Lambda$Y)
-    }
-    
-    ## ** K and X
-    if("K" %in% data$detail){
-        data.K <- data[data$detail=="K",,drop=FALSE]
-        data.K <- data.K[match(endogenous,data.K$Y),]
-        out$byTypebyEndo$K <- setNames(lapply(endogenous, function(iE){data.K[data.K$Y == iE,"param"]}), endogenous)
-        out$byTypebyEndo$XK <- setNames(lapply(endogenous, function(iE){data.K[data.K$Y == iE,"X"]}), endogenous)
-    }
-
-    ## ** Sigma
-    if("Sigma_var" %in% data$detail || "Sigma_cov" %in% data$detail){
-        data.Sigma <- data[data$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
-        out$byTypebyEndo$Sigma <- matrix(NA, nrow = n.endogenous, ncol = n.endogenous,
-                                          dimnames = list(endogenous, endogenous))
-
-        for(iSigma in 1:NROW(data.Sigma)){
-            out$byTypebyEndo$Sigma[data.Sigma$X[iSigma],data.Sigma$Y[iSigma]] <- data.Sigma$param[iSigma]
-            out$byTypebyEndo$Sigma[data.Sigma$Y[iSigma],data.Sigma$X[iSigma]] <- data.Sigma$param[iSigma]
-        }
-    }
-    if("cor" %in% data$detail){
-        data.cor <- data[data$detail %in% "cor",,drop=FALSE]
-        out$byTypebyEndo$cor <- matrix(NA, nrow = n.endogenous, ncol = n.endogenous,
-                                       dimnames = list(endogenous, endogenous))
-        for(iCor in 1:NROW(data.cor)){
-            out$byTypebyEndo$cor[data.cor$X[iCor],data.cor$Y[iCor]] <- data.cor$param[iCor]
-            out$byTypebyEndo$cor[data.cor$Y[iCor],data.cor$X[iCor]] <- data.cor$param[iCor]
-        }
-    }
-    if("sigma2" %in% data$detail){
-        out$byTypebyEndo$sigma2 <- matrix("sigma2", nrow = n.endogenous, ncol = n.endogenous,
-                                          dimnames = list(endogenous, endogenous))
-        if(is.null(out$byTypebyEndo$cor)){
-            out$byTypebyEndo$sigma2[upper.tri(out$byTypebyEndo$sigma2)] <- NA
-            out$byTypebyEndo$sigma2[lower.tri(out$byTypebyEndo$sigma2)] <- NA
-        }
-    }
-    if("sigma2k" %in% data$detail){
-        data.sigma2k <- data[data$detail %in% "sigma2k",,drop=FALSE]
-
-        out$byTypebyEndo$sigma2k <- setNames(lapply(1:NROW(data.sigma2k), function(iP){
-            matrix(NA, nrow = n.endogenous, ncol = n.endogenous,
-                   dimnames = list(endogenous, endogenous))
-        }), data.sigma2k$param)
-
-        
-        for(iSigma in 1:NROW(data.sigma2k)){ # iSigma <- 1
-            out$byTypebyEndo$sigma2k[[iSigma]][data.sigma2k$Y[iSigma],] <- data.sigma2k$param[iSigma]
-            out$byTypebyEndo$sigma2k[[iSigma]][,data.sigma2k$Y[iSigma]] <- data.sigma2k$param[iSigma]
-        }
-    }
-
-    ## ** alpha
-    if("alpha" %in% data$detail){
-        data.alpha <- data[data$detail=="alpha",,drop=FALSE]
-        data.alpha <- data.alpha[match(latent,data.alpha$Y),]
-        out$byTypebyEndo$alpha <- setNames(data.alpha$param,data.alpha$Y)
-    }
-
-    ## ** B
-    if("B" %in% data$detail){
-        data.B <- data[data$detail %in% c("B"),,drop=FALSE]
-        out$byTypebyEndo$B <- matrix(NA, nrow = n.latent, ncol = n.latent,
-                                     dimnames = list(latent, latent))
-        for(iB in 1:NROW(data.B)){ # iSigma <- 1
-            out$byTypebyEndo$B[data.B$X[iB],data.B$Y[iB]] <- data.B$param[iB]
-        }
-    
-    }
-    
-    ## ** Gamma and X
-    if("Gamma" %in% data$detail){
-        data.Gamma <- data[data$detail=="Gamma",,drop=FALSE]
-        data.Gamma <- data.Gamma[match(latent,data.Gamma$Y),]
-        out$byTypebyEndo$Gamma <- setNames(lapply(latent, function(iE){data.Gamma[data.Gamma$Y == iE,"param"]}), latent)
-        out$byTypebyEndo$XGamma <- setNames(lapply(latent, function(iE){data.Gamma[data.Gamma$Y == iE,"X"]}), latent)
-    }
-
-    ## ** Psi
-    if("Psi_var" %in% data$detail || "Psi_cov" %in% data$detail){
-        data.Psi <- data[data$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
-        out$byTypebyEndo$Psi <- matrix(NA, nrow = n.latent, ncol = n.latent,
-                                         dimnames = list(latent, latent))
-
-        for(iPsi in 1:NROW(data.Psi)){
-            out$byTypebyEndo$Psi[data.Psi$X[iPsi],data.Psi$Y[iPsi]] <- data.Psi$param[iPsi]
-            out$byTypebyEndo$Psi[data.Psi$Y[iPsi],data.Psi$X[iPsi]] <- data.Psi$param[iPsi]
-        }
-    }
-        
-    return(out)
-}
-
-
 
 ##----------------------------------------------------------------------
 ### coefType.R ends here
