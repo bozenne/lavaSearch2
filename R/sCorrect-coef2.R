@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: dec 10 2019 (13:50) 
+## Last-Updated: dec 11 2019 (16:22) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 44
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 #' @concept extractor
 #' @keywords smallSampleCorrection
 `coef2` <-
-    function(object) UseMethod("coef2")
+    function(object, ssc, labels) UseMethod("coef2")
 
 
 ## * Examples
@@ -76,18 +76,32 @@
 
 ## * coef2.lm
 #' @rdname coef2
-coef2.lm <- function(object){
-    coef.object <- coef(object)
-    out <- c(coef.object,sigma2=sigma(object)^2)
-    attr(out, "mean.coef") <- names(coef.object)
-    attr(out, "var.coef") <- "sigma2"
+coef2.lm <- function(object, ssc = TRUE, labels){
+    if(ssc){
+        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
+            object <- sCorrect(object, ssc = ssc, df = FALSE)
+        }
+        out <- object$sCorrect$coef
+    }else{
+        coef.object <- coef(object)
+        out <- c(coef.object,sigma2=sigma(object)^2)
+        attr(out, "mean.coef") <- names(coef.object)
+        attr(out, "var.coef") <- "sigma2"
+    }
+
     return(out)
 }
 
 ## * coef2.gls
 #' @rdname coef2
-coef2.gls <- function(object){
-
+coef2.gls <- function(object, ssc = TRUE, labels){
+    if(ssc){
+        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
+            object <- sCorrect(object, ssc = ssc, df = FALSE)
+        }
+        out <- object$sCorrect$coef
+    }else{
+        
     ## *** mean coefficients
     mean.coef <- stats::coef(object)
 
@@ -135,10 +149,11 @@ coef2.gls <- function(object){
         cor.coef <- NULL
     }
 
-    out <- c(mean.coef, cor.coef, var.coef)
-    attr(out, "mean.coef") <- names(mean.coef)
-    attr(out, "var.coef") <- names(var.coef)
-    attr(out, "cor.coef") <- names(cor.coef)
+        out <- c(mean.coef, cor.coef, var.coef)
+        attr(out, "mean.coef") <- names(mean.coef)
+        attr(out, "var.coef") <- names(var.coef)
+        attr(out, "cor.coef") <- names(cor.coef)
+    }
     return(out)
 }
 
@@ -147,10 +162,16 @@ coef2.gls <- function(object){
 
 ## * coef2.lme
 #' @rdname coef2
-coef2.lme <- function(object){
+coef2.lme <- function(object, ssc = TRUE, labels){
 
-    ## *** mean coefficients
-    mean.coef <- nlme::fixef(object)
+    if(ssc){
+        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
+            object <- sCorrect(object, ssc = ssc, df = FALSE)
+        }
+        out <- object$sCorrect$coef
+    }else{
+        ## *** mean coefficients
+        mean.coef <- nlme::fixef(object)
 
     ## *** variance coefficients
     var.coef <- c(sigma2 = stats::sigma(object)^2)
@@ -202,29 +223,39 @@ coef2.lme <- function(object){
     
     out <- c(mean.coef, cor.coef, var.coef, random.coef)
 
-    attr(out, "mean.coef") <- names(mean.coef)
-    attr(out, "var.coef") <- names(var.coef)
-    attr(out, "cor.coef") <- names(cor.coef)
-    attr(out, "ran.coef") <- names(random.coef)
-    return(out)
+            attr(out, "mean.coef") <- names(mean.coef)
+            attr(out, "var.coef") <- names(var.coef)
+            attr(out, "cor.coef") <- names(cor.coef)
+            attr(out, "ran.coef") <- names(random.coef)
+            return(out)
+        }
 }
 
 ## * coef2.lvmfit
-coef2.lvmfit <- function(object){
-    tempo <- coef(object, type = 2)
-    out <- tempo[,1]
-    attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
-    attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
-    attr(out, "cor.coef") <- NULL
-    return(out)
+#' @rdname coef2
+coef2.lvmfit <- function(object, ssc = TRUE, labels = lava.options()$coef.names){
+    if(ssc){
+        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
+            object <- sCorrect(object, ssc = ssc, df = FALSE)
+        }
+        out <- object$sCorrect$coef
+    }else{
+        tempo <- coef(object, type = 2, labels = labels)
+        out <- tempo[,1]
+        attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
+        attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
+        attr(out, "cor.coef") <- NULL
+        return(out)
+    }
 }
 
-## * coef2.sCorrect
-coef2.sCorrect <- function(object){
-    return(object$sCorrect$coef)
+## * coef.sCorrect
+#' @rdname coef2
+coef.sCorrect <- function(object, ssc = TRUE, labels = lava.options()$coef.names){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(coef2(object, ssc = ssc, labels = labels))
+
 }
-
-
 
 ######################################################################
 ### sCorrect-coef2.R ends here

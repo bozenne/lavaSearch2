@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: dec 10 2019 (13:57) 
+## Last-Updated: dec 11 2019 (13:53) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 39
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -104,21 +104,18 @@
 #' 
 #' @export
 `getVarCov2` <-
-    function(object, ...) UseMethod("getVarCov2")
+    function(fobject, param, data, ssc) UseMethod("getVarCov2")
 
 ## * getVarCov2.lm
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lm <- function(object, param = NULL, data = NULL, ...){
+getVarCov2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE){
 
-    if(inherits(object,"sCorrect") && is.null(param) && is.null(data)){
-        Omega <- object$sCorrect$moment$Omega
-    }else{
-        Omega <- conditionalMoment(object, param = param, data = data,
-                                   initialize = !is.null(data) || !inherits(object,"sCorrect"),
-                                   first.order = FALSE, second.order = FALSE, usefit = TRUE)$moment$Omega
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
     }
-    return(Omega)
+
+    return(object$sCorrect$moment$Omega)
 
 }
 
@@ -136,6 +133,13 @@ getVarCov2.lme <- getVarCov2.lm
 #' @rdname getVarCov2
 #' @export
 getVarCov2.lvmfit <- getVarCov2.lm
+
+## * getVarCov.sCorrect
+#' @rdname getVarCov2
+getVarCov.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE){
+    class(object) <- setdiff(class(object2),"sCorrect")
+    return(getVarCov2(object, param = param, data = data, ssc = ssc))
+}
 
 
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 10 2019 (17:29) 
+## last-updated: dec 11 2019 (16:40) 
 ##           By: Brice Ozenne
-##     Update #: 2268
+##     Update #: 2297
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,16 +59,22 @@
 #' @concept small sample inference
 #' @export
 `score2` <-
-  function(object, ...) UseMethod("score2")
+  function(object, param, data, ssc, indiv) UseMethod("score2")
 
 ## * score2.lm
 #' @rdname score2
 #' @export
-score2.lm <- function(object, param = NULL, data = NULL, bias.correct = TRUE, ...){
-    sCorrect(object, param = param, data = data, df = FALSE, ...) <- bias.correct
+score2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE, indiv = FALSE){
 
-    ### ** export
-    return(object$sCorrect$score)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    }
+
+    if(indiv){
+        return(object$sCorrect$score)
+    }else{
+        return(colSums(object$sCorrect$score))
+    }
 }
 
 ## * score2.gls
@@ -86,39 +92,12 @@ score2.lme <- score2.lm
 #' @export
 score2.lvmfit <- score2.lm
 
-## * score2.lm2
+## * score2.sCorrect
 #' @rdname score2
-#' @export
-score2.lm2 <- function(object, param = NULL, data = NULL, ...){
-
-    ### ** compute the score
-    if(!is.null(param) || !is.null(data)){
-        args <- object$sCorrect$args
-        args$df <- FALSE
-        object$sCorrect <- do.call(sCorrect,
-                                   args = c(list(object, param = param, data = data),
-                                            args))
-    }
-
-    ### ** export
-    return(object$sCorrect$score)
-
+score2.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, indiv = FALSE){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(score2(object, param = param, data = data, ssc = ssc, indiv = indiv))
 }
-
-## * score2.gls2
-#' @rdname score2
-#' @export
-score2.gls2 <- score2.lm2
-
-## * score2.lme2
-#' @rdname score2
-#' @export
-score2.lme2 <- score2.lm2
-
-## * score2.lvmfit
-#' @rdname score2
-#' @export
-score2.lvmfit2 <- score2.lm2
 
 ## * .score2
 #' @title Compute the Corrected Score.
@@ -128,60 +107,40 @@ score2.lvmfit2 <- score2.lm2
 #' @param n.cluster [integer >0] the number of observations.
 #' 
 #' @keywords internal
-.score2 <- function(epsilon, Omega, OmegaM1, dmu, dOmega,                    
+.score2 <- function(dmu, dOmega, epsilon, OmegaM1,
+                    missing.pattern, unique.pattern, name.pattern,
                     name.param, name.meanparam, name.varparam,
-                    index.Omega, n.cluster, indiv){
+                    n.cluster){
+    if(TRUE){cat(".score2\n")}
 
     ## ** Prepare
-    test.global <- is.null(index.Omega)
     out.score <- matrix(0, nrow = n.cluster, ncol = length(name.param),
                         dimnames = list(NULL,name.param))
-            
-    ## ** global
-    if(test.global){
-        epsilon.OmegaM1 <- epsilon %*% OmegaM1
+    n.pattern <- length(name.pattern)
+    
+    ## ** loop over missing data pattern
+    for(iP in 1:n.pattern){ ## iP <- 1
+        iPattern <- name.pattern[iP]
+        iOmegaM1 <- OmegaM1[[iPattern]]
+        iIndex <- missing.pattern[[iPattern]]
+        iY <- which(unique.pattern[iP,]==1)
+
+        iEpsilon.OmegaM1 <- epsilon[iIndex,iY,drop=FALSE] %*% iOmegaM1
 
         ## *** Compute score relative to the mean coefficients
-        for(iP in name.meanparam){ # iP <- 1
-            out.score[,iP] <- out.score[,iP] + rowSums(dmu[[iP]] * epsilon.OmegaM1)
+        for(iP in name.meanparam){ # iP <- "Y3~eta"
+            out.score[iIndex,iP] <- out.score[iIndex,iP] + rowSums(dmu[[iP]][iIndex,iY,drop=FALSE] * iEpsilon.OmegaM1)
         }
         
         ## *** Compute score relative to the variance-covariance coefficients
-        for(iP in name.varparam){ # iP <- 1
-            term2 <- - 1/2 * tr(OmegaM1 %*% dOmega[[iP]])            
-            term3 <- 1/2 * rowSums(epsilon.OmegaM1 %*% dOmega[[iP]] * epsilon.OmegaM1)
-            out.score[,iP] <- out.score[,iP] + as.double(term2) + term3
+        for(iP in name.varparam){ # iP <- "Y2~eta"
+            term2 <- - 1/2 * tr(iOmegaM1 %*% dOmega[[iP]][iY,iY,drop=FALSE])            
+            term3 <- 1/2 * rowSums(iEpsilon.OmegaM1 %*% dOmega[[iP]][iY,iY,drop=FALSE] * iEpsilon.OmegaM1)
+            out.score[iIndex,iP] <- out.score[iIndex,iP] + as.double(term2) + term3
         }        
     }
 
-
-    ## ** individual specific
-    if(!test.global){
-
-        for(iC in 1:n.cluster){
-            iIndex <- index.Omega[[iC]]
-            iEpsilon.OmegaM1 <- OmegaM1[[iC]] %*% cbind(epsilon[iC,iIndex])
-
-
-            ## *** Compute score relative to the mean coefficients
-            for(iP in name.meanparam){ # iP <- name.meanparam[1]
-                out.score[iC,iP] <- out.score[iC,iP] + dmu[[iP]][iC,iIndex] %*% iEpsilon.OmegaM1
-            }
-
-            ## *** Compute score relative to the variance-covariance coefficients
-            for(iP in name.varparam){ # iP <- name.varparam[1]
-                term2 <- - 1/2 * tr(OmegaM1[[iC]] %*% dOmega[[iP]][iIndex,iIndex,drop=FALSE])
-                term3 <- 1/2 * sum(iEpsilon.OmegaM1 * dOmega[[iP]][iIndex,iIndex,drop=FALSE] %*% iEpsilon.OmegaM1)
-                out.score[iC,iP] <- out.score[iC,iP] + as.double(term2) + term3 
-            }
-        }
-        
-    }
-
     ### ** export
-    if(indiv==FALSE){
-        out.score <- colSums(out.score)
-    }
     return(out.score)
 }
 

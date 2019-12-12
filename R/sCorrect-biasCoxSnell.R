@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: aug  2 2019 (11:49) 
+## Last-Updated: dec 11 2019 (14:11) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 27
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -90,6 +90,7 @@ biasCoxSnell <- function(object){
 
     moment.object$value
 }
+
 
 ######################################################################
 ### biasCoxSnell.R ends here

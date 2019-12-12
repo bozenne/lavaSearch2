@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: nov 27 2019 (14:55) 
+## Last-Updated: dec 11 2019 (15:03) 
 ##           By: Brice Ozenne
-##     Update #: 124
+##     Update #: 126
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -85,15 +85,11 @@
     }
     
     n.obs <- NROW(data)
-    out <- list(
-        index.cluster = 1:n.obs,
-        name.cluster = 1:n.obs,                
-        n.cluster = n.obs,
-        missing = FALSE,
-        index.Omega = as.list(index.Omega),
-        ref.group = NULL,
-        index.vec2mat = NULL
-    )
+    out <- list(index.cluster = 1:n.obs,
+                name.cluster = 1:n.obs,                
+                n.cluster = n.obs,
+                index.Omega = as.list(index.Omega)
+                )
     return(out)
     
 }
@@ -134,15 +130,10 @@
     index.cluster <- as.numeric(factor(index.cluster, levels = name.cluster))
 
     ## ** export
-    ref.group <- attr(index.Omega,"ref")
-    index.vec2mat <- index.cluster + (index.Omega - 1) * n.cluster
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,
-                missing = any(unlist(lapply(index.Omega,length)) < length(endogenous)),
-                index.Omega = tapply(index.Omega,index.cluster, list),
-                ref.group = ref.group,
-                index.vec2mat = index.vec2mat
+                index.Omega = tapply(index.Omega,index.cluster, list)
                 ))
 }
 
@@ -179,10 +170,7 @@
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,
-                missing = missing,
-                index.Omega = index.Omega,
-                ref.group = NULL,
-                index.vec2mat = NULL
+                index.Omega = index.Omega
                 ))
     
 }

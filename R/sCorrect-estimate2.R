@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: aug  2 2019 (11:26) 
+## Last-Updated: dec 11 2019 (13:23) 
 ##           By: Brice Ozenne
-##     Update #: 868
+##     Update #: 870
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -254,84 +254,6 @@
 
     ## ** Export
     return(object)
-}
-
-## * .adjustResiduals
-.adjustResiduals <- function(Omega, Psi, epsilon,
-                             index.Omega,
-                             name.endogenous, n.endogenous, n.cluster){
-
-    if(is.null(index.Omega)){ ## no missing values
-        
-        Omega.chol <- matrixPower(Omega, symmetric = TRUE, power = 1/2)
-        H <- Omega %*% Omega - Omega.chol %*% Psi %*% Omega.chol
-        HM1 <- tryCatch(matrixPower(H, symmetric = TRUE, power = -1/2), warning = function(w){w})
-        if(inherits(HM1,"warning")){
-            stop("Cannot compute the adjusted residuals \n",
-                 "Estimated bias too large compared to the estimated variance-covariance matrix \n",
-                 "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
-        }
-        epsilon.adj <- epsilon %*% Omega.chol %*% HM1 %*% Omega.chol
-        
-    }else{ ## missing values
-        
-        epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                              dimnames = list(NULL, name.endogenous))
-
-        for(iC in 1:n.cluster){
-            iIndex <- index.Omega[[iC]]
-            iOmega <- Omega[iIndex,iIndex,drop=FALSE]
-            iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
-            iH <- iOmega %*% iOmega - iOmega.chol %*% Psi[iIndex,iIndex,drop=FALSE] %*% iOmega.chol
-            iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
-            if(inherits(iHM1,"warning")){
-                stop("Cannot compute the adjusted residuals \n",
-                     "Estimated bias too large compared to the estimated variance-covariance matrix \n",
-                     "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
-            }
-            epsilon.adj[iC,iIndex] <- epsilon[iC,iIndex] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
-        }
-        
-    }
-    dimnames(epsilon.adj) <- list(NULL,name.endogenous)
-    return(epsilon.adj)
-}
-
-## * .adjustLeverage
-.adjustLeverage <- function(Omega, epsilon, ls.dmu, dOmega, vcov.param,
-                            index.Omega,
-                            name.endogenous, n.endogenous, name.varparam, n.varparam, n.cluster){
-
-    ## ** prepare
-    leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                       dimnames = list(NULL, name.endogenous))
-
-    if(is.null(index.Omega)){
-        iIndex <- 1:n.endogenous
-        iOmegaM1 <- chol2inv(chol(Omega)) ## solve(Omega)
-        iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x %*% iOmegaM1})
-    }
-
-    ## ** compute
-    for(iC in 1:n.cluster){                 # iC <- 1
-        if(!is.null(index.Omega)){
-            iIndex <- index.Omega[[iC]]
-            iOmegaM1 <- chol2inv(chol(Omega[iIndex,iIndex,drop=FALSE]))
-            iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iIndex,iIndex] %*% iOmegaM1})
-        }
-        ## derivative of the score regarding Y
-        scoreY <- ls.dmu[[iC]] %*% iOmegaM1
-
-        for(iP in 1:n.varparam){ ## iP <- 1
-            scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon[iC,iIndex] %*% iOmegaM1.dOmega.OmegaM1[[name.varparam[iP]]]
-        }
-        ## leverage
-        leverage[iC,iIndex] <- colSums(vcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
-                                        # same as
-                                        # diag(t(ls.dmu[[iC]])  %*% iVcov.param %*% scoreY)
-    }
-
-    return(leverage)            
 }
 
 ## * .adjustMoment

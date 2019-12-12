@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: dec 10 2019 (16:07) 
+## Last-Updated: dec 11 2019 (13:51) 
 ##           By: Brice Ozenne
-##     Update #: 36
+##     Update #: 49
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,7 +50,7 @@
 #' @concept small sample inference
 #' @export
 `residuals2` <-
-    function(object, param, data, type, format) UseMethod("residuals2")
+    function(object, param, data, ssc, type, format) UseMethod("residuals2")
 
 ## * Examples
 #' @rdname residuals2
@@ -103,23 +103,19 @@
 ## * residuals2.lm
 #' @rdname residuals2
 #' @export
-residuals2.lm <- function(object, param = NULL, data = NULL, type = "response", format = "wide"){
+residuals2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE, type = "response", format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
-    
-    if(inherits(object,"sCorrect") && is.null(param) && is.null(data)){
-        cM <- object$sCorrect
-    }else{
-        cM <- conditionalMoment(object, param = param, data = data,
-                                initialize = !is.null(data) || !inherits(object,"sCorrect"),
-                                first.order = FALSE, second.order = FALSE, usefit = TRUE)
+
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
     }
 
-    residuals <- .normalizeResiduals(residuals = cM$moment$residuals,
-                                     Omega = cM$moment$Omega,
-                                     type = type,
-                                     missing.pattern = cM$moment$missing.pattern,
-                                     Omega.missing.pattern = cM$moment$Omega.missing.pattern)
+    residuals <- .normalizeResiduals(residuals = object$sCorrect$moment$residuals,
+                                     Omega = object$sCorrect$moment$Omega,
+                                     type = object$sCorrect$skeleton$type,
+                                     missing.pattern = object$sCorrect$moment$missing.pattern,
+                                     Omega.missing.pattern = object$sCorrect$moment$Omega.missing.pattern)
     if(format == "wide"){
         return(residuals)
     }else if(format == "long"){
@@ -156,6 +152,13 @@ residuals2.lme <- residuals2.lm
 #' @export
 residuals2.lvmfit <- residuals2.lm
 
+## * residuals.sCorrect
+#' @rdname residuals2
+residuals.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, type = "response", format = "wide"){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(residuals2(object, param = param, data = data, ssc = ssc, type = type, format = format))
+}
+
 ## * .normalizeResiduals
 .normalizeResiduals <- function(residuals, Omega, type,
                                 missing.pattern, Omega.missing.pattern){
@@ -182,6 +185,47 @@ residuals2.lvmfit <- residuals2.lm
     }
 
     return(residuals)
+}
+
+## * .adjustResiduals
+.adjustResiduals <- function(Omega, Psi, epsilon,
+                             index.Omega,
+                             name.endogenous, n.endogenous, n.cluster){
+
+    if(is.null(index.Omega)){ ## no missing values
+        
+        Omega.chol <- matrixPower(Omega, symmetric = TRUE, power = 1/2)
+        H <- Omega %*% Omega - Omega.chol %*% Psi %*% Omega.chol
+        HM1 <- tryCatch(matrixPower(H, symmetric = TRUE, power = -1/2), warning = function(w){w})
+        if(inherits(HM1,"warning")){
+            stop("Cannot compute the adjusted residuals \n",
+                 "Estimated bias too large compared to the estimated variance-covariance matrix \n",
+                 "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
+        }
+        epsilon.adj <- epsilon %*% Omega.chol %*% HM1 %*% Omega.chol
+        
+    }else{ ## missing values
+        
+        epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                              dimnames = list(NULL, name.endogenous))
+
+        for(iC in 1:n.cluster){
+            iIndex <- index.Omega[[iC]]
+            iOmega <- Omega[iIndex,iIndex,drop=FALSE]
+            iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
+            iH <- iOmega %*% iOmega - iOmega.chol %*% Psi[iIndex,iIndex,drop=FALSE] %*% iOmega.chol
+            iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
+            if(inherits(iHM1,"warning")){
+                stop("Cannot compute the adjusted residuals \n",
+                     "Estimated bias too large compared to the estimated variance-covariance matrix \n",
+                     "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
+            }
+            epsilon.adj[iC,iIndex] <- epsilon[iC,iIndex] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
+        }
+        
+    }
+    dimnames(epsilon.adj) <- list(NULL,name.endogenous)
+    return(epsilon.adj)
 }
 
 

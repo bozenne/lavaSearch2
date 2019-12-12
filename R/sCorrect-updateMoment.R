@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: dec 10 2019 (17:29) 
+## Last-Updated: dec 12 2019 (11:43) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,6 +33,7 @@ updateMoment <- function(skeleton, value, toUpdate,
                 index.update <- which(!is.na(skeleton$SigmaParam))
                 skeleton$SigmaValue[index.update] <- param[skeleton$SigmaParam[index.update]]
                 value$Sigma <- apply(skeleton$SigmaValue, MARGIN = 1:2, FUN = prod)
+                attr(value$Sigma,"detail") <- skeleton$SigmaValue
             }else{
                 index.update <- which(!is.na(skeleton[[iUpdate]]))
                 value[[iUpdate]][index.update] <- param[skeleton[[iUpdate]][index.update]]
@@ -41,17 +42,43 @@ updateMoment <- function(skeleton, value, toUpdate,
     }
 
     ## ** Pre-compute relevant quantities
-    if(!is.null(value$B)){
-        value$iIB <- solve(diag(1,n.latent,n.latent)-value$B)
-    }else{
-        value$iIB <- diag(1,n.latent,n.latent)
-    }
-    if(!is.null(value$Lambda)){
-        value$iIB.Lambda <-  value$iIB %*% value$Lambda    
-    }
-    if(!is.null(value$Psi)){
+    if(n.latent>0){
+        ## alpha + X\Gamma
+        value$alpha.XGamma <- matrix(0, nrow = n.cluster, ncol = n.latent,
+                                     dimnames = list(NULL, latent))
+        if(length(value$alpha)>0){
+            value$alpha.XGamma <- value$alpha.XGamma + skeleton$Xalpha %o% value$alpha
+        }
+        if(length(value$Gamma)>0){
+            value$alpha.XGamma <- value$alpha.XGamma + do.call(cbind,lapply(latent, function(iL){skeleton$XGamma[[iL]] %*% value$Gamma[,iL]}))
+        }
+
+        ## (I-B)^{-1}
+        if(!is.null(value$B)){
+            value$iIB <- solve(diag(1, nrow = n.latent, ncol = n.latent) - value$B)
+        }else{
+            value$iIB <- diag(1, nrow = n.latent, ncol = n.latent)
+            dimnames(value$iIB) <- list(latent,latent)
+        }
+
+        ## (alpha + X\Gamma) (I-B)^{-1}
+        value$alpha.XGamma.iIB <- value$alpha.XGamma %*% value$iIB
+        
+        ## (I-B)^{-1} \Lambda
+        value$iIB.Lambda <-  value$iIB %*% value$Lambda
+        value$tLambda.tiIB <-  t(value$iIB.Lambda)
+
+        ## \Psi (I-B)^{-1}
         value$Psi.iIB <- value$Psi %*% value$iIB
+
+        ## (I-B)^{-t} \Psi (I-B)^{-1}
+        value$tiIB.Psi.iIB <-  t(value$iIB) %*% value$Psi
+
+        ## \Lambda^t (I-B)^{-t} \Psi (I-B)^{-1}
         value$tLambda.tiIB.Psi.iIB <- t(value$iIB.Lambda) %*% value$Psi.iIB
+
+        ## (I-B)^{-t} \Psi (I-B)^{-1} \Lambda
+        value$tiIB.Psi.iIB.Lambda <- t(value$tLambda.tiIB.Psi.iIB) 
     }
 
     ## ** Compute mean
@@ -63,17 +90,14 @@ updateMoment <- function(skeleton, value, toUpdate,
     if(!is.null(value$K)){
         value$mu <- value$mu + do.call(cbind,lapply(endogenous, function(iE){skeleton$XK[[iE]] %*% value$K[,iE]})) ## iE <- endogenous[1]
     }
-    if(!is.null(value$alpha)){
-        value$mu <- value$mu + skeleton$Xalpha %o% (value$alpha %*% value$iIB.Lambda)[1,]
-    }
-    if(!is.null(value$Gamma)){
-        value$mu <- value$mu + do.call(cbind,lapply(latent, function(iL){skeleton$XGamma[[iL]] %*% value$Gamma[,iL]})) %*% value$iIB.Lambda
+    if(n.latent>0){
+        value$mu <- value$mu + value$alpha.XGamma %*% value$iIB.Lambda
     }
 
     ## ** Compute variance
     value$Omega <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
                           dimnames = list(endogenous,endogenous))
-    
+
     if(!is.null(value$Sigma)){
         value$Omega <- value$Omega + value$Sigma
     }
@@ -86,91 +110,88 @@ updateMoment <- function(skeleton, value, toUpdate,
 
 ## * updateDMoment
 #' @rdname updateMoment
-updateDMoment <- function(moment, skeleton,
-                          toUpdate,
-                          endogenous, latent, n.cluster){
+updateDMoment <- function(moment, skeleton, param){
+    if(TRUE){cat("updateDMoment \n")}
 
-    n.endogenous <- length(endogenous)
-    n.latent <- length(latent)
+    ## ** import information
+    dmu <- skeleton$dmu.dparam
+    dOmega <- skeleton$dOmega.dparam
 
-    ## ** Compute partial derivative regarding for each matrix of coefficients
-    skeleton$dmu.dparam
-
-    skeleton$dmat.dparam
-    
-    moment
-    browser()
-    
-    ## ** Compute partial derivative regarding the mean
-    
-    ## ** Compute partial derivative regarding the variance
-    
-    ## from Moment
-    type <- object$conditionalMoment$skeleton$type
-    iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
-    alpha.XGamma.iIB <- object$conditionalMoment$value$alpha.XGamma.iIB
-    tLambda.tiIB.Psi.iIB <- object$conditionalMoment$value$tLambda.tiIB.Psi.iIB
-
-    ## from dMoment.init
-    dmu <- object$conditionalMoment$dMoment.init$dmu
-    dOmega <- object$conditionalMoment$dMoment.init$dOmega
-    dLambda <- object$conditionalMoment$dMoment.init$dLambda
-    dB <- object$conditionalMoment$dMoment.init$dB
-    dPsi <- object$conditionalMoment$dMoment.init$dPsi
-    toUpdate <- object$conditionalMoment$dMoment.init$toUpdate
-    name2Update <- names(toUpdate)
-    type2Update <- type[name2Update]
-    
-    ## *** Update partial derivatives
-
-    ## **** mean coefficients
-    type2Update.meanparam <- type2Update[type2Update %in% c("alpha","Lambda","Gamma","B")]
-    name2Update.meanparam <- names(type2Update.meanparam)
-    n2Update.meanparam <- length(name2Update.meanparam)
+    iIB.Lambda <- moment$iIB.Lambda
+    tLambda.tiIB <- moment$tLambda.tiIB
+    alpha.XGamma.iIB <- moment$alpha.XGamma.iIB
+    tiIB.Psi.iIB.Lambda <- moment$tiIB.Psi.iIB.Lambda
+    tLambda.tiIB.Psi.iIB <- moment$tLambda.tiIB.Psi.iIB
+    Sigma <- moment$Sigma
+    attr(Sigma,"detail") <- NULL
         
-    if(n2Update.meanparam>0){
-        for(iP in 1:n2Update.meanparam){ # iP <- 1
-            iType <- type2Update.meanparam[iP]
-            iName <- name2Update.meanparam[iP]
-            
-            if(iType == "alpha"){
-                dmu[[iName]] <- dmu[[iName]] %*% iIB.Lambda
-            }else if(iType == "Gamma"){
-                dmu[[iName]] <- dmu[[iName]] %*% iIB.Lambda 
-            }else if(iType == "Lambda"){
-                dmu[[iName]] <- alpha.XGamma.iIB %*% dLambda[[iName]]
-            }else if(iType == "B"){
-                dmu[[iName]] <- alpha.XGamma.iIB %*% dB[[iName]] %*% iIB.Lambda
-            }
-
-            colnames(dmu[[iName]]) <- name.endogenous
+    ## ** Compute partial derivative regarding the mean
+    if(length(skeleton$dmat.dparam$alpha)>0){
+        iName.param <- names(skeleton$dmat.dparam$alpha)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dmu[[iParam]] <- skeleton$dmat.dparam$alpha[[iParam]] %*% iIB.Lambda
         }
     }
 
-    ## **** variance-covariance coefficients
-    type2Update.vcovparam <- type2Update[type2Update %in% c("Psi_var","Psi_cov","Lambda","B")]
-    name2Update.vcovparam <- names(type2Update.vcovparam)
-    n2Update.vcovparam <- length(name2Update.vcovparam)
+    if(length(skeleton$dmat.dparam$Gamma)>0){
+        iName.param <- names(skeleton$dmat.dparam$Gamma)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dmu[[iParam]] <- skeleton$dmat.dparam$Gamma[[iParam]] %*% iIB.Lambda
+        }
+    }
 
-    if(n2Update.vcovparam>0){
-        for(iP in 1:n2Update.vcovparam){ # iP <- 1
-            iType <- type2Update.vcovparam[iP]
-            iName <- name2Update.vcovparam[iP]
-        
-            if(iType %in% "Psi_var"){
-                dOmega[[iName]] <-  t(iIB.Lambda) %*% dPsi[[iName]] %*% iIB.Lambda
-            }else if(iType %in% "Psi_cov"){
-                dOmega[[iName]] <-  t(iIB.Lambda) %*% dPsi[[iName]] %*% iIB.Lambda
-            }else if(iType == "Lambda"){
-                dOmega[[iName]] <- tLambda.tiIB.Psi.iIB %*% dLambda[[iName]]
-                dOmega[[iName]] <- dOmega[[iName]] + t(dOmega[[iName]])
-            }else if(iType == "B"){
-                dOmega[[iName]] <- tLambda.tiIB.Psi.iIB %*% dB[[iName]] %*% iIB.Lambda
-                dOmega[[iName]] <- dOmega[[iName]] + t(dOmega[[iName]])
-            }
+    if(length(skeleton$dmat.dparam$Lambda)>0){
+        iName.param <- names(skeleton$dmat.dparam$Lambda)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dmu[[iParam]] <- alpha.XGamma.iIB %*% skeleton$dmat.dparam$Lambda[[iParam]]
+        }
+    }
 
-            colnames(dOmega[[iName]]) <- name.endogenous
-            rownames(dOmega[[iName]]) <- name.endogenous
+    if(length(skeleton$dmat.dparam$B)>0){
+        iName.param <- names(skeleton$dmat.dparam$B)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dmu[[iParam]] <- alpha.XGamma.iIB %*% skeleton$dmat.dparam$B[[iParam]] %*% iIB.Lambda
+        }
+    }
+    
+    ## ** Compute partial derivative regarding the variance
+    if(length(skeleton$dmat.dparam$Lambda)>0){
+        iName.param <- names(skeleton$dmat.dparam$Lambda)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dOmega[[iParam]] <- t(skeleton$dmat.dparam$Lambda[[iParam]]) %*% tiIB.Psi.iIB.Lambda + tLambda.tiIB.Psi.iIB %*% skeleton$dmat.dparam$Lambda[[iParam]]
+        }
+    }
+
+    if(length(skeleton$dmat.dparam$B)>0){
+        iName.param <- names(skeleton$dmat.dparam$B)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dOmega[[iParam]] <- t(iIB.Lambda) %*% t(skeleton$dmat.dparam$B[[iParam]]) %*% tiIB.Psi.iIB.Lambda + tLambda.tiIB.Psi.iIB %*% skeleton$dmat.dparam$B[[iParam]] %*% iIB.Lambda
+        }
+    }
+
+    if(length(skeleton$dmat.dparam$Psi)>0){
+        iName.param <- names(skeleton$dmat.dparam$Psi)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dOmega[[iParam]] <- tLambda.tiIB %*% skeleton$dmat.dparam$Psi[[iParam]] %*% iIB.Lambda
+        }
+    }
+
+    if(length(skeleton$dmat.dparam$sigma2)>0){
+        dOmega[["sigma2"]] <- Sigma/param["sigma2"]
+    }
+
+    if(length(skeleton$dmat.dparam$sigma2k)>0){
+        iName.param <- names(skeleton$dmat.dparam$sigma2k)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            iFactor <- skeleton$dmat.dparam$sigma2k[[iParam]][,,"X"]+skeleton$dmat.dparam$sigma2k[[iParam]][,,"Y"]
+            dOmega[[iParam]] <- Sigma*iFactor/param[iParam]
+        }
+    }
+
+    if(length(skeleton$dmat.dparam$cor)>0){
+        iName.param <- names(skeleton$dmat.dparam$cor)
+        for(iParam in iName.param){ ## iParam <- iName.param[1]
+            dOmega[[iParam]] <- Sigma*skeleton$dmat.dparam$cor[[iParam]]/param[iParam]
         }
     }
 
@@ -182,157 +203,181 @@ updateDMoment <- function(moment, skeleton,
 
 ## * updateD2Moment
 #' @rdname updateD2Moment
-updateD2Moment <- function(){
+updateD2Moment <- function(moment, skeleton, param){
+    if(TRUE){cat("updateD2Moment \n")}
+
+    ## ** Import information
+    d2mu <- skeleton$dmu.dparam
+    d2Omega <- skeleton$dOmega.dparam
+
+    dalpha <- skeleton$dmat.dparam$alpha
+    dLambda <- skeleton$dmat.dparam$Lambda
+    dB <- skeleton$dmat.dparam$B
+    dPsi <- skeleton$dmat.dparam$Psi
+    dsigma2 <- skeleton$dmat.dparam$sigma2
+    dsigma2k <- skeleton$dmat.dparam$sigma2k
+    dcor <- skeleton$dmat.dparam$cor
     
-    ## *** Import information
-    n.endogenous <- NCOL(object$conditionalMoment$Omega)
-
-    ## from Moment
-    Psi <- object$conditionalMoment$value$Psi
-    Lambda <- object$conditionalMoment$value$Lambda
-    iIB <- object$conditionalMoment$value$iIB
-    Psi.iIB <- object$conditionalMoment$value$Psi.iIB
-    iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
-    alpha.XGamma.iIB <- object$conditionalMoment$value$alpha.XGamma.iIB
-    type <- object$conditionalMoment$skeleton$type
-
-    ## from dMoment.init
-    dLambda <- object$conditionalMoment$dMoment.init$dLambda
-    dB <- object$conditionalMoment$dMoment.init$dB
-    dPsi <- object$conditionalMoment$dMoment.init$dPsi
+    iIB <- moment$iIB
+    iIB.Lambda <- moment$iIB.Lambda
+    tLambda.tiIB <- moment$tLambda.tiIB
+    alpha.XGamma.iIB <- moment$alpha.XGamma.iIB
+    tiIB.Psi.iIB <- moment$tiIB.Psi.iIB
+    tiIB.Psi.iIB.Lambda <- moment$tiIB.Psi.iIB.Lambda
+    tLambda.tiIB.Psi.iIB <- moment$tLambda.tiIB.Psi.iIB
+    Sigma <- moment$Sigma
+    attr(Sigma,"detail") <- NULL
+    SigmaValue <- attr(moment$Sigma,"detail")
     
-    ## from d2Moment.init
-    d2mu <- object$conditionalMoment$d2Moment.init$d2mu
-    d2Omega <- object$conditionalMoment$d2Moment.init$d2Omega
+    grid.mean <- skeleton$grid.d2moment$mean
+    grid.var <- skeleton$grid.d2moment$var
 
-    grid.mean <- object$conditionalMoment$d2Moment.init$grid.mean
-    grid.vcov <- object$conditionalMoment$d2Moment.init$grid.vcov
-
-    n.mean <- object$conditionalMoment$d2Moment.init$n.mean
-    n.vcov <- object$conditionalMoment$d2Moment.init$n.vcov
-
-    toUpdate <- object$conditionalMoment$d2Moment.init$toUpdate
-    ##    names(object$conditionalMoment$d2Moment)
-    
-    ## *** second order partial derivatives
-    if(any(toUpdate)){
-        
-        ## **** mean coefficients        
-        if(toUpdate["alpha.B"]){
-            for(iP in 1:n.mean$alpha.B){ # iP <- 1
-                iName1 <- grid.mean$alpha.B[iP,"alpha"]
-                iName2 <- grid.mean$alpha.B[iP,"B"]
-
-                d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
-            }
+    ## ** Compute partial derivative regarding the mean
+    if(length(grid.mean$alpha.B)>0){
+        for(iP in 1:length(grid.mean$alpha.B)){ # iP <- 1
+            iName1 <- grid.mean$alpha.B[iP,"alpha"]
+            iName2 <- grid.mean$alpha.B[iP,"B"]
+            d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
         }
-        
-        if(toUpdate["alpha.Lambda"]){
-            for(iP in 1:n.mean$alpha.Lambda){ # iP <- 1
+    }
+    
+    if(length(grid.mean$alpha.Lambda)>0){
+        for(iP in 1:length(grid.mean$alpha.Lambda)){ # iP <- 1
                 iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
                 iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
-
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dLambda[[iName2]]
-                
-            }
         }
+    }
 
-        if(toUpdate["Gamma.B"]){
-            for(iP in 1:n.mean$Gamma.B){ # iP <- 1
+    if(length(grid.mean$Gamma.B)>0){
+        for(iP in 1:length(grid.mean$Gamma.B)){ # iP <- 1
                 iName1 <- grid.mean$Gamma.B[iP,"Gamma"]
                 iName2 <- grid.mean$Gamma.B[iP,"B"]
-
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
-            }
-        }        
+        }
+    }
 
-        if(toUpdate["Gamma.Lambda"]){
-            for(iP in 1:n.mean$Gamma.Lambda){ # iP <- 1
+    if(length(grid.mean$Gamma.Lambda)>0){
+        for(iP in 1:length(grid.mean$Gamma.Lambda)){ # iP <- 1
                 iName1 <- grid.mean$Gamma.Lambda[iP,"Gamma"]
                 iName2 <- grid.mean$Gamma.Lambda[iP,"Lambda"]                
-
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dLambda[[iName2]]
-            }
-        }        
+        }
+    }
 
-        if(toUpdate["Lambda.B"]){
-            for(iP in 1:n.mean$Lambda.B){ # iP <- 1
+    if(length(grid.mean$Lambda.B)>0){
+        for(iP in 1:length(grid.mean$Lambda.B)){ # iP <- 1
                 iName1 <- grid.mean$Lambda.B[iP,"Lambda"]
                 iName2 <- grid.mean$Lambda.B[iP,"B"]
-
                 d2mu[[iName1]][[iName2]] <- alpha.XGamma.iIB %*% dB[[iName2]] %*% iIB %*% dLambda[[iName1]]
-            }
         }
+    }
 
-        if(toUpdate["B.B"]){
-            for(iP in 1:n.mean$B.B){ # iP <- 1
+    if(length(grid.mean$B.B)>0){
+        for(iP in 1:length(grid.mean$B.B)){ # iP <- 1
                 iName1 <- grid.mean$B.B[iP,"B1"]
                 iName2 <- grid.mean$B.B[iP,"B2"]
 
                 term1 <- alpha.XGamma.iIB %*% dB[[iName2]] %*% iIB %*% dB[[iName1]] %*% iIB.Lambda
                 term2 <- alpha.XGamma.iIB %*% dB[[iName1]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
                 d2mu[[iName1]][[iName2]] <- term1 + term2
-            }
         }
+    }
 
-        ## **** variance-covariance coefficients
-        if(toUpdate["Psi.Lambda"]){
-            for(iP in 1:n.vcov$Psi.Lambda){ # iP <- 1
-                iName1 <- grid.vcov$Psi.Lambda[iP,"Psi"]
-                iName2 <- grid.vcov$Psi.Lambda[iP,"Lambda"]
+    ## ** Compute partial derivative regarding the variance
+    if(length(grid.var$Psi.Lambda)>0){
+        for(iP in 1:length(grid.var$Psi.Lambda)){ # iP <- 1
+            iName1 <- grid.var$Psi.Lambda[iP,"Psi"]
+            iName2 <- grid.var$Psi.Lambda[iP,"Lambda"]
 
-                term1 <- t(dLambda[[iName2]]) %*% t(iIB) %*% dPsi[[iName1]] %*% iIB.Lambda                
-                d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
-            }
+            term1 <- t(dLambda[[iName2]]) %*% t(iIB) %*% dPsi[[iName1]] %*% iIB.Lambda                
+            d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
         }
-
-        if(toUpdate["Psi.B"]){
-            for(iP in 1:n.vcov$Psi.B){ # iP <- 1
-                iName1 <- grid.vcov$Psi.B[iP,"Psi"]
-                iName2 <- grid.vcov$Psi.B[iP,"B"]
+    }
+    
+    if(length(grid.var$Psi.B)>0){
+        for(iP in 1:length(grid.var$Psi.B)){ # iP <- 1
+                iName1 <- grid.var$Psi.B[iP,"Psi"]
+                iName2 <- grid.var$Psi.B[iP,"B"]
 
                 term1 <- t(iIB.Lambda) %*% t(dB[[iName2]]) %*% t(iIB) %*% dPsi[[iName1]] %*% iIB.Lambda
                 d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
-            }
         }
-
-        if(toUpdate["Lambda.B"]){
-            for(iP in 1:n.vcov$Lambda.B){ # iP <- 1
-                iName1 <- grid.vcov$Lambda.B[iP,"Lambda"]
-                iName2 <- grid.vcov$Lambda.B[iP,"B"]
+    }
+    
+    if(length(grid.var$Lambda.B)>0){
+        for(iP in 1:length(grid.var$Lambda.B)){ # iP <- 1
+                iName1 <- grid.var$Lambda.B[iP,"Lambda"]
+                iName2 <- grid.var$Lambda.B[iP,"B"]
 
                 term1 <- t(dLambda[[iName1]]) %*% t(iIB) %*% t(dB[[iName2]]) %*% t(iIB) %*% Psi %*% iIB.Lambda
                 term2 <- t(dLambda[[iName1]]) %*% t(iIB) %*% Psi %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
                 ## term2 <- tLambda.tiIB.Psi.iIB %*% dB[[iName2]] %*% iIB %*% dLambda[[iName1]]                
                 d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2)
-            }
         }
-
-        if(toUpdate["Lambda.Lambda"]){
-            for(iP in 1:n.vcov$Lambda.Lambda){ # iP <- 1
-                iName1 <- grid.vcov$Lambda.Lambda[iP,"Lambda1"]
-                iName2 <- grid.vcov$Lambda.Lambda[iP,"Lambda2"]
-                
-                term1 <- t(dLambda[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% dLambda[[iName2]]
-                d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
-            }
-        }
-
-        if(toUpdate["B.B"]){
-            for(iP in 1:n.vcov$B.B){ # iP <- 1
-                iName1 <- grid.vcov$B.B[iP,"B1"]
-                iName2 <- grid.vcov$B.B[iP,"B2"]
-
-                term1 <- t(iIB.Lambda) %*% t(dB[[iName2]]) %*% t(iIB) %*% t(dB[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% Lambda
-                term2 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% t(dB[[iName2]]) %*% t(iIB) %*% Psi.iIB %*% Lambda
-                term3 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% dB[[iName2]] %*% iIB %*% Lambda
-                d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
-            }
-        }
-
     }
 
-    ## *** Export
+    if(length(grid.var$Lambda.Lambda)>0){
+        for(iP in 1:length(grid.var$Lambda.Lambda)){ # iP <- 1
+            iName1 <- grid.var$Lambda.Lambda[iP,"Lambda1"]
+            iName2 <- grid.var$Lambda.Lambda[iP,"Lambda2"]
+                
+            term1 <- t(dLambda[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% dLambda[[iName2]]
+            d2Omega[[iName1]][[iName2]] <- term1 + t(term1)
+        }
+    }
+
+    if(length(grid.var$B.B)>0){
+        for(iP in 1:length(grid.var$B.B)){ # iP <- 1
+            iName1 <- grid.var$B.B[iP,"B1"]
+            iName2 <- grid.var$B.B[iP,"B2"]
+
+            term1 <- t(iIB.Lambda) %*% t(dB[[iName2]]) %*% t(iIB) %*% t(dB[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% Lambda
+            term2 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% t(dB[[iName2]]) %*% t(iIB) %*% Psi.iIB %*% Lambda
+            term3 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% dB[[iName2]] %*% iIB %*% Lambda
+            d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
+        }
+    }
+
+    if(length(grid.var$sigma2.cor)>0){
+        for(iP in 1:length(grid.var$sigma2.cor)){ # iP <- 1
+            iName1 <- grid.var$sigma2.cor[iP,"sigma2"]
+            iName2 <- grid.var$sigma2.cor[iP,"cor"]
+            d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (dcor[[iName2]]/param[iName2])
+        }
+    }
+
+    if(length(grid.var$sigma2.sigma2k)>0){
+        for(iP in 1:length(grid.var$sigma2.sigma2k)){ # iP <- 1
+            iName1 <- grid.var$sigma2.sigma2k[iP,"sigma2"]
+            iName2 <- grid.var$sigma2.sigma2k[iP,"sigma2k"]
+
+            iFactor <- dsigma2k[[iName2]][,,"X"] + dsigma2k[[iName2]][,,"Y"]
+            d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (iFactor/param[iName2])
+        }
+    }
+
+    if(length(grid.var$cor.sigma2k)>0){
+        for(iP in 1:length(grid.var$cor.sigma2k)){ # iP <- 1
+            iName1 <- grid.var$cor.sigma2k[iP,"cor"]
+            iName2 <- grid.var$cor.sigma2k[iP,"sigma2k"]
+
+            iFactor <- dsigma2k[[iName2]][,,"X"] + dsigma2k[[iName2]][,,"Y"]
+            d2Omega[[iName1]][[iName2]] <- Sigma * (dcor[[iName1]]/param[iName1]) * (iFactor/param[iName2])
+        }
+    }
+
+    if(length(grid.var$sigma2k.sigma2k)>0){
+        for(iP in 1:length(grid.var$sigma2k.sigma2k)){ # iP <- 2
+            iName1 <- grid.var$sigma2k.sigma2k[iP,"sigma2k1"]
+            iName2 <- grid.var$sigma2k.sigma2k[iP,"sigma2k2"]
+
+            iFactor <- dsigma2k[[iName1]][,,"X"]*dsigma2k[[iName2]][,,"Y"]
+            d2Omega[[iName1]][[iName2]] <- Sigma * (iFactor/(param[iName1]*param[iName2]))
+        }
+    }
+
+    ## ** Export
     return(list(d2mu = d2mu, d2Omega = d2Omega))
 
 }

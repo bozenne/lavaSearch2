@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 27 2018 (14:32) 
 ## Version: 
-## Last-Updated: nov 25 2019 (15:16) 
+## Last-Updated: dec 12 2019 (09:14) 
 ##           By: Brice Ozenne
-##     Update #: 155
+##     Update #: 156
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -260,28 +260,6 @@ formula2character <- function(f, type = "formula"){
 
     ## ** export
     return(grid)        
-}
-
-
-## ** .combinationDF
-.combinationDF <- function(data,
-                           detail1, detail2,
-                           name1, name2){
-
-    detail <- NULL # [:for CRAN check] subset
-    
-    if(any(detail1 %in% data$detail) && any(detail2 %in% data$detail) ){
-        ls.args <- list(subset(data, subset = detail %in% detail1, select = "param", drop = TRUE),
-                        subset(data, subset = detail %in% detail2, select = "param", drop = TRUE))
-        names(ls.args) <- c(name1,name2)
-    
-        return(do.call(.combination, args = ls.args))
-        
-    }else{
-        
-        return(numeric(0))
-        
-    }
 }
 
 ######################################################################

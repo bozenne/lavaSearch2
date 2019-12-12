@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: dec 10 2019 (11:00) 
+## last-updated: dec 12 2019 (14:14) 
 ##           By: Brice Ozenne
-##     Update #: 817
+##     Update #: 832
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -115,7 +115,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
         data <- extractData(object)
     }
     if(is.null(coef2)){
-        coef2 <- coef2(object)
+        coef2 <- coef2(object, ssc = FALSE)
     }
     if(is.null(indexOmega)){
         indexOmega <- .getIndexOmega(object, data = data)
@@ -141,7 +141,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                 X = as.character(NA),
                                 data = as.character(NA),
                                 type = "intercept",
-                                value = as.double(coef2["(Intercept)"]),
+                                value = as.numeric(NA), ## as.double(coef2["(Intercept)"]),
                                 param = "(Intercept)",
                                 marginal = FALSE,
                                 factitious = FALSE,
@@ -195,7 +195,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                     X = iName.exogenous,
                                     data = iData.var,
                                     type = "regression",
-                                    value = as.double(coef2[iName.exogenous]),
+                                    value = as.numeric(NA), ##as.double(coef2[iName.exogenous]),
                                     param = iName.exogenous,
                                     marginal = FALSE,
                                     factitious = FALSE,
@@ -237,7 +237,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                              X = name.latent,
                              data = as.character(NA),
                              type = "variance",
-                             value = as.double(coef2[attr(coef2,"ran.coef")]),
+                             value = as.numeric(NA), ## as.double(coef2[attr(coef2,"ran.coef")]),
                              param = attr(coef2,"ran.coef"),
                              marginal = FALSE,
                              factitious = FALSE,
@@ -262,7 +262,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                 X = cor.combi[,2],
                                 data = name.endogenous,
                                 type = "covariance",
-                                value = as.double(coef2[cor.coef]),
+                                value = as.numeric(NA), ## as.double(coef2[cor.coef]),
                                 param = cor.coef,
                                 marginal = FALSE,
                                 factitious = FALSE,
@@ -282,7 +282,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                             X = name.endogenousW,
                             data = name.endogenous,
                             type = "variance",
-                            value = as.double(coef2["sigma2"]),
+                            value = as.numeric(NA), ## as.double(coef2["sigma2"]),
                             param = "sigma2",
                             marginal = FALSE,
                             factitious = FALSE,
@@ -324,7 +324,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                 X = paste0(name.endogenous,k.coef),
                                 data = name.endogenous,
                                 type = "variance",
-                                value = as.double(coef2[k.coef]),
+                                value = as.numeric(NA), ## as.double(coef2[k.coef]),
                                 param = k.coef,
                                 marginal = FALSE,
                                 factitious = FALSE,
@@ -338,7 +338,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
     }
     
     ## ** export
-    test.param <- !duplicated(out$param)
+    out$originalLink[duplicated(out$param)+is.na(out$param) > 0] <- NA
     rownames(out) <- NULL
 
     out$detail <- factor(out$detail,
@@ -532,8 +532,16 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
         df.param$originalLink <- df.param$name
     }
 
+    ## ** original link
+    coef.lava <- coef(object, labels = 0)
+    coef2.lava <- coef(object, labels = 1)
+
+    index.match <- match(coef.lava, df.param$originalLink)
+    if(length(index.match)<NROW(df.param)){
+        df.param$originalLink[-index.match] <- NA
+    }
+
     ## ** merge with lava
-    coef.lava <- coef(object)
     name.coef <- names(coef.lava)
 
     index.keep <- which(df.param$type!="external" & df.param$factitious == FALSE & df.param$marginal == FALSE)

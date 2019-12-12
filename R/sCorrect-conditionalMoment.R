@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 10 2019 (16:37) 
+## last-updated: dec 12 2019 (10:53) 
 ##           By: Brice Ozenne
-##     Update #: 1334
+##     Update #: 1381
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -118,6 +118,7 @@ conditionalMoment.lm <- function(object,
                        variable.name = "XXendogenousXX",
                        value.name = "XXvalueXX")
 
+        X.wide <- X[,endogenous,drop=FALSE]
     }else{
         X.long <- X
         names(X.long)[names(X.long) == lava::endogenous(object, format = "long")] <- "XXvalueXX"
@@ -126,6 +127,11 @@ conditionalMoment.lm <- function(object,
             X.long$XXendogenousXX[cluster$index.cluster == iC] <- endogenous[na.omit(cluster$index.Omega[[iC]])]
         }
         X.long <- cbind(X.long, XXclusterXX = cluster$index.cluster)
+
+        X.wide <- dcast(X.long[X.long$XXendogenousXX %in% endogenous,c("XXclusterXX","XXendogenousXX","XXvalueXX")],
+                        value.var = "XXvalueXX",
+                        formula = XXclusterXX ~ XXendogenousXX)
+        X.wide <- X.wide[order(X.wide$XXclusterXX),endogenous,drop=FALSE]
     }
     out$original.order <- X.long[,c("XXclusterXX","XXendogenousXX")]
     X.long <- X.long[order(X.long$XXclusterXX,X.long$XXendogenousXX),]
@@ -138,6 +144,18 @@ conditionalMoment.lm <- function(object,
         stop("Initialization of the conditional moments missing. \n",
              "Consider setting the argument \'initialize\' to TRUE \n")
     }
+
+    ## ** identify missing pattern
+    pattern <- X.wide
+    pattern[!is.na(pattern)] <- 1
+    pattern[is.na(pattern)] <- 0
+    unique.pattern <- unique(pattern)
+    name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
+    rownames(unique.pattern) <- name.pattern
+
+    out$missing$pattern <- tapply(1:cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)
+    out$missing$unique.pattern <- unique.pattern
+    out$missing$name.pattern <- name.pattern
     
     ## ** initialize
     if(initialize){
@@ -152,26 +170,30 @@ conditionalMoment.lm <- function(object,
             out$skeleton <- skeletonDtheta(out$skeleton,
                                            X = X.long,
                                            endogenous = endogenous, latent = latent,
+                                           missing.pattern = out$missing$pattern,
+                                           unique.pattern = out$missing$unique.pattern,
+                                           name.pattern = out$missing$name.pattern,
                                            n.cluster = cluster$n.cluster,
                                            index.Omega = cluster$index.Omega)
         }
     
         ## *** initialize second order partial derivatives of the conditional moments
         if(second.order){
-            out$skeleton <- skeletonDtheta2(moment = out$skeleton,
-                                            X = X.long,
-                                            endogenous = endogenous, latent = latent,
-                                            n.cluster = cluster$n.cluster,
-                                            index.Omega = cluster$index.Omega)
+            out$skeleton <- skeletonDtheta2(out$skeleton)
         }
     }
 
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            param <- coef2(object)
+            param <- coef2(object, ssc = FALSE, labels = 1)
+        }else{
+            if(any(names(param) %in% out$skeleton$originalLink2param == FALSE)){
+                stop("Incorrect name for the model parameters \n",
+                     "Consider using the argument \'label\' set to 1 when calling stats::coef on the LVM \n")
+            }
         }
-        
+
         ## *** conditional moments
         out$moment <- updateMoment(skeleton = out$skeleton$param,
                                    value = out$skeleton$value,
@@ -191,38 +213,27 @@ conditionalMoment.lm <- function(object,
             out$moment$residuals[iIndexWide,endogenous[iEndo]] <- X.long[iIndexLong,"XXvalueXX"] - out$moment$mu[iIndexWide,endogenous[iEndo]]
         }
 
-        ## *** identify missing patterns
-        missing.pattern <- out$moment$residuals
-        missing.pattern[!is.na(missing.pattern)] <- 1
-        missing.pattern[is.na(missing.pattern)] <- 0
-        Umissing.pattern <- unique(missing.pattern)
-
-        out$moment$missing.pattern <- apply(missing.pattern, MARGIN = 1, FUN = paste0, collapse="")
-        out$moment$Umissing.pattern <- Umissing.pattern
-        out$moment$Omega.missing.pattern <- lapply(1:NROW(Umissing.pattern), function(iM){ ## iM <- 1
-            iIndex <- which(missing.pattern[iM,]==1)
+        ## *** identify missing pattern
+        out$moment$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
+            iIndex <- which(unique.pattern[iM,]==1)
             return(out$moment$Omega[iIndex,iIndex,drop=FALSE])
         })
-        names(out$moment$Omega.missing.pattern) <- apply(Umissing.pattern, MARGIN = 1, FUN = paste0, collapse="")
+        names(out$moment$Omega.missing.pattern) <- name.pattern
         out$moment$iOmega.missing.pattern <- lapply(out$moment$Omega.missing.pattern, solve)
         
         ## *** first order derivatives
         if(first.order){            
             out$dmoment <- updateDMoment(moment = out$moment,
                                          skeleton = out$skeleton,
-                                         toUpdate = out$skeleton$toUpdate.dmoment,
-                                         endogenous = endogenous,
-                                         latent = latent,
-                                         n.cluster = cluster$n.cluster)
+                                         param = param)
         }
 
         
         ## *** second order derivatives
         if(second.order){
-            browser()
-            out$d2moment <- skeletonDtheta2(object)
-            object$conditionalMoment$d2mu <- out2$d2mu
-            object$conditionalMoment$d2Omega <- out2$d2Omega
+            out$d2moment <- updateD2Moment(moment = out$moment,
+                                           skeleton = out$skeleton,
+                                           param = param)
         }
        
     }
