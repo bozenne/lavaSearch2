@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 12 2019 (10:53) 
+## last-updated: dec 13 2019 (16:22) 
 ##           By: Brice Ozenne
-##     Update #: 1381
+##     Update #: 1422
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -80,152 +80,159 @@ conditionalMoment.lm <- function(object,
                                  ...){
     if(TRUE){cat("conditionalMoment \n")}
 
-    out <- list()
-    
-    ## ** get information from object
-    if(is.null(endogenous)){
-        endogenous <- lava::endogenous(object, format = "wide")
-    }
-    n.endogenous <- length(endogenous)
-    if(is.null(latent)){
-        latent <- lava::latent(object)
-    }
-    if(is.null(X) && !is.null(cluster)){
-        stop("Arguments \'X\' and \'cluster\' must either be both specified or both set to NULL \n")
-    }
-    if(is.null(data) && (is.null(X) || is.null(cluster))){
-        data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
-                            envir = parent.env(environment()), rm.na = TRUE)
-    }
-    if(is.null(X)){
-        X <- .getDesign(object, data = data, add.Y = TRUE)
-    }
-    if(is.null(cluster)){
-        cluster <- .getGroups2(object, data = data, endogenous = endogenous)
-    }
-
-    if(any(colnames(X) %in% c("XXvalueXX","XXendogenousXX","XXclusterXX"))){
-        stop("\"XXvalueXX\", \"XXendogenousXX\", and \"XXclusterXX\" should not correspond to variable names \n",
-             "It is used internally for data manipulation \n")
-    }
-    if(inherits(object,"lvmfit") || inherits(object,"lvm")){## convert to long format
-        X.latent <- matrix(NA, nrow = NROW(X), ncol = length(latent),
-                           dimnames = list(NULL, latent))
-
-        X.long <- melt(data.frame(X,X.latent, XXclusterXX = unique(cluster$index.cluster)),
-                       id.vars = c("XXclusterXX",setdiff(colnames(X),c(endogenous,latent))),
-                       measure.vars = c(endogenous,latent),
-                       variable.name = "XXendogenousXX",
-                       value.name = "XXvalueXX")
-
-        X.wide <- X[,endogenous,drop=FALSE]
-    }else{
-        X.long <- X
-        names(X.long)[names(X.long) == lava::endogenous(object, format = "long")] <- "XXvalueXX"
-        X.long$XXendogenousXX <- NA
-        for(iC in 1:cluster$n.cluster){ ## iC <- 10
-            X.long$XXendogenousXX[cluster$index.cluster == iC] <- endogenous[na.omit(cluster$index.Omega[[iC]])]
-        }
-        X.long <- cbind(X.long, XXclusterXX = cluster$index.cluster)
-
-        X.wide <- dcast(X.long[X.long$XXendogenousXX %in% endogenous,c("XXclusterXX","XXendogenousXX","XXvalueXX")],
-                        value.var = "XXvalueXX",
-                        formula = XXclusterXX ~ XXendogenousXX)
-        X.wide <- X.wide[order(X.wide$XXclusterXX),endogenous,drop=FALSE]
-    }
-    out$original.order <- X.long[,c("XXclusterXX","XXendogenousXX")]
-    X.long <- X.long[order(X.long$XXclusterXX,X.long$XXendogenousXX),]
-
     ## ** sanity checks
     if(first.order == FALSE && second.order == TRUE){
         stop("Cannot pre-compute second order derivatives without the first order derivatives. \n")
     }
-    if(initialize == FALSE && is.null(object$sCorrect$conditionalMoment)){
+    if(initialize == FALSE && is.null(object$sCorrect)){
         stop("Initialization of the conditional moments missing. \n",
              "Consider setting the argument \'initialize\' to TRUE \n")
     }
 
-    ## ** identify missing pattern
-    pattern <- X.wide
-    pattern[!is.na(pattern)] <- 1
-    pattern[is.na(pattern)] <- 0
-    unique.pattern <- unique(pattern)
-    name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
-    rownames(unique.pattern) <- name.pattern
-
-    out$missing$pattern <- tapply(1:cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)
-    out$missing$unique.pattern <- unique.pattern
-    out$missing$name.pattern <- name.pattern
-    
     ## ** initialize
     if(initialize){
+        out <- list()
+
+        ## *** get information from object
+        if(is.null(X) && !is.null(cluster)){
+            stop("Arguments \'X\' and \'cluster\' must either be both specified or both set to NULL \n")
+        }
+
+        if(is.null(endogenous)){
+            out$endogenous <- lava::endogenous(object, format = "wide")
+        }else{
+            out$endogenous <- endogenous
+        }
+
+        if(is.null(latent)){
+            out$latent <- lava::latent(object)
+        }else{
+            out$latent <- latent
+        }
+
+        if(is.null(data) && (is.null(X) || is.null(cluster))){
+            out$data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
+                                    envir = parent.env(environment()), rm.na = TRUE)
+        }else{
+            out$data <- data
+        }
+        
+        if(is.null(X)){
+            out$X <- .getDesign(object, data = out$data, add.Y = TRUE)
+        }else{
+            out$X <- X
+        }
+
+        if(is.null(cluster)){
+            out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
+        }else{
+            out$cluster <- cluster
+        }
+
+        if(any(colnames(out$X) %in% c("XXvalueXX","XXendogenousXX","XXclusterXX"))){
+            stop("\"XXvalueXX\", \"XXendogenousXX\", and \"XXclusterXX\" should not correspond to variable names \n",
+                 "It is used internally for data manipulation \n")
+        }
+
+        ## *** reshape dataset
+        if(inherits(object,"lvmfit") || inherits(object,"lvm")){## convert to long format
+            X.latent <- matrix(NA, nrow = NROW(out$X), ncol = length(out$latent),
+                               dimnames = list(NULL, out$latent))
+
+            X.long <- melt(data.frame(out$X,X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
+                           id.vars = c("XXclusterXX",setdiff(colnames(out$X),c(out$endogenous,out$latent))),
+                           measure.vars = c(out$endogenous,out$latent),
+                           variable.name = "XXendogenousXX",
+                           value.name = "XXvalueXX")
+
+            X.wide <- out$X[,out$endogenous,drop=FALSE]
+        }else{
+            X.long <- out$X
+            names(X.long)[names(X.long) == lava::endogenous(object, format = "long")] <- "XXvalueXX"
+            X.long$XXendogenousXX <- NA
+            for(iC in 1:out$cluster$n.cluster){ ## iC <- 10
+                X.long$XXendogenousXX[out$cluster$index.cluster == iC] <- out$endogenous[na.omit(out$cluster$index.Omega[[iC]])]
+            }
+            X.long <- cbind(X.long, XXclusterXX = out$cluster$index.cluster)
+
+            X.wide <- dcast(X.long[X.long$XXendogenousXX %in% out$endogenous,c("XXclusterXX","XXendogenousXX","XXvalueXX")],
+                            value.var = "XXvalueXX",
+                            formula = XXclusterXX ~ XXendogenousXX)
+            X.wide <- X.wide[order(X.wide$XXclusterXX),out$endogenous,drop=FALSE]
+        }
+        out$old2new.order <- X.long[,c("XXclusterXX","XXendogenousXX","XXvalueXX")]
+        names(out$old2new.order) <- c("XXclusterXX.old","XXendogenousXX.old","XXvalueXX.old")
+        X.long <- X.long[order(X.long$XXclusterXX,X.long$XXendogenousXX),]
+        out$old2new.order$XXclusterXX.new <- out$old2new.order$XXclusterXX
+        out$old2new.order$XXendogenousXX.new <- out$old2new.order$XXendogenousXX
+        out$old2new.order$XXvalueXX.new <- out$old2new.order$XXvalueXX
+
+        ## *** identify missing pattern
+        pattern <- X.wide
+        pattern[!is.na(pattern)] <- 1
+        pattern[is.na(pattern)] <- 0
+        unique.pattern <- unique(pattern)
+        name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
+        rownames(unique.pattern) <- name.pattern
+
+        out$missing$pattern <- tapply(1:out$cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)
+        out$missing$unique.pattern <- unique.pattern
+        out$missing$name.pattern <- name.pattern
+
         ## *** initialize conditional moments
         out$skeleton <- skeleton(object, X = X.long,
-                                 endogenous = endogenous, latent = latent,
-                                 n.cluster = cluster$n.cluster,
-                                 index.Omega = cluster$index.Omega)
+                                 endogenous = out$endogenous, latent = out$latent,
+                                 n.cluster = out$cluster$n.cluster,
+                                 index.Omega = out$cluster$index.Omega)
 
         ## *** initialize partial derivatives of the conditional moments
         if(first.order){
             out$skeleton <- skeletonDtheta(out$skeleton,
                                            X = X.long,
-                                           endogenous = endogenous, latent = latent,
+                                           endogenous = out$endogenous, latent = out$latent,
                                            missing.pattern = out$missing$pattern,
                                            unique.pattern = out$missing$unique.pattern,
                                            name.pattern = out$missing$name.pattern,
-                                           n.cluster = cluster$n.cluster,
-                                           index.Omega = cluster$index.Omega)
+                                           n.cluster = out$cluster$n.cluster,
+                                           index.Omega = out$cluster$index.Omega)
         }
     
         ## *** initialize second order partial derivatives of the conditional moments
         if(second.order){
             out$skeleton <- skeletonDtheta2(out$skeleton)
         }
+    }else{
+        out <- object$sCorrect[c("endogenous","data","X","cluster","old2new.order", "missing", "skeleton")]
     }
-
+    
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            param <- coef2(object, ssc = FALSE, labels = 1)
+            out$param <- coef2(object, ssc = FALSE, labels = 1)
         }else{
             if(any(names(param) %in% out$skeleton$originalLink2param == FALSE)){
                 stop("Incorrect name for the model parameters \n",
                      "Consider using the argument \'label\' set to 1 when calling stats::coef on the LVM \n")
             }
+            out$param <- param
         }
 
         ## *** conditional moments
         out$moment <- updateMoment(skeleton = out$skeleton$param,
                                    value = out$skeleton$value,
                                    toUpdate = out$skeleton$toUpdate.moment,
-                                   param = param,
-                                   endogenous = endogenous,
-                                   latent = latent,
-                                   n.cluster = cluster$n.cluster)
-
-        ## *** compute residuals
-        out$moment$residuals <- matrix(NA, nrow = cluster$n.cluster, ncol = n.endogenous,
-                                       dimnames = list(NULL, endogenous))
-
-        for(iEndo in 1:n.endogenous){ ## iEndo <- 1
-            iIndexLong <- out$skeleton$obsByEndoInX[[endogenous[iEndo]]]
-            iIndexWide <- X.long[iIndexLong,"XXclusterXX"]
-            out$moment$residuals[iIndexWide,endogenous[iEndo]] <- X.long[iIndexLong,"XXvalueXX"] - out$moment$mu[iIndexWide,endogenous[iEndo]]
-        }
-
-        ## *** identify missing pattern
-        out$moment$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
-            iIndex <- which(unique.pattern[iM,]==1)
-            return(out$moment$Omega[iIndex,iIndex,drop=FALSE])
-        })
-        names(out$moment$Omega.missing.pattern) <- name.pattern
-        out$moment$iOmega.missing.pattern <- lapply(out$moment$Omega.missing.pattern, solve)
+                                   param = out$param,
+                                   name.pattern = out$missing$name.pattern,
+                                   unique.pattern = out$missing$unique.pattern,
+                                   endogenous = out$endogenous,
+                                   latent = out$latent,
+                                   n.cluster = out$cluster$n.cluster)
         
         ## *** first order derivatives
         if(first.order){            
             out$dmoment <- updateDMoment(moment = out$moment,
                                          skeleton = out$skeleton,
-                                         param = param)
+                                         param = out$param)
         }
 
         
@@ -233,7 +240,7 @@ conditionalMoment.lm <- function(object,
         if(second.order){
             out$d2moment <- updateD2Moment(moment = out$moment,
                                            skeleton = out$skeleton,
-                                           param = param)
+                                           param = out$param)
         }
        
     }

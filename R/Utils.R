@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 27 2018 (14:32) 
 ## Version: 
-## Last-Updated: dec 12 2019 (09:14) 
+## Last-Updated: dec 13 2019 (09:16) 
 ##           By: Brice Ozenne
-##     Update #: 156
+##     Update #: 160
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -215,6 +215,7 @@ formula2character <- function(f, type = "formula"){
 #' @name combination
 #'
 #' @param ... [vectors] elements to be combined.
+#' @param levels [logical] should a label for each combination be output as an attribute named levels.
 #'
 #' @return A matrix, each row being a different combination.
 #' 
@@ -226,15 +227,14 @@ formula2character <- function(f, type = "formula"){
 #' .combination(c(1:2,1:2),1:2)
 #' 
 #' .combination(alpha = 1:2, beta = 3:4)
+#' .combination(alpha = 1:2, beta = 3:4, gamma = 1:4)
+#' .combination(alpha = 1:3, beta = 1:3, gamma = 1:3)
 #'
 #' @keywords internal
-.combination <- function(...){
+.combination <- function(..., levels = FALSE){
 
     ## ** normalize arguments
     dots <- list(...)
-    if(length(dots)!=2){
-        stop("can only handle two vectors \n")
-    }
     test.null <- unlist(lapply(dots,is.null))    
     if(any(test.null)){
         return(NULL)
@@ -244,20 +244,12 @@ formula2character <- function(f, type = "formula"){
     ## ** form all combinations
     grid <- expand.grid(dots, stringsAsFactors = FALSE) 
     
-    ## ** remove combinations (b,a) when (a,b) is already there
-    name1 <- paste0(grid[,1],grid[,2])
-    name2 <- paste0(grid[,2],grid[,1])
-
-    if(NROW(grid)>1 && any(name1 %in% name2)){ 
-
-        n.grid <- NROW(grid)
-        test.duplicated <- c(FALSE,sapply(2:n.grid, function(iG){
-            any(name2[iG] %in% name1[1:(iG-1)]) ## find duplicates
-        }))
-
-        grid <- grid[test.duplicated==FALSE,]
-    }
-
+    ## ** remove identical combinations after permutations of the columns
+    flatGrid <- apply(grid,1,function(iX){paste0(sort(iX),collapse = "")})    
+    grid <- grid[!duplicated(flatGrid),]
+    rownames(grid) <- NULL
+    attr(grid,"levels") <- unname(flatGrid[!duplicated(flatGrid)])
+    
     ## ** export
     return(grid)        
 }

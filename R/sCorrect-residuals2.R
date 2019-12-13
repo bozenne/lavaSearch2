@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: dec 11 2019 (13:51) 
+## Last-Updated: dec 13 2019 (17:17) 
 ##           By: Brice Ozenne
-##     Update #: 49
+##     Update #: 53
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -189,42 +189,31 @@ residuals.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, ty
 
 ## * .adjustResiduals
 .adjustResiduals <- function(Omega, Psi, epsilon,
-                             index.Omega,
-                             name.endogenous, n.endogenous, n.cluster){
+                             name.pattern, missing.pattern, unique.pattern,
+                             endogenous, n.endogenous, n.cluster){
 
-    if(is.null(index.Omega)){ ## no missing values
+    epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                          dimnames = list(NULL, endogenous))
+    n.pattern <- length(unique.pattern)        
         
-        Omega.chol <- matrixPower(Omega, symmetric = TRUE, power = 1/2)
-        H <- Omega %*% Omega - Omega.chol %*% Psi %*% Omega.chol
-        HM1 <- tryCatch(matrixPower(H, symmetric = TRUE, power = -1/2), warning = function(w){w})
-        if(inherits(HM1,"warning")){
+    for(iP in 1:n.pattern){ ## iP <- 1 
+        iIndex <- missing.pattern[[iP]]
+        iY <- which(unique.pattern[iP,]==1)
+        
+        iOmega <- Omega[iY,iY,drop=FALSE]
+        iPsi <- Psi[iY,iY,drop=FALSE]
+        
+        iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
+        iH <- iOmega %*% iOmega - iOmega.chol %*% iPsi %*% iOmega.chol
+        iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
+        if(inherits(iHM1,"warning")){
             stop("Cannot compute the adjusted residuals \n",
                  "Estimated bias too large compared to the estimated variance-covariance matrix \n",
                  "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
         }
-        epsilon.adj <- epsilon %*% Omega.chol %*% HM1 %*% Omega.chol
-        
-    }else{ ## missing values
-        
-        epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                              dimnames = list(NULL, name.endogenous))
-
-        for(iC in 1:n.cluster){
-            iIndex <- index.Omega[[iC]]
-            iOmega <- Omega[iIndex,iIndex,drop=FALSE]
-            iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
-            iH <- iOmega %*% iOmega - iOmega.chol %*% Psi[iIndex,iIndex,drop=FALSE] %*% iOmega.chol
-            iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
-            if(inherits(iHM1,"warning")){
-                stop("Cannot compute the adjusted residuals \n",
-                     "Estimated bias too large compared to the estimated variance-covariance matrix \n",
-                     "Consider setting argument \'adjust.n\' to FALSE when calling sCorrect \n")
-            }
-            epsilon.adj[iC,iIndex] <- epsilon[iC,iIndex] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
-        }
-        
+        epsilon.adj[iIndex,iY] <- epsilon[iIndex,iY,drop=FALSE] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
     }
-    dimnames(epsilon.adj) <- list(NULL,name.endogenous)
+    
     return(epsilon.adj)
 }
 

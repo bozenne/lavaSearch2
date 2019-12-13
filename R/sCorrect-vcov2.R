@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: dec 11 2019 (14:20) 
+## Last-Updated: dec 13 2019 (10:44) 
 ##           By: Brice Ozenne
-##     Update #: 7
+##     Update #: 8
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -113,6 +113,9 @@ vcov2.sCorrect <- function(object, param = param, data = data, ssc = ssc){
     }
     if(attr.info){
         attr(vcov,"information") <- information
+    }
+    if(!inherits(vcov, "try-error")){
+        dimnames(vcov) <- dimnames(information)
     }
     return(vcov)
 }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: dec 11 2019 (13:23) 
+## Last-Updated: dec 13 2019 (17:26) 
 ##           By: Brice Ozenne
-##     Update #: 870
+##     Update #: 898
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,348 +23,91 @@
 #' @name estimate2
 #' 
 #' @keywords internal
-.estimate2 <- function(object, epsilon, n.cluster,
-                       name.param, name.endogenous, name.meanparam, name.varparam,
-                       index.Omega,
-                       adjust.Omega, adjust.n, tol, n.iter, trace){
+.sscResiduals <- function(object, param, algorithm = "2"){
 
-    ## ** Prepare
-    Omega <- object$conditionalMoment$Omega
-    dmu <- object$conditionalMoment$dmu
-    dOmega <- object$conditionalMoment$dOmega
+    algorithm <- match.arg(as.character(algorithm), choices = c("1","2"))
+
+    ## ** current values
+    param <- object$sCorrect$param
+    Omega <- object$sCorrect$moment$Omega
+    epsilon <- object$sCorrect$moment$residuals
+    leverage <- object$sCorrect$leverage
+    dmu <- object$sCorrect$dmoment$dmu
+    dOmega <- object$sCorrect$dmoment$dOmega
+    vcov.param <- object$sCorrect$vcov.param
     
-    name.hybridparam <- intersect(name.meanparam, name.varparam)
+    endogenous <- object$sCorrect$endogenous
+    n.endogenous <- length(endogenous)
+    n.cluster <- object$sCorrect$cluster$n.cluster
+    param.mean <- object$sCorrect$skeleton$Uparam.mean
+    param.var <- object$sCorrect$skeleton$Uparam.var
+    missing.pattern <- object$sCorrect$missing$pattern
+    name.pattern <- object$sCorrect$missing$name.pattern
+    n.pattern <- length(name.pattern)
+    unique.pattern <- object$sCorrect$missing$unique.pattern
 
-    n.param <- length(name.param)
-    n.meanparam <- length(name.meanparam)
-    n.varparam <- length(name.varparam)
-    n.hybridparam <- length(name.hybridparam)
-
-    n.endogenous <- length(name.endogenous)
-    grid.meanparam <- .combination(name.meanparam, name.meanparam)    
-    n.grid.meanparam <- NROW(grid.meanparam)
-    grid.varparam <- .combination(name.varparam, name.varparam)
-    n.grid.varparam <- NROW(grid.varparam)
-
-    ## check low diagonal
-    name2num <- setNames(1:n.param,name.param)
-    if(!all(name2num[grid.meanparam[,1]]-name2num[grid.meanparam[,2]]>=0)){
-        stop("Incorrect allocation of the computation of the information matrix (mean parameter) \n")
-    }
-    name2num <- setNames(1:n.param,name.param)
-    if(!all(name2num[grid.varparam[,1]]-name2num[grid.varparam[,2]]>=0)){
-        stop("Incorrect allocation of the computation of the information matrix (variance parameter) \n")
-    }
-    ##
+    ## ** Step (i-ii) compute individual and average bias
+    dmu <- aperm(abind::abind(dmu, along = 3), perm = c(3,2,1))
+    vcov.muparam <- vcov.param[param.mean,param.mean,drop=FALSE]
     
-    leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                       dimnames = list(NULL, name.endogenous))
-    ls.dmu <- vector(mode = "list", length = n.cluster)
-    for(iC in 1:n.cluster){ # iC <- 1
-        if(is.null(index.Omega)){            
-            leverage[iC,] <- 0
-            ls.dmu[[iC]] <- matrix(0, nrow = n.param, ncol = n.endogenous,
-                                   dimnames = list(name.param, name.endogenous))
-            ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu[name.meanparam],function(x){x[iC,]}))
-        }else{
-            leverage[iC,index.Omega[[iC]]] <- 0
-            ls.dmu[[iC]] <- matrix(0, nrow = n.param, ncol = length(index.Omega[[iC]]),
-                                   dimnames = list(name.param, name.endogenous[index.Omega[[iC]]]))
-            ls.dmu[[iC]][name.meanparam,] <- do.call(rbind, lapply(dmu[name.meanparam],function(x){x[iC,index.Omega[[iC]]]}))
-        }        
-    }
+    Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
+                  dimnames = list(endogenous, endogenous))
+    n.Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
+                    dimnames = list(endogenous, endogenous))
     
-    ## ** Initialisation (i.e. first iteration without correction)
-    if(any(eigen(Omega)$value<=0)){
-        stop("the residual variance-covariance matrix is not positive definite \n")
-    }
-
-    if(is.null(index.Omega)){
-        n.corrected <- rep(n.cluster, n.endogenous)
-    }else{
-        n.corrected <- NULL
-    }
-    ls.Psi <- vector(mode = "list", length = n.cluster)
-
-    Omega.adj <- Omega
-    if(!adjust.n){
-       epsilon.adj <- epsilon
-    }
-
-    if(trace>0){
-        cat("* Reconstruct estimated information matrix ")
-    }
-
-    iVcov.param <- .vcov2(dmu = dmu,
-                          dOmega = dOmega,
-                          Omega = Omega,
-                          n.corrected = n.corrected,
-                          leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
-                          grid.meanparam = grid.meanparam,
-                          n.grid.meanparam = n.grid.meanparam,
-                          grid.varparam = grid.varparam,
-                          n.grid.varparam = n.grid.varparam,
-                          name.param = name.param,
-                          n.param = n.param,
-                          attr.info = TRUE)
-    iInfo <- attr(iVcov.param,"information")
-    if(trace>0){
-        cat("- done \n")
-    }
-    
-    ## ** Loop    
-    if(adjust.Omega || adjust.n){
-        if(trace>0){
-            cat("* iterative small sample correction: ")
-        }
-        iIter <- 0
-        iTol <- Inf
-        Omega_save <- Omega
-        iOmega.adj <- Omega.adj
-    }else{
-        iIter <- Inf
-        iTol <- -Inf        
-    }
-    
-    while(iIter < n.iter & iTol > tol){
-        if(trace>0){
-            cat("*")
-        }
-
-        ## *** Step (i-ii): compute individual bias, expected bias
-        Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
-                      dimnames = list(name.endogenous, name.endogenous))
-        M.countCluster <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
-                                 dimnames = list(name.endogenous, name.endogenous))
-        for(iC in 1:n.cluster){
-            ## individual bias
-            ls.Psi[[iC]] <- t(ls.dmu[[iC]])  %*% iVcov.param %*% ls.dmu[[iC]]
-            ## cumulated bias            
-            if(is.null(index.Omega)){
-                Psi <- Psi + ls.Psi[[iC]]
-                M.countCluster <- M.countCluster + 1
-            }else{
-                Psi[index.Omega[[iC]],index.Omega[[iC]]] <- Psi[index.Omega[[iC]],index.Omega[[iC]]] + ls.Psi[[iC]]
-                M.countCluster[index.Omega[[iC]],index.Omega[[iC]]] <- M.countCluster[index.Omega[[iC]],index.Omega[[iC]]] + 1
-            }
-        }
-
-        ## update
-        for(iPsi in 1:length(Psi)){
-            if(M.countCluster[iPsi]>0){
-                Psi[iPsi] <- Psi[iPsi]/M.countCluster[iPsi]
-            }
-        }
+    for(iP in 1:n.pattern){ ## iP <- 1
+        iY <- unique.pattern[iP,]
         
-        ## *** Step (iii): compute leverage
-        if(adjust.n){
-            epsilon.adj <- .adjustResiduals(Omega = Omega.adj,
-                                            Psi = Psi,
-                                            epsilon = epsilon,
-                                            index.Omega = index.Omega,
-                                            name.endogenous = name.endogenous,
-                                            n.endogenous = n.endogenous,
-                                            n.cluster = n.cluster)
+        for(iC in missing.pattern[[iP]]){ ## iC <- 1
+            ## individual bias
+            iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
 
-            leverage <- .adjustLeverage(Omega = Omega.adj,
-                                        epsilon = epsilon.adj,
-                                        ls.dmu = ls.dmu,
-                                        dOmega = dOmega,
-                                        vcov.param = iVcov.param,
-                                        index.Omega = index.Omega,
-                                        name.endogenous = name.endogenous,
+            ## cumulated bias            
+            Psi[iY,iY] <- Psi[iY,iY] + iPsi
+            n.Psi[iY,iY] <- n.Psi[iY,iY] + 1
+        }
+    }
+
+    ## take the average
+    Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
+        
+    ## ** Step (iii): compute corrected residuals and effective sample size
+    if(algorithm == "2"){
+        epsilon.adj <- .adjustResiduals(Omega = Omega,
+                                        Psi = Psi,
+                                        epsilon = epsilon,
+                                        name.pattern = name.pattern,
+                                        missing.pattern = missing.pattern,
+                                        unique.pattern = unique.pattern,
+                                        endogenous = endogenous,
                                         n.endogenous = n.endogenous,
-                                        name.varparam = name.varparam,
-                                        n.varparam = n.varparam,
                                         n.cluster = n.cluster)
 
-            n.corrected <- rep(n.cluster, n.endogenous) - colSums(leverage, na.rm = TRUE)
-        }
+        leverage.adj <- .leverage2(Omega = Omega,
+                                   epsilon = epsilon.adj,
+                                   dmu = dmu,
+                                   dOmega = dOmega,
+                                   name.pattern = name.pattern,
+                                   missing.pattern = missing.pattern,
+                                   unique.pattern = unique.pattern,
+                                   endogenous = endogenous,
+                                   n.endogenous = n.endogenous,
+                                   param.var = param.var,
+                                   n.param.var = length(param.var),
+                                   n.cluster = n.cluster)
+
+     
+    }else{
+        epsilon.adj <- epsilon
+        leverage.adj <- leverage
+    }
         
-        ## *** Step (v): correct residual covariance matrix, estimates, and derivatives
-        if(adjust.Omega){
-            ## corrected residual covariance variance
-            Omega.adj <- Omega + Psi
-            
-            ## correct estimates
-            object$conditionalMoment <- .adjustMoment(object, Omega = Omega.adj)
-            dOmega <- object$conditionalMoment$dOmega
-            ## conditionalMoment.adj$param - coef(object)
-           
-        }
+    ## ** Step (iv): bias-corrected residual covariance matrix
+    Omega.adj <- Omega + Psi
 
-        ## *** Step (vii): expected information matrix
-        iVcov.param <- .vcov2(dmu = dmu,
-                              dOmega = dOmega,
-                              Omega = Omega,
-                              n.corrected = n.corrected,
-                              leverage = leverage, index.Omega = index.Omega, n.cluster = n.cluster,
-                              grid.meanparam = grid.meanparam,
-                              n.grid.meanparam = n.grid.meanparam,
-                              grid.varparam = grid.varparam,
-                              n.grid.varparam = n.grid.varparam,
-                              name.param = name.param,
-                              n.param = n.param,
-                              attr.info = TRUE)
-        iInfo <- attr(iVcov.param,"information")
-        
-        ## *** Update cv
-        iIter <- iIter + 1
-        iTol <- norm(Omega.adj-Omega_save, type = "F")
-        Omega_save <- Omega.adj
-        ## cat("Omega.adj: ",Omega.adj," | n:",n.corrected," | iTol:",iTol,"\n")
-    }
-    
-    ## ** Post processing
-    if(!is.infinite(iIter)){
+    ## ** Step (v): bias-corrected variance parameters
 
-        if(iTol > tol){
-            warning("small sample correction did not reach convergence after ",iIter," iterations \n")
-
-            if(trace>0){
-                cat(" - incomplete \n")
-            }
-        }else{
-            if(trace>0){
-                cat(" - done \n")
-            }
-        }
-        
-    }
-
-    vcov.param <- try(chol2inv(chol(iInfo)), silent = TRUE)
-    if("try-error" %in% class(vcov.param)){
-        errorMessage <- vcov.param
-        vcov.param <- solve(iInfo)
-        attr(vcov.param, "warning") <- errorMessage
-    }
-    dimnames(vcov.param) <- dimnames(iInfo)
-
-    ## update object
-    object$conditionalMoment$Omega <- Omega.adj
-    object$dVcov <- list(param = object$conditionalMoment$param,
-                         score = NULL,
-                         vcov.param = vcov.param,
-                         dVcov.param = NULL,
-                         Omega = Omega.adj,
-                         residuals = epsilon.adj,
-                         leverage = leverage,
-                         n.corrected = rep(n.cluster, n.endogenous) - colSums(leverage, na.rm = TRUE),
-                         opt = list(objective = iTol, iterations = iIter, convergence = (iTol <= tol), grid.meanparam = grid.meanparam, grid.varparam = grid.varparam))
-
-    ## ** Export
-    return(object)
-}
-
-## * .adjustMoment
-`.adjustMoment` <-
-    function(object, ...) UseMethod(".adjustMoment")
-
-## * .adjustMoment.lm
-.adjustMoment.lm <- function(object, Omega){
-
-    object$conditionalMoment$param["sigma2"] <- as.double(Omega)
-    return(object$conditionalMoment)
-    
-}
-
-## * .adjustMoment.gls
-.adjustMoment.gls <- function(object, Omega, ...){
-
-    ## ** extract information
-    class.cor <- object$conditionalMoment$skeleton$class.cor
-    class.var <- object$conditionalMoment$skeleton$class.var
-    name.corcoef <- object$conditionalMoment$skeleton$name.corcoef
-    name.otherVar <- object$conditionalMoment$skeleton$name.otherVar
-    name.varcoef <- object$conditionalMoment$skeleton$name.varcoef
-    ref.group <- object$conditionalMoment$skeleton$ref.group
-    M.corcoef <- object$conditionalMoment$skeleton$M.corcoef
-    name.endogenous <- object$conditionalMoment$skeleton$name.endogenous
-    n.endogenous <- object$conditionalMoment$skeleton$n.endogenous
-    
-    ## ** identify parameters
-
-    if(identical(class.var, "NULL")){
-        object$conditionalMoment$param["sigma2"] <- mean(diag(Omega))
-    }else{            
-        index.Sigma2 <- which(ref.group %in% name.otherVar == FALSE)
-        object$conditionalMoment$param["sigma2"] <- mean(diag(Omega)[index.Sigma2])
-
-        vec.k <- tapply(diag(Omega)/Omega[index.Sigma2,index.Sigma2], ref.group, mean)            
-        object$conditionalMoment$param[name.otherVar] <- vec.k[name.otherVar]
-    }
-
-    if(identical(class.cor, "NULL")){
-        ## do nothing
-    }else if("corCompSymm" %in% class.cor){
-        object$conditionalMoment$param[name.corcoef] <- mean(stats::cov2cor(Omega)[lower.tri(Omega)])
-    }else if("corSymm" %in% class.cor){
-        vec.cor <- tapply(stats::cov2cor(Omega)[lower.tri(Omega)],
-                          M.corcoef[lower.tri(Omega)],
-                          mean)            
-        object$conditionalMoment$param[name.corcoef] <- vec.cor[name.corcoef]
-    } 
-
-    ## ** update conditional moments
-    object$conditionalMoment$Omega <- .getVarCov2(object,
-                                                  param = object$conditionalMoment$param,
-                                                  attr.param = attributes(object$conditionalMoment$param),
-                                                  name.endogenous = name.endogenous,
-                                                  n.endogenous = n.endogenous,
-                                                  ref.group = ref.group)
-    
-    ## ** update first derivative of the conditional variance
-    object$conditionalMoment$dOmega <- skeletonDtheta(object, class.cor = class.cor, class.var = class.var, 
-                                                      sigma2.base0 = object$conditionalMoment$skeleton$sigma2.base0,
-                                                      Msigma2.base0 = object$conditionalMoment$skeleton$Msigma2.base0,
-                                                      M.corcoef = M.corcoef, ref.group = ref.group,
-                                                      index.lower.tri = object$conditionalMoment$skeleton$index.lower.tri,
-                                                      indexArr.lower.tri = object$conditionalMoment$skeleton$indexArr.lower.tri,
-                                                      name.endogenous =  name.endogenous, n.endogenous = n.endogenous,
-                                                      cluster = object$conditionalMoment$skeleton$cluster,
-                                                      n.cluster = object$conditionalMoment$skeleton$n.cluster,
-                                                      var.coef = object$conditionalMoment$param[name.varcoef],
-                                                      name.varcoef = name.varcoef, name.otherVar = name.otherVar,
-                                                      n.varcoef = object$conditionalMoment$skeleton$n.varcoef,
-                                                      cor.coef = object$conditionalMoment$param[name.corcoef],
-                                                      name.corcoef = name.corcoef,
-                                                      n.corcoef = object$conditionalMoment$skeleton$n.corcoef,
-                                                      update.mean = FALSE, update.variance = TRUE, ...)$dOmega
-
-    ## ** export
-    ## names(object$conditionalMoment)
-    ## object$conditionalMoment$param["sigma2"] <- as.double(Omega)
-    return(object$conditionalMoment)
-    
-}
-
-## * .adjustMoment.lme
-.adjustMoment.lme <- function(object, Omega){
-
-    name.rancoef <- attr(object$conditionalMoment$param,"ran.coef")
-    
-    ## ** Identify random effect
-    if(!identical(object$conditionalMoment$skeleton$class.cor,"NULL")){
-        stop("Does not know how to identify the correlation coefficients when corStruct is not NULL \n")
-    }
-    object$conditionalMoment$param[name.rancoef] <- mean(Omega[lower.tri(Omega)])
-
-    ## ** save derivative regarding random effect
-    save <- object$conditionalMoment$dOmega$ranCoef1
-
-    ## ** compute moments 
-    conditionalMoment <- .adjustMoment.gls(object, Omega = Omega - object$conditionalMoment$param["ranCoef1"],
-                                           name.rancoef = name.rancoef)
-
-    ## ** restaure derivative regarding random effect
-    conditionalMoment$dOmega$ranCoef1 <- save
-    return(conditionalMoment)
-}
-
-## * .adjustMoment.lvmfit
-.adjustMoment.lvmfit <- function(object, Omega){
-
-    ## ** extract info
+    ## *** extract info
     n.endogenous <- NROW(Omega)
     df.param <- object$conditionalMoment$df.param
     
@@ -386,10 +129,10 @@
     dLambda <- object$conditionalMoment$dMoment.init$dLambda
     dB <- object$conditionalMoment$dMoment.init$dB
 
-    ## ** right hand side of the equation
+    ## *** right hand side of the equation
     eq.rhs <- Omega[index.matrix$index]
 
-    ## ** left hand side of the equation
+    ## *** left hand side of the equation
     if(NROW(index.Psi)>0){
         n.index.Psi <- NROW(index.Psi)
         n.latent <- NROW(skeleton$Psi)        
@@ -408,7 +151,7 @@
         }
     }
 
-    ## ** solve equation
+    ## *** solve equation
     ## microbenchmark::microbenchmark(svd = {asvd <- svd(A) ; asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs;},
     ## qr = qr.coef(qr(A), eq.rhs),
     ## Rcpp = OLS_cpp(A, eq.rhs),
@@ -438,28 +181,13 @@
     ## ** update parameters in conditional moments
     object$conditionalMoment$param[name.var] <- setNames(iSolution, name.var)
 
-    ## ** update conditional moments
-    object$conditionalMoment$skeleton$toUpdate <- object$conditionalMoment$adjustMoment$toUpdate
-    object$conditionalMoment$value <- skeleton.lvmfit(object,
-                                                      param = param,
-                                                      data = NULL,
-                                                      name.endogenous = name.endogenous,
-                                                      name.latent = name.latent)
-    object$conditionalMoment$Omega <- Omega
-    
-
-    ## ** update first derivative of the conditional variance
-    if(length(index.LambdaB)>0){
-        object$conditionalMoment$dMoment.init$toUpdate[] <- FALSE
-        object$conditionalMoment$dMoment.init$toUpdate[index.LambdaB] <- TRUE
-
-        object$conditionalMoment$dOmega <- skeletonDtheta.lvmfit(object,
-                                                                name.endogenous = name.endogenous,
-                                                                name.latent = name.latent)$dOmega
-    }
-    ## ** export
-    return(object$conditionalMoment)
+    ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the level above
+        
+    ## ** Export
+    return(newparam)
 }
+
+
 
 ##----------------------------------------------------------------------
 ### estimate2.R ends here

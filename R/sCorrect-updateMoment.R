@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: dec 12 2019 (11:43) 
+## Last-Updated: dec 13 2019 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 142
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,9 +18,9 @@
 ## * updateMoment
 #' @rdname updateMoment
 updateMoment <- function(skeleton, value, toUpdate,
+                         name.pattern, unique.pattern,
                          param, endogenous, latent, n.cluster){
     if(TRUE){cat("updateMoment \n")}
-
 
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)
@@ -94,6 +94,9 @@ updateMoment <- function(skeleton, value, toUpdate,
         value$mu <- value$mu + value$alpha.XGamma %*% value$iIB.Lambda
     }
 
+    ## ** update residuals
+    value$residuals <- skeleton$endogenous - value$mu
+    
     ## ** Compute variance
     value$Omega <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
                           dimnames = list(endogenous,endogenous))
@@ -104,6 +107,14 @@ updateMoment <- function(skeleton, value, toUpdate,
     if(!is.null(value$Psi)){
         value$Omega <- value$Omega + value$tLambda.tiIB.Psi.iIB %*% value$Lambda
     }
+
+    value$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
+        iIndex <- which(unique.pattern[iM,]==1)
+        return(value$Omega[iIndex,iIndex,drop=FALSE])
+    })
+    names(value$Omega.missing.pattern) <- name.pattern
+    value$OmegaM1.missing.pattern <- lapply(value$Omega.missing.pattern, solve)
+
     ## ** Export
     return(value)
 }
@@ -207,8 +218,8 @@ updateD2Moment <- function(moment, skeleton, param){
     if(TRUE){cat("updateD2Moment \n")}
 
     ## ** Import information
-    d2mu <- skeleton$dmu.dparam
-    d2Omega <- skeleton$dOmega.dparam
+    d2mu <- skeleton$d2mu.dparam
+    d2Omega <- skeleton$d2Omega.dparam
 
     dalpha <- skeleton$dmat.dparam$alpha
     dLambda <- skeleton$dmat.dparam$Lambda
@@ -234,7 +245,7 @@ updateD2Moment <- function(moment, skeleton, param){
 
     ## ** Compute partial derivative regarding the mean
     if(length(grid.mean$alpha.B)>0){
-        for(iP in 1:length(grid.mean$alpha.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$alpha.B)){ # iP <- 1
             iName1 <- grid.mean$alpha.B[iP,"alpha"]
             iName2 <- grid.mean$alpha.B[iP,"B"]
             d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
@@ -242,7 +253,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
     
     if(length(grid.mean$alpha.Lambda)>0){
-        for(iP in 1:length(grid.mean$alpha.Lambda)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$alpha.Lambda)){ # iP <- 1
                 iName1 <- grid.mean$alpha.Lambda[iP,"alpha"]
                 iName2 <- grid.mean$alpha.Lambda[iP,"Lambda"]
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dLambda[[iName2]]
@@ -250,7 +261,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.mean$Gamma.B)>0){
-        for(iP in 1:length(grid.mean$Gamma.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$Gamma.B)){ # iP <- 1
                 iName1 <- grid.mean$Gamma.B[iP,"Gamma"]
                 iName2 <- grid.mean$Gamma.B[iP,"B"]
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dB[[iName2]] %*% iIB.Lambda
@@ -258,7 +269,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.mean$Gamma.Lambda)>0){
-        for(iP in 1:length(grid.mean$Gamma.Lambda)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$Gamma.Lambda)){ # iP <- 1
                 iName1 <- grid.mean$Gamma.Lambda[iP,"Gamma"]
                 iName2 <- grid.mean$Gamma.Lambda[iP,"Lambda"]                
                 d2mu[[iName1]][[iName2]] <- d2mu[[iName1]][[iName2]] %*% iIB %*% dLambda[[iName2]]
@@ -266,7 +277,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.mean$Lambda.B)>0){
-        for(iP in 1:length(grid.mean$Lambda.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$Lambda.B)){ # iP <- 1
                 iName1 <- grid.mean$Lambda.B[iP,"Lambda"]
                 iName2 <- grid.mean$Lambda.B[iP,"B"]
                 d2mu[[iName1]][[iName2]] <- alpha.XGamma.iIB %*% dB[[iName2]] %*% iIB %*% dLambda[[iName1]]
@@ -274,7 +285,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.mean$B.B)>0){
-        for(iP in 1:length(grid.mean$B.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.mean$B.B)){ # iP <- 1
                 iName1 <- grid.mean$B.B[iP,"B1"]
                 iName2 <- grid.mean$B.B[iP,"B2"]
 
@@ -286,7 +297,7 @@ updateD2Moment <- function(moment, skeleton, param){
 
     ## ** Compute partial derivative regarding the variance
     if(length(grid.var$Psi.Lambda)>0){
-        for(iP in 1:length(grid.var$Psi.Lambda)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$Psi.Lambda)){ # iP <- 1
             iName1 <- grid.var$Psi.Lambda[iP,"Psi"]
             iName2 <- grid.var$Psi.Lambda[iP,"Lambda"]
 
@@ -296,7 +307,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
     
     if(length(grid.var$Psi.B)>0){
-        for(iP in 1:length(grid.var$Psi.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$Psi.B)){ # iP <- 1
                 iName1 <- grid.var$Psi.B[iP,"Psi"]
                 iName2 <- grid.var$Psi.B[iP,"B"]
 
@@ -306,7 +317,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
     
     if(length(grid.var$Lambda.B)>0){
-        for(iP in 1:length(grid.var$Lambda.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$Lambda.B)){ # iP <- 1
                 iName1 <- grid.var$Lambda.B[iP,"Lambda"]
                 iName2 <- grid.var$Lambda.B[iP,"B"]
 
@@ -318,7 +329,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$Lambda.Lambda)>0){
-        for(iP in 1:length(grid.var$Lambda.Lambda)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$Lambda.Lambda)){ # iP <- 1
             iName1 <- grid.var$Lambda.Lambda[iP,"Lambda1"]
             iName2 <- grid.var$Lambda.Lambda[iP,"Lambda2"]
                 
@@ -328,7 +339,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$B.B)>0){
-        for(iP in 1:length(grid.var$B.B)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$B.B)){ # iP <- 1
             iName1 <- grid.var$B.B[iP,"B1"]
             iName2 <- grid.var$B.B[iP,"B2"]
 
@@ -340,7 +351,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$sigma2.cor)>0){
-        for(iP in 1:length(grid.var$sigma2.cor)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$sigma2.cor)){ # iP <- 1
             iName1 <- grid.var$sigma2.cor[iP,"sigma2"]
             iName2 <- grid.var$sigma2.cor[iP,"cor"]
             d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (dcor[[iName2]]/param[iName2])
@@ -348,7 +359,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$sigma2.sigma2k)>0){
-        for(iP in 1:length(grid.var$sigma2.sigma2k)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$sigma2.sigma2k)){ # iP <- 1
             iName1 <- grid.var$sigma2.sigma2k[iP,"sigma2"]
             iName2 <- grid.var$sigma2.sigma2k[iP,"sigma2k"]
 
@@ -358,7 +369,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$cor.sigma2k)>0){
-        for(iP in 1:length(grid.var$cor.sigma2k)){ # iP <- 1
+        for(iP in 1:NROW(grid.var$cor.sigma2k)){ # iP <- 1
             iName1 <- grid.var$cor.sigma2k[iP,"cor"]
             iName2 <- grid.var$cor.sigma2k[iP,"sigma2k"]
 
@@ -368,7 +379,7 @@ updateD2Moment <- function(moment, skeleton, param){
     }
 
     if(length(grid.var$sigma2k.sigma2k)>0){
-        for(iP in 1:length(grid.var$sigma2k.sigma2k)){ # iP <- 2
+        for(iP in 1:NROW(grid.var$sigma2k.sigma2k)){ # iP <- 3
             iName1 <- grid.var$sigma2k.sigma2k[iP,"sigma2k1"]
             iName2 <- grid.var$sigma2k.sigma2k[iP,"sigma2k2"]
 

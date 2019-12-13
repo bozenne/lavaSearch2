@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: dec 12 2019 (14:34) 
+## Last-Updated: dec 13 2019 (13:30) 
 ##           By: Brice Ozenne
-##     Update #: 1430
+##     Update #: 1446
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -336,7 +336,16 @@ skeleton <- function(object, X,
                   "B" = "B" %in% type.param$detail,
                   "Psi" = ("Psi_cov" %in% type.param$detail) || ("Psi_var" %in% type.param$detail)
                   )    
-    
+
+    ## ** residuals
+    theta.param$endogenous <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
+                                    dimnames = list(NULL, endogenous))
+    for(iEndo in 1:length(endogenous)){ ## iEndo <- 1
+        iIndexLong <- obsByEndoInX[[endogenous[iEndo]]]
+        iIndexWide <- X[iIndexLong,"XXclusterXX"]
+        theta.param$endogenous[iIndexWide,endogenous[iEndo]] <- X[iIndexLong,"XXvalueXX"]
+    }
+
     ## ** export
     return(list(param = theta.param,
                 value = theta.value,
@@ -718,12 +727,33 @@ skeletonDtheta2 <- function(object){
             }
         }
     }
+
+    ## ** Parameters in dInformation
+    ## all but nu and K parameters
+    type.Uparam <- type.param[!is.na(type.param$originalLink),]
+    if(any(c("Lambda","B") %in% type.Uparam$details)){
+        type.dInformation <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")
+    }else{ ## mean-variance model
+        type.dInformation <- c("Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")
+    }
+    name.param.dInformation <- type.Uparam[type.Uparam$detail %in% type.dInformation,"param"]
+    
+
+    grid.dInformation <- expand.grid(X = object$Uparam, Y = object$Uparam, Z = name.param.dInformation, stringsAsFactors = FALSE)
+    grid.dInformation$level <- apply(grid.dInformation,1,function(iX){paste0(sort(iX),collapse="")})
+    grid.dInformation$duplicated <- duplicated(grid.dInformation$level)
+
+    level2row <- setNames(which(grid.dInformation$duplicated==FALSE),grid.dInformation[grid.dInformation$duplicated==FALSE,"level"])
+    grid.dInformation$reference <- level2row[grid.dInformation$level]
+    
     
     ## ** Export
     return(c(object,
              list(d2mu.dparam = d2mu,
                   d2Omega.dparam = d2Omega,
-                  grid.d2moment = grid.param))
+                  grid.d2moment = grid.param,
+                  name.param.dInformation = name.param.dInformation,
+                  grid.dInformation = grid.dInformation))
            )
 }
 

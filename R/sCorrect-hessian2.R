@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: dec 12 2019 (14:39) 
+## Last-Updated: dec 13 2019 (08:45) 
 ##           By: Brice Ozenne
-##     Update #: 25
+##     Update #: 33
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -61,8 +61,6 @@
         iOmegaM1 <- OmegaM1[[iPattern]]
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
-
-        iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
         iEpsilon <- epsilon[iIndex,iY,drop=FALSE]
         
         ## *** second derivative relative to the mean parameters
@@ -80,7 +78,6 @@
             hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] + term1 + term2
             hessian[iP2,iP1,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE]
         }
-browser()
         ## *** second derivative relative to the variance parameters
         for(iG in index.var){ # iG <- 2
             iP1 <- grid.var[iG,1]
@@ -92,13 +89,13 @@ browser()
                 term1b <- diag(iOmegaM1 %*% d2Omega[[iP1]][[iP2]][iY,iY,drop=FALSE])
                 term3 <- 1/2 * rowSums((iEpsilon %*% iOmegaM1 %*% d2Omega[[iP1]][[iP2]][iY,iY,drop=FALSE] %*% iOmegaM1) * iEpsilon)
             }else if(grid.var[iG,"d2.21"]){
-                term1b <- diag(iOmegaM1 %*% d2Omega[[iP2]][[iP1]])
+                term1b <- diag(iOmegaM1 %*% d2Omega[[iP2]][[iP1]][iY,iY,drop=FALSE])
                 term3 <- 1/2 * rowSums((iEpsilon %*% iOmegaM1 %*% d2Omega[[iP2]][[iP1]][iY,iY,drop=FALSE] %*% iOmegaM1) * iEpsilon)
             }else{
                 term1b <- 0
                 term3 <- 0
             }
-            hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] - 1/2 * rowSums( sweep(1-leverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+            hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] - 1/2 * rowSums( sweep(1-leverage[iIndex,iY,drop=FALSE], FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
             hessian[iP2,iP1,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE]
         }
         

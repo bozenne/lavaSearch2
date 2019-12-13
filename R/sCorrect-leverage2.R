@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: dec 11 2019 (13:53) 
+## Last-Updated: dec 13 2019 (17:28) 
 ##           By: Brice Ozenne
-##     Update #: 46
+##     Update #: 50
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -111,29 +111,25 @@ leverage2.lme <- leverage2.lm
 leverage2.lvmfit <- leverage2.lm
 
 ## * .leverage2
-.leverage2 <- function(Omega, epsilon, ls.dmu, dOmega, vcov.param,
-                       index.Omega,
-                       name.endogenous, n.endogenous, name.varparam, n.varparam, n.cluster){
+.leverage2 <- function(Omega, epsilon, dmu, dOmega, vcov.param,
+                       name.pattern, missing.pattern, unique.pattern,
+                       endogenous, n.endogenous, param.var, n.param.var, n.cluster){
 
-    ## ** prepare
+    n.pattern <- length(unique.pattern)        
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
-                       dimnames = list(NULL, name.endogenous))
+                       dimnames = list(NULL, endogenous))
 
-    if(is.null(index.Omega)){
-        iIndex <- 1:n.endogenous
-        iOmegaM1 <- chol2inv(chol(Omega)) ## solve(Omega)
-        iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x %*% iOmegaM1})
-    }
-
-    ## ** compute
-    for(iC in 1:n.cluster){                 # iC <- 1
-        if(!is.null(index.Omega)){
-            iIndex <- index.Omega[[iC]]
-            iOmegaM1 <- chol2inv(chol(Omega[iIndex,iIndex,drop=FALSE]))
-            iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iIndex,iIndex] %*% iOmegaM1})
-        }
+    for(iP in 1:n.pattern){ ## iP <- 1 
+        iIndex <- missing.pattern[[iP]]
+        iY <- which(unique.pattern[iP,]==1)
+        browser()
+        
+        iOmega <- Omega[iY,iY,drop=FALSE]
+        iOmegaM1 <- chol2inv(chol(iOmega))
+        iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iY,iY,drop=FALSE] %*% iOmegaM1})
+    
         ## derivative of the score regarding Y
-        scoreY <- ls.dmu[[iC]] %*% iOmegaM1
+        scoreY <- iOmegaM1 %*% dmu[,iY,iIndex]
 
         for(iP in 1:n.varparam){ ## iP <- 1
             scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon[iC,iIndex] %*% iOmegaM1.dOmega.OmegaM1[[name.varparam[iP]]]
