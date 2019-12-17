@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr 26 2018 (10:37) 
 ## Version: 
-## Last-Updated: feb 11 2019 (11:03) 
+## Last-Updated: dec 17 2019 (11:26) 
 ##           By: Brice Ozenne
-##     Update #: 6
+##     Update #: 7
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,13 +41,13 @@ table(d$Id)
 ## ** model fit and sCorrect
 test_that("lm - robust vcov",{
     e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
-    sCorrect(e.lvm) <- FALSE
+
     eR.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d, cluster ="Id")
     
     n.Id <- length(unique(d$Id))
     GS <- vcov(eR.lvm)/(n.Id/(n.Id-1))
-    test <- crossprod(iid2(e.lvm, cluster = "Id"))
-    expect_true(all(abs(GS/test-1)<1e-2))
+    test <- crossprod(iid2(e.lvm, cluster = "Id", ssc = NULL))
+    expect_true(all(abs(GS/test-1)<1e-3))
     ## GS/test
 
     summary(eR.lvm)$coef

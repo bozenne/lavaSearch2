@@ -1,11 +1,11 @@
-### estimate2.R --- 
+### sCorrect-sscResiduals.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: dec 13 2019 (17:26) 
+## Last-Updated: dec 17 2019 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 898
+##     Update #: 917
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,67 @@
 ## 
 ### Code:
 
-## * estimate2
+## * .init_sscResiduals
+.init_sscResiduals <- function(object,...){
+
+    out <- list()
+
+    ## ** extract info
+    skeleton <- object$sCorrect$skeleton
+    endogenous <- object$sCorrect$endogenous
+    latent <- object$sCorrect$latent
+    
+    type <- object$sCorrect$skeleton$type
+    type <- type[!is.na(type$param),]
+    type <- type[type$detail %in% c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","sigma2","sigma2k","cor"),]
+
+    Omega <- object$sCorrect$moment$Omega
+    out$name.var <- unique(type$param)
+    out$n.var <- length(out$name.var)
+
+    ## ** Omega  
+    out$index.upper.tri <- data.frame(index = which(upper.tri(Omega, diag = TRUE)),
+                                      which(upper.tri(Omega, diag = TRUE), arr.ind = TRUE)
+                                      )
+    out$name.rhs <- paste(endogenous[out$index.upper.tri[,"row"]],
+                          lava.options()$symbols[2],
+                          endogenous[out$index.upper.tri[,"col"]],
+                          sep = "")
+    out$n.rhs <- length(out$name.rhs)
+
+    ## ** Sigma 
+    out$A <- matrix(0, nrow = out$n.rhs, ncol = out$n.var,
+                    dimnames = list(out$name.rhs, out$name.var))
+    ## *** lvm
+    if(!is.null(skeleton$param$Sigma)){
+        vec.Sigma <- skeleton$param$Sigma[out$index.upper.tri$index]
+        for(i in which(!is.na(vec.Sigma))){
+            out$A[i, vec.Sigma[i]] <- 1
+        }
+    }
+
+    ## *** corStruct or varStruct
+    if(!is.null(skeleton$param$SigmaValue)){
+    }
+    browser()
+    ## ** Psi
+    if(length(latent)>0){
+        
+        index.Psi <- rbind(cbind(index = which(value$Psi!=0),
+                                 which(value$Psi!=0, arr.ind = TRUE)),
+                           cbind(index = which(is.na(value$Psi)),
+                                 which(is.na(value$Psi), arr.ind = TRUE))
+                           )
+    }else{
+        index.Psi <- NULL        
+    }
+
+    return(list(index.Omega = index.Omega,
+                index.Psi = index.Psi,
+                A = A))
+}
+
+## * .sscResiduals
 #' @title Compute Bias Corrected Quantities.
 #' @description Compute bias corrected residuals variance covariance matrix
 #' and information matrix.
@@ -39,8 +99,10 @@
     endogenous <- object$sCorrect$endogenous
     n.endogenous <- length(endogenous)
     n.cluster <- object$sCorrect$cluster$n.cluster
+    param <- object$sCorrect$skeleton$Uparam
     param.mean <- object$sCorrect$skeleton$Uparam.mean
     param.var <- object$sCorrect$skeleton$Uparam.var
+    param.hybrid <- intersect(param.mean,param.var)
     missing.pattern <- object$sCorrect$missing$pattern
     name.pattern <- object$sCorrect$missing$name.pattern
     n.pattern <- length(name.pattern)
@@ -87,13 +149,15 @@
                                    epsilon = epsilon.adj,
                                    dmu = dmu,
                                    dOmega = dOmega,
+                                   vcov.param = vcov.param,
                                    name.pattern = name.pattern,
                                    missing.pattern = missing.pattern,
                                    unique.pattern = unique.pattern,
                                    endogenous = endogenous,
                                    n.endogenous = n.endogenous,
-                                   param.var = param.var,
-                                   n.param.var = length(param.var),
+                                   param = param,
+                                   param.mean = param.mean,
+                                   param.hybrid = param.hybrid,
                                    n.cluster = n.cluster)
 
      
@@ -104,30 +168,8 @@
         
     ## ** Step (iv): bias-corrected residual covariance matrix
     Omega.adj <- Omega + Psi
-
+    browser()
     ## ** Step (v): bias-corrected variance parameters
-
-    ## *** extract info
-    n.endogenous <- NROW(Omega)
-    df.param <- object$conditionalMoment$df.param
-    
-    index.matrix <- object$conditionalMoment$adjustMoment$index.matrix
-    index.Psi <- object$conditionalMoment$adjustMoment$index.Psi
-    A <- object$conditionalMoment$adjustMoment$A
-    name.var <- object$conditionalMoment$adjustMoment$name.var
-    n.rhs <- object$conditionalMoment$adjustMoment$n.rhs
-    index.LambdaB <- object$conditionalMoment$adjustMoment$index.LambdaB
-    name.endogenous <- object$conditionalMoment$adjustMoment$name.endogenous
-    name.latent <- object$conditionalMoment$adjustMoment$name.latent
-    
-    skeleton <- object$conditionalMoment$skeleton
-
-    param <- object$conditionalMoment$param
-    Lambda <- object$conditionalMoment$value$Lambda
-    iIB <- object$conditionalMoment$value$iIB
-    iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
-    dLambda <- object$conditionalMoment$dMoment.init$dLambda
-    dB <- object$conditionalMoment$dMoment.init$dB
 
     ## *** right hand side of the equation
     eq.rhs <- Omega[index.matrix$index]
@@ -178,6 +220,29 @@
         }
     }
 
+
+    ##     n.endogenous <- NROW(Omega)
+    ## df.param <- object$conditionalMoment$df.param
+    
+    ## index.matrix <- object$conditionalMoment$adjustMoment$index.matrix
+    ## index.Psi <- object$conditionalMoment$adjustMoment$index.Psi
+    ## A <- object$conditionalMoment$adjustMoment$A
+    ## name.var <- object$conditionalMoment$adjustMoment$name.var
+    ## n.rhs <- object$conditionalMoment$adjustMoment$n.rhs
+    ## index.LambdaB <- object$conditionalMoment$adjustMoment$index.LambdaB
+    ## name.endogenous <- object$conditionalMoment$adjustMoment$name.endogenous
+    ## name.latent <- object$conditionalMoment$adjustMoment$name.latent
+    
+    ## skeleton <- object$conditionalMoment$skeleton
+
+    ## param <- object$conditionalMoment$param
+    ## Lambda <- object$conditionalMoment$value$Lambda
+    ## iIB <- object$conditionalMoment$value$iIB
+    ## iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
+    ## dLambda <- object$conditionalMoment$dMoment.init$dLambda
+    ## dB <- object$conditionalMoment$dMoment.init$dB
+
+    
     ## ** update parameters in conditional moments
     object$conditionalMoment$param[name.var] <- setNames(iSolution, name.var)
 
@@ -190,4 +255,4 @@
 
 
 ##----------------------------------------------------------------------
-### estimate2.R ends here
+### sCorrect-sscResiduals.R ends here

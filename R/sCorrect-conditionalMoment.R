@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 13 2019 (16:22) 
+## last-updated: dec 17 2019 (16:08) 
 ##           By: Brice Ozenne
-##     Update #: 1422
+##     Update #: 1434
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -64,7 +64,14 @@
 #' @keywords internal
 #' @export
 `conditionalMoment` <-
-  function(object, ...) UseMethod("conditionalMoment")
+    function(object,
+             initialize, first.order, second.order, usefit,
+             param = NULL,
+             data = NULL,
+             X = NULL,
+             cluster = NULL,
+             endogenous = NULL,
+             latent = NULL) UseMethod("conditionalMoment")
 
 ## * conditionalMoment.lm
 #' @rdname conditionalMoment
@@ -76,9 +83,8 @@ conditionalMoment.lm <- function(object,
                                  X = NULL,
                                  cluster = NULL,
                                  endogenous = NULL,
-                                 latent = NULL,
-                                 ...){
-    if(TRUE){cat("conditionalMoment \n")}
+                                 latent = NULL){
+    if(lava.options()$debug){cat("conditionalMoment \n")}
 
     ## ** sanity checks
     if(first.order == FALSE && second.order == TRUE){
@@ -201,20 +207,21 @@ conditionalMoment.lm <- function(object,
         if(second.order){
             out$skeleton <- skeletonDtheta2(out$skeleton)
         }
+        
     }else{
         out <- object$sCorrect[c("endogenous","data","X","cluster","old2new.order", "missing", "skeleton")]
     }
-    
+
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            out$param <- coef2(object, ssc = FALSE, labels = 1)
+            out$param <- .coef2(object, labels = 1)[out$skeleton$Uparam]
         }else{
-            if(any(names(param) %in% out$skeleton$originalLink2param == FALSE)){
+            if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
                 stop("Incorrect name for the model parameters \n",
                      "Consider using the argument \'label\' set to 1 when calling stats::coef on the LVM \n")
             }
-            out$param <- param
+            out$param <- param[out$skeleton$Uparam]
         }
 
         ## *** conditional moments

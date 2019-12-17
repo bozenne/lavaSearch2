@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: dec 13 2019 (13:30) 
+## Last-Updated: dec 17 2019 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 1446
+##     Update #: 1460
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -78,7 +78,7 @@
 skeleton <- function(object, X,
                      endogenous, latent,
                      n.cluster, index.Omega){
-    if(TRUE){cat("skeleton \n")}
+    if(lava.options()$debug){cat("skeleton \n")}
     
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)
@@ -365,7 +365,7 @@ skeletonDtheta <- function(object, X,
                            endogenous, latent,
                            missing.pattern, unique.pattern, name.pattern,
                            n.cluster, index.Omega){
-    if(TRUE){cat("skeletonDtheta \n")}
+    if(lava.options()$debug){cat("skeletonDtheta \n")}
 
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)
@@ -576,7 +576,7 @@ skeletonDtheta <- function(object, X,
 ## * skeletonDtheta2
 #' @rdname skeleton
 skeletonDtheta2 <- function(object){
-    if(TRUE){cat("skeletonDtheta2 \n")}
+    if(lava.options()$debug){cat("skeletonDtheta2 \n")}
 
     type.param <- object$type[!is.na(object$type$param),,drop=FALSE]
     grid.param <- list()

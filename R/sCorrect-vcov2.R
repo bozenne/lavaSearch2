@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: dec 13 2019 (10:44) 
+## Last-Updated: dec 17 2019 (11:23) 
 ##           By: Brice Ozenne
-##     Update #: 8
+##     Update #: 11
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -64,10 +64,11 @@
 ## * vcov2.lm
 #' @rdname vcov2
 #' @export
-vcov2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE){
+vcov2.lm <- function(object, param = NULL, data = NULL,
+                     ssc = lava.options()$ssc){
     
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
     }
     
     return(.info2vcov(object$sCorrect$information))
@@ -92,7 +93,8 @@ vcov2.lvmfit <- vcov2.lm
 ## ** vcov2.sCorrect
 #' @rdname vcov2
 #' @export
-vcov2.sCorrect <- function(object, param = param, data = data, ssc = ssc){
+vcov2.sCorrect <- function(object, param = NULL, data = NULL,
+                           ssc = lava.options()$ssc){
     class(object) <- setdiff(class(object),"sCorrect")
     return(information2(object, param = param, data = data, ssc = ssc))
 }

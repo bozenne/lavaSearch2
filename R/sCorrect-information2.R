@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: dec 12 2019 (14:19) 
+## Last-Updated: dec 17 2019 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 345
+##     Update #: 351
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,10 +58,11 @@
 ## * information2.lm
 #' @rdname information2
 #' @export
-information2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE){
+information2.lm <- function(object, param = NULL, data = NULL,
+                            ssc = lava.options()$ssc){
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
     }
 
     return(object$sCorrect$information)
@@ -84,7 +85,8 @@ information2.lvmfit <- information2.lm
 
 ## * information.sCorrect
 #' @rdname score2
-information.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE){
+information.sCorrect <- function(object, param = NULL, data = NULL,
+                                 ssc = lava.options()$ssc){
     class(object) <- setdiff(class(object),"sCorrect")
     return(information2(object, param = param, data = data, ssc = ssc))
 }
@@ -102,7 +104,7 @@ information.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE){
                           missing.pattern, unique.pattern, name.pattern,
                           grid.mean, grid.var, name.param,
                           leverage, n.cluster){
-    if(TRUE){cat(".information2\n")}
+    if(lava.options()$debug){cat(".information2\n")}
     
     ## ** Prepare
     n.grid.mean <- NROW(grid.mean)

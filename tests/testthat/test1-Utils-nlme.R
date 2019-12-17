@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 16 2017 (10:36) 
 ## Version: 
-## Last-Updated: aug 21 2019 (18:19) 
+## Last-Updated: dec 17 2019 (11:19) 
 ##           By: Brice Ozenne
-##     Update #: 70
+##     Update #: 75
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,7 @@ if(FALSE){ ## already called in test-all.R
 }
 
 library(nlme)
-lava.options(symbols = c("~","~~"))
+lava.options(symbols = c("~","~~"), ssc = NULL, df = NULL)
 
 context("Utils-nlme")
 
@@ -43,21 +43,11 @@ dL$time.num <- as.numeric(dL$time)
 ## * t.test
 test_that("invariant to the order in the dataset", {
     e1.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Id),],
-                  weights = varIdent(form = ~Id|Gender),
-                  method = "ML")
-    
-    outGroup <- getGroups2(e1.gls, cluster = dW$Id)
-    outOmega <- getVarCov2(e1.gls, cluster = dW$Id)
-    index.cluster <- as.numeric(names(outGroup$index.endogenous))
-    expect_true(all(diff(index.cluster)>0))
-
-    e2.gls <- gls(Y1 ~ Gender, data = dW[order(dW$Gender),],
                   weights = varIdent(form = ~1|Gender),
                   method = "ML")
-    outGroup2 <- getGroups2(e2.gls, cluster = dW$Id)
-    outOmega2 <- getVarCov2(e2.gls, cluster = dW$Id)
-    index.cluster <- as.numeric(names(out2$index.Omega))
-    expect_true(all(diff(index.cluster)>0))
+
+    outGroup <- .getGroups2(e1.gls)
+    expect_equal(outGroup$index.cluster,1:50)
 })
 
 ## * Heteroschedasticity
@@ -66,9 +56,13 @@ e.gls <- nlme::gls(value ~ time + G + Gender,
                    data = dL, method = "ML")
 
 test_that("Heteroschedasticity", {
+    expect_equal(endogenous(e.gls), paste0("value",levels(dL$time)))
+    
     vec.sigma <- c(1,coef(e.gls$modelStruct$varStruct, unconstrained = FALSE))
+    test <- getVarCov2(e.gls, ssc = NULL)
+    
     expect_equal(diag(vec.sigma^2 * sigma(e.gls)^2),
-                 unname(getVarCov2(e.gls, cluster = "Id")$Omega))
+                 unname(test))
 })
 
 ## * Compound symmetry
@@ -86,14 +80,16 @@ e.gls <- nlme::gls(value ~ time + G + Gender,
                    data = dL, method = "ML")
 
 test_that("Compound symmetry", {
+    expect_equal(endogenous(e.gls), paste0("value",1:4))
+
     expect_equal(unclass(getVarCov(e.gls)),
-                 unname(getVarCov2(e.gls)$Omega))
+                 unname(getVarCov2(e.gls, ssc = NULL)))
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(getVarCov2(e.lme)$Omega))
+                 unname(getVarCov2(e.lme, ssc = NULL)))
 
     expect_equal(unname(getVarCov(e.lme.bis, type = "marginal", individuals = 1)[[1]]),
-                 unname(getVarCov2(e.lme.bis)$Omega))
+                 unname(getVarCov2(e.lme.bis, ssc = NULL)))
 })
 
 ## * Unstructured 
@@ -107,12 +103,12 @@ e.gls <- nlme::gls(value ~ time + G + Gender,
                    data = dL, method = "ML")
 
 
-test_that("Unstructured ", {
+test_that("Unstructured", {
     expect_equal(unclass(getVarCov(e.gls)),
-                 unname(getVarCov2(e.gls)$Omega))
+                 unname(getVarCov2(e.gls, ssc = NULL)))
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(getVarCov2(e.lme)$Omega))
+                 unname(getVarCov2(e.lme, ssc = NULL)))
 })
 
 ## * Unstructured with weights
@@ -129,10 +125,10 @@ e.gls <- nlme::gls(value ~ time + G + Gender,
 
 test_that("Unstructured with weights", {
     expect_equal(unclass(getVarCov(e.gls)),
-                 unname(getVarCov2(e.gls)$Omega))
+                 unname(getVarCov2(e.gls, ssc = NULL)))
 
     expect_equal(unname(getVarCov(e.lme, type = "marginal", individuals = 1)[[1]]),
-                 unname(getVarCov2(e.lme)$Omega))
+                 unname(getVarCov2(e.lme, ssc = NULL)))
 })
 
 ## * Unstructured with missing data
@@ -179,47 +175,55 @@ e.gls <- gls(vasauc ~ treatment,
 logLik(e.gls)
 
 e.gls2 <- gls(vasauc ~ treatment,
-             correlation = corSymm(form =~ treatment.num | id),
-             weights = varIdent(form =~ 1|treatment),
-             na.action = na.omit,
-             data = dfL2)
+              correlation = corSymm(form =~ treatment.num | id),
+              weights = varIdent(form =~ 1|treatment),
+              na.action = na.omit,
+              data = dfL2)
 logLik(e.gls2)
 
 ## ** extract covariance matrix
-Sigma <- unname(getVarCov2(e.gls)$Omega)
-Sigma2 <- unname(getVarCov2(e.gls2)$Omega)
+test_that("Covariance matrix in presence of NA", {
+    endo <- endogenous(e.gls2)
+    expect_equal(endo, paste0("vasauc",c("A","B","C")))
 
-expect_equal(Sigma, Sigma2, tol = 1e-5)
-## allcoef <- lavaSearch2:::.coef2.gls(e.gls)
-## sigmaBase <- allcoef["sigma2"] * c(A=1,allcoef["B"],allcoef["C"])
+    glsCoef <- coef2(e.gls, ssc = NULL)
+    gls2Coef <- coef2(e.gls2, ssc = NULL)
+    expect_equal(as.double(glsCoef[names(gls2Coef)]),
+                 as.double(gls2Coef))
 
-## AB
-expect_equal(Sigma[c(1,2),c(1,2)],
-             unclass(nlme::getVarCov(e.gls2, individual = 1)),
-             tol = 1e-5)
-expect_equal(Sigma[c(1,2),c(1,2)],
-             unclass(nlme::getVarCov(e.gls, individual = 2)),
-             tol = 1e-5)
-## sqrt(sigmaBase["A"] * sigmaBase["B"]) * allcoef["corCoefAB"]
+    Sigma2 <- getVarCov2(e.gls2, ssc = NULL)
+    Sigma <- getVarCov2(e.gls, ssc = NULL)[rownames(Sigma2),colnames(Sigma2)]
+    expect_equal(Sigma, Sigma2)
+    ## allcoef <- lavaSearch2:::.coef2.gls(e.gls)
+    ## sigmaBase <- allcoef["sigma2"] * c(A=1,allcoef["B"],allcoef["C"])
 
-## AC
-expect_equal(Sigma[c(1,3),c(1,3)],
-             unclass(nlme::getVarCov(e.gls2, individual = 2)),
-             tol = 1e-5)
-expect_equal(Sigma[c(1,3),c(1,3)],
-             unclass(nlme::getVarCov(e.gls, individual = 1)),
-             tol = 1e-5)
-## sqrt(sigmaBase["A"] * sigmaBase["C"]) * allcoef["corCoefAC"]
+    ## AB
+    expect_equal(unname(Sigma[c(1,2),c(1,2)]),
+                 unclass(nlme::getVarCov(e.gls2, individual = 1)),
+                 tol = 1e-5)
+    expect_equal(unname(Sigma[c(1,2),c(1,2)]),
+                 unclass(nlme::getVarCov(e.gls, individual = 2)),
+                 tol = 1e-5)
+    ## sqrt(sigmaBase["A"] * sigmaBase["B"]) * allcoef["corCoefAB"]
 
-## BC
-expect_equal(Sigma[c(2,3),c(2,3)],
-             unclass(nlme::getVarCov(e.gls2, individual = 4)),
-             tol = 1e-5)
-expect_equal(Sigma[c(2,3),c(2,3)],
-             unclass(nlme::getVarCov(e.gls, individual = 4)),
-             tol = 1e-5)
-## sqrt(sigmaBase["B"] * sigmaBase["C"]) * allcoef["corCoefBC"]
+    ## AC
+    expect_equal(unname(Sigma[c(1,3),c(1,3)]),
+                 unclass(nlme::getVarCov(e.gls2, individual = 2)),
+                 tol = 1e-5)
+    expect_equal(unname(Sigma[c(1,3),c(1,3)]),
+                 unclass(nlme::getVarCov(e.gls, individual = 1)),
+                 tol = 1e-5)
+    ## sqrt(sigmaBase["A"] * sigmaBase["C"]) * allcoef["corCoefAC"]
 
+    ## BC
+    expect_equal(unname(Sigma[c(2,3),c(2,3)]),
+                 unclass(nlme::getVarCov(e.gls2, individual = 4)),
+                 tol = 1e-5)
+    expect_equal(unname(Sigma[c(2,3),c(2,3)]),
+                 unclass(nlme::getVarCov(e.gls, individual = 4)),
+                 tol = 1e-5)
+    ## sqrt(sigmaBase["B"] * sigmaBase["C"]) * allcoef["corCoefBC"]
+})
 
 ## * 2 random effect model (error)
 e.lme <- nlme::lme(value ~ time + G + Gender,
@@ -227,10 +231,10 @@ e.lme <- nlme::lme(value ~ time + G + Gender,
                    data = dL,
                    method = "ML")
 
-expect_error(getVarCov2(e.lme))
+## getVarCov(e.lme)
+expect_error(getVarCov2(e.lme, ssc = NULL))
 
 ## * PET dataset
-
 df.PET <- data.frame("ID" = c( 925, 2020, 2059, 2051, 2072, 2156, 2159, 2072, 2020, 2051, 2231,
                               2738, 2231, 2777,  939,  539, 2738, 2777,  925, 2156, 2159, 2059), 
                      "session" = c("V", "V", "V", "V", "V", "V", "V", "C", "C", "C", "C",
@@ -243,12 +247,12 @@ df.PET$session.index <- as.numeric(as.factor(df.PET$session))
 
 e.lme <- lme(PET ~ session,
              random = ~ 1 | ID,
-             weights = varIdent(form=~session.index|session),
+             weights = varIdent(form=~1|session),
              na.action = "na.omit",
              data = df.PET)
 test_that("getVarCov2 - NA", {
     expect_equal(matrix(c( 7.893839, 1.583932, 1.583932, 4.436933), 2, 2),
-                 unname(getVarCov2(e.lme)$Omega), tol = 1e-6, scale = 1)
+                 unname(getVarCov2(e.lme, ssc = NULL)), tol = 1e-6, scale = 1)
 })
 
 

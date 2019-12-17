@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: dec 13 2019 (17:17) 
+## Last-Updated: dec 17 2019 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 53
+##     Update #: 60
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,17 +103,18 @@
 ## * residuals2.lm
 #' @rdname residuals2
 #' @export
-residuals2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE, type = "response", format = "wide"){
+residuals2.lm <- function(object, param = NULL, data = NULL,
+                          ssc = lava.options()$ssc, type = "response", format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
+        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NULL)
     }
 
     residuals <- .normalizeResiduals(residuals = object$sCorrect$moment$residuals,
                                      Omega = object$sCorrect$moment$Omega,
-                                     type = object$sCorrect$skeleton$type,
+                                     type = type,
                                      missing.pattern = object$sCorrect$moment$missing.pattern,
                                      Omega.missing.pattern = object$sCorrect$moment$Omega.missing.pattern)
     if(format == "wide"){
@@ -154,7 +155,8 @@ residuals2.lvmfit <- residuals2.lm
 
 ## * residuals.sCorrect
 #' @rdname residuals2
-residuals.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, type = "response", format = "wide"){
+residuals.sCorrect <- function(object, param = NULL, data = NULL,
+                               ssc = lava.options()$ssc, type = "response", format = "wide"){
     class(object) <- setdiff(class(object),"sCorrect")
     return(residuals2(object, param = param, data = data, ssc = ssc, type = type, format = format))
 }

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 24 2017 (09:21) 
 ## Version: 
-## last-updated: mar 13 2018 (13:24) 
+## last-updated: dec 17 2019 (09:34) 
 ##           By: Brice Ozenne
-##     Update #: 16
+##     Update #: 17
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -41,5 +41,5 @@ test_that("inverse", {
     expect_equal(Sigma.m1 %*% Sigma,diag(1,NROW(Sigma),NCOL(Sigma)))
 })
 
-#----------------------------------------------------------------------
+##----------------------------------------------------------------------
 ### test-matrixPower.R ends here

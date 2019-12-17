@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: dec 13 2019 (08:45) 
+## Last-Updated: dec 17 2019 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 33
+##     Update #: 34
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@
                       missing.pattern, unique.pattern, name.pattern,
                       grid.mean, grid.var, grid.hybrid, name.param,
                       leverage, n.cluster){
-    if(TRUE){cat(".hessian2\n")}
+    if(lava.options()$debug){cat(".hessian2\n")}
 
     ## ** Prepare
     n.grid.mean <- NROW(grid.mean)

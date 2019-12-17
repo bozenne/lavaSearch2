@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: dec 11 2019 (15:03) 
+## Last-Updated: dec 17 2019 (09:40) 
 ##           By: Brice Ozenne
-##     Update #: 126
+##     Update #: 130
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,7 @@
 #' @concept extractor
 #' @keywords internal
 `.getGroups2` <-
-    function(object, data, ...) UseMethod(".getGroups2")
+    function(object, data, index.Omega, endogenous) UseMethod(".getGroups2")
 
 ## * Examples
 #' @examples
@@ -79,7 +79,10 @@
 
 ## * .getGroups2.lm
 #' @rdname getGroups2-internal
-.getGroups2.lm <- function(object, data, index.Omega = NULL, ...){
+.getGroups2.lm <- function(object, data = NULL, index.Omega = NULL, endogenous){
+    if(is.null(data)){
+        data <- extractData(object)
+    }
     if(is.null(index.Omega)){
         index.Omega <- .getIndexOmega(object, data = data)
     }
@@ -96,7 +99,10 @@
     
 ## * .getGroups2.gls
 #' @rdname getGroups2-internal
-.getGroups2.gls <- function(object, data, index.Omega = NULL, endogenous = NULL, ...){
+.getGroups2.gls <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
+    if(is.null(data)){
+        data <- extractData(object)
+    }
     if(is.null(index.Omega)){
         index.Omega <- .getIndexOmega(object, data = data)
     }
@@ -144,8 +150,10 @@
 
 ## * .getGroups2.lvmfit
 #' @rdname getGroups2-internal
-.getGroups2.lvmfit <- function(object, data, index.Omega = NULL, endogenous = NULL, ...){
-
+.getGroups2.lvmfit <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
+    if(is.null(data)){
+        data <- extractData(object)
+    }
     if(is.null(index.Omega)){
         index.Omega <- .getIndexOmega(object, data = data)
     }

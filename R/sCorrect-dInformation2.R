@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: dec 13 2019 (10:11) 
+## Last-Updated: dec 17 2019 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 28
+##     Update #: 29
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,7 +29,7 @@
                            grid.dInformation, name.param, name.param.dInformation,
                            leverage, n.cluster){
 
-    if(TRUE){cat(".dInformation2\n")}
+    if(lava.options()$debug){cat(".dInformation2\n")}
 
     ## ** Prepare
     n.grid <- NROW(grid.dInformation)

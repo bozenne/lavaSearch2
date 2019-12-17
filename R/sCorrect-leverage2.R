@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: dec 13 2019 (17:28) 
+## Last-Updated: dec 17 2019 (16:03) 
 ##           By: Brice Ozenne
-##     Update #: 50
+##     Update #: 85
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,11 +66,12 @@
 ## * leverage2.lm
 #' @rdname leverage2
 #' @export
-leverage2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE, format = "wide"){
+leverage2.lm <- function(object, param = NULL, data = NULL,
+                         ssc = lava.options()$ssc, format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
+        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NULL)
     }
 
     if(format == "wide"){
@@ -113,32 +114,47 @@ leverage2.lvmfit <- leverage2.lm
 ## * .leverage2
 .leverage2 <- function(Omega, epsilon, dmu, dOmega, vcov.param,
                        name.pattern, missing.pattern, unique.pattern,
-                       endogenous, n.endogenous, param.var, n.param.var, n.cluster){
+                       endogenous, n.endogenous, param, param.mean, param.hybrid, n.cluster){
 
-    n.pattern <- length(unique.pattern)        
+    n.pattern <- length(unique.pattern)
+    n.param <- length(param)
+    n.param.mean <- length(param.mean)
+    n.param.hybrid <- length(param.hybrid)
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL, endogenous))
-
+    scoreY <- array(NA, dim = c(n.cluster, n.endogenous, n.param.mean),
+                    dimnames = list(NULL, endogenous, param.mean))
+    
     for(iP in 1:n.pattern){ ## iP <- 1 
         iIndex <- missing.pattern[[iP]]
         iY <- which(unique.pattern[iP,]==1)
-        browser()
         
         iOmega <- Omega[iY,iY,drop=FALSE]
         iOmegaM1 <- chol2inv(chol(iOmega))
-        iOmegaM1.dOmega.OmegaM1 <- lapply(dOmega, function(x){iOmegaM1 %*% x[iY,iY,drop=FALSE] %*% iOmegaM1})
-    
+        iOmegaM1.epsilon <- epsilon[iIndex,iY,drop=FALSE] %*% iOmegaM1
+            
         ## derivative of the score regarding Y
-        scoreY <- iOmegaM1 %*% dmu[,iY,iIndex]
+        for(iP in 1:n.param.mean){
 
-        for(iP in 1:n.varparam){ ## iP <- 1
-            scoreY[name.varparam[iP],] <- scoreY[name.varparam[iP],] + 2 * epsilon[iC,iIndex] %*% iOmegaM1.dOmega.OmegaM1[[name.varparam[iP]]]
+            if(param.mean[iP] %in% param.hybrid){
+                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[param.hybrid[iP]]][iY,iY,drop=FALSE] %*% iOmegaM1
+            }else{
+                iOmegaM1.epsilon.dOmega.iOmegaM1 <- 0
+            }
+            
+            if(length(iY)>1){
+                scoreY[,iY,param.mean[iP]] <- t(dmu[param.mean[iP],iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+            }else{
+                scoreY[,iY,param.mean[iP]] <- dmu[param.mean[iP],iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+            }
         }
+
         ## leverage
-        leverage[iC,iIndex] <- colSums(vcov.param %*% ls.dmu[[iC]] * scoreY) ## NOTE: dimensions of ls.dmu and scoreY matches even when there are missing values
-                                        # same as
-                                        # diag(t(ls.dmu[[iC]])  %*% iVcov.param %*% scoreY)
-    }
+        for(iiY in iY){
+            leverage[iIndex,iiY] <- rowSums((t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE]) * scoreY[iIndex,iiY,])
+            ## diag( t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE] %*% t(scoreY[iIndex,iiY,]) )
+        }
+    }        
 
     return(leverage)            
 }

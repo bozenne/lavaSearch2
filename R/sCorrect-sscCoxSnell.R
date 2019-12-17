@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: dec 11 2019 (14:11) 
+## Last-Updated: dec 17 2019 (16:16) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 28
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,13 @@
 ## 
 ### Code:
 
-biasCoxSnell <- function(object){
+## * .init_sscCoxSnell
+.init_sscCoxSnell <- function(object,...){
+    return(object,...)
+}
+
+## * .sscCoxSnell
+.sscCoxSnell <- function(object){
 
     ## ** extract information from object
     param <- coef2(e)

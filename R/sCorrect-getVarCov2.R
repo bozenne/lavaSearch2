@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: dec 11 2019 (13:53) 
+## Last-Updated: dec 17 2019 (11:24) 
 ##           By: Brice Ozenne
-##     Update #: 39
+##     Update #: 53
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,13 +109,15 @@
 ## * getVarCov2.lm
 #' @rdname getVarCov2
 #' @export
-getVarCov2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE){
+getVarCov2.lm <- function(object, param = NULL, data = NULL,
+                          ssc = lava.options()$ssc){
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
+        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NULL)
     }
-
-    return(object$sCorrect$moment$Omega)
+    Omega <- object$sCorrect$moment$Omega
+    attr(Omega, "detail") <- NULL
+    return(Omega)
 
 }
 
@@ -136,7 +138,8 @@ getVarCov2.lvmfit <- getVarCov2.lm
 
 ## * getVarCov.sCorrect
 #' @rdname getVarCov2
-getVarCov.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE){
+getVarCov.sCorrect <- function(object, param = NULL, data = NULL,
+                               ssc = lava.options()$ssc){
     class(object) <- setdiff(class(object2),"sCorrect")
     return(getVarCov2(object, param = param, data = data, ssc = ssc))
 }

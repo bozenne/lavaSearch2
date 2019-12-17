@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (13:50) 
 ## Version: 
-## Last-Updated: nov 25 2019 (10:30) 
+## Last-Updated: dec 17 2019 (10:49) 
 ##           By: Brice Ozenne
-##     Update #: 83
+##     Update #: 85
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -110,7 +110,6 @@ endogenous.gls <- function(x, format = "wide", cluster = NULL, ...){
              "it should be something like: correlation = corStruct(form = ~index|groupA) \n",
              "                             weight = varStruct(form = ~index|groupB) \n")
     }
-
     ## ** Identify the index and name of the endogenous variables
     if(format == "long" || ("NULL" %in% class.var && "NULL" %in% class.cor && "NULL" %in% class.re)){ ## basic lme models or lm-ish models, order of the lines in the dataset does not matter
         return(name.Y)

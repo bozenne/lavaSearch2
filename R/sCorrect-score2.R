@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 13 2019 (13:54) 
+## last-updated: dec 17 2019 (13:46) 
 ##           By: Brice Ozenne
-##     Update #: 2302
+##     Update #: 2306
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -64,10 +64,11 @@
 ## * score2.lm
 #' @rdname score2
 #' @export
-score2.lm <- function(object, param = NULL, data = NULL, ssc = TRUE, indiv = FALSE){
+score2.lm <- function(object, param = NULL, data = NULL,
+                      ssc = lava.options()$ssc, indiv = FALSE){
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || (object$sCorrect$ssc != ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = FALSE)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc, ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
     }
 
     if(indiv){
@@ -94,7 +95,8 @@ score2.lvmfit <- score2.lm
 
 ## * score2.sCorrect
 #' @rdname score2
-score2.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, indiv = FALSE){
+score2.sCorrect <- function(object, param = NULL, data = NULL,
+                            ssc = lava.options()$ssc, indiv = FALSE){
     class(object) <- setdiff(class(object),"sCorrect")
     return(score2(object, param = param, data = data, ssc = ssc, indiv = indiv))
 }
@@ -111,7 +113,7 @@ score2.sCorrect <- function(object, param = NULL, data = NULL, ssc = TRUE, indiv
                     missing.pattern, unique.pattern, name.pattern,
                     name.param, name.meanparam, name.varparam,
                     n.cluster){
-    if(TRUE){cat(".score2\n")}
+    if(lava.options()$debug){cat(".score2\n")}
 
     ## ** Prepare
     out.score <- matrix(0, nrow = n.cluster, ncol = length(name.param),

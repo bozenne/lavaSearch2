@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: dec 12 2019 (14:14) 
+## last-updated: dec 17 2019 (13:06) 
 ##           By: Brice Ozenne
-##     Update #: 832
+##     Update #: 853
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -108,14 +108,14 @@
 ## * coefType.lm
 #' @rdname coefType
 #' @export
-coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ...){
+coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef = NULL, ...){
 
     ## ** extract all coef
     if(is.null(data)){
         data <- extractData(object)
     }
-    if(is.null(coef2)){
-        coef2 <- coef2(object, ssc = FALSE)
+    if(is.null(coef)){
+        coef <- .coef2(object, labels = 1)
     }
     if(is.null(indexOmega)){
         indexOmega <- .getIndexOmega(object, data = data)
@@ -123,7 +123,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
 
     formula.object <- formula(object)
     object.terms <- terms(formula.object)
-    name.coef <- names(coef2)
+    name.coef <- names(coef)
     name.endogenous <- endogenous(object, format = "long")
     name.endogenousW <- endogenous(object, format = "wide")
     n.endogenous <- length(name.endogenousW)
@@ -155,7 +155,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
     }
 
     ## ** regression
-    regcoef <- setdiff(attr(coef2, "mean.coef"), "(Intercept)")
+    regcoef <- setdiff(attr(coef, "mean.coef"), "(Intercept)")
     n.regcoef <- length(regcoef)
     if(n.regcoef>0){
         
@@ -177,7 +177,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
         ## }
         X <- model.matrix(formula.object,data)
         data.var <- setNames(attr(object.terms, "term.labels")[attr(X,"assign")[attr(X,"assign")!=0]],
-                             setdiff(attr(coef2,"mean.coef"),"(Intercept)"))
+                             setdiff(attr(coef,"mean.coef"),"(Intercept)"))
 
         for(iE in 1:n.endogenous){
             index.endpoint <- which(indexOmega==iE)
@@ -195,7 +195,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                     X = iName.exogenous,
                                     data = iData.var,
                                     type = "regression",
-                                    value = as.numeric(NA), ##as.double(coef2[iName.exogenous]),
+                                    value = as.numeric(NA), ##as.double(coef[iName.exogenous]),
                                     param = iName.exogenous,
                                     marginal = FALSE,
                                     factitious = FALSE,
@@ -237,8 +237,8 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                              X = name.latent,
                              data = as.character(NA),
                              type = "variance",
-                             value = as.numeric(NA), ## as.double(coef2[attr(coef2,"ran.coef")]),
-                             param = attr(coef2,"ran.coef"),
+                             value = as.numeric(NA), ## as.double(coef[attr(coef,"ran.coef")]),
+                             param = attr(coef,"ran.coef"),
                              marginal = FALSE,
                              factitious = FALSE,
                              level = as.character(NA),
@@ -252,17 +252,23 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
 
     ## ** correlation structure
     if(!is.null(object$modelStruct$corStruct)){
-        cor.coef <- attr(coef2, "cor.coef")
-        cor.combi <- .combination(name.endogenousW,name.endogenousW)
-        cor.combi <- cor.combi[cor.combi[,1]!=cor.combi[,2],]
-        
+        cor.coef <- attr(coef, "cor.coef")
+        if(!is.null(attr(coef, "table.cor.coef"))){
+            cor.combi <- t(attr(coef, "table.cor.coef"))
+            cor.combi[] <- paste0(endogenous(object, format = "long"), cor.combi[])
+            colnames(cor.combi) <- c("Var1","Var2")            
+        }else{
+            cor.combi <- .combination(name.endogenousW,name.endogenousW)
+            cor.combi <- cor.combi[cor.combi[,1]!=cor.combi[,2],]
+            rownames(cor.combi) <- NULL
+        }
         out <- rbind(out,
                      data.frame(name = paste0(cor.combi[,1],"~~",cor.combi[,2]),
                                 Y = cor.combi[,1],
                                 X = cor.combi[,2],
                                 data = name.endogenous,
                                 type = "covariance",
-                                value = as.numeric(NA), ## as.double(coef2[cor.coef]),
+                                value = as.numeric(NA), ## as.double(coef[cor.coef]),
                                 param = cor.coef,
                                 marginal = FALSE,
                                 factitious = FALSE,
@@ -282,7 +288,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                             X = name.endogenousW,
                             data = name.endogenous,
                             type = "variance",
-                            value = as.numeric(NA), ## as.double(coef2["sigma2"]),
+                            value = as.numeric(NA), ## as.double(coef["sigma2"]),
                             param = "sigma2",
                             marginal = FALSE,
                             factitious = FALSE,
@@ -295,7 +301,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                  )
 
     if(!is.null(object$modelStruct$varStruct)){
-        k.coef <- setdiff(attr(coef2, "var.coef"), "sigma2")
+        k.coef <- setdiff(attr(coef, "var.coef"), "sigma2")
         refk.coef <- setdiff(names(stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = TRUE)),k.coef)
 
         ## reference 
@@ -324,7 +330,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef2 = NULL, ..
                                 X = paste0(name.endogenous,k.coef),
                                 data = name.endogenous,
                                 type = "variance",
-                                value = as.numeric(NA), ## as.double(coef2[k.coef]),
+                                value = as.numeric(NA), ## as.double(coef[k.coef]),
                                 param = k.coef,
                                 marginal = FALSE,
                                 factitious = FALSE,
@@ -488,7 +494,7 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
                            param = unlist(ls.param),
                            marginal = unlist(ls.marginal),
                            stringsAsFactors = FALSE)
-    df.param[df.param$X %in% latent(object),"data"] <- NA
+    df.param[which(df.param$X %in% latent(object)),"data"] <- NA
     
     ## ** categorical variables
     if(!is.null(object$attributes$ordinalparname)){
@@ -536,11 +542,6 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
     coef.lava <- coef(object, labels = 0)
     coef2.lava <- coef(object, labels = 1)
 
-    index.match <- match(coef.lava, df.param$originalLink)
-    if(length(index.match)<NROW(df.param)){
-        df.param$originalLink[-index.match] <- NA
-    }
-
     ## ** merge with lava
     name.coef <- names(coef.lava)
 
@@ -550,6 +551,7 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
                                                  name.coef = df.param[index.keep, "name"],
                                                  type.coef = df.param[index.keep, "type"])
     df.param$lava <- name.coef[match(df.param$originalLink,coef.lava)]
+    df.param[df.param$factitious,c("param","lava")] <- as.character(NA)
     df.param <- df.param[order(df.param$type,df.param$detail,df.param$name),,drop=FALSE]
     rownames(df.param) <- NULL
 
@@ -564,11 +566,9 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
             df.param <- rbind(df.param[,c("name", "type", "lava")],
                               df.extra)
         }
-        
         ## 
-        out <- subset(df.param, subset = !is.na(lava), select = c("type", "name"))
-        out <- stats::setNames(out$type, out$name)
-        out <- out[!duplicated(names(out))]
+        out <- stats::setNames(df.param$type, df.param$name)
+        ## out <- out[!duplicated(names(out))]
         return(out[coef.lava])    
     }else{
         df.param$detail <- factor(df.param$detail,

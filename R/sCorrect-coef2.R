@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: dec 11 2019 (16:22) 
+## Last-Updated: dec 17 2019 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 69
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -76,17 +76,14 @@
 
 ## * coef2.lm
 #' @rdname coef2
-coef2.lm <- function(object, ssc = TRUE, labels){
-    if(ssc){
-        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
-            object <- sCorrect(object, ssc = ssc, df = FALSE)
+coef2.lm <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
+    if(is.null(ssc) && (is.null(object$sCorrect) || !is.null(object$sCorrect$ssc))){
+        out <- .coef2(object, labels = labels)
+    }else{    
+        if(!identical(object$sCorrect$ssc,ssc)){
+            object <- sCorrect(object, ssc = ssc, df = NULL)
         }
-        out <- object$sCorrect$coef
-    }else{
-        coef.object <- coef(object)
-        out <- c(coef.object,sigma2=sigma(object)^2)
-        attr(out, "mean.coef") <- names(coef.object)
-        attr(out, "var.coef") <- "sigma2"
+        out <- object$sCorrect$param
     }
 
     return(out)
@@ -94,30 +91,63 @@ coef2.lm <- function(object, ssc = TRUE, labels){
 
 ## * coef2.gls
 #' @rdname coef2
-coef2.gls <- function(object, ssc = TRUE, labels){
-    if(ssc){
-        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
-            object <- sCorrect(object, ssc = ssc, df = FALSE)
-        }
-        out <- object$sCorrect$coef
-    }else{
+coef2.gls <- coef2.lm
+
+## * coef2.lme
+#' @rdname coef2
+coef2.lme <- coef2.lm
+
+## * coef2.lvmfit
+#' @rdname coef2
+coef2.lvmfit <- coef2.lm
+
+## * coef.sCorrect
+#' @rdname coef2
+coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(coef2(object, ssc = ssc, labels = labels))
+
+}
+## * .coef2
+.coef2 <- function(object, labels){
+
+    if(inherits(object,"lm")){        
+        coef.object <- coef(object)
         
-    ## *** mean coefficients
-    mean.coef <- stats::coef(object)
+        out <- c(coef.object,sigma2=sigma(object)^2)
+        attr(out, "mean.coef") <- names(coef.object)
+        attr(out, "var.coef") <- "sigma2"
 
-    ## *** variance coefficients
-    var.coef <- c(sigma2 = stats::sigma(object)^2)
-    if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(var.coef,
-                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))          
-    }
+    }else if(inherits(object,"gls") || inherits(object,"lme")){
+        
+        ## ** mean coefficients
+        if(inherit(object,"gls")){
+            mean.coef <- stats::coef(object)
+        }else if(inherit(object,"lme")){
+            mean.coef <- nlme::fixef(object)
+        }
+            
+        ## ** variance coefficients
+        var.coef <- c(sigma2 = stats::sigma(object)^2)
+        if(!is.null(object$modelStruct$varStruct)){
+            var.coef <- c(var.coef,
+                          stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))          
+        }
 
-    ## *** correlation coefficients
-    if(!is.null(object$modelStruct$corStruct)){
-        cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
+        ## ** random effect coefficients
+        if(inherit(object,"lme")){
+            random.coef <- as.double(nlme::getVarCov(object))    
+            names(random.coef) <- paste0("ranCoef",1:length(random.coef))
+        }else{
+            random.coef <- NULL
+        }
+        
+        ## ** correlation coefficients
+        if(!is.null(object$modelStruct$corStruct)){
+            cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
 
-        n.var <- length(var.coef)
-        n.cor <- length(cor.coef)
+            n.var <- length(var.coef)
+            n.cor <- length(cor.coef)
 
         ## check unstructured covariance matrix
         if(!is.null(object$modelStruct$varStruct) && ((n.var*(n.var-1))/2 == n.cor)){
@@ -131,129 +161,43 @@ coef2.gls <- function(object, ssc = TRUE, labels){
             veccov.cor2 <- factor(veccov.cor, levels = 0:max(veccov.cor), labels = newlevels.cor)
             
             if(identical(as.character(veccov.cor2),as.character(veccov.var))){
-
-                cor.coefName <- apply(utils::combn(newlevels.cor, m = 2), MARGIN = 2, FUN = paste, collapse = "")
+                table.cor.coef <- utils::combn(newlevels.cor, m = 2)
+                cor.coefName <- apply(table.cor.coef, MARGIN = 2, FUN = paste, collapse = "")
                 names(cor.coef) <- paste0("corCoef",cor.coefName)
 
             }else{
+                table.cor.coef <- NULL
                 names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
             }
             
-            
         }else{
+            table.cor.coef <- NULL
             names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
         }
         
         
-    }else{
-        cor.coef <- NULL
-    }
-
+        }else{
+            table.cor.coef <- NULL
+            cor.coef <- NULL
+        }
+        
         out <- c(mean.coef, cor.coef, var.coef)
         attr(out, "mean.coef") <- names(mean.coef)
         attr(out, "var.coef") <- names(var.coef)
         attr(out, "cor.coef") <- names(cor.coef)
-    }
-    return(out)
-}
-
-
-
-
-## * coef2.lme
-#' @rdname coef2
-coef2.lme <- function(object, ssc = TRUE, labels){
-
-    if(ssc){
-        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
-            object <- sCorrect(object, ssc = ssc, df = FALSE)
-        }
-        out <- object$sCorrect$coef
-    }else{
-        ## *** mean coefficients
-        mean.coef <- nlme::fixef(object)
-
-    ## *** variance coefficients
-    var.coef <- c(sigma2 = stats::sigma(object)^2)
-    if(!is.null(object$modelStruct$varStruct)){
-        var.coef <- c(var.coef,
-                      stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))   
-    }
-
-    ## *** random effect coefficients
-    random.coef <- as.double(nlme::getVarCov(object))    
-    names(random.coef) <- paste0("ranCoef",1:length(random.coef))
-
-    ## *** correlation coefficients
-    if(!is.null(object$modelStruct$corStruct)){
-        cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
-
-        n.var <- length(var.coef)
-        n.cor <- length(cor.coef)
-
-        ## check unstructured covariance matrix
-        if(!is.null(object$modelStruct$varStruct) && ((n.var*(n.var-1))/2 == n.cor)){
-
-            vecgroup <- attr(unclass(object$modelStruct$corStruct), "group")
-            veccov.cor <- unname(unlist(attr(object$modelStruct$corStruct, "covariate")))
-            veccov.var <- attr(object$modelStruct$varStruct, "groups")
-
-            table.covvar <- table(veccov.cor,veccov.var)
-            newlevels.cor <- colnames(table.covvar)[apply(table.covvar, 1, which.max)]
-            veccov.cor2 <- factor(veccov.cor, levels = 0:max(veccov.cor), labels = newlevels.cor)
-            
-            if(identical(as.character(veccov.cor2),as.character(veccov.var))){
-
-                cor.coefName <- apply(utils::combn(newlevels.cor, m = 2), MARGIN = 2, FUN = paste, collapse = "")
-                names(cor.coef) <- paste0("corCoef",cor.coefName)
-
-            }else{
-                names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-            }
-            
-            
-        }else{
-            names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-        }
+        attr(out, "table.cor.coef") <- table.cor.coef
         
+    }else if(inherits(object,"lvmfit")){
         
-        }else{
-            cor.coef <- NULL
-        }
-    
-    out <- c(mean.coef, cor.coef, var.coef, random.coef)
-
-            attr(out, "mean.coef") <- names(mean.coef)
-            attr(out, "var.coef") <- names(var.coef)
-            attr(out, "cor.coef") <- names(cor.coef)
-            attr(out, "ran.coef") <- names(random.coef)
-            return(out)
-        }
-}
-
-## * coef2.lvmfit
-#' @rdname coef2
-coef2.lvmfit <- function(object, ssc = TRUE, labels = lava.options()$coef.names){
-    if(ssc){
-        if(is.null(object$sCorrect) || (object$sCorrect$ssc != ssc)){
-            object <- sCorrect(object, ssc = ssc, df = FALSE)
-        }
-        out <- object$sCorrect$coef
-    }else{
-        tempo <- coef(object, type = 2, labels = labels)
+        tempo <- stats::coef(object, type = 2, labels = labels)
         out <- tempo[,1]
         attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
         attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
         attr(out, "cor.coef") <- NULL
-        return(out)
+        
     }
-}
-
-## * coef.sCorrect
-#' @rdname coef2
-coef.sCorrect <- function(object, ssc = TRUE, labels = lava.options()$coef.names){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(coef2(object, ssc = ssc, labels = labels))
+    
+    return(out)
 
 }
 

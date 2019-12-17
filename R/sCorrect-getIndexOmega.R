@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: nov 25 2019 (14:17) 
+## Last-Updated: dec 17 2019 (09:43) 
 ##           By: Brice Ozenne
-##     Update #: 59
+##     Update #: 61
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -101,9 +101,11 @@
     ## ** ref.group
     if(!is.null(object$modelStruct$varStruct)){
         var.var <- all.vars(formula(object$modelStruct$varStruct))
+        if(length(var.var)>1){
+            stop("Can only handle one covariate in the formula for the variance (argument \'weight\') \n")
+        }
         level.var.var <- attr(unclass(object$modelStruct$varStruct),"groupNames")
     }
-    
     ## ** index.Omega
     n.obs <- NROW(data)
     if(!is.null(object$modelStruct$corStruct)){
