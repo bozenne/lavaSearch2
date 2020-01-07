@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: dec 17 2019 (16:08) 
+## last-updated: jan  7 2020 (14:02) 
 ##           By: Brice Ozenne
-##     Update #: 1434
+##     Update #: 1439
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,11 +67,7 @@
     function(object,
              initialize, first.order, second.order, usefit,
              param = NULL,
-             data = NULL,
-             X = NULL,
-             cluster = NULL,
-             endogenous = NULL,
-             latent = NULL) UseMethod("conditionalMoment")
+             data = NULL) UseMethod("conditionalMoment")
 
 ## * conditionalMoment.lm
 #' @rdname conditionalMoment
@@ -79,11 +75,7 @@
 conditionalMoment.lm <- function(object,
                                  initialize, first.order, second.order, usefit,
                                  param = NULL,
-                                 data = NULL,
-                                 X = NULL,
-                                 cluster = NULL,
-                                 endogenous = NULL,
-                                 latent = NULL){
+                                 data = NULL){
     if(lava.options()$debug){cat("conditionalMoment \n")}
 
     ## ** sanity checks
@@ -100,40 +92,18 @@ conditionalMoment.lm <- function(object,
         out <- list()
 
         ## *** get information from object
-        if(is.null(X) && !is.null(cluster)){
-            stop("Arguments \'X\' and \'cluster\' must either be both specified or both set to NULL \n")
-        }
+        out$endogenous <- lava::endogenous(object, format = "wide")
+        out$latent <- lava::latent(object)
 
-        if(is.null(endogenous)){
-            out$endogenous <- lava::endogenous(object, format = "wide")
-        }else{
-            out$endogenous <- endogenous
-        }
-
-        if(is.null(latent)){
-            out$latent <- lava::latent(object)
-        }else{
-            out$latent <- latent
-        }
-
-        if(is.null(data) && (is.null(X) || is.null(cluster))){
+        if(is.null(data)){
             out$data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
                                     envir = parent.env(environment()), rm.na = TRUE)
         }else{
             out$data <- data
         }
         
-        if(is.null(X)){
-            out$X <- .getDesign(object, data = out$data, add.Y = TRUE)
-        }else{
-            out$X <- X
-        }
-
-        if(is.null(cluster)){
-            out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
-        }else{
-            out$cluster <- cluster
-        }
+        out$X <- .getDesign(object, data = out$data, add.Y = TRUE)
+        out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
 
         if(any(colnames(out$X) %in% c("XXvalueXX","XXendogenousXX","XXclusterXX"))){
             stop("\"XXvalueXX\", \"XXendogenousXX\", and \"XXclusterXX\" should not correspond to variable names \n",
@@ -209,7 +179,7 @@ conditionalMoment.lm <- function(object,
         }
         
     }else{
-        out <- object$sCorrect[c("endogenous","data","X","cluster","old2new.order", "missing", "skeleton")]
+        out <- object$sCorrect[c("endogenous", "latent", "data", "X", "cluster", "old2new.order", "missing", "skeleton")]
     }
 
     ## ** update according to the value of the model coefficients

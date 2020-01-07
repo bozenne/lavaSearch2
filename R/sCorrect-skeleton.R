@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  7 2020 (13:30) 
+## Last-Updated: jan  7 2020 (14:35) 
 ##           By: Brice Ozenne
-##     Update #: 1467
+##     Update #: 1474
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -444,8 +444,8 @@ skeletonDtheta <- function(object, X,
                                                   nrow = n.cluster, ncol = n.latent,
                                                   dimnames = list(NULL,latent))
 
-            for(iEta in 1:NROW(iType.Gamma)){ ## iY <- 5
-                iLatent <- match(iType.Gamma$Y[iY],latent)
+            for(iEta in 1:NROW(iType.Gamma)){ ## iLatent <- 5
+                iLatent <- match(iType.Gamma$Y[iEta],latent)
                 dmat.dparam$Gamma[[iGamma]][,iLatent] <- X[X$XXendogenousXX==latent[iLatent],iType.Gamma$X[1]]
             }
         }
@@ -702,9 +702,9 @@ skeletonDtheta2 <- function(object){
                 iIndex1 <- which((object$grid.dmoment$mean$Var1==iName1)*(object$grid.dmoment$mean$Var2==iName2)==1)
                 iIndex2 <- which((object$grid.dmoment$mean$Var1==iName2)*(object$grid.dmoment$mean$Var2==iName1)==1)
                 if(length(iIndex1)>0){
-                    object$grid.dmoment$mean[iIndex1,"d12"] <- TRUE
+                    object$grid.dmoment$mean[iIndex1,"d2.12"] <- TRUE
                 }else if(length(iIndex2)>0){
-                    object$grid.dmoment$mean[iIndex2,"d21"] <- TRUE
+                    object$grid.dmoment$mean[iIndex2,"d2.21"] <- TRUE
                 }
             }
         }
@@ -731,7 +731,7 @@ skeletonDtheta2 <- function(object){
     ## ** Parameters in dInformation
     ## all but nu and K parameters
     type.Uparam <- type.param[!is.na(type.param$originalLink),]
-    if(any(c("Lambda","B") %in% type.Uparam$details)){
+    if(any(c("Lambda","B") %in% type.Uparam$detail)){
         type.dInformation <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")
     }else{ ## mean-variance model
         type.dInformation <- c("Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")

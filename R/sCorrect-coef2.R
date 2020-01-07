@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan  7 2020 (10:59) 
+## Last-Updated: jan  7 2020 (13:53) 
 ##           By: Brice Ozenne
-##     Update #: 70
+##     Update #: 75
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -180,11 +180,12 @@ coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.option
             table.cor.coef <- NULL
             cor.coef <- NULL
         }
-        
-        out <- c(mean.coef, cor.coef, var.coef)
+
+        out <- c(mean.coef, cor.coef, var.coef, random.coef)
         attr(out, "mean.coef") <- names(mean.coef)
         attr(out, "var.coef") <- names(var.coef)
         attr(out, "cor.coef") <- names(cor.coef)
+        attr(out, "ran.coef") <- names(random.coef)
         attr(out, "table.cor.coef") <- table.cor.coef
         
     }else if(inherits(object,"lvmfit")){
@@ -193,7 +194,6 @@ coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.option
         out <- tempo[,1]
         attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
         attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
-        attr(out, "cor.coef") <- NULL
         
     }
     

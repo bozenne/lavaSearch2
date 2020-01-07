@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: dec 17 2019 (13:45) 
+## Last-Updated: jan  7 2020 (14:33) 
 ##           By: Brice Ozenne
-##     Update #: 34
+##     Update #: 37
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -62,9 +62,9 @@
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
         iEpsilon <- epsilon[iIndex,iY,drop=FALSE]
-        
+
         ## *** second derivative relative to the mean parameters
-        for(iG in index.mean){ # iG <- 1
+        for(iG in index.mean){ # iG <- 2
             iP1 <- grid.mean[iG,1]
             iP2 <- grid.mean[iG,2]
             if(grid.mean[iG,"d2.12"]){
