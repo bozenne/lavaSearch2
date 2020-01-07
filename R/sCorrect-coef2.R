@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: dec 17 2019 (13:36) 
+## Last-Updated: jan  7 2020 (10:59) 
 ##           By: Brice Ozenne
-##     Update #: 69
+##     Update #: 70
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -121,9 +121,9 @@ coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.option
     }else if(inherits(object,"gls") || inherits(object,"lme")){
         
         ## ** mean coefficients
-        if(inherit(object,"gls")){
+        if(inherits(object,"gls")){
             mean.coef <- stats::coef(object)
-        }else if(inherit(object,"lme")){
+        }else if(inherits(object,"lme")){
             mean.coef <- nlme::fixef(object)
         }
             
@@ -135,7 +135,7 @@ coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.option
         }
 
         ## ** random effect coefficients
-        if(inherit(object,"lme")){
+        if(inherits(object,"lme")){
             random.coef <- as.double(nlme::getVarCov(object))    
             names(random.coef) <- paste0("ranCoef",1:length(random.coef))
         }else{

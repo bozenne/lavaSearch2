@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: dec 17 2019 (13:45) 
+## Last-Updated: jan  7 2020 (11:51) 
 ##           By: Brice Ozenne
-##     Update #: 351
+##     Update #: 355
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -146,10 +146,9 @@ information.sCorrect <- function(object, param = NULL, data = NULL,
         for(iG in index.var){ # iG <- 1
             iP1 <- grid.var[iG,1]
             iP2 <- grid.var[iG,2]
-
             iDiag <- diag(iOmegaM1 %*% dOmega[[iP1]][iY,iY,drop=FALSE] %*% iOmegaM1 %*% dOmega[[iP2]][iY,iY,drop=FALSE])
             Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.corrected)
-        }
+        }        
     }
 
     ## ** Make Info a symmetric matrix

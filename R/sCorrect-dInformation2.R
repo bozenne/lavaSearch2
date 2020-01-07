@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: dec 17 2019 (13:45) 
+## Last-Updated: jan  7 2020 (13:46) 
 ##           By: Brice Ozenne
-##     Update #: 29
+##     Update #: 62
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,6 +43,7 @@
 
     index.duplicated <- which(grid.dInformation$duplicated)
     index.Nduplicated <- setdiff(1:n.grid, index.duplicated)
+    ## grid.dInformation[index.Nduplicated,,drop=FALSE]
     
     ## ** loop over missing data pattern
     for(iP in 1:n.pattern){ ## iP <- 1
@@ -53,11 +54,10 @@
 
         iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
         for(iGrid in index.Nduplicated){ # iGrid <- 1
-                
             iName1 <- grid.dInformation[iGrid,"X"]
             iName2 <- grid.dInformation[iGrid,"Y"]
             iNameD <- grid.dInformation[iGrid,"Z"]
-            ## cat(iNameD," ",iName1,"",iName2,"\n")
+            ## cat("* ", iNameD," ",iName1,"",iName2,"\n")
 
             ## *** identify relevant terms
             test.Omega1 <- !is.null(dOmega[[iNameD]]) && !is.null(dOmega[[iName1]]) && !is.null(dOmega[[iName2]])
@@ -110,7 +110,8 @@
             }                    
 
             ## *** evaluate contributions to dInformation
-            if(test.Omega1){
+            ## if(iP==2 && (iName1==iName2)&& (iName2==iNameD) && (iName1=="2")){browser()}
+            if(test.Omega1){                
                 iDiag1 <- diag(iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.2)
                 iDiag2 <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2)
                 dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iN.corrected + iDiag2 * iN.corrected)
@@ -124,6 +125,7 @@
             if(test.Omega3a || test.Omega3b){
                 iDiag <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1 %*% d2Omega.D2)
                 dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)
+                
             }
 
             if(test.mu1a || test.mu1b){
@@ -144,7 +146,8 @@
     ## ** symmetrize
     if(length(index.duplicated)>0){
         for(iGrid in index.duplicated){ ## iGrid <- index.duplicated[1]
-            
+
+
             iName1 <- grid.dInformation[iGrid,"X"]
             iName2 <- grid.dInformation[iGrid,"Y"]
             iNameD <- grid.dInformation[iGrid,"Z"]

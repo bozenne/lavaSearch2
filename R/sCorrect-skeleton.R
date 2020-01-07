@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: dec 17 2019 (13:45) 
+## Last-Updated: jan  7 2020 (13:30) 
 ##           By: Brice Ozenne
-##     Update #: 1460
+##     Update #: 1467
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -738,9 +738,8 @@ skeletonDtheta2 <- function(object){
     }
     name.param.dInformation <- type.Uparam[type.Uparam$detail %in% type.dInformation,"param"]
     
-
     grid.dInformation <- expand.grid(X = object$Uparam, Y = object$Uparam, Z = name.param.dInformation, stringsAsFactors = FALSE)
-    grid.dInformation$level <- apply(grid.dInformation,1,function(iX){paste0(sort(iX),collapse="")})
+    grid.dInformation$level <- apply(grid.dInformation,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
     grid.dInformation$duplicated <- duplicated(grid.dInformation$level)
 
     level2row <- setNames(which(grid.dInformation$duplicated==FALSE),grid.dInformation[grid.dInformation$duplicated==FALSE,"level"])

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: dec 17 2019 (16:43) 
+## Last-Updated: jan  7 2020 (13:45) 
 ##           By: Brice Ozenne
-##     Update #: 161
+##     Update #: 167
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -386,8 +386,10 @@ updateD2Moment <- function(moment, skeleton, param){
         for(iP in 1:NROW(grid.var$sigma2k.sigma2k)){ # iP <- 3
             iName1 <- grid.var$sigma2k.sigma2k[iP,"sigma2k1"]
             iName2 <- grid.var$sigma2k.sigma2k[iP,"sigma2k2"]
-
-            iFactor <- dsigma2k[[iName1]][,,"X"]*dsigma2k[[iName2]][,,"Y"]
+            iFactor <- dsigma2k[[iName1]][,,"X"] * dsigma2k[[iName2]][,,"Y"]
+            if(iName1==iName2){
+                iFactor <- 2 * iFactor
+            }
             d2Omega[[iName1]][[iName2]] <- Sigma * (iFactor/(param[iName1]*param[iName2]))
         }
     }

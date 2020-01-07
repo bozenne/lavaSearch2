@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: dec 17 2019 (16:17) 
+## Last-Updated: jan  7 2020 (13:48) 
 ##           By: Brice Ozenne
-##     Update #: 1668
+##     Update #: 1673
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -371,6 +371,12 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
         object$sCorrect$hessian <- aperm(array(num.hessian, dim = c(n.cluster,n.param,n.param),
                                                dimnames = list(NULL, name.param, name.param)), perm = 3:1)
 
+        ## ## *** dInformation
+        ## num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object, type = "information", method = "Richardson")
+
+        ## object$sCorrect$dInformation <- array(num.information, dim = c(n.param,n.param,n.param),
+        ##                                       dimnames = list(name.param, name.param, name.param))
+
         ## *** dVcov.param
         num.dVcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object, type = "vcov.model", method = "Richardson")
 
@@ -392,7 +398,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
 ## * .wraper.numDev
 .warper.numDev <- function(value, object, type){ # x <- p.obj
 
-    type <- match.arg(type, c("score","hessian","vcov.model","vcov.robust"))
+    type <- match.arg(type, c("score","hessian","information","vcov.model","vcov.robust"))
             
     ## update param
     pp <- object$sCorrect$coef
@@ -433,7 +439,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                         leverage = object$sCorrect$leverage,
                         n.cluster = object$sCorrect$cluster$n.cluster)
     }
-    if(type %in% c("vcov.model","vcov.robust")){
+    if(type %in% c("information","vcov.model","vcov.robust")){
         ii <- .information2(dmu = cM$dmoment$dmu,
                             dOmega = cM$dmoment$dOmega,
                             OmegaM1 = cM$moment$OmegaM1.missing.pattern,
@@ -450,6 +456,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
     return(switch(type,
                   "score" = ss,
                   "hessian" = hh,
+                  "information" = ii,
                   "vcov.model" = solve(ii),
                   "vcov.robust" = crossprod(ss %*% solve(ii)))
            )
