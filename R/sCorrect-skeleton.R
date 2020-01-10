@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 10 2020 (14:04) 
+## Last-Updated: jan 10 2020 (14:49) 
 ##           By: Brice Ozenne
-##     Update #: 1587
+##     Update #: 1592
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -836,16 +836,19 @@ skeletonDtheta2 <- function(object){
     ## generate grid (all possible combinations)
     grid <- expand.grid(X = X, Y = Y, Z = Z, stringsAsFactors = FALSE)    
 
-    ## remove duplicated 
-    if(rm.duplicated.byZ){  ## XY=YZ for fixed Z
-        grid$level <- apply(grid,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
-    }else{ ## XYZ = XZY = ZYX = YXZ
-        grid$level <- apply(grid,1,function(iX){paste0(sort(iX),collapse="")})
-    }
-    grid$duplicated <- duplicated(grid$level)
-    grid <- grid[grid$duplicated==FALSE,c("X","Y","Z"),drop=FALSE]
-    rownames(grid) <- NULL
-    
+    ## find duplicated 
+    levelXY <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
+    grid$duplicatedXY <- duplicated(levelXY)
+
+    levelXZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(sort(iX[c(1,3)]),iX[2]),collapse="")})
+    grid$duplicatedXZ <- duplicated(levelXZ)
+
+    levelYZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(iX[1],sort(iX[2:3])),collapse="")})
+    grid$duplicatedYZ <- duplicated(levelYZ)
+
+    levelXYZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(sort(iX),collapse="")})
+    grid$duplicatedXYZ <- duplicated(levelXYZ)
+
     return(grid)
 }
 ##----------------------------------------------------------------------

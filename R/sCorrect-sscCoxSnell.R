@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan  9 2020 (18:01) 
+## Last-Updated: jan 10 2020 (14:42) 
 ##           By: Brice Ozenne
-##     Update #: 49
+##     Update #: 59
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -156,32 +156,28 @@
                 iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
 
                 ## term 1
-                iDiag <- diag(iOmegaM1 %*% id2Omega[[iName2]][[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(iDiag * iN.corrected)
+                if(grid.2varD2.1varD1[iGrid,"d2XY"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XY.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XY.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName3]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * iN.corrected)
+                }
 
                 ## term 2
-                iDiag <- diag(iOmegaM1 %*% id2Omega[[iName2]][[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(iDiag * iN.corrected)
+                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * iN.corrected)
+                }
 
                 ## term 3
-                iDiag <- - diag(iOmegaM1 %*% id2Omega[[iName2]][[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(iDiag * iN.corrected)
-
-                ## symmetrize
-                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
-            }
-        }
-        
-        ## *** 2 first derivative regarding the mean and one regarding the variance
-        if(n.grid.2meanD1.1varD1>0){
-            for(iGrid in 1:n.grid.2meanD1.1varD1){ # iGrid <- 1
-                iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
-                iName2 <- grid.2meanD1.1varD1[iGrid,"Y"]
-                iName3 <- grid.2meanD1.1varD1[iGrid,"Z"]
-            
-                ## term 4
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - sum(idmu[[iName1]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 * idmu[[iName2]])
-                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3] ## symmetrize
+                if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName1]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + 1/2 * sum(iDiag * iN.corrected)
+                }
             }
         }
         
@@ -192,15 +188,61 @@
                 iName2 <- grid.2meanD2.1meanD1[iGrid,"Y"]
                 iName3 <- grid.2meanD2.1meanD1[iGrid,"Z"]
 
-                ## term 5
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(id2mu[[iName2]][[iName3]] %*% iOmegaM1 * idmu[[iName1]])
-                dInfo[iName2,iName1,iName3] <- dInfo[iName2,iName1,iName3] ## symmetrize
+                ## term 4
+                if(grid.2meanD2.1meanD1[iGrid,"d2XY"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName3]])
+                }
 
-                ## tern 6
-                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(idmu[[iName1]] %*% iOmegaM1 * id2mu[[iName2]][[iName3]])
-                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3] ## symmetrize
+                ## term 5
+                if(grid.2meanD2.1meanD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
+                }
+
+                ## term 6
+                if(grid.2meanD2.1meanD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName1]])
+                }
             }
         }
+
+        ## *** 2 first derivative regarding the mean and one regarding the variance
+        if(n.grid.2meanD1.1varD1>0){
+            for(iGrid in 1:n.grid.2meanD1.1varD1){ # iGrid <- 1
+                iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName2 <- grid.2meanD1.1varD1[iGrid,"Y"]
+                iName3 <- grid.2meanD1.1varD1[iGrid,"Z"]
+                
+                ## term 7
+                iName1.YXZ <- grid.2meanD1.1varD1[iGrid,"Y"]
+                iName2.YXZ <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName3.YXZ <- grid.2meanD1.1varD1[iGrid,"Z"]
+                JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(idmu[[iName2.YXZ]] %*% iOmegaM1 %*% idOmega[[iName1.YXZ]] %*% iOmegaM1 * idmu[[iName3.YXZ]])
+
+                ## term 8
+                iName1.XYZ <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName2.XYZ <- grid.2meanD1.1varD1[iGrid,"Y"]
+                iName3.XYZ <- grid.2meanD1.1varD1[iGrid,"Z"]
+                JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(idmu[[iName1.XYZ]] %*% iOmegaM1 %*% idOmega[[iName3.XYZ]] %*% iOmegaM1 * idmu[[iName2.XYZ]])
+
+                ## term 9
+                iName1.XZY <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName2.XZY <- grid.2meanD1.1varD1[iGrid,"Z"]
+                iName3.XZY <- grid.2meanD1.1varD1[iGrid,"Y"]
+                JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(idmu[[iName1.XZY]] %*% iOmegaM1 %*% idOmega[[iName2.XZY]] %*% iOmegaM1 * idmu[[iName3.XZY]])
+
+                ## symmetrize (XYZ = XZY)
+                ## dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
+
+            }
+        }
+        
+
     }
 
     return(JJK)

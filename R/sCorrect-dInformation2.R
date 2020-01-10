@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 10 2020 (14:10) 
+## Last-Updated: jan 10 2020 (15:59) 
 ##           By: Brice Ozenne
-##     Update #: 209
+##     Update #: 283
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,31 +30,46 @@
                            name.param, leverage, n.cluster){
 
     if(lava.options()$debug){cat(".dInformation2\n")}
-
+    symmetrize <- TRUE
+    
     ## ** Prepare
     n.param <- length(name.param)
     n.pattern <- length(name.pattern)
 
     n.grid.3varD1 <- NROW(grid.3varD1)
+    if(symmetrize && n.grid.3varD1>0){
+        grid.3varD1 <- grid.3varD1[grid.3varD1$duplicatedXYZ==FALSE,,drop=FALSE]
+        n.grid.3varD1 <- NROW(grid.3varD1)
+    }
+
     n.grid.2meanD1.1varD1 <- NROW(grid.2meanD1.1varD1)
+    if(symmetrize && n.grid.3varD1>0){
+        grid.2meanD1.1varD1 <- grid.2meanD1.1varD1[grid.2meanD1.1varD1$duplicatedXY==FALSE,,drop=FALSE]
+        n.grid.2meanD1.1varD1 <- NROW(grid.2meanD1.1varD1)
+    }
+
+    n.grid.2varD2.1varD1 <- NROW(grid.2varD2.1varD1)
+    if(symmetrize && n.grid.2varD2.1varD1>0){
+        grid.2varD2.1varD1 <- grid.2varD2.1varD1[grid.2varD2.1varD1$d2XZ+grid.2varD2.1varD1$d2YZ>0,,drop=FALSE]
+        n.grid.2varD2.1varD1 <- NROW(grid.2varD2.1varD1)
+
+        grid.2varD2.1varD1[,"d2XZ"] <- grid.2varD2.1varD1[,"d2XZ"]*(1-grid.2varD2.1varD1[,"duplicatedXZ"])
+        grid.2varD2.1varD1[,"d2YZ"] <- grid.2varD2.1varD1[,"d2YZ"]*(1-grid.2varD2.1varD1[,"duplicatedYZ"])
+    }
     
     n.grid.2meanD2.1meanD1 <- NROW(grid.2meanD2.1meanD1)
-    if(n.grid.2meanD2.1meanD1>0){
-        index.grid.2meanD2.1meanD1 <- union(which(grid.2meanD2.1meanD1$d2XZ),
-                                            which(grid.2meanD2.1meanD1$d2YZ))
-        n.grid.2meanD2.1meanD1 <- length(index.grid.2meanD2.1meanD1)
+    if(symmetrize && n.grid.2meanD2.1meanD1>0){
+        grid.2meanD2.1meanD1 <- grid.2meanD2.1meanD1[grid.2meanD2.1meanD1$d2XZ+grid.2meanD2.1meanD1$d2YZ>0,,drop=FALSE]
+        n.grid.2meanD2.1meanD1 <- NROW(grid.2meanD2.1meanD1)
+
+        grid.2meanD2.1meanD1[,"d2XZ"] <- grid.2meanD2.1meanD1[,"d2XZ"]*(1-grid.2meanD2.1meanD1[,"duplicatedXZ"])
+        grid.2meanD2.1meanD1[,"d2YZ"] <- grid.2meanD2.1meanD1[,"d2YZ"]*(1-grid.2meanD2.1meanD1[,"duplicatedYZ"])
     }
-    n.grid.2varD2.1varD1 <- NROW(grid.2varD2.1varD1)
-    if(n.grid.2varD2.1varD1>0){
-        index.grid.2varD2.1varD1 <- union(which(grid.2varD2.1varD1$d2XZ),
-                                          which(grid.2varD2.1varD1$d2YZ))
-        n.grid.2varD2.1varD1 <- length(index.grid.2varD2.1varD1)
-    }
-    
+
     dInfo <- array(0,
                    dim = c(n.param, n.param, n.param),
                    dimnames = list(name.param, name.param, name.param))
-
+    
     ## ** loop over missing data pattern
     for(iP in 1:n.pattern){ ## iP <- 1
         iPattern <- name.pattern[iP]
@@ -81,41 +96,12 @@
                 dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - 1/2 * sum(iDiag1 * iN.corrected + iDiag2 * iN.corrected)
 
                 ## symmetrize (XYZ = XZY = YXZ = YZX = ZXY = ZYX)
-                dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
-                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
-                dInfo[iName2,iName3,iName1] <- dInfo[iName1,iName2,iName3]
-                dInfo[iName3,iName1,iName2] <- dInfo[iName1,iName2,iName3]
-                dInfo[iName3,iName2,iName1] <- dInfo[iName1,iName2,iName3]
-            }
-        }
-
-        ## *** 1 second derivative and 1 first derivative regarding the variance
-        if(n.grid.2varD2.1varD1>0){
-            for(iGrid in index.grid.2varD2.1varD1){ # iGrid <- 1
-                iName1 <- grid.2varD2.1varD1[iGrid,"X"]
-                iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
-                iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
-
-                ## term 2
-                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
-                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
-                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
-                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]])
-                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + 1/2 * sum(iDiag * iN.corrected)
-
-                    ## symmetrize (XYZ = ZYX) - does not lead to correct result
-                    ## dInfo[iName3,iName2,iName1] <- dInfo[iName1,iName2,iName3]
-                }
-
-                ## term 3
-                if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
-                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
-                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
-                    iDiag <- diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]])
-                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + 1/2 * sum(iDiag * iN.corrected)
-
-                    ## symmetrize (XYZ = XZY) - does not lead to correct result
-                    ## dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
+                if(symmetrize){
+                    dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
+                    dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                    dInfo[iName2,iName3,iName1] <- dInfo[iName1,iName2,iName3]
+                    dInfo[iName3,iName1,iName2] <- dInfo[iName1,iName2,iName3]
+                    dInfo[iName3,iName2,iName1] <- dInfo[iName1,iName2,iName3]
                 }
             }
         }
@@ -126,19 +112,56 @@
                 iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
                 iName2 <- grid.2meanD1.1varD1[iGrid,"Y"]
                 iName3 <- grid.2meanD1.1varD1[iGrid,"Z"]
-            
+
                 ## term 4
                 dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - sum(idmu[[iName1]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 * idmu[[iName2]])
                 
                 ## symmetrize (XYZ = YXZ)
-                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                if(symmetrize){
+                    dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                }
 
             }
         }
         
+        ## *** 1 second derivative and 1 first derivative regarding the variance
+        if(n.grid.2varD2.1varD1>0){
+            for(iGrid in 1:n.grid.2varD2.1varD1){ # iGrid <- 1
+                iName1 <- grid.2varD2.1varD1[iGrid,"X"]
+                iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
+                iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
+
+                ## term 2
+                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
+                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]]) * iN.corrected)
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
+
+                    ## symmetrize (XYZ = ZYX)
+                    if(symmetrize && (iName1 != iName3)){
+                        dInfo[iName3,iName2,iName1] <- dInfo[iName3,iName2,iName1] + iDiag
+                    }
+                }
+                
+                ## term 3
+                if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
+                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]]) * iN.corrected)
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
+
+                    ## symmetrize (XYZ = XZY)
+                    if(symmetrize && (iName2 != iName3)){
+                        dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName3,iName2] + iDiag
+                    }
+                }
+            }
+        }
+
         ## *** 1 second derivative and 1 first derivative regarding the mean
         if(n.grid.2meanD2.1meanD1>0){
-            for(iGrid in index.grid.2meanD2.1meanD1){ # iGrid <- 1
+            for(iGrid in 1:n.grid.2meanD2.1meanD1){ # iGrid <- 1
                 iName1 <- grid.2meanD2.1meanD1[iGrid,"X"]
                 iName2 <- grid.2meanD2.1meanD1[iGrid,"Y"]
                 iName3 <- grid.2meanD2.1meanD1[iGrid,"Z"]
@@ -147,20 +170,26 @@
                 if(grid.2meanD2.1meanD1[iGrid,"d2XZ"]){
                     d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var1"]
                     d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var2"]
-                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
+                    iDiag <- sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
 
-                    ## symmetrize
-                    ## dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                    ## symmetrize (XYZ=ZYX)
+                    if(symmetrize && (iName1 != iName3)){
+                        dInfo[iName3,iName2,iName1] <- dInfo[iName3,iName2,iName1] + iDiag
+                    }
                 }
 
                 ## term 6
                 if(grid.2meanD2.1meanD1[iGrid,"d2YZ"]){
                     d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var1"]
                     d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var2"]
-                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(idmu[[iName1]] %*% iOmegaM1 * id2mu[[d2.Var1]][[d2.Var2]])
+                    iDiag <- sum(idmu[[iName1]] %*% iOmegaM1 * id2mu[[d2.Var1]][[d2.Var2]])
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
 
-                    ## symmetrize
-                    ## dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]                
+                    ## symmetrize (XYZ = XZY)
+                    if(symmetrize && (iName2 != iName3)){
+                        dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName3,iName2] + iDiag
+                    }
                 }
             }
         }
@@ -262,7 +291,6 @@
             }                    
 
             ## *** evaluate contributions to dInformation
-            if(iP==2 && (iName1==iName2)&& (iName2==iNameD) && (iName1=="2")){browser()}
             if(test.Omega1){                
                 iDiag1 <- diag(iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.2)
                 iDiag2 <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2)
