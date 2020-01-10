@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan  8 2020 (11:15) 
+## Last-Updated: jan 10 2020 (18:19) 
 ##           By: Brice Ozenne
-##     Update #: 989
+##     Update #: 997
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -122,20 +122,19 @@
     n.Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
                     dimnames = list(endogenous, endogenous))
 
-    ls.Psi <- vector(mode = "list", length = n.cluster)
+    ## ls.Psi <- vector(mode = "list", length = n.cluster)
     for(iP in 1:n.pattern){ ## iP <- 1
-        iY <- unique.pattern[iP,]
+        iY <- which(unique.pattern[iP,]>0)
         
         for(iC in missing.pattern[[iP]]){ ## iC <- 1
             ## individual bias
             iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
-            ls.Psi[[iC]] <- iPsi
+            ## ls.Psi[[iC]] <- iPsi
             ## cumulated bias            
             Psi[iY,iY] <- Psi[iY,iY] + iPsi
             n.Psi[iY,iY] <- n.Psi[iY,iY] + 1
         }
     }
-
     ## take the average
     Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
     
@@ -228,9 +227,9 @@
             stop(iSolution)
         }
     }
-
+    
     ## ** update parameters in conditional moments
-    ## iSolution - param[object$sCorrect$ssc$name.var]
+    ## iSolution - param0[object$sCorrect$ssc$name.var]
     param0[object$sCorrect$ssc$name.var] <- iSolution
 
     ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the parent function

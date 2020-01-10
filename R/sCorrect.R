@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 10 2020 (13:39) 
+## Last-Updated: jan 10 2020 (17:37) 
 ##           By: Brice Ozenne
-##     Update #: 1787
+##     Update #: 1788
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,7 +137,8 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         ## *** initialize bias correction
         if(trace>0){cat("Initialize bias correction \n")}
         if(ssc=="Cox"){
-            object$sCorrect$ssc <- list(type = "Cox")
+            object$sCorrect$ssc <- list(type = "Cox",
+                                        param0 = object$sCorrect$param)
         }else if(ssc=="residuals"){
             object$sCorrect$ssc <- .init_sscResiduals(object)
         }
@@ -154,6 +155,8 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
             ## bias correction
             if(ssc=="Cox"){
                 iParam <- .sscCoxSnell(object)
+                object$sCorrect$ssc$JJK <- attr(iParam,"JJK")
+                object$sCorrect$ssc$lm <- attr(iParam,"lm")
             }else if(ssc=="residuals"){
                 iParam <- .sscResiduals(object)
                 object$sCorrect$leverage <- attr(iParam,"leverage")
