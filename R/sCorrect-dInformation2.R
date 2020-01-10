@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan  7 2020 (14:16) 
+## Last-Updated: jan 10 2020 (14:10) 
 ##           By: Brice Ozenne
-##     Update #: 65
+##     Update #: 209
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,9 +25,162 @@
 #' 
 #' @keywords internal
 .dInformation2 <- function(dmu, dOmega, d2mu, d2Omega, OmegaM1,
-                           missing.pattern, unique.pattern, name.pattern, 
-                           grid.dInformation, name.param, name.param.dInformation,
-                           leverage, n.cluster){
+                           missing.pattern, unique.pattern, name.pattern,
+                           grid.3varD1, grid.2meanD1.1varD1, grid.2meanD2.1meanD1, grid.2varD2.1varD1,
+                           name.param, leverage, n.cluster){
+
+    if(lava.options()$debug){cat(".dInformation2\n")}
+
+    ## ** Prepare
+    n.param <- length(name.param)
+    n.pattern <- length(name.pattern)
+
+    n.grid.3varD1 <- NROW(grid.3varD1)
+    n.grid.2meanD1.1varD1 <- NROW(grid.2meanD1.1varD1)
+    
+    n.grid.2meanD2.1meanD1 <- NROW(grid.2meanD2.1meanD1)
+    if(n.grid.2meanD2.1meanD1>0){
+        index.grid.2meanD2.1meanD1 <- union(which(grid.2meanD2.1meanD1$d2XZ),
+                                            which(grid.2meanD2.1meanD1$d2YZ))
+        n.grid.2meanD2.1meanD1 <- length(index.grid.2meanD2.1meanD1)
+    }
+    n.grid.2varD2.1varD1 <- NROW(grid.2varD2.1varD1)
+    if(n.grid.2varD2.1varD1>0){
+        index.grid.2varD2.1varD1 <- union(which(grid.2varD2.1varD1$d2XZ),
+                                          which(grid.2varD2.1varD1$d2YZ))
+        n.grid.2varD2.1varD1 <- length(index.grid.2varD2.1varD1)
+    }
+    
+    dInfo <- array(0,
+                   dim = c(n.param, n.param, n.param),
+                   dimnames = list(name.param, name.param, name.param))
+
+    ## ** loop over missing data pattern
+    for(iP in 1:n.pattern){ ## iP <- 1
+        iPattern <- name.pattern[iP]
+        iIndex <- missing.pattern[[iPattern]]
+        iY <- which(unique.pattern[iP,]==1)
+
+        iOmegaM1 <- OmegaM1[[iPattern]]
+        iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
+        idmu <- .subsetList(dmu, indexRow = iIndex, indexCol = iY)
+        idOmega <- .subsetList(dOmega, indexRow = iY, indexCol = iY)
+        id2mu <- .subsetList2(d2mu, indexRow = iIndex, indexCol = iY)
+        id2Omega <- .subsetList2(d2Omega, indexRow = iY, indexCol = iY)
+
+        ## *** 3 first derivative regarding the variance
+        if(n.grid.3varD1>0){
+            for(iGrid in 1:n.grid.3varD1){ # iGrid <- 1
+                iName1 <- grid.3varD1[iGrid,"X"]
+                iName2 <- grid.3varD1[iGrid,"Y"]
+                iName3 <- grid.3varD1[iGrid,"Z"]
+            
+                ## term 1
+                iDiag1 <- diag(iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                iDiag2 <- diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - 1/2 * sum(iDiag1 * iN.corrected + iDiag2 * iN.corrected)
+
+                ## symmetrize (XYZ = XZY = YXZ = YZX = ZXY = ZYX)
+                dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
+                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                dInfo[iName2,iName3,iName1] <- dInfo[iName1,iName2,iName3]
+                dInfo[iName3,iName1,iName2] <- dInfo[iName1,iName2,iName3]
+                dInfo[iName3,iName2,iName1] <- dInfo[iName1,iName2,iName3]
+            }
+        }
+
+        ## *** 1 second derivative and 1 first derivative regarding the variance
+        if(n.grid.2varD2.1varD1>0){
+            for(iGrid in index.grid.2varD2.1varD1){ # iGrid <- 1
+                iName1 <- grid.2varD2.1varD1[iGrid,"X"]
+                iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
+                iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
+
+                ## term 2
+                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + 1/2 * sum(iDiag * iN.corrected)
+
+                    ## symmetrize (XYZ = ZYX) - does not lead to correct result
+                    ## dInfo[iName3,iName2,iName1] <- dInfo[iName1,iName2,iName3]
+                }
+
+                ## term 3
+                if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]])
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + 1/2 * sum(iDiag * iN.corrected)
+
+                    ## symmetrize (XYZ = XZY) - does not lead to correct result
+                    ## dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName2,iName3]
+                }
+            }
+        }
+
+        ## *** 2 first derivative regarding the mean and one regarding the variance
+        if(n.grid.2meanD1.1varD1>0){
+            for(iGrid in 1:n.grid.2meanD1.1varD1){ # iGrid <- 1
+                iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName2 <- grid.2meanD1.1varD1[iGrid,"Y"]
+                iName3 <- grid.2meanD1.1varD1[iGrid,"Z"]
+            
+                ## term 4
+                dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - sum(idmu[[iName1]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 * idmu[[iName2]])
+                
+                ## symmetrize (XYZ = YXZ)
+                dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+
+            }
+        }
+        
+        ## *** 1 second derivative and 1 first derivative regarding the mean
+        if(n.grid.2meanD2.1meanD1>0){
+            for(iGrid in index.grid.2meanD2.1meanD1){ # iGrid <- 1
+                iName1 <- grid.2meanD2.1meanD1[iGrid,"X"]
+                iName2 <- grid.2meanD2.1meanD1[iGrid,"Y"]
+                iName3 <- grid.2meanD2.1meanD1[iGrid,"Z"]
+
+                ## term 5
+                if(grid.2meanD2.1meanD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var2"]
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
+
+                    ## symmetrize
+                    ## dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]
+                }
+
+                ## term 6
+                if(grid.2meanD2.1meanD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var2"]
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + sum(idmu[[iName1]] %*% iOmegaM1 * id2mu[[d2.Var1]][[d2.Var2]])
+
+                    ## symmetrize
+                    ## dInfo[iName2,iName1,iName3] <- dInfo[iName1,iName2,iName3]                
+                }
+            }
+        }
+    }
+    
+    ## dInfo.bis <- .old_dInformation2(dmu = dmu, dOmega = dOmega, d2mu = d2mu, d2Omega = d2Omega, OmegaM1 = OmegaM1,
+    ##                                 missing.pattern = missing.pattern, unique.pattern = unique.pattern, name.pattern = name.pattern, 
+    ##                                 grid.dInformation = expand.grid(X = name.param, Y = name.param, Z = name.param, duplicated = FALSE, stringsAsFactors = FALSE),
+    ##                                 name.param = name.param, name.param.dInformation = name.param,
+    ##                                 leverage = leverage, n.cluster = n.cluster)
+
+    ## ** export
+    return(dInfo)
+}
+
+## * .old_dInformation2
+.old_dInformation2 <- function(dmu, dOmega, d2mu, d2Omega, OmegaM1,
+                               missing.pattern, unique.pattern, name.pattern, 
+                               grid.dInformation, name.param, name.param.dInformation,
+                               leverage, n.cluster){
 
     if(lava.options()$debug){cat(".dInformation2\n")}
 
@@ -75,7 +228,6 @@
             if((test.Omega1 + test.Omega2a + test.Omega2b + test.Omega3a + test.Omega3b + test.mu1a + test.mu1b + test.mu2a + test.mu2b + test.mu3) == 0){
                 next
             }
-
             ## *** extract quantities for computations 
             if(test.mu1a){
                 d2mu.D1 <- d2mu[[iNameD]][[iName1]][iIndex,iY,drop=FALSE]
@@ -110,7 +262,7 @@
             }                    
 
             ## *** evaluate contributions to dInformation
-            ## if(iP==2 && (iName1==iName2)&& (iName2==iNameD) && (iName1=="2")){browser()}
+            if(iP==2 && (iName1==iName2)&& (iName2==iNameD) && (iName1=="2")){browser()}
             if(test.Omega1){                
                 iDiag1 <- diag(iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.2)
                 iDiag2 <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2)
@@ -124,8 +276,7 @@
 
             if(test.Omega3a || test.Omega3b){
                 iDiag <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1 %*% d2Omega.D2)
-                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)
-                
+                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)                
             }
 
             if(test.mu1a || test.mu1b){
@@ -143,7 +294,7 @@
         }
     }
 
-    ## ** symmetrize
+    ## ## ** symmetrize
     if(length(index.duplicated)>0){
         for(iGrid in index.duplicated){ ## iGrid <- index.duplicated[1]
 
@@ -163,7 +314,6 @@
     ### ** export
     return(dInfo)
 }
-
 
 ######################################################################
 ### sCorrect-dInformation2.R ends here

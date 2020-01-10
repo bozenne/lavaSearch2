@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan  7 2020 (13:52) 
+## last-updated: jan  8 2020 (15:37) 
 ##           By: Brice Ozenne
-##     Update #: 856
+##     Update #: 858
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -115,7 +115,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef = NULL, ...
         data <- extractData(object)
     }
     if(is.null(coef)){
-        coef <- .coef2(object, labels = 1)
+        coef <- .coef2(object, labels = 1, ssc = object$method)
     }
     if(is.null(indexOmega)){
         indexOmega <- .getIndexOmega(object, data = data)

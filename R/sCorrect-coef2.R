@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan  7 2020 (13:53) 
+## Last-Updated: jan 10 2020 (13:41) 
 ##           By: Brice Ozenne
-##     Update #: 75
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,15 +77,14 @@
 ## * coef2.lm
 #' @rdname coef2
 coef2.lm <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
-    if(is.null(ssc) && (is.null(object$sCorrect) || !is.null(object$sCorrect$ssc))){
-        out <- .coef2(object, labels = labels)
-    }else{    
-        if(!identical(object$sCorrect$ssc,ssc)){
-            object <- sCorrect(object, ssc = ssc, df = NULL)
+    if((is.na(ssc) && !is.na(object$sCorrect$ssc$type)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
+        out <- .coef2(object, labels = labels, ssc = ssc)
+    }else{
+        if(!identical(object$sCorrect$ssc$type,ssc)){
+            object <- sCorrect(object, ssc = ssc, df = NA)
         }
         out <- object$sCorrect$param
     }
-
     return(out)
 }
 
@@ -99,26 +98,52 @@ coef2.lme <- coef2.lm
 
 ## * coef2.lvmfit
 #' @rdname coef2
-coef2.lvmfit <- coef2.lm
+coef2.lvmfit <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
+    if((is.na(ssc) && !is.na(object$sCorrect$ssc$type)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
+        out <- .coef2(object, labels = labels, ssc = ssc)
+    }else{
+        if(!identical(object$sCorrect$ssc$type,ssc)){
+            object <- sCorrect(object, ssc = ssc, df = NA)
+        }
+        out <- object$sCorrect$param
+        names(out) <- names(object$sCorrect$skeleton$originalLink2param) ## restaure names as in lava
+    }
+    return(out)
+}
 
-## * coef.sCorrect
+
+
+## * coef2.sCorrect
 #' @rdname coef2
-coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
+coef2.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
     class(object) <- setdiff(class(object),"sCorrect")
     return(coef2(object, ssc = ssc, labels = labels))
 
 }
+
+## * coef.sCorrect
+coef.sCorrect <- coef2.sCorrect
+
 ## * .coef2
-.coef2 <- function(object, labels){
+.coef2 <- function(object, labels, ssc){
 
     if(inherits(object,"lm")){        
         coef.object <- coef(object)
-        
-        out <- c(coef.object,sigma2=sigma(object)^2)
+        if(identical(ssc,"REML")){
+            out <- c(coef.object,sigma2=sigma(object)^2)
+        }else{
+            out <- c(coef.object,sigma2=mean(residuals(object)^2))
+        }
         attr(out, "mean.coef") <- names(coef.object)
         attr(out, "var.coef") <- "sigma2"
 
     }else if(inherits(object,"gls") || inherits(object,"lme")){
+
+        if(identical(ssc,"REML") && (object$method=="ML")){
+            object <- update(object, method = "REML")
+        }else if(is.na(ssc) && (object$method=="REML")){
+            object <- update(object, method = "ML")
+        }
         
         ## ** mean coefficients
         if(inherits(object,"gls")){
@@ -189,9 +214,9 @@ coef.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.option
         attr(out, "table.cor.coef") <- table.cor.coef
         
     }else if(inherits(object,"lvmfit")){
-        
+
         tempo <- stats::coef(object, type = 2, labels = labels)
-        out <- tempo[,1]
+        out <- setNames(tempo[,1],rownames(tempo))
         attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
         attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
         

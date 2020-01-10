@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: dec 17 2019 (11:38) 
+## Last-Updated: jan  8 2020 (16:36) 
 ##           By: Brice Ozenne
-##     Update #: 60
+##     Update #: 91
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -108,14 +108,14 @@ residuals2.lm <- function(object, param = NULL, data = NULL,
 
     format <- match.arg(format, choices = c("long","wide"))
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
-        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NULL)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
+        object <- sCorrect(object, param = param, data = data, first.order = !is.na(ssc), ssc = ssc, df = NA)
     }
-
-    residuals <- .normalizeResiduals(residuals = object$sCorrect$moment$residuals,
+    residuals <- .normalizeResiduals(residuals = object$sCorrect$residuals,
                                      Omega = object$sCorrect$moment$Omega,
                                      type = type,
-                                     missing.pattern = object$sCorrect$moment$missing.pattern,
+                                     missing.pattern = object$sCorrect$missing$pattern,
+                                     unique.pattern = object$sCorrect$missing$unique.pattern,
                                      Omega.missing.pattern = object$sCorrect$moment$Omega.missing.pattern)
     if(format == "wide"){
         return(residuals)
@@ -153,17 +153,21 @@ residuals2.lme <- residuals2.lm
 #' @export
 residuals2.lvmfit <- residuals2.lm
 
-## * residuals.sCorrect
+## * residuals2.sCorrect
 #' @rdname residuals2
-residuals.sCorrect <- function(object, param = NULL, data = NULL,
-                               ssc = lava.options()$ssc, type = "response", format = "wide"){
+residuals2.sCorrect <- function(object, param = NULL, data = NULL,
+                               ssc = object$sCorrect$ssc$type, type = "response", format = "wide"){
     class(object) <- setdiff(class(object),"sCorrect")
     return(residuals2(object, param = param, data = data, ssc = ssc, type = type, format = format))
 }
 
+## * residuals.sCorrect
+#' @rdname residuals2
+residuals.sCorrect <- residuals2.sCorrect
+
 ## * .normalizeResiduals
 .normalizeResiduals <- function(residuals, Omega, type,
-                                missing.pattern, Omega.missing.pattern){
+                                missing.pattern, unique.pattern, Omega.missing.pattern){
     type <- match.arg(type, choices = c("response","studentized","normalized"), several.ok = FALSE)
 
     if(type=="studentized"){
@@ -178,10 +182,13 @@ residuals.sCorrect <- function(object, param = NULL, data = NULL,
             residuals <- residuals %*% matrixPower(Omega, symmetric = TRUE, power = -1/2)
         }else{
             iOmegaHalf.missing.pattern <- lapply(Omega.missing.pattern,matrixPower,symmetric = TRUE, power = -1/2)
-            for(iC in 1:NROW(residuals)){ ## iC <- 1
-                iY <- which(!is.na(residuals[iC,]))
-                residuals[iC,iY] <- residuals[iC,iY] %*% iOmegaHalf.missing.pattern[[missing.pattern[iC]]]
+            for(iP in names(missing.pattern)){
+                iY <- which(unique.pattern[iP,]==1)
+                for(iC in missing.pattern[[iP]]){ ## iC <- 1
+                    residuals[iC,iY] <- residuals[iC,iY] %*% iOmegaHalf.missing.pattern[[iP]]
+                }
             }
+            
         }
         colnames(residuals) <- name.endogenous
     }
@@ -193,10 +200,11 @@ residuals.sCorrect <- function(object, param = NULL, data = NULL,
 .adjustResiduals <- function(Omega, Psi, epsilon,
                              name.pattern, missing.pattern, unique.pattern,
                              endogenous, n.endogenous, n.cluster){
-
+    if(is.null(Psi)){return(epsilon)}
+    n.endogenous <- length(endogenous)
     epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                           dimnames = list(NULL, endogenous))
-    n.pattern <- length(unique.pattern)        
+    n.pattern <- NROW(unique.pattern)        
         
     for(iP in 1:n.pattern){ ## iP <- 1 
         iIndex <- missing.pattern[[iP]]
@@ -204,7 +212,7 @@ residuals.sCorrect <- function(object, param = NULL, data = NULL,
         
         iOmega <- Omega[iY,iY,drop=FALSE]
         iPsi <- Psi[iY,iY,drop=FALSE]
-        
+
         iOmega.chol <- matrixPower(iOmega, symmetric = TRUE, power = 1/2)
         iH <- iOmega %*% iOmega - iOmega.chol %*% iPsi %*% iOmega.chol
         iHM1 <- tryCatch(matrixPower(iH, symmetric = TRUE, power = -1/2), warning = function(w){w})
@@ -215,7 +223,7 @@ residuals.sCorrect <- function(object, param = NULL, data = NULL,
         }
         epsilon.adj[iIndex,iY] <- epsilon[iIndex,iY,drop=FALSE] %*% iOmega.chol %*% iHM1 %*% iOmega.chol
     }
-    
+
     return(epsilon.adj)
 }
 

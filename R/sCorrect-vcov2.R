@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: dec 17 2019 (11:23) 
+## Last-Updated: jan  8 2020 (16:39) 
 ##           By: Brice Ozenne
-##     Update #: 11
+##     Update #: 18
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,8 +15,7 @@
 ## 
 ### Code:
 
-## * vcov2
-## ** vcov2 (documentation)
+## * vcov2 (documentation)
 #' @title  Extract the Variance Covariance Matrix of the Model Parameters After Small Sample Correction
 #' @description  Extract the variance covariance matrix of the model parameters from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
 #' Similar to \code{vcov} but with small sample correction (if any).
@@ -67,39 +66,42 @@
 vcov2.lm <- function(object, param = NULL, data = NULL,
                      ssc = lava.options()$ssc){
     
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NA)
     }
     
     return(.info2vcov(object$sCorrect$information))
 }
 
-## ** vcov2.gls
+## * vcov2.gls
 #' @rdname vcov2
 #' @export
 vcov2.gls <- vcov2.lm
 
-## ** vcov2.lme
+## * vcov2.lme
 #' @rdname vcov2
 #' @export
 vcov2.lme <- vcov2.lm
 
-## ** vcov2.lvmfit
+## * vcov2.lvmfit
 #' @rdname vcov2
 #' @export
 vcov2.lvmfit <- vcov2.lm
 
-
-## ** vcov2.sCorrect
+## * vcov2.sCorrect
 #' @rdname vcov2
 #' @export
 vcov2.sCorrect <- function(object, param = NULL, data = NULL,
-                           ssc = lava.options()$ssc){
+                          ssc = object$sCorrect$ssc$type){
     class(object) <- setdiff(class(object),"sCorrect")
-    return(information2(object, param = param, data = data, ssc = ssc))
+    return(vcov2(object, param = param, data = data, ssc = ssc))
 }
 
-## ** .info2vcov (helper)
+## * vcov.sCorrect
+#' @rdname vcov2
+#' @export
+vcov.sCorrect <- vcov2.sCorrect
+## * .info2vcov (helper)
 #' @title Inverse the Information Matrix
 #' @description Compute the inverse of the information matrix.
 #' @name vcov2-internal

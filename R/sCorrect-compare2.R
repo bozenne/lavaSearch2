@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: aug  2 2019 (11:15) 
+## Last-Updated: jan  8 2020 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 595
+##     Update #: 621
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -79,7 +79,7 @@
 #' sCorrect(e.lm) <- TRUE
 #' 
 #' ## and define the contrast matrix
-#' C <- createContrast(e.lm, par = c("X1b=0","X1c=0"), add.variance = TRUE)
+#' C <- createContrast(e.lm, linfct = c("X1b=0","X1c=0"), add.variance = TRUE)
 #'
 #' ## run compare2
 #' compare2(e.lm, contrast = C$contrast, null = C$null)
@@ -103,80 +103,23 @@
 #' @concept small sample inference
 #' @export
 `compare2` <-
-  function(object, df, bias.correct, ...) UseMethod("compare2")
+    function(object, linfct, rhs, robust, cluster,
+             ssc, df,
+             as.lava, F.test, conf.level) UseMethod("compare2")
 
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
-    sCorrect(object, df = df) <- bias.correct
-    return(.compare2(object, ...))
-}
-
-## * compare2.gls
-#' @rdname compare2
-#' @export
-compare2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(.compare2(object, ...))
-}
-
-## * compare2.lme
-#' @rdname compare2
-#' @export
-compare2.lme <- compare2.lm
-
-## * compare2.lvmfit
-#' @rdname compare2
-#' @export
-compare2.lvmfit <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, df = df) <- bias.correct
-    return(.compare2(object, cluster = cluster, ...))
-}
-
-## * compare2.lm2
-#' @rdname compare2
-#' @export
-compare2.lm2 <- function(object, ...){
-    return(.compare2(object, ...))
-}
-
-## * compare2.gls2
-#' @rdname compare2
-#' @export
-compare2.gls2 <- function(object, ...){
-    return(.compare2(object, ...))
-}
-
-## * compare2.lme2
-#' @rdname compare2
-#' @export
-compare2.lme2 <- function(object, ...){
-    return(.compare2(object, ...))
-}
-
-## * compare2.lvmfit2
-#' @rdname compare2
-#' @export
-compare2.lvmfit2 <- function(object, ...){
-    return(.compare2(object, ...))
-}
-
-## * .compare2
-#' @rdname compare2
-.compare2 <- function(object, par = NULL, contrast = NULL, null = NULL, rhs = NULL,
-                      robust = FALSE, cluster = NULL, df = object$sCorrect$args$df,
-                      as.lava = TRUE, F.test = TRUE, level = 0.95){
-
-
-    if(!is.null(null) && !is.null(rhs)){
-        stop("Arguments \'null\' and \'rhs\' should not be both specified \n")
+compare2.lm <- function(object, linfct = NULL, rhs = NULL,
+                        robust = FALSE, cluster = NULL, 
+                        ssc = lava.options()$ssc, df = lava.options()$df,
+                        as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
+        object <- sCorrect(object, ssc = ssc, df = df)
     }
+
     if(!is.logical(robust)){ 
         stop("Argument \'robust\' should be TRUE or FALSE \n")
-    }
-    if(!is.logical(df) && (robust == FALSE || df %in% c(0:3) == FALSE)){     ## 2-3 hidden values
-        stop("Argument \'df\' should be TRUE or FALSE \n")
     }
 
     if(robust){
@@ -186,11 +129,7 @@ compare2.lvmfit2 <- function(object, ...){
             
             if(length(cluster)==1){
                 ## reconstruct cluster variable
-                if(inherits(object,"lvmfit")){
-                    data <- object$data$model.frame
-                }else{
-                    data <- extractData(object)
-                }
+                data <- object$sCorrect$data
                 
                 if(cluster %in%  names(data) == FALSE){
                     stop("Could not find variable ",cluster," (argument \'cluster\') in argument \'data\' \n")
@@ -198,11 +137,10 @@ compare2.lvmfit2 <- function(object, ...){
                     cluster <- data[[cluster]]
                 }            
                 
-            }else if(stats::nobs(object)!=length(cluster)){
-                stop("length of argument \'cluster\' does not match number of rows of the score matrix \n")
+            }else if(NROW(data)!=length(cluster)){
+                stop("length of argument \'cluster\' does not match number of rows of the dataset \n")
             }
-            ls.indexCluster <- tapply(1:length(cluster),cluster,list)
-            n.cluster <- length(ls.indexCluster)
+            n.cluster <- length(unique(cluster))
         }else{
             n.cluster <- stats::nobs(object)
         }
@@ -211,34 +149,33 @@ compare2.lvmfit2 <- function(object, ...){
     
     ## ** extract information
     ## 0-order: param
-    param <- object$sCorrect$param
-
+    param <- coef2(object, ssc = ssc)
     n.param <- length(param)
     name.param <- names(param)
 
     ## 1-order: score
     if(robust){
-        score <- object$sCorrect$score
+        score <- score2(object, ssc = ssc)
     }
     
     ## 2-order: variance covariance
-    vcov.param <- vcov2(object)
+    vcov.param <- vcov2(object, ssc = ssc)
+    warn <- attr(vcov.param, "warning")
     attr(vcov.param, "warning") <- NULL
-    warn <- attr(vcov2(object), "warning")
     
     if(robust){
-        rvcov.param <- crossprod(iid2(object, cluster = cluster))
+        rvcov.param <- crossprod(iid2(object, ssc = ssc, cluster = cluster))
         hessian <- object$sCorrect$hessian
     }
 
     ## 3-order: derivative of the variance covariance
-    if(df>0){
+    if(!is.null(df)){
         dVcov.param <- object$sCorrect$dVcov.param
         keep.param <- dimnames(dVcov.param)[[3]]
     }
     
-    ## ** Prepare for the robust case 
-    if(df>1 && robust){ ## not used if df=1
+    ## ** Computation of the df for the robust case
+    if(robust && identical(df, "Satterthwaite") && lava.options()$df.robust==1){
 
         ## update the score/hessian/derivative at the cluster level
         if(!is.null(cluster)){            
@@ -273,60 +210,58 @@ compare2.lvmfit2 <- function(object, ...){
         }
     }
     
-    ### ** normalize linear hypotheses
-    if(!is.null(par)){
+    ## ** normalize linear hypotheses
+    if(!is.matrix(linfct)){
         
-        if(!is.null(contrast)){
-            stop("Argument \'par\' and argument \'contrast\' should not simultaneously specified")
-        }else if(!is.null(null)){
-            stop("Argument \'par\' and argument \'null\' should not simultaneously specified")
+        res.C <- .createContrast(linfct, name.param = name.param, add.rowname = TRUE)
+        linfct <- res.C$contrast
+        if(is.null(rhs)){
+            rhs <- res.C$null
         }else{
-            res.C <- createContrast(par, name.param = name.param, add.rowname = TRUE)
-            contrast <- res.C$contrast
-            null <- res.C$null
+            if(length(rhs)!=length(res.C$null)){
+                stop("Incorrect argument \'rhs\' \n",
+                     "Must have length ",length(res.C$null),"\n")
+            }
+            rhs <- setNames(rhs, names(res.C$null))
         }
         
     }else{
         
-        if(is.null(contrast)){
-            stop("Argument \'contrast\' and argument \'par\' cannot be both NULL \n",
-                 "Please specify the null hypotheses using one of the two arguments \n")
+        if(is.null(colnames(linfct))){
+            stop("Argument \'linfct\' must have column names \n")
         }
-        if(is.null(colnames(contrast))){
-            stop("Argument \'contrast\' must have column names \n")
+        if(NCOL(linfct) != n.param){
+            stop("Argument \'linfct\' should be a matrix with ",n.param," columns \n")
         }
-        if(any(colnames(contrast) %in% name.param == FALSE)){
-            txt <- setdiff(colnames(contrast), name.param)
-            stop("Argument \'contrast\' has incorrect column names \n",
+        if(any(colnames(linfct) %in% name.param == FALSE)){
+            txt <- setdiff(colnames(linfct), name.param)
+            stop("Argument \'linfct\' has incorrect column names \n",
                  "invalid name(s): \"",paste(txt, collapse = "\" \""),"\"\n")
         }
-        if(any(name.param %in% colnames(contrast) == FALSE)){
-            txt <- setdiff(name.param, colnames(contrast))
-            stop("Argument \'contrast\' has incorrect column names \n",
+        if(any(name.param %in% colnames(linfct) == FALSE)){
+            txt <- setdiff(name.param, colnames(linfct))
+            stop("Argument \'linfct\' has incorrect column names \n",
                  "missing name(s): \"",paste(txt, collapse = "\" \""),"\"\n")
         }
-        if(NCOL(contrast) != n.param){
-            stop("Argument \'contrast\' should be a matrix with ",n.param," columns \n")
-        }
         ## reorder columns according to coefficients
-        contrast <- contrast[,name.param,drop=FALSE]
-        if(any(abs(svd(contrast)$d)<1e-10)){
-            stop("Argument \'contrast\' is singular \n")
+        linfct <- linfct[,name.param,drop=FALSE]
+        if(any(abs(svd(linfct)$d)<1e-10)){
+            stop("Argument \'linfct\' is singular \n")
         }
-        if(is.null(null)){
-            null <- setNames(rep(0,NROW(contrast)),rownames(contrast))
-        }else if(length(null)!=NROW(contrast)){
-            stop("The length of argument \'null\' does not match the number of rows of argument \'contrast' \n")
+        if(is.null(rhs)){
+            rhs <- setNames(rep(0,NROW(linfct)),rownames(linfct))
+        }else if(length(rhs)!=NROW(linfct)){
+            stop("The length of argument \'rhs\' must match the number of rows of argument \'linfct' \n")
         }
-        if(is.null(rownames(contrast))){
-            rownames(contrast) <- .contrast2name(contrast, null = null)
-            null <- setNames(null, rownames(contrast))
+        if(is.null(rownames(linfct))){
+            rownames(linfct) <- .contrast2name(linfct, null = rhs)
+            rhs <- setNames(rhs, rownames(linfct))
         }
     }
     
     ### ** prepare export
-    name.hypo <- rownames(contrast)
-    n.hypo <- NROW(contrast)
+    name.hypo <- rownames(linfct)
+    n.hypo <- NROW(linfct)
 
     df.table <- as.data.frame(matrix(NA, nrow = n.hypo, ncol = 5,
                                      dimnames = list(name.hypo,
@@ -334,11 +269,11 @@ compare2.lvmfit2 <- function(object, ...){
                                      ))
 
     ## ** Univariate Wald test
-    C.p <- (contrast %*% param) - null
+    C.p <- (linfct %*% param) - rhs
     if(robust){
-        C.vcov.C <- contrast %*% rvcov.param %*% t(contrast)
+        C.vcov.C <- linfct %*% rvcov.param %*% t(linfct)
     }else{
-        C.vcov.C <- contrast %*% vcov.param %*% t(contrast)
+        C.vcov.C <- linfct %*% vcov.param %*% t(linfct)
     }
     sd.C.p <- sqrt(diag(C.vcov.C))
     stat.Wald <- C.p/sd.C.p
@@ -349,28 +284,28 @@ compare2.lvmfit2 <- function(object, ...){
     df.table$statistic <- as.numeric(stat.Wald)
 
     ##  degrees of freedom
-    if(df>0 && !is.null(dVcov.param)){
+    if(identical(df,"Satterthwaite") && !is.null(dVcov.param)){
 
         ## univariate
         if(robust == FALSE){
-            df.Wald  <- dfSigma(contrast = contrast,
+            df.Wald  <- dfSigma(contrast = linfct,
                                 vcov = vcov.param,
                                 dVcov = dVcov.param,
                                 keep.param = keep.param)
         }else if(robust == TRUE){
 
             if(df == TRUE){
-                df.Wald <- dfSigma(contrast = contrast,
+                df.Wald <- dfSigma(contrast = linfct,
                                    vcov = vcov.param,
                                    dVcov = dVcov.param,
                                    keep.param = keep.param)
             }else if(df == 2){
-                df.Wald  <- dfSigma(contrast = contrast,
+                df.Wald  <- dfSigma(contrast = linfct,
                                     vcov = rvcov.param,
                                     dVcov = dRvcov.param * factor.dRvcov,
                                     keep.param = name.param)
             }else if(df == 3){
-                df.Wald <- dfSigmaRobust(contrast = contrast,
+                df.Wald <- dfSigmaRobust(contrast = linfct,
                                          vcov = vcov.param,
                                          rvcov = rvcov.param,
                                          score = score)
@@ -396,12 +331,12 @@ compare2.lvmfit2 <- function(object, ...){
             stat.F <- t(C.p) %*% iC.vcov.C %*% (C.p) / n.hypo
 
             ## df (independent t statistics)
-            if(df>0){
+            if(identical(df,"Satterthwaite")){
                 svd.tempo <- eigen(iC.vcov.C)
                 D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
                 P.svd <- svd.tempo$vectors
      
-                C.anova <- sqrt(D.svd) %*% t(P.svd) %*% contrast
+                C.anova <- sqrt(D.svd) %*% t(P.svd) %*% linfct
 
                 if(df == TRUE){
                     nu_m <- dfSigma(contrast = C.anova,
@@ -466,17 +401,50 @@ compare2.lvmfit2 <- function(object, ...){
         if(robust){
             colnames(out$estimate)[2] <- "robust SE"
         }        
-        attr(out, "B") <- contrast
+        attr(out, "B") <- linfct
         class(out) <- "htest"
     }else{
         out <- df.table
         attr(out, "warning") <- warn
-        attr(out, "contrast") <- contrast
+        attr(out, "contrast") <- linfct
     }
     attr(out,"error") <- error
     return(out)
 }
 
+## * compare2.gls
+#' @rdname compare2
+#' @export
+compare2.gls <- compare2.lm
+
+## * compare2.lme
+#' @rdname compare2
+#' @export
+compare2.lme <- compare2.lm
+
+## * compare2.lvmfit
+#' @rdname compare2
+#' @export
+compare2.lvmfit <- compare2.lm
+
+## * compare2.sCorrect
+#' @rdname compare2
+compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
+                             robust = FALSE, cluster = NULL, 
+                             ssc = object$sCorrect$ssc$type, df = object$sCorrect$df,
+                             as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(compare2(object, linfct = linfct, rhs = rhs,
+                    robust = robust, cluster = cluster,
+                    ssc = ssc, df = df,
+                    as.lava = as.lava, F.test = F.test, conf.level = conf.level))
+
+}
+
+## * compare.sCorrect
+#' @rdname compare2
+compare.sCorrect <- compare2.sCorrect
+    
 ## * dfSigma
 ##' @title Degree of Freedom for the Chi-Square Test
 ##' @description Computation of the degrees of freedom of the chi-squared distribution

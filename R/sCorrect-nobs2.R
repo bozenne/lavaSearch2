@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (13:39) 
 ## Version: 
-## Last-Updated: dec 11 2019 (12:09) 
+## Last-Updated: jan  8 2020 (11:11) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 17
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,15 +50,6 @@ nobs2.lme <- nobs2.lm
 #' @rdname nobs2
 #' @export
 nobs2.lvmfit <- nobs2.lm
-
-## * nobs.sCorrect
-#' @rdname nobs2
-nobs.sCorrect <- function(object){
-    class(object) <- setdiff(class(object2),"sCorrect")
-    return(nobs2(object))
-}
-
-
 
 ######################################################################
 ### method-sCorrect.R ends here

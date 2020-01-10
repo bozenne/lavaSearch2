@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan  7 2020 (14:02) 
+## last-updated: jan 10 2020 (13:39) 
 ##           By: Brice Ozenne
-##     Update #: 1439
+##     Update #: 1494
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,7 +65,8 @@
 #' @export
 `conditionalMoment` <-
     function(object,
-             initialize, first.order, second.order, usefit,
+             initialize, first.order, second.order,
+             usefit, residuals, leverage, 
              param = NULL,
              data = NULL) UseMethod("conditionalMoment")
 
@@ -73,7 +74,8 @@
 #' @rdname conditionalMoment
 #' @export
 conditionalMoment.lm <- function(object,
-                                 initialize, first.order, second.order, usefit,
+                                 initialize, first.order, second.order,
+                                 usefit, residuals, leverage, 
                                  param = NULL,
                                  data = NULL){
     if(lava.options()$debug){cat("conditionalMoment \n")}
@@ -101,7 +103,6 @@ conditionalMoment.lm <- function(object,
         }else{
             out$data <- data
         }
-        
         out$X <- .getDesign(object, data = out$data, add.Y = TRUE)
         out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
 
@@ -179,13 +180,14 @@ conditionalMoment.lm <- function(object,
         }
         
     }else{
-        out <- object$sCorrect[c("endogenous", "latent", "data", "X", "cluster", "old2new.order", "missing", "skeleton")]
+        rm.name <- c("moment","dmoment","d2moment","score","vcov.param","information","hessian","dInformation","dVcov.param","dRvcov.param","leverage","residuals")
+        out <- object$sCorrect[setdiff(names(object$sCorrect),rm.name)]
     }
 
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            out$param <- .coef2(object, labels = 1)[out$skeleton$Uparam]
+            out$param <- .coef2(object, labels = 1, ssc = NULL)[out$skeleton$Uparam]
         }else{
             if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
                 stop("Incorrect name for the model parameters \n",
@@ -219,10 +221,42 @@ conditionalMoment.lm <- function(object,
                                            skeleton = out$skeleton,
                                            param = out$param)
         }
-       
+
+        ## *** update residuals
+        if(residuals){
+            out$residuals <- .adjustResiduals(Omega = out$ssc$Omega0, Psi = out$ssc$Psi,
+                                              epsilon = out$skeleton$param$endogenous - out$moment$mu,
+                                              name.pattern = out$missing$name.pattern, missing.pattern = out$missing$pattern, unique.pattern = out$missing$unique.pattern,
+                                              endogenous = out$endogenous, n.cluster = out$cluster$n.cluster)
+        }else{
+            out$residuals <- object$sCorrect$residuals
+        }
+        ## mean(object$sCorrect$residuals^2)
+        ## object$sCorrect$moment$Omega
+        
+        ## *** leverage
+        if(leverage){
+            out$leverage <- .leverage2(Omega = out$moment$Omega,
+                                       epsilon = out$residuals,
+                                       dmu = aperm(abind::abind(out$dmoment$dmu, along = 3), perm = c(3,2,1)),
+                                       dOmega = out$dmoment$dOmega,
+                                       vcov.param = object$sCorrect$vcov.param,
+                                       name.pattern = out$missing$name.pattern,
+                                       missing.pattern = out$missing$pattern,
+                                       unique.pattern = out$missing$unique.pattern,
+                                       endogenous = out$endogenous,
+                                       n.endogenous = length(out$endogenous),
+                                       param = out$skeleton$Uparam,
+                                       param.mean = out$skeleton$Uparam.mean,
+                                       param.hybrid = out$skeleton$Uparam.hybrid,
+                                       n.cluster = out$cluster$n.cluster)
+        }else{
+            out$leverage <- object$sCorrect$leverage
+        }
+    
+
     }
 
-    
     ## ** export
     return(out)
 }

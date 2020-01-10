@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: dec 17 2019 (16:03) 
+## Last-Updated: jan  8 2020 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 85
+##     Update #: 106
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,8 +70,8 @@ leverage2.lm <- function(object, param = NULL, data = NULL,
                          ssc = lava.options()$ssc, format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
-        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NULL)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
+        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NA)
     }
 
     if(format == "wide"){
@@ -111,17 +111,31 @@ leverage2.lme <- leverage2.lm
 #' @export
 leverage2.lvmfit <- leverage2.lm
 
+## * leverage2.sCorrect
+#' @rdname information2
+leverage2.sCorrect <- function(object, param = NULL, data = NULL,
+                               ssc = object$sCorrect$ssc$type, format = "wide"){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(leverage2(object, param = param, data = data, ssc = ssc, format = format))
+}
+
+
 ## * .leverage2
 .leverage2 <- function(Omega, epsilon, dmu, dOmega, vcov.param,
                        name.pattern, missing.pattern, unique.pattern,
                        endogenous, n.endogenous, param, param.mean, param.hybrid, n.cluster){
 
-    n.pattern <- length(unique.pattern)
+    n.pattern <- NROW(unique.pattern)
     n.param <- length(param)
     n.param.mean <- length(param.mean)
     n.param.hybrid <- length(param.hybrid)
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL, endogenous))
+    if(is.null(vcov.param)){
+        leverage[] <- 0
+        return(leverage)
+    }
+
     scoreY <- array(NA, dim = c(n.cluster, n.endogenous, n.param.mean),
                     dimnames = list(NULL, endogenous, param.mean))
     
@@ -141,7 +155,7 @@ leverage2.lvmfit <- leverage2.lm
             }else{
                 iOmegaM1.epsilon.dOmega.iOmegaM1 <- 0
             }
-            
+
             if(length(iY)>1){
                 scoreY[,iY,param.mean[iP]] <- t(dmu[param.mean[iP],iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
             }else{
@@ -151,7 +165,11 @@ leverage2.lvmfit <- leverage2.lm
 
         ## leverage
         for(iiY in iY){
-            leverage[iIndex,iiY] <- rowSums((t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE]) * scoreY[iIndex,iiY,])
+            if(n.param.mean==1){                
+                leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * vcov.param[param.mean,param.mean] * scoreY[iIndex,iiY,]
+            }else{
+                leverage[iIndex,iiY] <- rowSums((t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE]) * scoreY[iIndex,iiY,])
+            }
             ## diag( t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE] %*% t(scoreY[iIndex,iiY,]) )
         }
     }        

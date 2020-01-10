@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan  7 2020 (13:58) 
+## Last-Updated: jan 10 2020 (13:39) 
 ##           By: Brice Ozenne
-##     Update #: 1675
+##     Update #: 1787
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -116,60 +116,71 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
     }
 
     ## arguments
-    if(!is.null(ssc) && ssc %in% c("residuals","Cox") == FALSE){
-        stop("Argument \'ssc\' should either be NULL, \"residual\", or \"Cox\" \n")
+    if(is.null(ssc) || (!is.na(ssc) && ssc %in% c("residuals","Cox") == FALSE)){
+        stop("Argument \'ssc\' should either be NA, \"residual\", or \"Cox\" \n")
     }
-    if(!is.null(df) && df %in% c("Satterthwaite") == FALSE){
-        stop("Argument \'df\' should either be NULL or \"Satterthwaite\" \n")
+    if(is.null(df) || (!is.na(df) && df %in% c("Satterthwaite") == FALSE)){
+        stop("Argument \'df\' should either be NA or \"Satterthwaite\" \n")
     }
     
     ## ** initialize object
     if(trace>0){cat("Initialize moments \n")}
     object <- .init_sCorrect(object, param = param, data = data,
-                             initialize = TRUE, 
-                             first.order = first.order, dVcov = !is.null(df), dVcov.robust = !is.null(df),
+                             initialize = TRUE, residuals = TRUE, leverage = TRUE, 
+                             first.order = first.order, second.order = !is.na(df) || identical(ssc,"Cox"),
+                             dVcov = !is.na(df) && is.na(ssc), dVcov.robust = !is.na(df) && is.na(ssc),
                              derivative = derivative)
 
     ## ** bias correction
-    if(!is.null(ssc)){
+    if(!is.na(ssc)){
 
         ## *** initialize bias correction
+        if(trace>0){cat("Initialize bias correction \n")}
         if(ssc=="Cox"){
-            iParam <- .init_sscCoxSnell(object, param = iParam)
+            object$sCorrect$ssc <- list(type = "Cox")
         }else if(ssc=="residuals"){
-            iParam <- .init_sscResiduals(object, param = iParam)
+            object$sCorrect$ssc <- .init_sscResiduals(object)
         }
         
         ## *** perform bias correction
         if(trace>0){cat("Perform bias correction \n")}
         iIter <- 0
         iTol <- Inf
-        iParam <- object$sCorrect$coef
-        iiParam <- iParam
-        
+        iiParam <- object$sCorrect$param
+            
         while(iIter < iter.max & iTol > tol.max){
             if(trace>0){cat("*")}
 
             ## bias correction
             if(ssc=="Cox"){
-                iParam <- .sscCoxSnell(object, param = iParam)
+                iParam <- .sscCoxSnell(object)
             }else if(ssc=="residuals"){
-                iParam <- .sscResiduals(object, param = iParam)
+                iParam <- .sscResiduals(object)
+                object$sCorrect$leverage <- attr(iParam,"leverage")
+                object$sCorrect$ssc$Psi <- attr(iParam,"Psi")
+                object$sCorrect$residuals <- attr(iParam,"residuals")
             }
-            
             ## update moments
             object <- .init_sCorrect(object, param = iParam,
-                                     initialize = FALSE,
-                                     first.order = first.order, dVcov = (ssc=="Cox"), dVcov.robust = (ssc=="Cox"),
+                                     initialize = FALSE, residuals = FALSE, leverage = FALSE, 
+                                     first.order = first.order, second.order = identical(ssc,"Cox"),
+                                     dVcov = FALSE, dVcov.robust = FALSE,
                                      derivative = derivative)
 
             ## cv criteria
             iIter <- iIter + 1
             iTol <- max(abs(iParam-iiParam))
+            cat(iTol," (",iParam,") \n")
             iiParam <- iParam
         }
 
         ## *** assess convergence
+        object$sCorrect$ssc$cv <- cv
+        object$sCorrect$ssc$iter <- iIter
+        object$sCorrect$ssc$tol <- iTol
+        object$sCorrect$ssc$iter.max <- iter.max
+        object$sCorrect$ssc$tol.max <- tol.max
+        
         if(iTol > tol.max){
             cv <- FALSE
             if(trace > 0){
@@ -181,19 +192,18 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
                 cat("\n")
             }
         }
-        
+
         ## *** update score, information matrix, leverage, ..., with the bias corrected parameters
         object <- .init_sCorrect(object, param = iParam,
-                                 initialize = FALSE,
-                                 first.order = first.order, dVcov = !is.null(df), dVcov.robust = !is.null(df),
+                                 initialize = FALSE, residuals = TRUE, leverage = TRUE, 
+                                 first.order = first.order, second.order = !is.na(df),
+                                 dVcov = !is.na(df), dVcov.robust = !is.na(df),
                                  derivative = derivative)
+    }else{
+        object$sCorrect$ssc$type <- NA
     }
-    
-    ## ** export    
-    object$sCorrect$ssc <- ssc
-    if(!is.null(ssc)){
-        object$sCorrect$opt.scc <- list(cv = cv, iter = iIter, tol = iTol, iter.max = iter.max, tol.max = tol.max)
-    }
+
+    ## ** export
     object$sCorrect$df <- df
     class(object) <- append("sCorrect",class(object))
     return(object)    
@@ -230,8 +240,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
 
 ## * .init_sCorrect
 .init_sCorrect <- function(object, param, data,
-                           initialize,
-                           first.order = first.order, dVcov, dVcov.robust,
+                           initialize, residuals, leverage,
+                           first.order, second.order, dVcov, dVcov.robust, 
                            derivative){
     if(lava.options()$debug){cat(".init_sCorrect \n")}
 
@@ -239,23 +249,18 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
 
     ## ** initalize sCorrect object with model parameters, data, ...
     object$sCorrect <- conditionalMoment(object,
-                                         initialize = initialize, first.order = first.order,
-                                         second.order = dVcov || dVcov.robust,
-                                         usefit = TRUE,
+                                         initialize = initialize, first.order = first.order, second.order = second.order,
+                                         usefit = TRUE, residuals = residuals, leverage = leverage,
                                          param = param,
                                          data = data)
+    name.param <- object$sCorrect$skeleton$Uparam
+    n.param <- length(name.param)
 
-    if(initialize){ ## leverage
-        object$sCorrect$leverage <- matrix(0, nrow = object$sCorrect$cluster$n.cluster, ncol = length(object$sCorrect$endogenous),
-                                           dimnames = list(NULL, object$sCorrect$endogenous))
-        object$sCorrect$leverage[is.na(object$sCorrect$moment$residuals)] <- NA
-    }
-    
     ## ** score
     if(first.order){
         object$sCorrect$score <- .score2(dmu = object$sCorrect$dmoment$dmu,
                                          dOmega = object$sCorrect$dmoment$dOmega,                    
-                                         epsilon = object$sCorrect$moment$residuals,
+                                         epsilon = object$sCorrect$residuals,
                                          OmegaM1 = object$sCorrect$moment$OmegaM1.missing.pattern,
                                          missing.pattern = object$sCorrect$missing$pattern,
                                          unique.pattern = object$sCorrect$missing$unique.pattern,
@@ -288,7 +293,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                              dOmega = object$sCorrect$dmoment$dOmega,
                                              d2mu = object$sCorrect$d2moment$d2mu,
                                              d2Omega = object$sCorrect$d2moment$d2Omega,
-                                             epsilon = object$sCorrect$moment$residuals,                                     
+                                             epsilon = object$sCorrect$residuals,                                     
                                              OmegaM1 = object$sCorrect$moment$OmegaM1.missing.pattern,
                                              missing.pattern = object$sCorrect$missing$pattern,
                                              unique.pattern = object$sCorrect$missing$unique.pattern,
@@ -311,39 +316,37 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                                        missing.pattern = object$sCorrect$missing$pattern,
                                                        unique.pattern = object$sCorrect$missing$unique.pattern,
                                                        name.pattern = object$sCorrect$missing$name.pattern,
-                                                       grid.dInformation = object$sCorrect$skeleton$grid.dInformation,
+                                                       grid.3varD1 = object$sCorrect$skeleton$grid.3varD1,
+                                                       grid.2meanD1.1varD1 = object$sCorrect$skeleton$grid.2meanD1.1varD1,
+                                                       grid.2meanD2.1meanD1 = object$sCorrect$skeleton$grid.2meanD2.1meanD1,
+                                                       grid.2varD2.1varD1 = object$sCorrect$skeleton$grid.2varD2.1varD1,
                                                        name.param = object$sCorrect$skeleton$Uparam,
-                                                       name.param.dInformation = object$sCorrect$skeleton$name.param.dInformation,
                                                        leverage = object$sCorrect$leverage,
                                                        n.cluster = object$sCorrect$cluster$n.cluster)
 
-        ## delta method 
-        object$sCorrect$dVcov.param <- array(NA, dim = dim(object$sCorrect$dInformation), dimnames = dimnames(object$sCorrect$dInformation))
-        for(iP in object$sCorrect$skeleton$name.param.dInformation){
-            object$sCorrect$dVcov.param[,,iP] <- - object$sCorrect$vcov.param %*% object$sCorrect$dInformation[,,iP] %*% object$sCorrect$vcov.param
+        ## delta method
+        object$sCorrect$dVcov.param <- array(0, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
+        for(iP in name.param){ ## iP <- "Y1"
+            if(any(object$sCorrect$dInformation[,,iP]!=0)){
+                object$sCorrect$dVcov.param[,,iP] <- - object$sCorrect$vcov.param %*% object$sCorrect$dInformation[,,iP] %*% object$sCorrect$vcov.param
+            }
         }
     }
 
     ## ** dRvcov.param  (robust variance, analytic)
     if((derivative == "analytic") && dVcov.robust){
-        name.param <- object$sCorrect$skeleton$Uparam
-        name.param.dInformation <- object$sCorrect$skeleton$name.param.dInformation
-        n.param <- length(name.param)
 
-        object$sCorrect$dRvcov.param <- array(NA, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
-        score <- object$sCorrect$score
-        score2 <- crossprod(score)
-        hessian <- object$sCorrect$hessian
-        vcov.param <- object$sCorrect$vcov.param
-        dVcov.param <- object$sCorrect$dVcov.param
+        object$sCorrect$dRvcov.param <- array(0, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
+        score2_vcov.param <- crossprod(object$sCorrect$score) %*% object$sCorrect$vcov.param
+        score_vcov.param <- object$sCorrect$score %*% object$sCorrect$vcov.param
         
-        for(iP in 1:n.param){ ## iP <- 1
-            if(name.param[iP] %in% name.param.dInformation){
-                term1 <- dVcov.param[,,name.param[iP]] %*% score2 %*% vcov.param
+        for(iP in name.param){ ## iP <- 1
+            if(any(object$sCorrect$dVcov.param[,,iP]!=0)){
+                term1 <- object$sCorrect$dVcov.param[,,iP] %*% score2_vcov.param
             }else{
                 term1 <- matrix(0, nrow = n.param, ncol = n.param)
             }
-            term2 <- vcov.param %*% hessian[iP,,] %*% score %*% vcov.param
+            term2 <- object$sCorrect$vcov.param %*% object$sCorrect$hessian[iP,,] %*% score_vcov.param
             object$sCorrect$dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
         }
     }
@@ -372,10 +375,10 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                                dimnames = list(NULL, name.param, name.param)), perm = 3:1)
 
         ## ## *** dInformation
-        ## num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object, type = "information", method = "Richardson")
+        num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object, type = "information", method = "Richardson")
 
-        ## object$sCorrect$dInformation <- array(num.information, dim = c(n.param,n.param,n.param),
-        ##                                       dimnames = list(name.param, name.param, name.param))
+        object$sCorrect$dInformation <- array(num.information, dim = c(n.param,n.param,n.param),
+                                              dimnames = list(name.param, name.param, name.param))
 
         ## *** dVcov.param
         num.dVcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object, type = "vcov.model", method = "Richardson")
@@ -400,19 +403,16 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
 
     type <- match.arg(type, c("score","hessian","information","vcov.model","vcov.robust"))
             
-    ## update param
-    pp <- object$sCorrect$coef
-    pp[names(value)] <- value
-
     ## update moments and their derivatives
-    cM <- conditionalMoment(object, param = pp,
-                            initialize = FALSE, first.order = TRUE, second.order = (type == "hessian"), usefit = TRUE)
+    cM <- conditionalMoment(object, param = value,
+                            initialize = FALSE, first.order = TRUE, second.order = (type == "hessian"),
+                            usefit = TRUE, residuals = TRUE, leverage = FALSE)
 
     ## compute information matrix
     if(type %in% c("score","vcov.robust")){
         ss <- .score2(dmu = cM$dmoment$dmu,
                       dOmega = cM$dmoment$dOmega,
-                      epsilon = cM$moment$residuals,
+                      epsilon = cM$residuals,
                       OmegaM1 = cM$moment$OmegaM1.missing.pattern,
                       missing.pattern = object$sCorrect$missing$pattern,
                       unique.pattern = object$sCorrect$missing$unique.pattern,
@@ -427,7 +427,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                         dOmega = cM$dmoment$dOmega,
                         d2mu = cM$d2moment$d2mu,
                         d2Omega = cM$d2moment$d2Omega,
-                        epsilon = cM$moment$residuals,
+                        epsilon = cM$residuals,
                         OmegaM1 = cM$moment$OmegaM1.missing.pattern,
                         missing.pattern = object$sCorrect$missing$pattern,
                         unique.pattern = object$sCorrect$missing$unique.pattern,

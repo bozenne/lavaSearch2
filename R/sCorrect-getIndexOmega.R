@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: dec 17 2019 (09:43) 
+## Last-Updated: jan  9 2020 (14:53) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 67
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -160,8 +160,9 @@
 .getIndexOmega.lvmfit <- function(object, data, ...){
 
     ## ** check missing value in exogenous variables
-    name.exogenous <- exogenous(e.lvm)
+    name.exogenous <- exogenous(object)
     missing.var <- name.exogenous[name.exogenous %in% names(data) == FALSE]
+
     if(length(missing.var)>0){
         cat2bin <- var2dummy(object$model, var = names(dW), data = dW)
         name.exogenous[name.exogenous %in% missing.var] <- names(cat2bin)[cat2bin %in% missing.var]
@@ -175,7 +176,7 @@
 
     ## ** index.Omega
     n.obs <- NROW(data)
-    name.endogenous <- endogenous(e.lvm)
+    name.endogenous <- endogenous(object)
     n.endogenous <- length(name.endogenous)
 
     M.index <- matrix(1:n.endogenous, nrow = n.obs, ncol = n.endogenous, byrow = TRUE)

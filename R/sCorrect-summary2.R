@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: nov 18 2019 (10:12) 
+## Last-Updated: jan  8 2020 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 313
+##     Update #: 348
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,55 +70,26 @@
 #' @concept small sample inference
 #' @export
 `summary2` <-
-  function(object, ...) UseMethod("summary2")
+  function(object, ssc, df, digit, robust, ...) UseMethod("summary2")
 
 ## * summary2.lm
 #' @rdname summary2
 #' @method summary2 lm
 #' @export
-summary2.lm <- function(object, df = TRUE, bias.correct = TRUE, ...){
-    sCorrect(object, df = df) <- bias.correct
-    return(summary2(object, df = df, ...))
-}
-## * summary2.gls
-#' @rdname summary2
-#' @method summary2 gls
-#' @export
-summary2.gls <- function(object, df = TRUE, bias.correct = TRUE, cluster = NULL, ...){
-    sCorrect(object, df = df, cluster = cluster) <- bias.correct
-    return(summary2(object, df = df, ...))
-}
-
-## * summary2.lme
-#' @rdname summary2
-#' @method summary2 lme
-#' @export
-summary2.lme <- summary2.lm
-
-## * summary2.lvmfit
-#' @rdname summary2
-#' @method summary2 lvmfit
-#' @export
-summary2.lvmfit <- summary2.lm
-
-## * summary2.lm2
-#' @rdname summary2
-#' @method summary2 lm2
-#' @export
-summary2.lm2 <- function(object, 
-                         digit = max(3, getOption("digit")),
-                         robust = FALSE,
-                         df = TRUE,
-                         ...){
-
-### ** perform Wald test
-    name.param <- names(coef(object))
+summary2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df,
+                        digit = max(3, getOption("digit")),
+                        robust = FALSE, ...){
+    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
+        object <- sCorrect(object, ssc = ssc, df = df)
+    }
+    ## ** perform Wald test
+    name.param <- names(coef2(object, ssc = NA))
     n.param <- length(name.param)
 
     tTable.all <- compare2(object,
-                           par = name.param,
+                           linfct = name.param,
                            robust = robust,
-                           df = df,
+                           ssc = ssc, df = df,
                            F.test = FALSE,
                            as.lava = FALSE)
     tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
@@ -126,35 +97,41 @@ summary2.lm2 <- function(object,
                              c("Value","Std.Error","t-value","p-value","df")
                              )
 
-### ** get summary
-    class(object) <- setdiff(class(object),c("lm2"))
+    ## ** get summary
+    class(object) <- setdiff(class(object),c("sCorrect"))
     object.summary <- summary(object, digits = digit, ...)
     
-### ** update summary
+    ## ** update summary
     object.summary$coefficients <- tTable
+    object.summary$residuals <- object$sCorrect$residuals[,1]
+    object.summary$sigma <- sqrt(tTable["sigma2","Value"])
 
-### ** export
+    object.summary$cov.unscaled <- NULL
+    object.summary$fstatistic <- NULL
+
+    ## ** export
     return(object.summary)
 
 }
-## * summary2.gls2
+## * summary2.gls
 #' @rdname summary2
-#' @method summary2 gls2
+#' @method summary2 gls
 #' @export
-summary2.gls2 <- function(object, 
-                          digit = max(3, getOption("digit")),
-                          robust = FALSE,
-                          df = TRUE,
-                          ...){
-    
-    ### ** perform Wald test
-    name.param <- names(coef(object))
+summary2.gls <- function(object, ssc = lava.options()$ssc, df = lava.options()$df,
+                         digit = max(3, getOption("digit")),
+                         robust = FALSE, ...){
+    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
+        object <- sCorrect(object, ssc = ssc, df = df)
+    }
+
+    ## ** perform Wald test
+    name.param <- names(coef2(object, ssc = ssc))
     n.param <- length(name.param)
 
     tTable.all <- compare2(object,
-                           par = name.param,
+                           linfct = name.param,
                            robust = robust,
-                           df = df,
+                           ssc = ssc, df = df,
                            F.test = FALSE,
                            as.lava = FALSE)
     tTable <- tTable.all[1:n.param,c("estimate","std","statistic","p-value","df")]
@@ -163,39 +140,48 @@ summary2.gls2 <- function(object,
                              )
 
     ### ** get summary
-    class(object) <- setdiff(class(object),c("gls2","lme2"))
+    class(object) <- setdiff(class(object),c("sCorrect"))
     object.summary <- summary(object, digits = digit, ...)
     
     ### ** update summary
     object.summary$tTable <- tTable
-
+    browser()
+    object.summary$residuals <- quantile(residuals2(object, ssc = ssc, type = "normalized"), na.rm = TRUE)
+    quantile(residuals(object), na.rm = TRUE)
+    
+    object.summary$sigma <- tTable["sigma2","Value"]
+    browser()
+    
     ### ** export
     return(object.summary)
 }
-
-## * summary2.lme2
+## * summary2.lme
 #' @rdname summary2
-#' @method summary2 lme2
+#' @method summary2 lme
 #' @export
-summary2.lme2 <- summary2.gls2
+summary2.lme <- summary2.gls
 
-## * summary2.lvmfit2
+## * summary2.lvmfit
 #' @rdname summary2
-#' @method summary2 lvmfit2
+#' @method summary2 lvmfit
 #' @export
-summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, ...){
+summary2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options()$df,
+                            digit = max(3, getOption("digit")),
+                            robust = FALSE, ...){
+    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
+        object <- sCorrect(object, ssc = ssc, df = df)
+    }
 
-    
-### ** perform Wald test
-    param <- lava::pars(object)
+    ## ** perform Wald test
+    param <- coef2(object, ssc = ssc)
     name.param <- names(param)
     n.param <- length(param)
 
     table.all <- compare2(object,
-                          par = name.param,
+                          linfct = name.param,
                           robust = robust,
                           cluster = cluster,
-                          df = df,
+                          ssc = ssc, df = df,
                           F.test = FALSE,
                           as.lava = FALSE)
     table.coef <- table.all[1:n.param,c("estimate","std","statistic","p-value","df")]
@@ -203,8 +189,8 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")
                                  )
 
-### ** get summary
-    class(object) <- setdiff(class(object),"lvmfit2")
+    ## ** get summary
+    class(object) <- setdiff(class(object),"sCorrect")
     object.summary <- summary(object, ...)
     if(!is.null(object$cluster) || inherits(object,"lvm.missing")){
         
@@ -224,11 +210,11 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
     vec.char <- setdiff(object.summary$coefmat[,"Estimate"],"")
     digit <- max(c(nchar(gsub(".","",vec.char,fixed = TRUE)))-1,1)
 
-    ### ** update summary
-    ### *** vcov
+    ## ** update summary
+    ## *** vcov
     object.summary$vcov <- attr(object$dVcov, "vcov.param")[name.param,name.param]    
 
-### *** coef
+    ## *** coef
     lava.rownames <- rownames(object.summary$coef)
     ## add rows corresponding to reference parameters
     missing.rows <- setdiff(lava.rownames,rownames(table.coef))
@@ -248,7 +234,7 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
     object.summary$coef <- table.coef
     
     
-    ### *** coefmat
+    ## *** coefmat
     name.label0 <- trimws(rownames(CoefMat(object, labels = 0, level = 9)), which = "both")
     index.titleVariance <- which(name.label0=="Residual Variances:")
     if(length(index.titleVariance)>0){
@@ -281,13 +267,27 @@ summary2.lvmfit2 <- function(object, cluster = NULL, robust = FALSE, df = TRUE, 
     table.coefmat[object.summary$coefmat[,"P-value"]=="","P-value"] <- ""
     object.summary$coefmat <- table.coefmat
 
-### ** Export
+    ## ** Export
     if(robust){
         colnames(object.summary$coefmat)[2] <- "robust SE"
         colnames(object.summary$coef)[2] <- "robust SE"
     }
     return(object.summary)    
+
 }
+
+## * summary2.sCorrect
+#' @rdname summary2
+summary2.sCorrect <- function(object, ssc = object$sCorrect$ssc$type, df = object$sCorrect$df,
+                              digit = max(3, getOption("digit")),
+                              robust = FALSE, ...){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(summary2(object, ssc = ssc, df = df, digit = digit, robust = robust, ...))
+}
+
+## * summary.sCorrect
+#' @rdname summary2
+summary.sCorrect <- summary2.sCorrect
 
 
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: aug  2 2019 (11:03) 
+## Last-Updated: jan  8 2020 (16:37) 
 ##           By: Brice Ozenne
-##     Update #: 80
+##     Update #: 84
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,18 +38,15 @@
 ## * effects2 (examples)
 ## TODO
 
-## * compare2.lvmfit
+## * effects2.lvmfit
 #' @rdname effects2
 #' @export
-effects2.lvmfit <- function(object, link, df = TRUE, bias.correct = TRUE, ...){
-    sCorrect(object, df = df) <- bias.correct    
-    return(effects2.lvmfit2(object, link = link))
-}
+effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.options()$df, ...){
+    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
+        object <- sCorrect(object, ssc = ssc, df = df)
+    }
 
-## * effects2 (code)
-##' @rdname effects2
-##' @export
-effects2.lvmfit2 <- function(object, link, ...){
+    ## ** compute product
     n.link <- length(link)
 
     name.coef <- names(coef(object))
@@ -123,9 +120,21 @@ effects2.lvmfit2 <- function(object, link, ...){
     rownames(out) <- c(link.direct,link.other)
 
     return(out)
-    
 }
 
+## * effects2.sCorrect
+#' @rdname effects2
+effects2.sCorrect <- function(object, link, ssc = object$sCorrect$ssc$type, labels = lava.options()$coef.names){
+    class(object) <- setdiff(class(object),"sCorrect")
+    return(effect2(object, link = link, ssc = ssc, labels = labels))
+
+}
+
+## * effects.sCorrect
+#' @rdname effects2
+effects.sCorrect <- effects2.sCorrect
+
+## * .deltaMethod_product
 .deltaMethod_product <- function(mu,Sigma,dSigma,link){
     link1 <- link[1]
     link2 <- link[2]

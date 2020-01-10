@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: jan  7 2020 (13:57) 
+## Last-Updated: jan 10 2020 (13:28) 
 ##           By: Brice Ozenne
-##     Update #: 171
+##     Update #: 182
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,6 +37,7 @@ updateMoment <- function(skeleton, value, toUpdate,
             }else{
                 index.update <- which(!is.na(skeleton[[iUpdate]]))
                 value[[iUpdate]][index.update] <- param[skeleton[[iUpdate]][index.update]]
+                skeleton$Sigma
             }
         }
     }
@@ -94,9 +95,6 @@ updateMoment <- function(skeleton, value, toUpdate,
         value$mu <- value$mu + value$alpha.XGamma %*% value$iIB.Lambda
     }
 
-    ## ** update residuals
-    value$residuals <- skeleton$endogenous - value$mu
-    
     ## ** Compute variance
     value$Omega <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
                           dimnames = list(endogenous,endogenous))
@@ -230,6 +228,8 @@ updateD2Moment <- function(moment, skeleton, param){
     dsigma2k <- skeleton$dmat.dparam$sigma2k
     dcor <- skeleton$dmat.dparam$cor
 
+    Psi <- moment$Psi
+    Lambda <- moment$Lambda
     iIB <- moment$iIB
     Psi.iIB <- moment$Psi.iIB
     iIB.Lambda <- moment$iIB.Lambda

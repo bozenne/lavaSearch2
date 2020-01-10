@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: nov 18 2019 (10:44) 
+## Last-Updated: jan  8 2020 (13:02) 
 ##           By: Brice Ozenne
-##     Update #: 814
+##     Update #: 815
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -210,7 +210,10 @@ calibrateType1.lvm <- function(object, param, n.rep, n, correction = TRUE, warmu
         txtCoef <- paste(param[coef.true[param]==0], collapse = "\" \"")
         stop("Control type 2 error: coefficients \"",txtCoef,"\" are 0 while their belong to the param hypothesis\n")
     }
-    res.C <- createContrast(param, name.param = name.coef, add.rowname = TRUE, rowname.rhs = FALSE)
+    res.C <- .createContrast(param,
+                             name.param = name.coef,
+                             add.rowname = TRUE,
+                             rowname.rhs = FALSE)
     contrast <- res.C$contrast
     if(is.null(null)){
         rhs <- res.C$null

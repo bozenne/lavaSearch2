@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: dec 17 2019 (13:46) 
+## last-updated: jan 10 2020 (13:26) 
 ##           By: Brice Ozenne
-##     Update #: 2306
+##     Update #: 2315
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,8 +67,8 @@
 score2.lm <- function(object, param = NULL, data = NULL,
                       ssc = lava.options()$ssc, indiv = FALSE){
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc, ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type, ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NA)
     }
 
     if(indiv){
@@ -96,10 +96,14 @@ score2.lvmfit <- score2.lm
 ## * score2.sCorrect
 #' @rdname score2
 score2.sCorrect <- function(object, param = NULL, data = NULL,
-                            ssc = lava.options()$ssc, indiv = FALSE){
+                            ssc = object$sCorrect$ssc$type, indiv = FALSE){
     class(object) <- setdiff(class(object),"sCorrect")
     return(score2(object, param = param, data = data, ssc = ssc, indiv = indiv))
 }
+
+## * score.sCorrect
+#' @rdname score2
+score.sCorrect <- score2.sCorrect
 
 ## * .score2
 #' @title Compute the Corrected Score.

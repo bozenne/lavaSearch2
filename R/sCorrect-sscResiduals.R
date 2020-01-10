@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: dec 17 2019 (16:48) 
+## Last-Updated: jan  8 2020 (11:15) 
 ##           By: Brice Ozenne
-##     Update #: 917
+##     Update #: 989
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,12 +16,11 @@
 ### Code:
 
 ## * .init_sscResiduals
-.init_sscResiduals <- function(object,...){
+.init_sscResiduals <- function(object){
 
     out <- list()
 
     ## ** extract info
-    skeleton <- object$sCorrect$skeleton
     endogenous <- object$sCorrect$endogenous
     latent <- object$sCorrect$latent
     
@@ -30,49 +29,55 @@
     type <- type[type$detail %in% c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","sigma2","sigma2k","cor"),]
 
     Omega <- object$sCorrect$moment$Omega
-    out$name.var <- unique(type$param)
-    out$n.var <- length(out$name.var)
+    name.var <- unique(type$param)
+    n.var <- length(name.var)
 
-    ## ** Omega  
-    out$index.upper.tri <- data.frame(index = which(upper.tri(Omega, diag = TRUE)),
-                                      which(upper.tri(Omega, diag = TRUE), arr.ind = TRUE)
-                                      )
-    out$name.rhs <- paste(endogenous[out$index.upper.tri[,"row"]],
-                          lava.options()$symbols[2],
-                          endogenous[out$index.upper.tri[,"col"]],
-                          sep = "")
-    out$n.rhs <- length(out$name.rhs)
+    ## ** subset residual variance-covariance
+    index.upper.tri <- data.frame(index = which(upper.tri(Omega, diag = TRUE)),
+                                  which(upper.tri(Omega, diag = TRUE), arr.ind = TRUE)
+                                  )
+    name.rhs <- paste(endogenous[index.upper.tri[,"row"]],
+                      lava.options()$symbols[2],
+                      endogenous[index.upper.tri[,"col"]],
+                      sep = "")
+    n.rhs <- length(name.rhs)
 
-    ## ** Sigma 
-    out$A <- matrix(0, nrow = out$n.rhs, ncol = out$n.var,
-                    dimnames = list(out$name.rhs, out$name.var))
-    ## *** lvm
-    if(!is.null(skeleton$param$Sigma)){
-        vec.Sigma <- skeleton$param$Sigma[out$index.upper.tri$index]
-        for(i in which(!is.na(vec.Sigma))){
-            out$A[i, vec.Sigma[i]] <- 1
+    ## ** Design matrix
+    A <- matrix(0, nrow = n.rhs, ncol = n.var,
+                    dimnames = list(name.rhs, name.var))
+
+    ## *** Sigma_var and Sigma_cov
+    if(any(type$detail %in% c("Sigma_var","Sigma_cov"))){
+        type.Sigma <- type[type$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
+        for(iRow in 1:NROW(type.Sigma)){ ## iRow <- 1 
+            A[paste0(type.Sigma[iRow,"Y"],"~~",type.Sigma[iRow,"X"]),type.Sigma[iRow,"param"]] <- 1
         }
     }
-
-    ## *** corStruct or varStruct
-    if(!is.null(skeleton$param$SigmaValue)){
+    ## *** sigma2, sigma2k, and cor
+    if(any(type$detail %in% c("sigma2","sigma2k","cor"))){
+        stop("Not yet implemented")
     }
-    browser()
-    ## ** Psi
-    if(length(latent)>0){
-        
-        index.Psi <- rbind(cbind(index = which(value$Psi!=0),
-                                 which(value$Psi!=0, arr.ind = TRUE)),
-                           cbind(index = which(is.na(value$Psi)),
-                                 which(is.na(value$Psi), arr.ind = TRUE))
-                           )
+    
+    ## *** Psi_var and Psi_cov
+    if(any(type$detail %in% c("Psi_var","Psi_cov"))){
+        type.Psi <- type[type$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
+        index.Psi <- cbind(row = match(type.Psi$X, latent),
+                           col = match(type.Psi$Y, latent))
+        rownames(index.Psi) <- type.Psi$param
     }else{
-        index.Psi <- NULL        
+        index.Psi <- NULL
     }
 
-    return(list(index.Omega = index.Omega,
-                index.Psi = index.Psi,
-                A = A))
+    return(list(type = "residuals",
+                param0 = object$sCorrect$param,
+                Omega0 = object$sCorrect$moment$Omega,
+                residuals0 = object$sCorrect$residuals,
+                index.upper.tri = index.upper.tri,
+                name.rhs = name.rhs,
+                name.var = name.var,
+                A = A,
+                index.Psi = index.Psi
+                ))
 }
 
 ## * .sscResiduals
@@ -84,13 +89,14 @@
 #' 
 #' @keywords internal
 .sscResiduals <- function(object, param, algorithm = "2"){
-
     algorithm <- match.arg(as.character(algorithm), choices = c("1","2"))
 
     ## ** current values
-    param <- object$sCorrect$param
-    Omega <- object$sCorrect$moment$Omega
-    epsilon <- object$sCorrect$moment$residuals
+    Omega0 <- object$sCorrect$ssc$Omega0 ## non bias corrected value of Omega
+    param0 <- object$sCorrect$ssc$param0 ## non bias corrected value of the model parameters
+    residuals0 <- object$sCorrect$ssc$residuals0 ## non bias corrected value of the model residuals
+    
+    epsilon <- object$sCorrect$residuals
     leverage <- object$sCorrect$leverage
     dmu <- object$sCorrect$dmoment$dmu
     dOmega <- object$sCorrect$dmoment$dOmega
@@ -99,7 +105,6 @@
     endogenous <- object$sCorrect$endogenous
     n.endogenous <- length(endogenous)
     n.cluster <- object$sCorrect$cluster$n.cluster
-    param <- object$sCorrect$skeleton$Uparam
     param.mean <- object$sCorrect$skeleton$Uparam.mean
     param.var <- object$sCorrect$skeleton$Uparam.var
     param.hybrid <- intersect(param.mean,param.var)
@@ -111,19 +116,20 @@
     ## ** Step (i-ii) compute individual and average bias
     dmu <- aperm(abind::abind(dmu, along = 3), perm = c(3,2,1))
     vcov.muparam <- vcov.param[param.mean,param.mean,drop=FALSE]
-    
+
     Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
                   dimnames = list(endogenous, endogenous))
     n.Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
                     dimnames = list(endogenous, endogenous))
-    
+
+    ls.Psi <- vector(mode = "list", length = n.cluster)
     for(iP in 1:n.pattern){ ## iP <- 1
         iY <- unique.pattern[iP,]
         
         for(iC in missing.pattern[[iP]]){ ## iC <- 1
             ## individual bias
             iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
-
+            ls.Psi[[iC]] <- iPsi
             ## cumulated bias            
             Psi[iY,iY] <- Psi[iY,iY] + iPsi
             n.Psi[iY,iY] <- n.Psi[iY,iY] + 1
@@ -132,20 +138,19 @@
 
     ## take the average
     Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
-        
+    
     ## ** Step (iii): compute corrected residuals and effective sample size
     if(algorithm == "2"){
-        epsilon.adj <- .adjustResiduals(Omega = Omega,
+        epsilon.adj <- .adjustResiduals(Omega = Omega0,
                                         Psi = Psi,
-                                        epsilon = epsilon,
+                                        epsilon = residuals0,
                                         name.pattern = name.pattern,
                                         missing.pattern = missing.pattern,
                                         unique.pattern = unique.pattern,
                                         endogenous = endogenous,
-                                        n.endogenous = n.endogenous,
                                         n.cluster = n.cluster)
 
-        leverage.adj <- .leverage2(Omega = Omega,
+        leverage.adj <- .leverage2(Omega = Omega0,
                                    epsilon = epsilon.adj,
                                    dmu = dmu,
                                    dOmega = dOmega,
@@ -155,7 +160,7 @@
                                    unique.pattern = unique.pattern,
                                    endogenous = endogenous,
                                    n.endogenous = n.endogenous,
-                                   param = param,
+                                   param = object$sCorrect$skeleton$Uparam,
                                    param.mean = param.mean,
                                    param.hybrid = param.hybrid,
                                    n.cluster = n.cluster)
@@ -167,30 +172,34 @@
     }
         
     ## ** Step (iv): bias-corrected residual covariance matrix
-    Omega.adj <- Omega + Psi
-    browser()
+    Omega.adj <- Omega0 + Psi
+
     ## ** Step (v): bias-corrected variance parameters
 
     ## *** right hand side of the equation
-    eq.rhs <- Omega[index.matrix$index]
+    index.upper.tri <- object$sCorrect$ssc$index.upper.tri[,"index"]
+    eq.rhs <- setNames(Omega.adj[index.upper.tri],
+                       object$sCorrect$ssc$name.rhs)
 
     ## *** left hand side of the equation
-    if(NROW(index.Psi)>0){
-        n.index.Psi <- NROW(index.Psi)
-        n.latent <- NROW(skeleton$Psi)        
-        Z <- iIB %*% Lambda
+    A <- object$sCorrect$ssc$A
+    index.Psi <- object$sCorrect$ssc$index.Psi
 
+    if(NROW(index.Psi)>0){
+        Z <- object$sCorrect$moment$iIB %*% object$sCorrect$moment$Lambda
+        tZ <- t(Z)
+        n.index.Psi <- NROW(index.Psi)
+    
         ## A = t(Z) Psi Z + Sigma
         ## (t(Z) Psi Z)_{ij} = \sum_{k,l} Z_{k,i} Psi_{k,l} Z_{l,j}
-        for(iIndex in 1:n.rhs){ # iIndex <- 1
-            iRow <- index.matrix[iIndex,"row"]
-            iCol <- index.matrix[iIndex,"col"]
-            for(iPsi in 1:n.index.Psi){
-                iRowPsi <- index.Psi[iPsi,"row"]
-                iColPsi <- index.Psi[iPsi,"col"]
-                A[iIndex,skeleton$Psi[iRowPsi,iColPsi]] <- A[iIndex,skeleton$Psi[iRowPsi,iColPsi]] + Z[iRowPsi,iRow]*Z[iColPsi,iCol]
-            }
+        ## (t(Z) Psi Z)_{ij} regarding param_(k,l) = Z_{k,i} Z_{l,j}
+        for(iPsi in 1:n.index.Psi){ ## iPsi <- 1
+            iNamePsi <- rownames(index.Psi)[iPsi]
+            iRowPsi <- index.Psi[iPsi,"row"]
+            iColPsi <- index.Psi[iPsi,"col"]
+            A[,iNamePsi] <- A[,iNamePsi] + (tZ[,index.Psi[iPsi,"row"]] %o% Z[index.Psi[iPsi,"col"],])[index.upper.tri]
         }
+        
     }
 
     ## *** solve equation
@@ -220,36 +229,17 @@
         }
     }
 
-
-    ##     n.endogenous <- NROW(Omega)
-    ## df.param <- object$conditionalMoment$df.param
-    
-    ## index.matrix <- object$conditionalMoment$adjustMoment$index.matrix
-    ## index.Psi <- object$conditionalMoment$adjustMoment$index.Psi
-    ## A <- object$conditionalMoment$adjustMoment$A
-    ## name.var <- object$conditionalMoment$adjustMoment$name.var
-    ## n.rhs <- object$conditionalMoment$adjustMoment$n.rhs
-    ## index.LambdaB <- object$conditionalMoment$adjustMoment$index.LambdaB
-    ## name.endogenous <- object$conditionalMoment$adjustMoment$name.endogenous
-    ## name.latent <- object$conditionalMoment$adjustMoment$name.latent
-    
-    ## skeleton <- object$conditionalMoment$skeleton
-
-    ## param <- object$conditionalMoment$param
-    ## Lambda <- object$conditionalMoment$value$Lambda
-    ## iIB <- object$conditionalMoment$value$iIB
-    ## iIB.Lambda <- object$conditionalMoment$value$iIB.Lambda
-    ## dLambda <- object$conditionalMoment$dMoment.init$dLambda
-    ## dB <- object$conditionalMoment$dMoment.init$dB
-
-    
     ## ** update parameters in conditional moments
-    object$conditionalMoment$param[name.var] <- setNames(iSolution, name.var)
+    ## iSolution - param[object$sCorrect$ssc$name.var]
+    param0[object$sCorrect$ssc$name.var] <- iSolution
 
-    ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the level above
+    ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the parent function
         
     ## ** Export
-    return(newparam)
+    attr(param0,"leverage") <- leverage.adj
+    attr(param0,"residuals") <- epsilon.adj
+    attr(param0,"Psi") <- Psi
+    return(param0)
 }
 
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: jan  7 2020 (11:51) 
+## Last-Updated: jan 10 2020 (13:24) 
 ##           By: Brice Ozenne
-##     Update #: 355
+##     Update #: 364
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -61,8 +61,8 @@
 information2.lm <- function(object, param = NULL, data = NULL,
                             ssc = lava.options()$ssc){
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc,ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NULL)
+    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
+        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NA)
     }
 
     return(object$sCorrect$information)
@@ -83,13 +83,18 @@ information2.lme <- information2.lm
 #' @export
 information2.lvmfit <- information2.lm
 
-## * information.sCorrect
-#' @rdname score2
-information.sCorrect <- function(object, param = NULL, data = NULL,
-                                 ssc = lava.options()$ssc){
+## * information2.sCorrect
+#' @rdname information2
+information2.sCorrect <- function(object, param = NULL, data = NULL,
+                                 ssc = object$sCorrect$ssc$type){
     class(object) <- setdiff(class(object),"sCorrect")
     return(information2(object, param = param, data = data, ssc = ssc))
 }
+
+## * information.sCorrect
+#' @rdname information2
+information.sCorrect <- information2.sCorrect
+
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments

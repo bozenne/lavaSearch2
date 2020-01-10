@@ -208,7 +208,7 @@ extractData.lvmfit <- function(object, design.matrix = FALSE, as.data.frame = TR
     }
 
     ## ** remove missing values
-    test.na <- rowSums(is.na(data[,manifest(object)]))
+    test.na <- rowSums(is.na(data[,manifest(object),drop=FALSE]))
     if(rm.na == TRUE && any(test.na>0)){ ## remove rows corresponding to missing values
         if(!inherits(object,"lvm.missing")){
             data <- data[setdiff(1:NROW(data),which(test.na>0)),,drop=FALSE]

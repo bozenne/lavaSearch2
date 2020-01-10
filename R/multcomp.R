@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jun 14 2019 (13:44) 
+## Last-Updated: jan  8 2020 (15:09) 
 ##           By: Brice Ozenne
-##     Update #: 556
+##     Update #: 560
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -56,7 +56,7 @@
 #' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, var.test = "Treatment", add.variance = FALSE)
+#' resC <- createContrast(e.mmm, linfct = "Treatment", add.variance = FALSE)
 #'
 #' #### adjust for multiple comparisons ####
 #' e.glht <- glht(e.mmm, linfct = resC$mlf)
@@ -154,7 +154,7 @@ estfun.lme <- function(x, ...){
 #' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, var.test = "E", add.variance = TRUE)
+#' resC <- createContrast(e.mmm, linfct = "E", add.variance = TRUE)
 #'
 #' #### adjust for multiple comparisons ####
 #' e.glht2 <- glht2(e.mmm, linfct = resC$contrast, df = FALSE)
@@ -179,7 +179,7 @@ glht2.lvmfit <- function(model, linfct, rhs = 0,
     
     ### ** define contrast matrix
     if(!is.matrix(linfct)){
-        resC <- createContrast(model, par = linfct)
+        resC <- createContrast(model, linfct = linfct)
         linfct <- resC$contrast
         if("rhs" %in% names(match.call()) == FALSE){
             rhs <- resC$null
@@ -264,7 +264,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     ## ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
-        resC <- createContrast(model, par = linfct, add.variance = TRUE)
+        resC <- createContrast(model, linfct = linfct, add.variance = TRUE)
         contrast <- resC$contrast
         ls.contrast <- resC$ls.contrast
         if("rhs" %in% names(match.call()) == FALSE){

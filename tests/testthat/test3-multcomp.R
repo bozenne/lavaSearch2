@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: feb 25 2019 (09:37) 
+## Last-Updated: jan  8 2020 (13:04) 
 ##           By: Brice Ozenne
-##     Update #: 116
+##     Update #: 117
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -61,7 +61,7 @@ class(ls.lm) <- "mmm"
 test_that("glht vs. glht2 (list lm): information std", {
     e.glht <- glht(ls.lm, mlf("E = 0"))
 
-    resC <- createContrast(ls.lm, var.test = "E", add.variance = TRUE)
+    resC <- createContrast(ls.lm, linfct = "E", add.variance = TRUE)
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
 
@@ -82,7 +82,7 @@ test_that("glht vs. glht2 (list lm): information std", {
 test_that("glht vs. glht2 (list ml): robust std", {
     e.glht <- glht(ls.lm, mlf("E = 0"), vcov = sandwich)
 
-    resC <- createContrast(ls.lm, var.test = "E", add.variance = TRUE)
+    resC <- createContrast(ls.lm, linfct = "E", add.variance = TRUE)
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
     e.glht2 <- glht2(ls.lm, linfct = resC$contrast,
@@ -105,7 +105,7 @@ test_that("glht2 vs. lava (ml): robust std", {
     lsRed.lm <- ls.lm[1:2]
     class(lsRed.lm) <- "mmm"
 
-    resC <- createContrast(lsRed.lm, var.test = "E", add.variance = TRUE)
+    resC <- createContrast(lsRed.lm, linfct = "E", add.variance = TRUE)
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
     e.glht2 <- glht2(lsRed.lm, linfct = resC$contrast,
@@ -183,7 +183,7 @@ mmm.lvm <- mmm(Y1 = estimate(lvm(Y1~E), data = df.data),
 test_that("glht vs. glht2 (list lvm): information std", {
 
     ##
-    resC <- createContrast(mmm.lvm, var.test = "E")
+    resC <- createContrast(mmm.lvm, linfct = "E")
     lvm2.glht <- glht2(mmm.lvm, linfct = resC$contrast,
                        bias.correct = FALSE, robust = FALSE)
     lvm2.sglht <- summary(lvm2.glht)    

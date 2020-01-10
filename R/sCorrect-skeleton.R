@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan  7 2020 (14:35) 
+## Last-Updated: jan 10 2020 (14:04) 
 ##           By: Brice Ozenne
-##     Update #: 1474
+##     Update #: 1587
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -280,7 +280,6 @@ skeleton <- function(object, X,
             }
         }
     }    
-
 
     if(any(c("Psi_var", "Psi_cov") %in% type.theta$detail)){
         type.Psi_var <- type.theta[type.theta$detail %in% "Psi_var",,drop=FALSE]
@@ -692,8 +691,11 @@ skeletonDtheta2 <- function(object){
     }
 
     ## ** update grid.dmoment
-    object$grid.dmoment$mean$d2.12 <- FALSE
-    object$grid.dmoment$mean$d2.21 <- FALSE
+    if(NROW(object$grid.dmoment$mean)>0){
+        object$grid.dmoment$mean$d2.12 <- FALSE
+        object$grid.dmoment$mean$d2.21 <- FALSE
+    }
+    
     if(length(grid.param$mean)>0){
         for(iType in names(grid.param$mean)){  ## iType <- names(grid.param$mean)[1]
             for(iRow in 1:NROW(grid.param$mean[[iType]])){ ## iRow <- 1
@@ -710,8 +712,10 @@ skeletonDtheta2 <- function(object){
         }
     }
     
-    object$grid.dmoment$var$d2.12 <- FALSE
-    object$grid.dmoment$var$d2.21 <- FALSE
+    if(NROW(object$grid.dmoment$var)>0){
+        object$grid.dmoment$var$d2.12 <- FALSE
+        object$grid.dmoment$var$d2.21 <- FALSE
+    }
     if(length(grid.param$var)>0){
         for(iType in names(grid.param$var)){  ## iType <- names(grid.param$var)[1]
             for(iRow in 1:NROW(grid.param$var[[iType]])){ ## iRow <- 1
@@ -728,31 +732,24 @@ skeletonDtheta2 <- function(object){
         }
     }
 
-    ## ** Parameters in dInformation
-    ## all but nu and K parameters
-    type.Uparam <- type.param[!is.na(type.param$originalLink),]
-    if(any(c("Lambda","B") %in% type.Uparam$detail)){
-        type.dInformation <- c("alpha","Gamma","Lambda","B","Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")
-    }else{ ## mean-variance model
-        type.dInformation <- c("Psi_var","Sigma_var","Psi_cov","Sigma_cov","sigma2","sigma2k","cor")
-    }
-    name.param.dInformation <- type.Uparam[type.Uparam$detail %in% type.dInformation,"param"]
-    
-    grid.dInformation <- expand.grid(X = object$Uparam, Y = object$Uparam, Z = name.param.dInformation, stringsAsFactors = FALSE)
-    grid.dInformation$level <- apply(grid.dInformation,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
-    grid.dInformation$duplicated <- duplicated(grid.dInformation$level)
+    ## ** Parameters in dInformation/JJK
+    grid.3varD1 <- .expand.grid3(X = object$Uparam.var, Y = object$Uparam.var, Z = object$Uparam.var, rm.duplicated.byZ = FALSE)
+    grid.2meanD1.1varD1 <- .expand.grid3(X = object$Uparam.mean, Y = object$Uparam.mean, Z = object$Uparam.var, rm.duplicated.byZ = TRUE)
 
-    level2row <- setNames(which(grid.dInformation$duplicated==FALSE),grid.dInformation[grid.dInformation$duplicated==FALSE,"level"])
-    grid.dInformation$reference <- level2row[grid.dInformation$level]
-    
-    
-    ## ** Export
+    grid.2meanD2.1meanD1 <- .expand.grid2(X = object$Uparam.mean, Y = object$Uparam.mean, Z = object$Uparam.mean,
+                                          d2 = object$grid.dmoment$mean)
+    grid.2varD2.1varD1 <- .expand.grid2(X = object$Uparam.var, Y = object$Uparam.var, Z = object$Uparam.var,
+                                        d2 = object$grid.dmoment$var)
+
+    ## ** Export    
     return(c(object,
              list(d2mu.dparam = d2mu,
                   d2Omega.dparam = d2Omega,
                   grid.d2moment = grid.param,
-                  name.param.dInformation = name.param.dInformation,
-                  grid.dInformation = grid.dInformation))
+                  grid.3varD1 = grid.3varD1,
+                  grid.2meanD1.1varD1 = grid.2meanD1.1varD1,
+                  grid.2meanD2.1meanD1 = grid.2meanD2.1meanD1,
+                  grid.2varD2.1varD1 = grid.2varD2.1varD1))
            )
 }
 
@@ -780,7 +777,77 @@ skeletonDtheta2 <- function(object){
     }
 }
 
+## ** .expand.grid2
+.expand.grid2 <- function(X,Y,Z,d2){
+    if(NROW(d2)==0 || sum(d2$d2.12+d2$d2.21)==0){return(NULL)}
 
+    ## find available derivatives
+    index.12 <- which(d2[,"d2.12"])
+    index.21 <- which(d2[,"d2.21"])
+
+    available.d2 <- rbind(data.frame(Var1 = d2[index.12,1], Var2 = d2[index.12,2], stringsAsFactors = FALSE),
+                          data.frame(Var1 = d2[index.21,2], Var2 = d2[index.21,1], stringsAsFactors = FALSE))
+    name.available.d2 <- as.character(interaction(available.d2))
+    n.available.d2 <- length(name.available.d2)
+
+    unavailable.d2 <- data.frame(Var1 = available.d2[,2], Var2 = available.d2[,1], stringsAsFactors = FALSE)
+    name2position <- rbind(data.frame(name = name.available.d2, position = 1:n.available.d2, stringsAsFactors = FALSE),
+                           data.frame(name = as.character(interaction(unavailable.d2)), position = 1:n.available.d2, stringsAsFactors = FALSE))
+    unavailable.d2 <- unavailable.d2[as.character(interaction(unavailable.d2)) %in% name.available.d2 == FALSE,,drop=FALSE]
+    
+    ## generate grid (combination between X and YZ)
+    grid <- expand.grid(X = X, Y = Y, Z = Z, stringsAsFactors = FALSE)
+
+    ## find second order derivative
+    name.gridXY <- as.character(interaction(grid[,c("X","Y")]))
+    d2XY <- available.d2[name2position$position[match(name.gridXY, name2position$name)],]
+    names(d2XY) <- c("d2XY.Var1","d2XY.Var2")
+        
+    name.gridXZ <- as.character(interaction(grid[,c("X","Z")]))
+    d2XZ <- available.d2[name2position$position[match(name.gridXZ, name2position$name)],]
+    names(d2XZ) <- c("d2XZ.Var1","d2XZ.Var2")
+
+    name.gridYZ <- as.character(interaction(grid[,c("Y","Z")]))
+    d2YZ <- available.d2[name2position$position[match(name.gridYZ, name2position$name)],]
+    names(d2YZ) <- c("d2YZ.Var1","d2YZ.Var2")
+    
+    grid <- cbind(grid,d2XY,d2XZ,d2YZ)
+    rownames(grid) <- NULL
+
+    ## find duplicated
+    levelXY <- apply(grid,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
+    grid$duplicatedXY <- duplicated(levelXY)
+    grid$d2XY <- (rowSums(is.na(d2XY))==0)
+
+    levelXZ <- apply(grid,1,function(iX){paste0(c(sort(iX[c(1,3)]),iX[2]),collapse="")})
+    grid$duplicatedXZ <- duplicated(levelXZ)
+    grid$d2XZ <- (rowSums(is.na(d2XZ))==0)
+
+    levelYZ <- apply(grid,1,function(iX){paste0(c(iX[1],sort(iX[2:3])),collapse="")})
+    grid$duplicatedYZ <- duplicated(levelYZ)
+    grid$d2YZ <- (rowSums(is.na(d2YZ))==0)
+
+    return(grid[grid$d2XY+grid$d2XZ+grid$d2YZ>0,,drop=FALSE])
+}
+
+## ** .expand.grid3
+.expand.grid3 <- function(X,Y,Z, rm.duplicated.byZ){
+
+    ## generate grid (all possible combinations)
+    grid <- expand.grid(X = X, Y = Y, Z = Z, stringsAsFactors = FALSE)    
+
+    ## remove duplicated 
+    if(rm.duplicated.byZ){  ## XY=YZ for fixed Z
+        grid$level <- apply(grid,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
+    }else{ ## XYZ = XZY = ZYX = YXZ
+        grid$level <- apply(grid,1,function(iX){paste0(sort(iX),collapse="")})
+    }
+    grid$duplicated <- duplicated(grid$level)
+    grid <- grid[grid$duplicated==FALSE,c("X","Y","Z"),drop=FALSE]
+    rownames(grid) <- NULL
+    
+    return(grid)
+}
 ##----------------------------------------------------------------------
 ### sCorrect-skeleton.R ends here
 
