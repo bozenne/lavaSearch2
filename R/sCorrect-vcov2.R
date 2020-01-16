@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:39) 
+## Last-Updated: jan 15 2020 (14:24) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 32
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -113,7 +113,31 @@ vcov.sCorrect <- vcov2.sCorrect
 .info2vcov <- function(information, attr.info = FALSE){
     vcov <- try(chol2inv(chol(information)), silent = TRUE)
     if(inherits(vcov, "try-error")){
-        vcov <- try(solve(information), silent = FALSE)
+        vcov <- try(solve(information), silent = TRUE)
+        if(inherits(vcov, "try-error")){ ## try by block
+            cat("Singular information matrix: try to inverse it by block \n")
+            information.N0 <- abs(information)>1e-10
+            remaining.var <- colnames(information)
+            vcov <- matrix(0, nrow = NROW(information), ncol = NCOL(information),
+                           dimnames = dimnames(information))
+            while(length(remaining.var)>0){
+                current.set <- remaining.var[1]
+                new.set <- unique(unlist(apply(information.N0[current.set,,drop=FALSE],1,function(iRow){list(names(iRow[iRow==1]))})))
+                while(length(current.set)<length(new.set)){
+                    current.set <- new.set
+                    new.set <- unique(unlist(apply(information.N0[current.set,,drop=FALSE],1,function(iRow){list(names(iRow[iRow==1]))})))
+                }
+                if(length(new.set)>0){
+                    iTry <- try(solve(information[current.set,current.set]), silent = TRUE)
+                    if(inherits(iTry,"try-error")){
+                        vcov[current.set,current.set] <- NA
+                    }else{
+                        vcov[current.set,current.set] <- iTry
+                    }
+                }
+                remaining.var <- setdiff(remaining.var, current.set)
+            }
+        }
     }
     if(attr.info){
         attr(vcov,"information") <- information

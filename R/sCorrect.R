@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 10 2020 (17:37) 
+## Last-Updated: jan 16 2020 (11:17) 
 ##           By: Brice Ozenne
-##     Update #: 1788
+##     Update #: 1815
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -86,14 +86,16 @@
              first.order, ssc, df,
              derivative, iter.max, tol.max, trace) UseMethod("sCorrect")
 
+
+
 ## * sCorrect.lm
 #' @rdname sCorrect
 #' @export
 sCorrect.lm <- function(object, param = NULL, data = NULL,
                         first.order = TRUE, ssc = lava.options()$ssc, df = lava.options()$df,
                         derivative = "analytic", iter.max = 100, tol.max = 1e-6,
-                        trace = 1){
-
+                        trace = 0){
+    
     ## ** preliminary tests
     if(!inherits(object,"lm") && !inherits(object,"gls") && !inherits(object,"lme") && !inherits(object,"lvmfit")){
         stop("Cannot only convert object of class lm/gls/lme/lvmfit to sCorrect \n")
@@ -116,8 +118,15 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
     }
 
     ## arguments
-    if(is.null(ssc) || (!is.na(ssc) && ssc %in% c("residuals","Cox") == FALSE)){
-        stop("Argument \'ssc\' should either be NA, \"residual\", or \"Cox\" \n")
+    valid.ssc <- c("residuals","Cox")
+    if(inherits(object,"lm") || inherits(object,"gls") || inherits(object,"lme")){
+        valid.ssc <- c(valid.ssc,"REML")
+        if(identical(ssc,"REML") && is.null(param)){
+            param <- .coef2(object, labels = 1, ssc = "REML")
+        }
+    }
+    if(is.null(ssc) || (!is.na(ssc) && ssc %in% valid.ssc == FALSE)){
+        stop("Argument \'ssc\' should either be NA, \"",paste0(valid.ssc, collapse = "\", \""),"\" \n")
     }
     if(is.null(df) || (!is.na(df) && df %in% c("Satterthwaite") == FALSE)){
         stop("Argument \'df\' should either be NA or \"Satterthwaite\" \n")
@@ -132,13 +141,14 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
                              derivative = derivative)
 
     ## ** bias correction
-    if(!is.na(ssc)){
+    if(identical(ssc,"residuals") || identical(ssc,"Cox")){
 
         ## *** initialize bias correction
         if(trace>0){cat("Initialize bias correction \n")}
         if(ssc=="Cox"){
             object$sCorrect$ssc <- list(type = "Cox",
-                                        param0 = object$sCorrect$param)
+                                        param0 = object$sCorrect$param,
+                                        Omega0 = object$sCorrect$moment$Omega)
         }else if(ssc=="residuals"){
             object$sCorrect$ssc <- .init_sscResiduals(object)
         }
@@ -148,6 +158,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         iIter <- 0
         iTol <- Inf
         iiParam <- object$sCorrect$param
+        cat(iTol," (",iiParam,") \n")
             
         while(iIter < iter.max & iTol > tol.max){
             if(trace>0){cat("*")}
@@ -157,6 +168,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
                 iParam <- .sscCoxSnell(object)
                 object$sCorrect$ssc$JJK <- attr(iParam,"JJK")
                 object$sCorrect$ssc$lm <- attr(iParam,"lm")
+                object$sCorrect$ssc$Psi <- object$sCorrect$moment$Omega - object$sCorrect$ssc$Omega0
             }else if(ssc=="residuals"){
                 iParam <- .sscResiduals(object)
                 object$sCorrect$leverage <- attr(iParam,"leverage")

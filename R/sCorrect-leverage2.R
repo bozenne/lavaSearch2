@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:38) 
+## Last-Updated: jan 16 2020 (11:01) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 109
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -151,7 +151,7 @@ leverage2.sCorrect <- function(object, param = NULL, data = NULL,
         for(iP in 1:n.param.mean){
 
             if(param.mean[iP] %in% param.hybrid){
-                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[param.hybrid[iP]]][iY,iY,drop=FALSE] %*% iOmegaM1
+                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[param.mean[iP]]][iY,iY,drop=FALSE] %*% iOmegaM1
             }else{
                 iOmegaM1.epsilon.dOmega.iOmegaM1 <- 0
             }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: jan 10 2020 (13:28) 
+## Last-Updated: jan 15 2020 (15:33) 
 ##           By: Brice Ozenne
-##     Update #: 182
+##     Update #: 189
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -85,6 +85,7 @@ updateMoment <- function(skeleton, value, toUpdate,
     ## ** Compute mean
     value$mu <- matrix(0, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL,endogenous))
+
     if("nu" %in% names(value)){
         value$mu <- value$mu + sweep(skeleton$Xnu, MARGIN = 2, FUN = "*", STATS = value$nu)
     }
@@ -200,7 +201,11 @@ updateDMoment <- function(moment, skeleton, param){
     if("cor" %in% names(skeleton$dmat.dparam)){
         iName.param <- names(skeleton$dmat.dparam$cor)
         for(iParam in iName.param){ ## iParam <- iName.param[1]
-            dOmega[[iParam]] <- Sigma*skeleton$dmat.dparam$cor[[iParam]]/param[iParam]
+            if(abs(param[iParam])>1e-10){
+                dOmega[[iParam]] <- Sigma*skeleton$dmat.dparam$cor[[iParam]]/param[iParam]
+            }else{
+                dOmega[[iParam]] <- Sigma*0
+            }
         }
     }
 

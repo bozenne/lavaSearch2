@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 10 2020 (13:39) 
+## last-updated: jan 15 2020 (15:33) 
 ##           By: Brice Ozenne
-##     Update #: 1494
+##     Update #: 1498
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -187,7 +187,7 @@ conditionalMoment.lm <- function(object,
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            out$param <- .coef2(object, labels = 1, ssc = NULL)[out$skeleton$Uparam]
+            out$param <- .coef2(object, labels = 1, ssc = NA)[out$skeleton$Uparam]
         }else{
             if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
                 stop("Incorrect name for the model parameters \n",

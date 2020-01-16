@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:37) 
+## Last-Updated: jan 15 2020 (14:46) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 61
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -140,7 +140,7 @@ getVarCov2.lvmfit <- getVarCov2.lm
 #' @rdname getVarCov2
 getVarCov2.sCorrect <- function(object, param = NULL, data = NULL,
                                ssc = object$sCorrect$ssc$type){
-    class(object) <- setdiff(class(object2),"sCorrect")
+    class(object) <- setdiff(class(object),"sCorrect")
     return(getVarCov2(object, param = param, data = data, ssc = ssc))
 }
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 10 2020 (15:59) 
+## Last-Updated: jan 16 2020 (15:55) 
 ##           By: Brice Ozenne
-##     Update #: 283
+##     Update #: 289
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -194,13 +194,12 @@
             }
         }
     }
-    
     ## dInfo.bis <- .old_dInformation2(dmu = dmu, dOmega = dOmega, d2mu = d2mu, d2Omega = d2Omega, OmegaM1 = OmegaM1,
     ##                                 missing.pattern = missing.pattern, unique.pattern = unique.pattern, name.pattern = name.pattern, 
     ##                                 grid.dInformation = expand.grid(X = name.param, Y = name.param, Z = name.param, duplicated = FALSE, stringsAsFactors = FALSE),
     ##                                 name.param = name.param, name.param.dInformation = name.param,
     ##                                 leverage = leverage, n.cluster = n.cluster)
-
+    
     ## ** export
     return(dInfo)
 }

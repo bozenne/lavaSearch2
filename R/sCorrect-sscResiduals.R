@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 10 2020 (18:19) 
+## Last-Updated: jan 15 2020 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 997
+##     Update #: 999
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -137,7 +137,7 @@
     }
     ## take the average
     Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
-    
+
     ## ** Step (iii): compute corrected residuals and effective sample size
     if(algorithm == "2"){
         epsilon.adj <- .adjustResiduals(Omega = Omega0,

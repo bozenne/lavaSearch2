@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan 10 2020 (13:41) 
+## Last-Updated: jan 16 2020 (11:06) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 126
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,7 +77,7 @@
 ## * coef2.lm
 #' @rdname coef2
 coef2.lm <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
-    if((is.na(ssc) && !is.na(object$sCorrect$ssc$type)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
+    if((is.na(ssc) && !identical(object$sCorrect$ssc$type,NA)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
         out <- .coef2(object, labels = labels, ssc = ssc)
     }else{
         if(!identical(object$sCorrect$ssc$type,ssc)){
@@ -115,7 +115,7 @@ coef2.lvmfit <- function(object, ssc = lava.options()$ssc, labels = lava.options
 
 ## * coef2.sCorrect
 #' @rdname coef2
-coef2.sCorrect <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
+coef2.sCorrect <- function(object, ssc = object$sCorrect$ssc$type, labels = lava.options()$coef.names){
     class(object) <- setdiff(class(object),"sCorrect")
     return(coef2(object, ssc = ssc, labels = labels))
 

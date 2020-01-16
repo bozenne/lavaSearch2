@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 10 2020 (14:49) 
+## Last-Updated: jan 16 2020 (15:54) 
 ##           By: Brice Ozenne
-##     Update #: 1592
+##     Update #: 1657
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -733,8 +733,9 @@ skeletonDtheta2 <- function(object){
     }
 
     ## ** Parameters in dInformation/JJK
-    grid.3varD1 <- .expand.grid3(X = object$Uparam.var, Y = object$Uparam.var, Z = object$Uparam.var, rm.duplicated.byZ = FALSE)
-    grid.2meanD1.1varD1 <- .expand.grid3(X = object$Uparam.mean, Y = object$Uparam.mean, Z = object$Uparam.var, rm.duplicated.byZ = TRUE)
+    grid.3varD1 <- .duplicatedGrid(expand.grid(X = object$Uparam.var, Y = object$Uparam.var, Z = object$Uparam.var, stringsAsFactors = FALSE))
+    
+    grid.2meanD1.1varD1 <- .duplicatedGrid(expand.grid(X = object$Uparam.mean, Y = object$Uparam.mean, Z = object$Uparam.var, stringsAsFactors = FALSE))
 
     grid.2meanD2.1meanD1 <- .expand.grid2(X = object$Uparam.mean, Y = object$Uparam.mean, Z = object$Uparam.mean,
                                           d2 = object$grid.dmoment$mean)
@@ -813,44 +814,63 @@ skeletonDtheta2 <- function(object){
     
     grid <- cbind(grid,d2XY,d2XZ,d2YZ)
     rownames(grid) <- NULL
-
+    
     ## find duplicated
-    levelXY <- apply(grid,1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
-    grid$duplicatedXY <- duplicated(levelXY)
-    grid$d2XY <- (rowSums(is.na(d2XY))==0)
-
-    levelXZ <- apply(grid,1,function(iX){paste0(c(sort(iX[c(1,3)]),iX[2]),collapse="")})
-    grid$duplicatedXZ <- duplicated(levelXZ)
-    grid$d2XZ <- (rowSums(is.na(d2XZ))==0)
-
-    levelYZ <- apply(grid,1,function(iX){paste0(c(iX[1],sort(iX[2:3])),collapse="")})
-    grid$duplicatedYZ <- duplicated(levelYZ)
-    grid$d2YZ <- (rowSums(is.na(d2YZ))==0)
-
+    grid <- cbind(.duplicatedGrid(grid[,c("X","Y","Z")]), grid[,-(1:3)])
+    grid$d2XY <- !is.na(grid$d2XY.Var1)
+    grid$d2XZ <- !is.na(grid$d2XZ.Var1)
+    grid$d2YZ <- !is.na(grid$d2YZ.Var1)
     return(grid[grid$d2XY+grid$d2XZ+grid$d2YZ>0,,drop=FALSE])
 }
 
-## ** .expand.grid3
-.expand.grid3 <- function(X,Y,Z, rm.duplicated.byZ){
+## ** .duplicatedGrid
+.duplicatedGrid <- function(grid){
+    grid <- as.data.frame(grid)
+    if(NROW(grid)==1){
+        grid$duplicatedXY <- FALSE
+        grid$duplicatedXZ <- FALSE
+        grid$duplicatedYZ <- FALSE
+        grid$duplicatedXYZ <- FALSE
+        return(grid)
+    }
+    
+    ## normalize grid
+    labels <- unique(unlist(grid))
+    n.labels <- length(labels)
+    grid.num <- cbind(apply(grid, 2, match, labels), index =  1:NROW(grid))
+    p <- NCOL(grid)
+    
+    ## warper
+    warper <- function(M, M.max, p){
+        newlevel <- rep(NA, M.max)
+        newlevel[1] <- 1
+        for(iX in 2:M.max){
+            newlevel[iX] <- p * newlevel[iX-1] + 1
+        }
+        M[] <- newlevel[unlist(M)]
+        return(duplicated(rowSums(M)))
+    }
+    
+    ## find duplicated
+    duplicatedXY <- do.call(rbind,by(grid.num[,c(1:2,4),drop=FALSE], INDICES = grid.num[,3], FUN = function(iGrid){
+        return(cbind(warper(iGrid[,1:2], M.max = n.labels, p = p),iGrid[,3]))
+    }))
+    grid$duplicatedXY[duplicatedXY[,2]] <- as.logical(duplicatedXY[,1])
 
-    ## generate grid (all possible combinations)
-    grid <- expand.grid(X = X, Y = Y, Z = Z, stringsAsFactors = FALSE)    
+    duplicatedXZ <- do.call(rbind,by(grid.num[,c(1,3,4),drop=FALSE], INDICES = grid.num[,2], FUN = function(iGrid){
+        return(cbind(warper(iGrid[,1:2], M.max = n.labels, p = p),iGrid[,3]))
+    }))
+    grid$duplicatedXZ[duplicatedXZ[,2]] <- as.logical(duplicatedXZ[,1])
 
-    ## find duplicated 
-    levelXY <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(sort(iX[1:2]),iX[3]),collapse="")})
-    grid$duplicatedXY <- duplicated(levelXY)
+    duplicatedYZ <- do.call(rbind,by(grid.num[,c(2:4),drop=FALSE], INDICES = grid.num[,1], FUN = function(iGrid){
+        return(cbind(warper(iGrid[,1:2], M.max = n.labels, p = p),iGrid[,3]))
+    }))
+    grid$duplicatedYZ[duplicatedYZ[,2]] <- as.logical(duplicatedYZ[,1])
 
-    levelXZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(sort(iX[c(1,3)]),iX[2]),collapse="")})
-    grid$duplicatedXZ <- duplicated(levelXZ)
-
-    levelYZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(c(iX[1],sort(iX[2:3])),collapse="")})
-    grid$duplicatedYZ <- duplicated(levelYZ)
-
-    levelXYZ <- apply(grid[,c("X","Y","Z")],1,function(iX){paste0(sort(iX),collapse="")})
-    grid$duplicatedXYZ <- duplicated(levelXYZ)
+    
+    grid$duplicatedXYZ <- warper(grid.num[,1:3,drop=FALSE], M.max = n.labels, p = p)
 
     return(grid)
+
 }
-##----------------------------------------------------------------------
-### sCorrect-skeleton.R ends here
 
