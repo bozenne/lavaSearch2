@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 17 2020 (13:39) 
+## Last-Updated: jan 17 2020 (18:20) 
 ##           By: Brice Ozenne
-##     Update #: 84
+##     Update #: 87
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,6 +65,22 @@ test_that("linear regression - residual correction equivalent to REML", {
                  unname(GS), tol = 1e-6)
     expect_equal(unname(eSSC1.lvm$sCorrect$vcov.param[1:3,1:3]),
                  unname(GS), tol = 1e-6)
+
+
+    ## model based
+    GS <- data.frame("Estimate" = c(1.08233491, -0.42993475, 1.82039942, 0.15110105), 
+                     "Std. Error" = c(0.18717083, 0.20041228, 0.37551973, 0.19577922), 
+                     "t-value" = c(5.78260466, -2.14525157, 4.84767986, 0.77179308), 
+                     "P-value" = c(5.7e-07, 0.03713074, NA, 0.44410038), 
+                     "df" = c(47, 47, 11.75, 47))
+    expect_equivalent(GS,
+                      summary2(eSSC1.lvm)$coef, tol = 1e-6)
+
+    ## robust
+    
+    expect_equivalent(GS,
+                      summary2(eSSC1.lvm, robust = TRUE)$coef, tol = 1e-6)
+
 })
 
 test_that("linear regression - Cox correction equivalent to REML", {
@@ -209,7 +225,9 @@ test_that("mixed model (CS) - Cox correction equivalent to REML", {
     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
     eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
     eSSC2.lme <- sCorrect(e.lme, ssc = "Cox")
-
+    ## coef(eSSC2.lvm) - coef(e.lvm)
+    ## GS - coef(e.lvm)
+    
     GS <- c(intervals(e.lme)$fixed[,2],
             sigma2 = as.double(intervals(e.lme)$sigma[2])^2,
             tau = intervals(e.lme)$reStruct$Id[,2,]^2)
@@ -264,7 +282,9 @@ test_that("mixed model (CS,weight) - Cox correction equivalent to REML", {
     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
     eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
     eSSC2.lme <- sCorrect(e.lme, ssc = "Cox")
-
+    ## GS - coef(e.lvm)
+    ## coef(eSSC2.lvm) - coef(e.lvm)
+    
     GS <- c(intervals(e.lme)$fixed[,2],
             Y1 = as.double(intervals(e.lme)$sigma[2])^2,
             tau = intervals(e.lme)$reStruct$Id[,2,]^2,
@@ -393,7 +413,7 @@ test_that("two factors model (correlation) - residuals correction", {
 
     GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.82498637, "eta1~~eta1" = 2.19604428, "Y2~~Y2" = 1.67543559, "Y3~~Y3" = 0.90484948, "Z1~~Z1" = 1.20086385, "eta2~~eta2" = 0.7944319, "Z2~~Z2" = 1.41920933, "Z3~~Z3" = 0.21553652)
     expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)
-}
+})
 
 test_that("two factors model (correlation) - Cox correction", {
     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
@@ -401,30 +421,31 @@ test_that("two factors model (correlation) - Cox correction", {
     GS <- c("eta1" = 0.15334368, "Y2" = 0.19799503, "Y3" = 0.37775788, "eta2" = 0.39767751, "Z2" = -0.18562638, "Z3" = -0.75078602, "eta1~eta2" = 0.35160357, "Y2~eta1" = 0.8409626, "Y3~eta1" = 0.86679841, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.89498429, "Z3~eta2" = 1.76979176, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.88673054, "eta1~~eta1" = 2.22027337, "Y2~~Y2" = 1.7069357, "Y3~~Y3" = 0.87527537, "Z1~~Z1" = 1.26455176, "eta2~~eta2" = 0.74360185, "Z2~~Z2" = 1.43772669, "Z3~~Z3" = 0.31131063)
 
     expect_equal(coef(eSSC2.lvm), GS, tol = 1e-6)
-}
+})
 
-## ** two factors model (covariance)
-m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,eta1~X1,
-           Z1~eta2,Z2~eta2,Z3~eta2+X3,eta2~X2,
-           eta1~~eta2))
+## ## ** two factors model (covariance)
+## m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,eta1~X1,
+##            Z1~eta2,Z2~eta2,Z3~eta2+X3,eta2~X2,
+##            eta1~~eta2))
 
-e.lvm <- estimate(m, d)
+## e.lvm <- estimate(m, d)
+## coef(e.lvm)
 
-test_that("two factors model (correlation) - residuals correction", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+## test_that("two factors model (correlation) - residuals correction", {
+##     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
 
-    GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.82498637, "eta1~~eta1" = 2.19604428, "Y2~~Y2" = 1.67543559, "Y3~~Y3" = 0.90484948, "Z1~~Z1" = 1.20086385, "eta2~~eta2" = 0.7944319, "Z2~~Z2" = 1.41920933, "Z3~~Z3" = 0.21553652)
-    expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)
-}
+##     GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.82498637, "eta1~~eta1" = 2.19604428, "Y2~~Y2" = 1.67543559, "Y3~~Y3" = 0.90484948, "Z1~~Z1" = 1.20086385, "eta2~~eta2" = 0.7944319, "Z2~~Z2" = 1.41920933, "Z3~~Z3" = 0.21553652)
+##     expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)
+## })
 
-test_that("two factors model (correlation) - Cox correction", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+## test_that("two factors model (correlation) - Cox correction", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
 
-    GS <- c("eta1" = 0.24295941, "Y2" = 0.18388462, "Y3" = 0.32464952, "eta2" = 0.37537296, "Z2" = -0.1851004, "Z3" = -0.77200208, "eta1~X1" = 1.08475547, "Y2~eta1" = 0.88925211, "Y3~eta1" = 1.12263979, "Y3~X1" = 0.82749017, "eta2~X2" = -0.10473803, "Z2~eta2" = 0.89399459, "Z3~eta2" = 1.82282964, "Z3~X3" = 1.21228718, "Y1~~Y1" = 0.98937181, "eta1~~eta1" = 0.9128264, "Y2~~Y2" = 1.59949563, "Y3~~Y3" = 0.75743488, "Z1~~Z1" = 1.29260368, "eta2~~eta2" = 0.72179897, "Z2~~Z2" = 1.46486865, "Z3~~Z3" = 0.22243345, "eta1~~eta2" = 0.14547098)
+##     GS <- c("eta1" = 0.24295941, "Y2" = 0.18388462, "Y3" = 0.32464952, "eta2" = 0.37537296, "Z2" = -0.1851004, "Z3" = -0.77200208, "eta1~X1" = 1.08475547, "Y2~eta1" = 0.88925211, "Y3~eta1" = 1.12263979, "Y3~X1" = 0.82749017, "eta2~X2" = -0.10473803, "Z2~eta2" = 0.89399459, "Z3~eta2" = 1.82282964, "Z3~X3" = 1.21228718, "Y1~~Y1" = 0.98937181, "eta1~~eta1" = 0.9128264, "Y2~~Y2" = 1.59949563, "Y3~~Y3" = 0.75743488, "Z1~~Z1" = 1.29260368, "eta2~~eta2" = 0.72179897, "Z2~~Z2" = 1.46486865, "Z3~~Z3" = 0.22243345, "eta1~~eta2" = 0.14547098)
 
-    expect_equal(coef(eSSC2.lvm), GS, tol = 1e-6)
-    ## coef(e.lvm) - coef(eSSC2.lvm)
-}
+##     expect_equal(coef(eSSC2.lvm), GS, tol = 1e-6)
+##     ## coef(e.lvm) - coef(eSSC2.lvm)
+## })
 
 ##----------------------------------------------------------------------
 ### test1-sCorrect-ssc.R ends here

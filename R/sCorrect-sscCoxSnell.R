@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan 17 2020 (13:33) 
+## Last-Updated: jan 17 2020 (13:57) 
 ##           By: Brice Ozenne
-##     Update #: 161
+##     Update #: 162
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,7 @@
     ## ** compute JJK
     object$sCorrect$skeleton$grid.2varD2.1varD1
     JJK <- .calcJJK(object)
-    print(range(.old_calcJJK(object)-JJK))
+    ## print(range(.old_calcJJK(object)-JJK))
     ## print(sum(.old_calcJJK(object))-sum(JJK))
 
     ## ** least squares

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 16 2020 (11:17) 
+## Last-Updated: jan 17 2020 (13:58) 
 ##           By: Brice Ozenne
-##     Update #: 1815
+##     Update #: 1816
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -158,7 +158,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         iIter <- 0
         iTol <- Inf
         iiParam <- object$sCorrect$param
-        cat(iTol," (",iiParam,") \n")
+        ## cat(iTol," (",iiParam,") \n")
             
         while(iIter < iter.max & iTol > tol.max){
             if(trace>0){cat("*")}
@@ -185,7 +185,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
             ## cv criteria
             iIter <- iIter + 1
             iTol <- max(abs(iParam-iiParam))
-            cat(iTol," (",iParam,") \n")
+            ## cat(iTol," (",iParam,") \n")
             iiParam <- iParam
         }
 
