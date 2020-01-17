@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 16 2020 (15:54) 
+## Last-Updated: jan 17 2020 (09:37) 
 ##           By: Brice Ozenne
-##     Update #: 1657
+##     Update #: 1661
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -825,14 +825,16 @@ skeletonDtheta2 <- function(object){
 
 ## ** .duplicatedGrid
 .duplicatedGrid <- function(grid){
-    grid <- as.data.frame(grid)
-    if(NROW(grid)==1){
+    if(NROW(grid)==0){
+        return(NULL)
+    }else if(NROW(grid)==1){
         grid$duplicatedXY <- FALSE
         grid$duplicatedXZ <- FALSE
         grid$duplicatedYZ <- FALSE
         grid$duplicatedXYZ <- FALSE
         return(grid)
     }
+    grid <- as.data.frame(grid)
     
     ## normalize grid
     labels <- unique(unlist(grid))

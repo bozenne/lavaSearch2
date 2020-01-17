@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan 16 2020 (16:58) 
+## Last-Updated: jan 17 2020 (13:33) 
 ##           By: Brice Ozenne
-##     Update #: 115
+##     Update #: 161
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,14 +26,20 @@
     name.param <- names(param)
     
     ## ** compute JJK
+    object$sCorrect$skeleton$grid.2varD2.1varD1
     JJK <- .calcJJK(object)
     print(range(.old_calcJJK(object)-JJK))
+    ## print(sum(.old_calcJJK(object))-sum(JJK))
 
     ## ** least squares
     Y <- (1/2) * sapply(name.param, function(iP){sum(JJK[,,iP] * object$sCorrect$vcov.param)})
     X <- object$sCorrect$information
     ## information(e.lvm2)
 
+    ## dd <- as.data.frame(cbind(Y = Y,X))
+    ## names(dd) <- c("Y",paste0("X",1:9))
+    ## e.lm <- lm(Y ~ -1+X1+X2+X3+X4+X5+X6+X7+X8+X9, data = dd)
+    
     e.lm <- lm.fit(y = Y, x = X)
     newparam <- param - e.lm$coefficient
     
@@ -88,72 +94,75 @@
         id2Omega <- .subsetList2(d2Omega, indexRow = iY, indexCol = iY)
 
         ## *** 1 second derivative and 1 first derivative regarding the variance
-        ## if(n.grid.2varD2.1varD1>0){
-        ##     for(iGrid in 1:n.grid.2varD2.1varD1){ # iGrid <- 1
-        ##         iName1 <- grid.2varD2.1varD1[iGrid,"X"]
-        ##         iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
-        ##         iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
+        if(n.grid.2varD2.1varD1>0){
+            for(iGrid in 1:n.grid.2varD2.1varD1){ # iGrid <- 1
+                iName1 <- grid.2varD2.1varD1[iGrid,"X"]
+                iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
+                iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
 
-        ##         ## term 1
-        ##         if(grid.2varD2.1varD1[iGrid,"d2XY"]){
-        ##             d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XY.Var1"]
-        ##             d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XY.Var2"]
-        ##             iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName3]])
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
-        ##         }
+                ## term 1
+                if(grid.2varD2.1varD1[iGrid,"d2XY"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XY.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XY.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName3]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
+                    ## cat("a: ",iName1," ",iName2," ",iName3,"\n")
+                }
 
-        ##         ## term 2
-        ##         if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
-        ##             d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
-        ##             d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
-        ##             iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]])
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
-        ##         }
+                ## term 2
+                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
+                    ## cat("b: ",iName1," ",iName2," ",iName3,"\n")
+                }
 
-        ##         ## term 3
-        ##         if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
-        ##             d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
-        ##             d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
-        ##             iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName1]])
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + 1/2 * sum(iDiag * n.cluster)
-        ##         }
-        ##     }
-        ## }
+                ## term 3
+                if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
+                    iDiag <- diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName1]])
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + 1/2 * sum(iDiag * n.cluster)
+                    ## cat(iGrid,") c: ",iName1," ",iName2," ",iName3," = ", 1/2 * sum(iDiag * n.cluster),"\n")
+                }
+            }
+        }
         
         ## *** 1 second derivative and 1 first derivative regarding the mean
-        ## if(n.grid.2meanD2.1meanD1>0){
-        ##     for(iGrid in 1:n.grid.2meanD2.1meanD1){ # iGrid <- 1
-        ##         iName1 <- grid.2meanD2.1meanD1[iGrid,"X"]
-        ##         iName2 <- grid.2meanD2.1meanD1[iGrid,"Y"]
-        ##         iName3 <- grid.2meanD2.1meanD1[iGrid,"Z"]
+        if(n.grid.2meanD2.1meanD1>0){
+            for(iGrid in 1:n.grid.2meanD2.1meanD1){ # iGrid <- 1
+                iName1 <- grid.2meanD2.1meanD1[iGrid,"X"]
+                iName2 <- grid.2meanD2.1meanD1[iGrid,"Y"]
+                iName3 <- grid.2meanD2.1meanD1[iGrid,"Z"]
 
-        ##         ## term 4
-        ##         if(grid.2meanD2.1meanD1[iGrid,"d2XY"]){
-        ##             d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var1"]
-        ##             d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var2"]
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName3]])
-        ##         }
+                ## term 4
+                if(grid.2meanD2.1meanD1[iGrid,"d2XY"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XY.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName3]])
+                }
 
-        ##         ## term 5
-        ##         if(grid.2meanD2.1meanD1[iGrid,"d2XZ"]){
-        ##             d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var1"]
-        ##             d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var2"]
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
-        ##         }
+                ## term 5
+                if(grid.2meanD2.1meanD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2XZ.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName2]])
+                }
 
-        ##         ## term 6
-        ##         if(grid.2meanD2.1meanD1[iGrid,"d2YZ"]){
-        ##             d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var1"]
-        ##             d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var2"]
-        ##             JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName1]])
-        ##         }
-        ##     }
-        ## }
+                ## term 6
+                if(grid.2meanD2.1meanD1[iGrid,"d2YZ"]){
+                    d2.Var1 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var1"]
+                    d2.Var2 <- grid.2meanD2.1meanD1[iGrid,"d2YZ.Var2"]
+                    JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(id2mu[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 * idmu[[iName1]])
+                }
+            }
+        }
 
         ## *** 2 first derivative regarding the mean and one regarding the variance
         if(n.grid.2meanD1.1varD1>0){
             for(iGrid in 1:n.grid.2meanD1.1varD1){ # iGrid <- 1
-                
+
                 ## term 7
                 iName1 <- grid.2meanD1.1varD1[iGrid,"Z"]
                 iName2 <- grid.2meanD1.1varD1[iGrid,"X"]
@@ -161,13 +170,11 @@
                 value <- sum(idmu[[iName2]] %*% iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 * idmu[[iName3]])
                 JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + value
 
-
                 ## term 8 
                 iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
                 iName2 <- grid.2meanD1.1varD1[iGrid,"Z"]
-                iName3 <- grid.2meanD1.1varD1[iGrid,"X"]
+                iName3 <- grid.2meanD1.1varD1[iGrid,"Y"]
                 JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - value
-
                 
                 ## term 9
                 iName1 <- grid.2meanD1.1varD1[iGrid,"X"]
@@ -249,8 +256,8 @@
                     if(!is.null(idOmega[[iName2]]) && !is.null(id2Omega[[iName1]][[iName3]])){
                         iDiag <- diag(iOmegaM1 %*% id2Omega[[iName1]][[iName3]] %*% iOmegaM1 %*% idOmega[[iName2]])
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
-                    }else if(!is.null(idOmega[[iName2]]) && !is.null(id2Omega[[iName1]][[iName3]])){
-                        iDiag <- diag(iOmegaM1 %*% id2Omega[[iName3]][[iName2]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                    }else if(!is.null(idOmega[[iName2]]) && !is.null(id2Omega[[iName3]][[iName1]])){
+                        iDiag <- diag(iOmegaM1 %*% id2Omega[[iName3]][[iName1]] %*% iOmegaM1 %*% idOmega[[iName2]])
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - 1/2 * sum(iDiag * n.cluster)
                     }
 
@@ -258,9 +265,11 @@
                     if(!is.null(idOmega[[iName1]]) && !is.null(id2Omega[[iName2]][[iName3]])){
                         iDiag <- diag(iOmegaM1 %*% id2Omega[[iName2]][[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + 1/2 * sum(iDiag * n.cluster)
-                    }else if(!is.null(idOmega[[iName1]]) && !is.null(id2Omega[[iName2]][[iName3]])){
+                        ## cat("c: ",iName1," ",iName2," ",iName3," = ", 1/2 * sum(iDiag * n.cluster),"\n")
+                    }else if(!is.null(idOmega[[iName1]]) && !is.null(id2Omega[[iName3]][[iName2]])){
                         iDiag <- diag(iOmegaM1 %*% id2Omega[[iName3]][[iName2]] %*% iOmegaM1 %*% idOmega[[iName1]])
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + 1/2 * sum(iDiag * n.cluster)
+                        ## cat("c: ",iName1," ",iName2," ",iName3," = ", 1/2 * sum(iDiag * n.cluster),"\n")
                     }
         
                     ## *** 1 second derivative and 1 first derivative regarding the mean
@@ -282,11 +291,12 @@
                     ## term 6
                     if(!is.null(idmu[[iName1]]) && !is.null(id2mu[[iName2]][[iName3]])){
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(id2mu[[iName2]][[iName3]] %*% iOmegaM1 * idmu[[iName1]])
-                    }else if(!is.null(idmu[[iName1]]) && !is.null(id2mu[[iName3]][[iName1]])){
+                    }else if(!is.null(idmu[[iName1]]) && !is.null(id2mu[[iName3]][[iName2]])){
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] + sum(id2mu[[iName3]][[iName2]] %*% iOmegaM1 * idmu[[iName1]])
                     }
 
                     ## *** 2 first derivative regarding the mean and one regarding the variance
+
                     ## term 7
                     if(!is.null(idmu[[iName2]]) && !is.null(idOmega[[iName1]]) && !is.null(idmu[[iName3]])){
                         value <- sum(idmu[[iName2]] %*% iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 * idmu[[iName3]])
@@ -303,7 +313,6 @@
                     if(!is.null(idmu[[iName2]]) && !is.null(idOmega[[iName3]]) && !is.null(idmu[[iName1]])){
                         value <- sum(idmu[[iName2]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 * idmu[[iName1]])
                         JJK[iName1,iName2,iName3] <- JJK[iName1,iName2,iName3] - value
-
                     }
                 }
             }
