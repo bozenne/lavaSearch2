@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:37) 
+## Last-Updated: jan 24 2020 (17:16) 
 ##           By: Brice Ozenne
-##     Update #: 621
+##     Update #: 666
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,16 +24,16 @@
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param par [vector of characters] expression defining the linear hypotheses to be tested.
 #' See the examples section. 
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
-#' @param null,rhs [vector] the right hand side of the linear hypotheses to be tested.
+#' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param F.test [logical] should a joint test be performed?
-#' @param level [numeric 0-1] the confidence level of the confidence interval.
+#' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
 #' @param ...  [internal] only used by the generic method.
 #'
 #' @details The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
@@ -82,8 +82,8 @@
 #' C <- createContrast(e.lm, linfct = c("X1b=0","X1c=0"), add.variance = TRUE)
 #'
 #' ## run compare2
-#' compare2(e.lm, contrast = C$contrast, null = C$null)
-#' compare2(e.lm, contrast = C$contrast, null = C$null, robust = TRUE)
+#' compare2(e.lm, linfct = C$contrast, rhs = C$null)
+#' compare2(e.lm, linfct = C$contrast, rhs = C$null, robust = TRUE)
 #' 
 #' #### with gls ####
 #' library(nlme)
@@ -114,6 +114,11 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
                         robust = FALSE, cluster = NULL, 
                         ssc = lava.options()$ssc, df = lava.options()$df,
                         as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+
+    if(is.null(linfct)){ ## necessary for lava::gof to work
+        return(lava::compare(object))
+    }
+    
     if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
         object <- sCorrect(object, ssc = ssc, df = df)
     }
@@ -125,7 +130,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     if(robust){
         factor.dRvcov <- lava.options()$factor.dRvcov
 
-        if(!is.null(cluster)){
+        if(!is.null(cluster) && !inherits(cluster, "function")){
             
             if(length(cluster)==1){
                 ## reconstruct cluster variable
@@ -143,13 +148,13 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
             n.cluster <- length(unique(cluster))
         }else{
             n.cluster <- stats::nobs(object)
+            cluster <- NULL
         }
     }
 
-    
     ## ** extract information
     ## 0-order: param
-    param <- coef2(object, ssc = ssc)
+    param <- coef2(object, as.lava = TRUE)
     n.param <- length(param)
     name.param <- names(param)
 
@@ -162,7 +167,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     vcov.param <- vcov2(object, ssc = ssc)
     warn <- attr(vcov.param, "warning")
     attr(vcov.param, "warning") <- NULL
-    
+
     if(robust){
         rvcov.param <- crossprod(iid2(object, ssc = ssc, cluster = cluster))
         hessian <- object$sCorrect$hessian
@@ -245,7 +250,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
         }
         ## reorder columns according to coefficients
         linfct <- linfct[,name.param,drop=FALSE]
-        if(any(abs(svd(linfct)$d)<1e-10)){
+        if(F.test && any(abs(svd(linfct)$d)<1e-10)){
             stop("Argument \'linfct\' is singular \n")
         }
         if(is.null(rhs)){
@@ -258,8 +263,8 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
             rhs <- setNames(rhs, rownames(linfct))
         }
     }
-    
-    ### ** prepare export
+
+### ** prepare export
     name.hypo <- rownames(linfct)
     n.hypo <- NROW(linfct)
 
@@ -294,22 +299,19 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
                                 keep.param = keep.param)
         }else if(robust == TRUE){
 
-            if(df == TRUE){
                 df.Wald <- dfSigma(contrast = linfct,
                                    vcov = vcov.param,
                                    dVcov = dVcov.param,
                                    keep.param = keep.param)
-            }else if(df == 2){
-                df.Wald  <- dfSigma(contrast = linfct,
-                                    vcov = rvcov.param,
-                                    dVcov = dRvcov.param * factor.dRvcov,
-                                    keep.param = name.param)
-            }else if(df == 3){
-                df.Wald <- dfSigmaRobust(contrast = linfct,
-                                         vcov = vcov.param,
-                                         rvcov = rvcov.param,
-                                         score = score)
-            }
+                ## df.Wald  <- dfSigma(contrast = linfct,
+                ##                     vcov = rvcov.param,
+                ##                     dVcov = dRvcov.param * factor.dRvcov,
+                ##                     keep.param = name.param)
+                ## df.Wald <- dfSigmaRobust(contrast = linfct,
+                ##                          vcov = vcov.param,
+                ##                          rvcov = rvcov.param,
+                ##                          score = score)
+            
         }
     }else{
         df.Wald <- rep(Inf, n.hypo)
@@ -326,7 +328,6 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     if(F.test){
         ## statistic
         iC.vcov.C <- try(solve(C.vcov.C), silent = TRUE)
-        
         if(!inherits(iC.vcov.C,"try-error")){
             stat.F <- t(C.p) %*% iC.vcov.C %*% (C.p) / n.hypo
 
@@ -338,22 +339,18 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
      
                 C.anova <- sqrt(D.svd) %*% t(P.svd) %*% linfct
 
-                if(df == TRUE){
-                    nu_m <- dfSigma(contrast = C.anova,
-                                    vcov = vcov.param,
-                                    dVcov = dVcov.param,
-                                    keep.param = keep.param)
-                } else if(df == 2){
-                    nu_m <- dfSigma(contrast = C.anova,
-                                    vcov = rvcov.param,
-                                    dVcov = dRvcov.param * factor.dRvcov,
-                                    keep.param = keep.param)
-                } else if(df == 3){
-                    nu_m <- dfSigmaRobust(contrast = C.anova,
-                                          vcov = vcov.param,
-                                          rvcov = rvcov.param,
-                                          score = score)
-                }
+                nu_m <- dfSigma(contrast = C.anova,
+                                vcov = vcov.param,
+                                dVcov = dVcov.param,
+                                keep.param = keep.param)
+                ## nu_m <- dfSigma(contrast = C.anova,
+                ##                 vcov = rvcov.param,
+                ##                 dVcov = dRvcov.param * factor.dRvcov,
+                ##                 keep.param = keep.param)
+                ## nu_m <- dfSigmaRobust(contrast = C.anova,
+                ##                       vcov = vcov.param,
+                ##                       rvcov = rvcov.param,
+                ##                       score = score)
         
                 EQ <- sum(nu_m/(nu_m-2))
                 df.F <- 2*EQ / (EQ - n.hypo)
@@ -367,14 +364,14 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
                                                            df1 = n.hypo,
                                                            df2 = df.table["global", "df"])
         }else{
-            warning("Unable to compute the degrees of freedom for the F-test \n")
+            warning("Unable to invert the variance-covariance matrix after application of the contrasts \n")
             error <- iC.vcov.C
         }
     }
 
     ## ** export
     if(as.lava == TRUE){
-        level.inf <- (1-level)/2
+        level.inf <- (1-conf.level)/2
         level.sup <- 1-level.inf
 
         level.inf.label <- paste0(100*level.inf,"%")
@@ -395,7 +392,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
                     estimate = df.estimate,
                     vcov = C.vcov.C,
                     coef = C.p[,1],
-                    null = null,
+                    null = rhs,
                     cnames = name.hypo                    
                     )
         if(robust){
@@ -430,9 +427,10 @@ compare2.lvmfit <- compare2.lm
 ## * compare2.sCorrect
 #' @rdname compare2
 compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
-                             robust = FALSE, cluster = NULL, 
-                             ssc = object$sCorrect$ssc$type, df = object$sCorrect$df,
-                             as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+                              robust = FALSE, cluster = NULL, 
+                              ssc = object$sCorrect$ssc$type, df = object$sCorrect$df,
+                              as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+
     class(object) <- setdiff(class(object),"sCorrect")
     return(compare2(object, linfct = linfct, rhs = rhs,
                     robust = robust, cluster = cluster,

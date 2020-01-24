@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan 17 2020 (13:57) 
+## Last-Updated: jan 24 2020 (17:47) 
 ##           By: Brice Ozenne
-##     Update #: 162
+##     Update #: 172
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,6 +28,7 @@
     ## ** compute JJK
     object$sCorrect$skeleton$grid.2varD2.1varD1
     JJK <- .calcJJK(object)
+
     ## print(range(.old_calcJJK(object)-JJK))
     ## print(sum(.old_calcJJK(object))-sum(JJK))
 
@@ -42,6 +43,7 @@
     
     e.lm <- lm.fit(y = Y, x = X)
     newparam <- param - e.lm$coefficient
+    print(e.lm$coefficient)
     
     ## ** export
     attr(newparam,"JJK") <- JJK
@@ -128,7 +130,7 @@
                 }
             }
         }
-        
+
         ## *** 1 second derivative and 1 first derivative regarding the mean
         if(n.grid.2meanD2.1meanD1>0){
             for(iGrid in 1:n.grid.2meanD2.1meanD1){ # iGrid <- 1
@@ -158,7 +160,7 @@
                 }
             }
         }
-
+        
         ## *** 2 first derivative regarding the mean and one regarding the variance
         if(n.grid.2meanD1.1varD1>0){
             for(iGrid in 1:n.grid.2meanD1.1varD1){ # iGrid <- 1
@@ -187,6 +189,7 @@
 
     }
 
+    ## sum(abs(JJK)>0)
     return(JJK)
 }
 

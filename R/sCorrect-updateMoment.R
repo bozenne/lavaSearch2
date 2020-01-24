@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: jan 15 2020 (15:33) 
+## Last-Updated: jan 24 2020 (18:07) 
 ##           By: Brice Ozenne
-##     Update #: 189
+##     Update #: 195
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -374,6 +374,9 @@ updateD2Moment <- function(moment, skeleton, param){
 
             iFactor <- dsigma2k[[iName2]][,,"X"] + dsigma2k[[iName2]][,,"Y"]
             d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (iFactor/param[iName2])
+            ## 2*param["Y2"]
+            ## Sigma
+            ## param["sigma2"]*param["Y2"]^2
         }
     }
 

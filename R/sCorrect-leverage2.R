@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: jan 16 2020 (11:01) 
+## Last-Updated: jan 23 2020 (13:56) 
 ##           By: Brice Ozenne
-##     Update #: 109
+##     Update #: 111
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -157,9 +157,9 @@ leverage2.sCorrect <- function(object, param = NULL, data = NULL,
             }
 
             if(length(iY)>1){
-                scoreY[,iY,param.mean[iP]] <- t(dmu[param.mean[iP],iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+                scoreY[iIndex,iY,param.mean[iP]] <- t(dmu[param.mean[iP],iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
             }else{
-                scoreY[,iY,param.mean[iP]] <- dmu[param.mean[iP],iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+                scoreY[iIndex,iY,param.mean[iP]] <- dmu[param.mean[iP],iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
             }
         }
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 15 2020 (15:33) 
+## last-updated: jan 24 2020 (18:12) 
 ##           By: Brice Ozenne
-##     Update #: 1498
+##     Update #: 1522
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -152,7 +152,7 @@ conditionalMoment.lm <- function(object,
         name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
         rownames(unique.pattern) <- name.pattern
 
-        out$missing$pattern <- tapply(1:out$cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)
+        out$missing$pattern <- tapply(1:out$cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)[name.pattern]
         out$missing$unique.pattern <- unique.pattern
         out$missing$name.pattern <- name.pattern
 
@@ -187,7 +187,10 @@ conditionalMoment.lm <- function(object,
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            out$param <- .coef2(object, labels = 1, ssc = NA)[out$skeleton$Uparam]
+            out$param <- coef2(object, as.lava = FALSE)[out$skeleton$Uparam]            
+            out$name.param <- setNames(out$skeleton$Uparam, out$skeleton$type$name[match(out$skeleton$Uparam, out$skeleton$type$param)])
+            out$name.param <- out$name.param[names(coef2(object, as.lava = TRUE))]
+            
         }else{
             if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
                 stop("Incorrect name for the model parameters \n",

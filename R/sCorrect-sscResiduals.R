@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 17 2020 (13:46) 
+## Last-Updated: jan 24 2020 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 1002
+##     Update #: 1048
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,21 +43,54 @@
     n.rhs <- length(name.rhs)
 
     ## ** Design matrix
-    A <- matrix(0, nrow = n.rhs, ncol = n.var,
+    if(any(type$detail %in% c("sigma2","sigma2k","cor")) == FALSE){
+        A <- matrix(0, nrow = n.rhs, ncol = n.var,
                     dimnames = list(name.rhs, name.var))
 
-    ## *** Sigma_var and Sigma_cov
-    if(any(type$detail %in% c("Sigma_var","Sigma_cov"))){
-        type.Sigma <- type[type$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
-        for(iRow in 1:NROW(type.Sigma)){ ## iRow <- 1 
-            A[paste0(type.Sigma[iRow,"Y"],"~~",type.Sigma[iRow,"X"]),type.Sigma[iRow,"param"]] <- 1
+        ## *** Sigma_var and Sigma_cov
+        if(any(type$detail %in% c("Sigma_var","Sigma_cov"))){
+            type.Sigma <- type[type$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
+            for(iRow in 1:NROW(type.Sigma)){ ## iRow <- 1 
+                A[paste0(type.Sigma[iRow,"Y"],"~~",type.Sigma[iRow,"X"]),type.Sigma[iRow,"param"]] <- 1
+            }
+        }
+    }else{
+        name.param.sigma2 <- unique(type[type$detail=="sigma2","param"])
+        name.param.sigma2k <- unique(type[type$detail=="sigma2k","param"])
+        name.param.cor <- unique(type[type$detail=="cor","param"])
+        name.param.tau <- unique(type[type$detail=="Psi_var","param"])
+        
+        if(any(type$detail %in% "Psi_var")){
+            if("cor" %in% type$detail){
+                stop("Invalid specification of the residual variance covariance matrix \n",
+                     "Consider using \"gls\" instead of \"lme\" \n")
+            }else{
+                A <- list(tau = function(Omega){mean(lower.tri(Omega))})
+                if("sigma2k" %in% type$detail){
+                    A$sigma2 <- function(Omega){Omega[1,1]-mean(lower.tri(Omega))}
+                    A$sigma2k <- function(Omega){sqrt(diag(Omega-mean(lower.tri(Omega)))/(Omega[1,1]-mean(lower.tri(Omega))))[-1]}
+                }else{
+                    A$sigma2 <- function(Omega){mean(diag(Omega))-mean(lower.tri(Omega))}
+                }
+            }                
+        }else{
+            A <- list()
+            if("sigma2k" %in% type$detail){
+                A$sigma2 <- function(Omega){Omega[1,1]}
+                A$sigma2k <- function(Omega){sqrt(diag(Omega)/Omega[1,1])[-1]}
+            }else{
+                A$sigma2 <- function(Omega){mean(diag(Omega))}
+            }
+            if("cor" %in% type$detail){
+                if(length(name.param.cor)>1){
+                    A$cor <- function(Omega){cov2cor(Omega)[upper.tri(Omega)]}
+                }else{
+                    A$cor <- function(Omega){mean(cov2cor(Omega)[upper.tri(Omega)])}
+                }
+            }
         }
     }
-    ## *** sigma2, sigma2k, and cor
-    if(any(type$detail %in% c("sigma2","sigma2k","cor"))){
-        stop("Not yet implemented")
-    }
-    
+
     ## *** Psi_var and Psi_cov
     if(any(type$detail %in% c("Psi_var","Psi_cov"))){
         type.Psi <- type[type$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
@@ -67,7 +100,7 @@
     }else{
         index.Psi <- NULL
     }
-
+    
     return(list(type = "residuals",
                 param0 = object$sCorrect$param,
                 Omega0 = object$sCorrect$moment$Omega,
@@ -174,60 +207,69 @@
     Omega.adj <- Omega0 + Psi
 
     ## ** Step (v): bias-corrected variance parameters
-
-    ## *** right hand side of the equation
-    index.upper.tri <- object$sCorrect$ssc$index.upper.tri[,"index"]
-    eq.rhs <- setNames(Omega.adj[index.upper.tri],
-                       object$sCorrect$ssc$name.rhs)
-
-    ## *** left hand side of the equation
     A <- object$sCorrect$ssc$A
-    index.Psi <- object$sCorrect$ssc$index.Psi
 
-    if(NROW(index.Psi)>0){
-        Z <- object$sCorrect$moment$iIB %*% object$sCorrect$moment$Lambda
-        tZ <- t(Z)
-        n.index.Psi <- NROW(index.Psi)
+    if(is.matrix(A)){
+        ## *** right hand side of the equation
+        index.upper.tri <- object$sCorrect$ssc$index.upper.tri[,"index"]
+        eq.rhs <- setNames(Omega.adj[index.upper.tri],
+                           object$sCorrect$ssc$name.rhs)
+
+        ## *** left hand side of the equation
+        index.Psi <- object$sCorrect$ssc$index.Psi
+
+        if(NROW(index.Psi)>0){
+            Z <- object$sCorrect$moment$iIB %*% object$sCorrect$moment$Lambda
+            tZ <- t(Z)
+            n.index.Psi <- NROW(index.Psi)
     
-        ## A = t(Z) Psi Z + Sigma
-        ## (t(Z) Psi Z)_{ij} = \sum_{k,l} Z_{k,i} Psi_{k,l} Z_{l,j}
-        ## (t(Z) Psi Z)_{ij} regarding param_(k,l) = Z_{k,i} Z_{l,j}
-        for(iPsi in 1:n.index.Psi){ ## iPsi <- 1
-            iNamePsi <- rownames(index.Psi)[iPsi]
-            iRowPsi <- index.Psi[iPsi,"row"]
-            iColPsi <- index.Psi[iPsi,"col"]
-            A[,iNamePsi] <- A[,iNamePsi] + (tZ[,index.Psi[iPsi,"row"]] %o% Z[index.Psi[iPsi,"col"],])[index.upper.tri]
-        }
+            ## A = t(Z) Psi Z + Sigma
+            ## (t(Z) Psi Z)_{ij} = \sum_{k,l} Z_{k,i} Psi_{k,l} Z_{l,j}
+            ## (t(Z) Psi Z)_{ij} regarding param_(k,l) = Z_{k,i} Z_{l,j}
+            for(iPsi in 1:n.index.Psi){ ## iPsi <- 1
+                iNamePsi <- rownames(index.Psi)[iPsi]
+                iRowPsi <- index.Psi[iPsi,"row"]
+                iColPsi <- index.Psi[iPsi,"col"]
+                A[,iNamePsi] <- A[,iNamePsi] + (tZ[,index.Psi[iPsi,"row"]] %o% Z[index.Psi[iPsi,"col"],])[index.upper.tri]
+            }
         
+        }
+
+        ## *** solve equation
+        ## microbenchmark::microbenchmark(svd = {asvd <- svd(A) ; asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs;},
+        ## qr = qr.coef(qr(A), eq.rhs),
+        ## Rcpp = OLS_cpp(A, eq.rhs),
+        ## RcppTry = try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE),
+        ## Rcpp2 = OLS2_cpp(A, eq.rhs),
+        ## OLS1 = solve(crossprod(A), crossprod(A, eq.rhs)),
+        ## OLS2 = solve(t(A) %*% A) %*% t(A) %*% eq.rhs,
+        ## OLS_stats = stats::lsfit(x = A, y = eq.rhs),
+        ## OLS_LINPACK = .Call(stats:::C_Cdqrls, x = A, y = eq.rhs, tolerance = 1e-7, FALSE)$coefficients, times = 500)
+        if(lava.options()$method.estimate2=="svd"){
+            asvd <- svd(A)
+            iSolution <- try((asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs)[,1], silent = TRUE)
+        }else if(lava.options()$method.estimate2=="ols"){
+            iSolution <- try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE)
+        }else{
+            stop("unknown OLS methods \n")
+        }
+    
+        if(inherits(iSolution, "try-error")){
+            if(abs(det(t(A) %*% A)) <  1e-10){            
+                stop("Singular matrix: cannot update the estimates \n")
+            }else{
+                stop(iSolution)
+            }
+        }
+    }else{
+        iSolution <- as.double(unlist(lapply(A, function(iFCT){iFCT(Omega.adj)})))
+        ## print(setNames(iSolution,object$sCorrect$ssc$name.var))
+
+        ## tempo <- Omega.adj
+        ## attr(tempo,"detail") <- NULL
+        ## print(tempo)
     }
 
-    ## *** solve equation
-    ## microbenchmark::microbenchmark(svd = {asvd <- svd(A) ; asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs;},
-    ## qr = qr.coef(qr(A), eq.rhs),
-    ## Rcpp = OLS_cpp(A, eq.rhs),
-    ## RcppTry = try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE),
-    ## Rcpp2 = OLS2_cpp(A, eq.rhs),
-    ## OLS1 = solve(crossprod(A), crossprod(A, eq.rhs)),
-    ## OLS2 = solve(t(A) %*% A) %*% t(A) %*% eq.rhs,
-    ## OLS_stats = stats::lsfit(x = A, y = eq.rhs),
-    ## OLS_LINPACK = .Call(stats:::C_Cdqrls, x = A, y = eq.rhs, tolerance = 1e-7, FALSE)$coefficients, times = 500)
-    if(lava.options()$method.estimate2=="svd"){
-        asvd <- svd(A)
-        iSolution <- try((asvd$v %*% diag(1/asvd$d) %*% t(asvd$u) %*% eq.rhs)[,1], silent = TRUE)
-    }else if(lava.options()$method.estimate2=="ols"){
-        iSolution <- try(OLS_cpp(A, eq.rhs)[,1], silent = TRUE)
-    }else{
-        stop("unknown OLS methods \n")
-    }
-    
-    if(inherits(iSolution, "try-error")){
-        if(abs(det(t(A) %*% A)) <  1e-10){            
-            stop("Singular matrix: cannot update the estimates \n")
-        }else{
-            stop(iSolution)
-        }
-    }
-    
     ## ** update parameters in conditional moments
     ## iSolution - param0[object$sCorrect$ssc$name.var]
     param0[object$sCorrect$ssc$name.var] <- iSolution

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:37) 
+## Last-Updated: jan 24 2020 (11:27) 
 ##           By: Brice Ozenne
-##     Update #: 84
+##     Update #: 129
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,15 +25,16 @@
 #' @param object an object that inherits from lvmfit.
 #' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
+#' @param transform [function] function to backtransform the estimates and the associated confidence intervals.
+#' @param conf.level [numeric, 0-1] confidence level of the interval.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
-#' @param ...  [internal] only used by the generic method.
+#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
 #' 
 #' @concept small sample inference
 #' @export
 `effects2` <-
-  function(object, link, ...) UseMethod("effects2")
+  function(object, link, conf.level, ssc, df, transform) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
@@ -41,7 +42,9 @@
 ## * effects2.lvmfit
 #' @rdname effects2
 #' @export
-effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.options()$df, ...){
+effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
+                            ssc = lava.options()$ssc, df = lava.options()$df){
+
     if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
         object <- sCorrect(object, ssc = ssc, df = df)
     }
@@ -53,8 +56,8 @@ effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.op
     link.direct <- link[link %in% name.coef]
     link.other <- setdiff(link, link.direct)
 
-    object.summary2 <- summary2(object)$coef 
-    
+    object.summary2 <- summary2(object, ssc = ssc, df = df)$coef 
+
     out <- NULL
     if(length(link.direct)>0){        
         out <- rbind(out,
@@ -66,7 +69,7 @@ effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.op
         mu <- setNames(object.summary2[,"Estimate"],rownames(object.summary2))
         mu.se <- setNames(object.summary2[,"Std. Error"],rownames(object.summary2))
         mu.df <- setNames(object.summary2[,"df"],rownames(object.summary2))
-        Sigma <- vcov2(object)
+        Sigma <- vcov2(object, ssc = ssc)
         dSigma <- object$sCorrect$dVcov.param
         
         for(iL in 1:length(link.other)){ ## iL <- 1
@@ -100,16 +103,21 @@ effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.op
                     iEffect <- prod(mu[iLink])
                     iEffect.se <- mu.se[iLink.NNA] * mu[iLink.NA]
                     iEffect.df <- mu.df[iLink.NNA]
-                    
-                    iRow <- c("Estimate" = iEffect,
-                              "Std. Error" = iEffect.se,
-                              "t-value" = iEffect/iEffect.se,
-                              "P-value" = 2*(1-pt(abs(iEffect/iEffect.se), df = iEffect.df)),
-                              "df" = iEffect.df
+
+                    iRow <- c("estimate" = as.double(iEffect),                                  
+                              "std.error" = as.double(iEffect.se),
+                              "df" = as.double(iEffect.df),
+                              "ci.lower" = as.numeric(NA),
+                              "ci.upper" = as.numeric(NA),
+                              "statistic" = as.double(iEffect/iEffect.se),
+                              "p.value" = as.numeric(NA)
                               )
-                    out <- rbind(out,
-                                 iRow
-                                 )                    
+                    if(is.infinite(iRow["df"])){                       
+                        iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]))))
+                    }else{
+                        iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]), df = iRow["df"])))
+                    }
+                    out <- rbind(out,iRow)                    
                 }
                 
             }
@@ -119,14 +127,36 @@ effects2.lvmfit <- function(object, link, ssc = lava.options()$ssc, df = lava.op
     }
     rownames(out) <- c(link.direct,link.other)
 
+    ## ** transform
+    if(is.null(transform)){
+        transform <- function(x){x}
+        dtransform <- function(x){x}
+    }else if(!is.null(attr(transform,"derivative"))){
+        dtransform <- attr(transform,"derivative")
+    }else{
+        dtransform <- function(x){numDeriv::jacobian(transform, x)[1,1]}
+    }
+
+    if(all(is.infinite(out[,"df"]))){
+        out[,"ci.lower"] <- sapply(out[,"estimate"] + qnorm((1-conf.level)/2) * out[,"std.error"], transform)
+        out[,"ci.upper"] <- sapply(out[,"estimate"] + qnorm(conf.level + (1-conf.level)/2) * out[,"std.error"], transform)
+    }else{
+        out[,"ci.lower"] <- sapply(out[,"estimate"] + qt((1-conf.level)/2, df = out[,"df"]) * out[,"std.error"], transform)
+        out[,"ci.upper"] <- sapply(out[,"estimate"] + qt(conf.level + (1-conf.level)/2, df = out[,"df"]) * out[,"std.error"], transform)
+    }
+    out[,"std.error"] <- out[,"std.error"]*dtransform(out[,"estimate"])
+    out[,"estimate"] <- transform(out[,"estimate"])
+    
+    ## ** export    
     return(out)
 }
 
 ## * effects2.sCorrect
 #' @rdname effects2
-effects2.sCorrect <- function(object, link, ssc = object$sCorrect$ssc$type, labels = lava.options()$coef.names){
+effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL,
+                              ssc = object$sCorrect$ssc$type, df = object$sCorrect$df){
     class(object) <- setdiff(class(object),"sCorrect")
-    return(effect2(object, link = link, ssc = ssc, labels = labels))
+    return(effects2(object, link = link, conf.level = conf.level, transform = transform, ssc = ssc, df = df))
 
 }
 
@@ -158,13 +188,22 @@ effects.sCorrect <- effects2.sCorrect
     }else{
         effect.df <- Inf
     }
-    
-    return(c("Estimate" = effect,
-             "Std. Error" = effect.se,
-             "t-value" = effect.Wald,
-             "P-value" = 2*(1-pt(abs(effect.Wald), df = effect.df)),
-             "df" = effect.df
-             ))
+
+    ## ** export
+    iOut <- c("estimate" = as.double(effect),
+              "std.error" = as.double(effect.se),
+              "df" = as.double(effect.df),
+              "ci.lower" = as.numeric(NA),
+              "ci.upper" = as.numeric(NA),
+              "statistic" = as.double(effect.Wald),
+              "p.value" = as.numeric(NA)
+              )
+    if(is.infinite(iOut["df"])){                       
+        iOut["p.value"] <- as.double(2*(1-pnorm(abs(iOut["statistic"]))))
+    }else{
+        iOut["p.value"] <- as.double(2*(1-pnorm(abs(iOut["statistic"]), df = iOut["df"])))
+    }
+    return(iOut)
 }
 
 ######################################################################

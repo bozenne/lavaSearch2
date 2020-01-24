@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: jan  8 2020 (15:40) 
+## Last-Updated: jan 24 2020 (17:14) 
 ##           By: Brice Ozenne
-##     Update #: 295
+##     Update #: 330
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -93,9 +93,9 @@
 #' @rdname createContrast
 #' @export
 createContrast.lm <- function(object, linfct, add.variance, ...){
-
     if(add.variance){
-        name.param <- names(coef2(object, ssc = object$method))
+        param <- coef2(object, as.lava = TRUE)
+        name.param <- names(param)
     }else{
         name.param <- names(coef(object))
     }
@@ -105,7 +105,7 @@ createContrast.lm <- function(object, linfct, add.variance, ...){
     if(length(linfct)==1 && all(linfct %in% name.param == FALSE) & all(sapply(linfct, function(iL){any(grepl(iL, name.param, fixed = TRUE))}))){
         linfct <- grep(linfct, name.param,  value = TRUE)
     }
-    out <- createContrast(linfct = linfct, name.param = name.param, ...)
+    out <- .createContrast(linfct = linfct, name.param = name.param, ...)
     return(out)
     
 }
@@ -151,7 +151,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
         stop("Incorrect argument  \'object\' \n",
              "Each element of the list must be named \n")
     }
-    
+
     ls.coefname <- lapply(name.model, function(iModel){ ## list by model
         iResC <- createContrast(object[[iModel]],
                                 linfct = character(0),
@@ -175,7 +175,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     }
 
     ## ** create full contrast matrix
-    out <- createContrast(linfct, linfct = object.coefname)
+    out <- .createContrast(linfct, name.param = object.coefname)
     if(any(out$null!=0)){
         warning("glht ignores the \'rhs\' argument when dealing with a multiple models \n")
     }
@@ -239,7 +239,7 @@ createContrast.mmm <- createContrast.list
     if(diff.first){
         linfct <- paste0(linfct[-1]," - ",linfct[1])
     }
-    
+
     n.hypo <- length(linfct)
     if(any(nchar(linfct)==0)){
         stop("Argument contains empty character string(s) instead of an expression involving the model mean coefficients \n")

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:36) 
+## Last-Updated: jan 24 2020 (15:37) 
 ##           By: Brice Ozenne
-##     Update #: 91
+##     Update #: 100
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -123,18 +123,20 @@ residuals2.lm <- function(object, param = NULL, data = NULL,
         endogenous <- colnames(residuals)
         n.endogenous <- length(endogenous)
         
-        residualsW <- data.frame(cluster = 1:NROW(residuals), residuals)
+        residualsW <- data.frame(1:NROW(residuals), residuals)
+        names(residualsW) <- c("cluster",endogenous)
         residualsL <- stats::na.omit(stats::reshape(residualsW,
-                                                    idvar = "id",
+                                                    idvar = "cluster",
                                                     direction = "long",
                                                     varying = list(endogenous),
                                                     timevar = "endogenous",
                                                     v.names = "residual"))
+
         rownames(residualsL) <- NULL
         residualsL$endogenous <- factor(residualsL$endogenous, levels = 1:n.endogenous, labels = endogenous)
-        reorder <- match(interaction(cM$original.order$XXclusterXX,cM$original.order$XXendogenousXX),
+        reorder <- match(interaction(object$sCorrect$old2new.order$XXclusterXX.old, object$sCorrect$old2new.order$XXendogenousXX.old),
                          interaction(residualsL$cluster,residualsL$endogenous))
-        return(residualsL[reorder,])
+        return(residualsL[reorder,"residual"])
     }
 }
 
@@ -168,9 +170,9 @@ residuals.sCorrect <- residuals2.sCorrect
 ## * .normalizeResiduals
 .normalizeResiduals <- function(residuals, Omega, type,
                                 missing.pattern, unique.pattern, Omega.missing.pattern){
-    type <- match.arg(type, choices = c("response","studentized","normalized"), several.ok = FALSE)
+    type <- match.arg(type, choices = c("response","pearson","studentized","normalized"), several.ok = FALSE)
 
-    if(type=="studentized"){
+    if(type %in% c("studentized","pearson")){
         residuals <- sweep(residuals,
                            STATS = sqrt(diag(Omega)),
                            FUN = "/",

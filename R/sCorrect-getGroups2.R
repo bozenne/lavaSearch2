@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: jan  9 2020 (13:01) 
+## Last-Updated: jan 23 2020 (14:57) 
 ##           By: Brice Ozenne
-##     Update #: 133
+##     Update #: 135
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -161,7 +161,7 @@
         endogenous <- lava::endogenous(object)
     }
     n.endogenous <- length(endogenous)
-    
+
     ## ** find clusters
     n.cluster <- NROW(data)
     name.cluster <- 1:n.cluster

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan  8 2020 (13:04) 
+## Last-Updated: jan 24 2020 (10:26) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 120
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -42,12 +42,39 @@ lava.options(symbols = c("~","~~"))
 context("multcomp - mmm")
 
 ## * simulation
-mSim <- lvm(c(Y1,Y2,Y3,Y4)~ beta * eta, E ~ 1)
+mSim <- lvm(c(Y1,Y2,Y3,Y4)~ beta * eta,
+            E ~ 1, Y1 ~ 0.25*T1 + 0.5*T2 + 0.05*T3)
 latent(mSim) <- "eta"
 set.seed(10)
 n <- 1e2
 
 df.data <- lava::sim(mSim, n, latent = FALSE, p = c(beta = 1))
+
+## * linear regressions with logical constrains
+e.lm <- lm(Y1 ~ T1 + T2 + T3, data = df.data)
+## summary(e.lm)
+
+test_that("glht vs. glht2 (logical constrains)", {
+    e.glht <- glht(e.lm, linfct = c("T2-T1=0",
+                                    "T2-T3=0",
+                                    "T1-T3=0"))
+    summary(e.glht, test = adjusted("none"))
+    summary(e.glht, test = adjusted("bonferroni"))
+
+    e.glht2 <- glht2(e.lm, linfct = c("T2-T1=0",
+                                      "T2-T3=0",
+                                      "T1-T3=0"))
+    
+    expect_equal(e.glht$vcov,e.glht2$vcov[rownames(e.glht$vcov),colnames(e.glht$vcov)], tol = 1e-6)
+    expect_equal(e.glht$coef,e.glht2$coef[names(e.glht$coef)], tol = 1e-6)
+
+    eS.glht <- summary(e.glht, test = adjusted("Shaffer"))
+    eS.glht2 <- summary(e.glht2, test = adjusted("Shaffer"))
+
+    expect_equivalent(eS.glht$test[c("coefficients","sigma","tstat","pvalues")],
+                      eS.glht2$test[c("coefficients","sigma","tstat","pvalues")], tol = 1e-6)
+})
+
 
 ## * list of linear regressions
 name.Y <- setdiff(endogenous(mSim),"E")
@@ -60,23 +87,24 @@ class(ls.lm) <- "mmm"
 
 test_that("glht vs. glht2 (list lm): information std", {
     e.glht <- glht(ls.lm, mlf("E = 0"))
+    ## lsSSC.lm <- sCorrect(ls.lm, ssc = NA, df = NA)
 
     resC <- createContrast(ls.lm, linfct = "E", add.variance = TRUE)
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
 
     e.glht2 <- glht2(ls.lm, linfct = resC$contrast,
-                     bias.correct = FALSE, robust = FALSE)
+                     ssc = "residuals", robust = FALSE)
 
     expect_equal(e.glht$vcov,
-                 n/(n-2)*e.glht2$vcov[name.mean,name.mean])
-    expect_equal(e.glht$coef,e.glht2$coef[names(e.glht$coef)])
+                 e.glht2$vcov[name.mean,name.mean], tol = 1e-6)
+    expect_equal(e.glht$coef,e.glht2$coef[names(e.glht$coef)], tol = 1e-6)
     expect_equivalent(e.glht$linfct,e.glht2$linfct[,name.mean])
 
     eS.glht <- summary(e.glht)
     eS.glht2 <- summary(e.glht2)
 
-    expect_equal(eS.glht$test$tstat, 1/sqrt(n/(n-2))*eS.glht2$test$tstat)
+    expect_equal(eS.glht$test$tstat, eS.glht2$test$tstat, tol = 1e-6)
 })
      
 test_that("glht vs. glht2 (list ml): robust std", {

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: jan 16 2020 (15:57) 
+## Last-Updated: jan 24 2020 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 71
+##     Update #: 72
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -74,10 +74,10 @@ test_that("linear regression (ML) - no constrains",{
                  unname(information2(test.lvm, ssc = NA)[lvm2lm,lvm2lm]),
                  tol = 1e-8)
     expect_equal(coef(e.lvm),
-                 coef2(test.lvm, ssc = NA),
+                 coef2(test.lvm),
                  tol = 1e-8)
-    expect_equal(unname(coef2(test.lm, ssc = NA)[1:3]),
-                 unname(coef2(test.lvm, ssc = NA)[lvm2lm]),
+    expect_equal(unname(coef2(test.lm)[1:3]),
+                 unname(coef2(test.lvm)[lvm2lm]),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
                  unname(residuals2(test.lvm, ssc = NA, type = "response")),

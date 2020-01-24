@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 17 2020 (18:20) 
+## Last-Updated: jan 24 2020 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 87
+##     Update #: 101
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,10 +24,6 @@ if(FALSE){ ## already called in test-all.R
 
 lava.options(symbols = c("~","~~"))
 library(nlme)
-calcFactor <- function(object){
-    return((object$dims$N - object$dims$p)/(object$dims$N - object$dims$p * (object$method == "REML")))
-}
-
 context("sCorrect (small sample correction)")
 
 ## * simulation
@@ -48,25 +44,28 @@ dLred$variable.factor <- as.factor(dLred$variable)
 ## * linear regression
 ## ** univariate
 e.lm <- lm(Y1~X1+X2, data = d)
+e.gls <- gls(Y1~X1+X2, data = d)
 e.lvm <- estimate(lvm(Y1~X1+X2), data = d)
 
 test_that("linear regression - residual correction equivalent to REML", {
     eSSC1.lm <- sCorrect(e.lm, ssc = "residuals")
+    eSSC1.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
 
+    ## comapre parameters
     GS <- c(coef(e.lm), sigma(e.lm)^2)
     expect_equal(unname(eSSC1.lm$sCorrect$param),
                  unname(GS), tol = 1e-6)
     expect_equal(unname(eSSC1.lvm$sCorrect$param),
                  unname(GS), tol = 1e-6)
 
+    ## compare vcov
     GS <- vcov(e.lm)
     expect_equal(unname(eSSC1.lm$sCorrect$vcov.param[1:3,1:3]),
                  unname(GS), tol = 1e-6)
     expect_equal(unname(eSSC1.lvm$sCorrect$vcov.param[1:3,1:3]),
                  unname(GS), tol = 1e-6)
-
-
+        
     ## model based
     GS <- data.frame("Estimate" = c(1.08233491, -0.42993475, 1.82039942, 0.15110105), 
                      "Std. Error" = c(0.18717083, 0.20041228, 0.37551973, 0.19577922), 
@@ -77,7 +76,11 @@ test_that("linear regression - residual correction equivalent to REML", {
                       summary2(eSSC1.lvm)$coef, tol = 1e-6)
 
     ## robust
-    
+    GS <- data.frame("Estimate" = c(1.08233491, -0.42993475, 1.82039942, 0.15110105), 
+                     "robust SE" = c(0.23395087, 0.15458464, 0.3626631, 0.1806237), 
+                     "t-value" = c(4.62633424, -2.78122563, 5.01953307, 0.83655163), 
+                     "P-value" = c(2.939e-05, 0.0077684, NA, 0.40707794), 
+                     "df" = c(47, 47, 11.75, 47))
     expect_equivalent(GS,
                       summary2(eSSC1.lvm, robust = TRUE)$coef, tol = 1e-6)
 
@@ -85,29 +88,33 @@ test_that("linear regression - residual correction equivalent to REML", {
 
 test_that("linear regression - Cox correction equivalent to REML", {
     eSSC2.lm <- sCorrect(e.lm, ssc = "Cox")
+    eSSC2.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "Cox")
     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
 
+    ## compare coef
+    GS <- c(coef(e.lm), sigma(e.lm)^2)
+    expect_equal(unname(eSSC2.lm$sCorrect$param),
+                 unname(GS), tol = 1e-6)
+    expect_equal(unname(eSSC2.lvm$sCorrect$param),
+                 unname(GS), tol = 1e-6)
+    
+    ## compare vcov
+    GS <- vcov(e.lm)
+    expect_equal(unname(eSSC2.lm$sCorrect$vcov.param[1:3,1:3]),
+                 unname(GS), tol = 1e-6)
+    expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:3,1:3]),
+                 unname(GS), tol = 1e-6)
+
+    ## compare JJK
+    p <- length(name.param)
     JJK <- array(0, dim = rep(p,3), dimnames = list(name.param,name.param,name.param))
     name.param <- c(names(coef(e.lm)),"sigma2")
-    p <- length(name.param)
     X <- model.matrix(e.lm)
 
     JJK[name.param[1:3],name.param[1:3],"sigma2"] <- -crossprod(X)/sigma(e.lm)^4
     JJK[name.param[1:3],"sigma2",name.param[1:3]] <- -crossprod(X)/sigma(e.lm)^4
     JJK["sigma2",name.param[1:3],name.param[1:3]] <- crossprod(X)/sigma(e.lm)^4
     expect_equal(JJK, eSSC2.lm$sCorrect$ssc$JJK, tol = 1e-5)
-    
-    GS <- c(coef(e.lm), sigma(e.lm)^2)
-    expect_equal(unname(eSSC2.lm$sCorrect$param),
-                 unname(GS), tol = 1e-6)
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 1e-6)
-
-    GS <- vcov(e.lm)
-    expect_equal(unname(eSSC2.lm$sCorrect$vcov.param[1:3,1:3]),
-                 unname(GS), tol = 1e-6)
-    expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:3,1:3]),
-                 unname(GS), tol = 1e-6)
 })
 
 
@@ -123,7 +130,9 @@ e.lvm <- estimate(lvm(Y1 ~ X1,
 
 test_that("multiple linear regression - residual correction equivalent to REML", {
     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    eSSC1.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
 
+    ## lvm
     GS <- c(intervals(e.gls)$coef[,2],
             (c(Y1 = 1, intervals(e.gls)$varStruct[,2])*intervals(e.gls)$sigma[2])^2
             )
@@ -134,21 +143,40 @@ test_that("multiple linear regression - residual correction equivalent to REML",
     GS <- vcov(e.gls)
     expect_equal(unname(eSSC1.lvm$sCorrect$vcov.param[1:6,1:6]),
                  unname(GS), tol = 1e-6)
+
+    ## gls
+    GS <- c(intervals(e.gls)$coef[,2],
+            intervals(e.gls)$varStruct[,2])
+    expect_equal(eSSC1.gls$sCorrect$ssc$param0[names(GS)], GS, tol = 1e-6)
 })
 
 test_that("multiple linear regression - Cox correction equivalent to REML", {
     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+    ## eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
+    ## eSSC2.glsN <- sCorrect(e.gls, ssc = "Cox", derivative = "numeric")
 
+    ## range(eSSC2.gls$sCorrect$hessian-eSSC2.glsN$sCorrect$hessian)
+    ## eSSC2.gls$sCorrect$information
+    ## eSSC2.glsN$sCorrect$information
+
+    ## lvm
     GS <- c(intervals(e.gls)$coef[,2],
-            (c(Y1 = 1, intervals(e.gls)$varStruct[,2])*intervals(e.gls)$sigma[2])^2
+            c(Y1 = 1, intervals(e.gls)$varStruct[,2]^2)*intervals(e.gls)$sigma[2]^2
             )
     
     expect_equal(unname(eSSC2.lvm$sCorrect$param[c("Y1","Y2","Y3","Y1~X1","Y2~X1","Y3~X1","Y1~~Y1","Y2~~Y2","Y3~~Y3")]),
                  unname(GS), tol = 1e-6)
-
+    
     GS <- vcov(e.gls)
     expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:6,1:6]),
                  unname(GS), tol = 1e-6)
+
+    ## gls
+    ## GS <- c(intervals(e.gls)$coef[,2],
+    ##         sigma2 = as.double(intervals(e.gls)$sigma[2]^2),
+    ##         intervals(e.gls)$varStruct[,2]
+    ##         )
+    
 })
 
 ## ** multiple, with constrains
@@ -164,8 +192,12 @@ e.lvm <- estimate(lvm(Y1[mu1:sigma1]~ beta1*X1,
                       Y2[mu2:sigma2]~ beta1*X1,
                       Y3[mu3:sigma3]~ beta1*X1),
                   data = d)
+## logLik(e.gls0)
 ## logLik(e.gls)
 ## logLik(e.lvm)
+
+## vcov(e.gls0)[1:4,1:4]/vcov(e.lvm)[1:4,1:4]
+
 
 test_that("multiple linear regression - residual correction equivalent to REML", {
     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")

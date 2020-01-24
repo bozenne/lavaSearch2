@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan 16 2020 (11:06) 
+## Last-Updated: jan 24 2020 (18:04) 
 ##           By: Brice Ozenne
-##     Update #: 126
+##     Update #: 160
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,6 +23,8 @@
 #' @name coef2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, \code{lvmfit} object.
+#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
+#' Only relevant for \code{lvmfit} objects.
 #' 
 #' @details For \code{gls} and \code{lme} models, the variance coefficients that are exported are the residual variance of each outcome. 
 #' This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
@@ -37,7 +39,7 @@
 #' @concept extractor
 #' @keywords smallSampleCorrection
 `coef2` <-
-    function(object, ssc, labels) UseMethod("coef2")
+    function(object, as.lava) UseMethod("coef2")
 
 
 ## * Examples
@@ -73,16 +75,14 @@
 #' #### latent variable models ####
 #' e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
 #' coef2(e.lvm)
+#' coef(e.lvm)
 
 ## * coef2.lm
 #' @rdname coef2
-coef2.lm <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
-    if((is.na(ssc) && !identical(object$sCorrect$ssc$type,NA)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
-        out <- .coef2(object, labels = labels, ssc = ssc)
+coef2.lm <- function(object, as.lava = TRUE){
+    if(is.null(object$sCorrect)){
+        out <- .coef2(object)
     }else{
-        if(!identical(object$sCorrect$ssc$type,ssc)){
-            object <- sCorrect(object, ssc = ssc, df = NA)
-        }
         out <- object$sCorrect$param
     }
     return(out)
@@ -98,15 +98,21 @@ coef2.lme <- coef2.lm
 
 ## * coef2.lvmfit
 #' @rdname coef2
-coef2.lvmfit <- function(object, ssc = lava.options()$ssc, labels = lava.options()$coef.names){
-    if((is.na(ssc) && !is.na(object$sCorrect$ssc$type)) || (!inherits(object,"lvmfit") && identical(ssc,"REML"))){
-        out <- .coef2(object, labels = labels, ssc = ssc)
-    }else{
-        if(!identical(object$sCorrect$ssc$type,ssc)){
-            object <- sCorrect(object, ssc = ssc, df = NA)
+coef2.lvmfit <- function(object, as.lava = TRUE){
+    if(is.null(object$sCorrect)){
+        out <- .coef2(object)
+        if(as.lava){
+            tableType <- coefType(object, as.lava = FALSE)
+            index <- match(names(out),tableType$param)
+            names(out) <- tableType$name[index]
+            out <- out[order(index)] 
         }
+    }else{
         out <- object$sCorrect$param
-        names(out) <- names(object$sCorrect$skeleton$originalLink2param) ## restaure names as in lava
+        if(as.lava){ ## restaure names and order as in coef() lava
+            out <- out[object$sCorrect$skeleton$originalLink2param]
+            names(out) <- names(object$sCorrect$skeleton$originalLink2param)
+        }
     }
     return(out)
 }
@@ -115,9 +121,9 @@ coef2.lvmfit <- function(object, ssc = lava.options()$ssc, labels = lava.options
 
 ## * coef2.sCorrect
 #' @rdname coef2
-coef2.sCorrect <- function(object, ssc = object$sCorrect$ssc$type, labels = lava.options()$coef.names){
+coef2.sCorrect <- function(object, as.lava = TRUE){
     class(object) <- setdiff(class(object),"sCorrect")
-    return(coef2(object, ssc = ssc, labels = labels))
+    return(coef2(object, as.lava = TRUE))
 
 }
 
@@ -125,26 +131,16 @@ coef2.sCorrect <- function(object, ssc = object$sCorrect$ssc$type, labels = lava
 coef.sCorrect <- coef2.sCorrect
 
 ## * .coef2
-.coef2 <- function(object, labels, ssc){
+.coef2 <- function(object){
 
     if(inherits(object,"lm")){        
         coef.object <- coef(object)
-        if(identical(ssc,"REML")){
-            out <- c(coef.object,sigma2=sigma(object)^2)
-        }else{
-            out <- c(coef.object,sigma2=mean(residuals(object)^2))
-        }
+        out <- c(coef.object,sigma2=mean(residuals(object)^2))
         attr(out, "mean.coef") <- names(coef.object)
         attr(out, "var.coef") <- "sigma2"
 
     }else if(inherits(object,"gls") || inherits(object,"lme")){
 
-        if(identical(ssc,"REML") && (object$method=="ML")){
-            object <- update(object, method = "REML")
-        }else if(is.na(ssc) && (object$method=="REML")){
-            object <- update(object, method = "ML")
-        }
-        
         ## ** mean coefficients
         if(inherits(object,"gls")){
             mean.coef <- stats::coef(object)
@@ -205,7 +201,6 @@ coef.sCorrect <- coef2.sCorrect
             table.cor.coef <- NULL
             cor.coef <- NULL
         }
-
         out <- c(mean.coef, cor.coef, var.coef, random.coef)
         attr(out, "mean.coef") <- names(mean.coef)
         attr(out, "var.coef") <- names(var.coef)
@@ -214,16 +209,13 @@ coef.sCorrect <- coef2.sCorrect
         attr(out, "table.cor.coef") <- table.cor.coef
         
     }else if(inherits(object,"lvmfit")){
-
-        tempo <- stats::coef(object, type = 2, labels = labels)
+        tempo <- stats::coef(object, type = 2, labels = 1)
         out <- setNames(tempo[,1],rownames(tempo))
         attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
         attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
-        
     }
-    
-    return(out)
 
+    return(out)
 }
 
 ######################################################################

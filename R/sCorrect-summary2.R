@@ -1,11 +1,12 @@
+
 ### sCorrect-summary2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan  8 2020 (16:38) 
+## Last-Updated: jan 24 2020 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 348
+##     Update #: 372
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -83,7 +84,7 @@ summary2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df
         object <- sCorrect(object, ssc = ssc, df = df)
     }
     ## ** perform Wald test
-    name.param <- names(coef2(object, ssc = NA))
+    name.param <- names(coef2(object))
     n.param <- length(name.param)
 
     tTable.all <- compare2(object,
@@ -125,7 +126,7 @@ summary2.gls <- function(object, ssc = lava.options()$ssc, df = lava.options()$d
     }
 
     ## ** perform Wald test
-    name.param <- names(coef2(object, ssc = ssc))
+    name.param <- names(coef2(object))
     n.param <- length(name.param)
 
     tTable.all <- compare2(object,
@@ -145,12 +146,8 @@ summary2.gls <- function(object, ssc = lava.options()$ssc, df = lava.options()$d
     
     ### ** update summary
     object.summary$tTable <- tTable
-    browser()
     object.summary$residuals <- quantile(residuals2(object, ssc = ssc, type = "normalized"), na.rm = TRUE)
-    quantile(residuals(object), na.rm = TRUE)
-    
     object.summary$sigma <- tTable["sigma2","Value"]
-    browser()
     
     ### ** export
     return(object.summary)
@@ -168,12 +165,13 @@ summary2.lme <- summary2.gls
 summary2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options()$df,
                             digit = max(3, getOption("digit")),
                             robust = FALSE, ...){
+
     if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
         object <- sCorrect(object, ssc = ssc, df = df)
     }
 
     ## ** perform Wald test
-    param <- coef2(object, ssc = ssc)
+    param <- coef2(object, as.lava = TRUE)
     name.param <- names(param)
     n.param <- length(param)
 
@@ -184,6 +182,7 @@ summary2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options(
                           ssc = ssc, df = df,
                           F.test = FALSE,
                           as.lava = FALSE)
+
     table.coef <- table.all[1:n.param,c("estimate","std","statistic","p-value","df")]
     dimnames(table.coef) <- list(name.param,
                                  c("Estimate", "Std. Error", "t-value", "P-value", "df")

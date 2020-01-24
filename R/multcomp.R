@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan  8 2020 (15:09) 
+## Last-Updated: jan 24 2020 (17:22) 
 ##           By: Brice Ozenne
-##     Update #: 560
+##     Update #: 620
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,6 +63,28 @@
 #' summary(e.glht)
 #' @concept multiple comparison
 
+
+## * estfun.lm
+#' @rdname estfun
+#' @method estfun lm
+#' @export
+estfun.lm <- function(x, ...){
+    U <- score2(x, ssc = if(identical(object$method,"REML")){"REML"}else{NA})
+    return(U)
+}
+
+## * estfun.gls
+#' @rdname estfun
+#' @method estfun gls
+#' @export
+estfun.gls <- estfun.lm
+
+## * estfun.lme
+#' @rdname estfun
+#' @method estfun lme
+#' @export
+estfun.lme <- estfun.lm
+
 ## * estfun.lvmfit
 #' @rdname estfun
 #' @method estfun lvmfit
@@ -72,29 +94,12 @@ estfun.lvmfit <- function(x, ...){
     return(U)
 }
 
-## * estfun.gls
+## * estfun.sCorrect
 #' @rdname estfun
-#' @method estfun gls
+#' @method estfun sCorrect
 #' @export
-estfun.gls <- function(x, ...){
-    if(inherits(x,"gls2")){
-        U <- score2(x)
-    }else{
-        U <- score2(x, bias.correct = FALSE)
-    }
-    return(U)
-}
-
-## * estfun.lme
-#' @rdname estfun
-#' @method estfun lme
-#' @export
-estfun.lme <- function(x, ...){
-    if(inherits(x,"lme2")){
-        U <- score2(x)
-    }else{
-        U <- score2(x, bias.correct = FALSE)
-    }
+estfun.sCorrect <- function(x, ...){
+    U <- score2(x)
     return(U)
 }
 
@@ -107,7 +112,7 @@ estfun.lme <- function(x, ...){
 #' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias?
+#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias?
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
@@ -164,80 +169,111 @@ estfun.lme <- function(x, ...){
 #' @export
 `glht2` <-
     function(model, linfct, rhs,
-             bias.correct, df, robust, cluster) UseMethod("glht2")
+             ssc, df, robust, cluster) UseMethod("glht2")
 
 
-## * glht2.lvmfit
+## * glht2.lm
 #' @rdname glht2
 #' @export
-glht2.lvmfit <- function(model, linfct, rhs = 0,
-                         bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL){
+glht2.lm <- function(model, linfct, rhs = 0,
+                     ssc = lava.options()$ssc, df = lava.options()$df,
+                     robust = FALSE, cluster = NULL){
 
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
     }
     
-    ### ** define contrast matrix
+    ## ** define contrast matrix
     if(!is.matrix(linfct)){
-        resC <- createContrast(model, linfct = linfct)
+        resC <- createContrast(model, linfct = linfct, add.variance = TRUE)
         linfct <- resC$contrast
         if("rhs" %in% names(match.call()) == FALSE){
             rhs <- resC$null
         }
     }
 
-### ** pre-compute quantities for the small sample correction
-    if(!inherits(model,"lvmfit2")){
-        sCorrect(model, df = df) <- bias.correct
+    ## ** pre-compute quantities for the small sample correction
+    if(!inherits(model,"sCorrect") || !identical(model$sCorrect$ssc$type, ssc) || !identical(model$sCorrect$df, df)){
+        model <- sCorrect(model, ssc = ssc, df = df)
     }
 
-### ** Wald test with small sample correction
+    ## ** Wald test with small sample correction
     name.param <- colnames(linfct)
     n.param <- NCOL(linfct)
     n.hypo <- NROW(linfct)
 
-    resWald <- compare2(model, contrast = linfct, null = rhs, as.lava = FALSE)
+    resWald <- compare2(model, linfct = linfct, rhs = rhs, as.lava = FALSE, F.test = FALSE)
     ## update name according to multcomp, i.e. without second member
     rownames(linfct) <- .contrast2name(linfct, null = NULL) 
 
-### ** Global degree of freedom
-    if(df){
-        df.global <- round(resWald["global","df"], digits = 0)
+    ## ## ** Global degree of freedom
+    if(!is.na(df)){
+        ## df.global <- round(resWald["global","df"], digits = 0)
+        seq.df <- resWald[1:NROW(linfct),"df"]
+        df.global <- round(stats::median(seq.df), digits = 0)
     }else{
         df.global <- 0
     }
     
-### ** compute variance-covariance matrix
+    ## ** compute variance-covariance matrix
     if(robust){
         vcov.model <- crossprod(iid2(model, cluster = cluster))
     }else{
         vcov.model <- vcov2(model)
     }
 
-### ** convert to the appropriate format
+    ## ** sanity check
+    param <- coef2(model, as.lava = TRUE)
+    name.param <- names(param)
+
+    if(!identical(colnames(linfct),name.param)){
+        stop("Column names of the contrast matrix does not match the one of the coefficients \n")
+    }
+    if(!identical(colnames(vcov.model),name.param)){
+        stop("Column names of the variance covariance matrix does not match the one of the coefficients \n")
+    }
+    if(!identical(rownames(vcov.model),name.param)){
+        stop("Rownames names of the variance covariance matrix does not match the one of the coefficients \n")
+    }
+
+    ## ** convert to the appropriate format
     out <- list(model = model,
                 linfct = linfct,
                 rhs = unname(rhs),
-                coef = coef(model),
+                coef = param,
                 vcov = vcov.model,
                 df = df.global,
                 alternative = "two.sided",
                 type = NULL,
                 robust = robust,
-                bias.correct = bias.correct)
+                ssc = ssc)
     class(out) <- c("glht2","glht")
         
     ### ** export
     return(out)
 }
 
+## * glht2.gls
+#' @rdname glht2
+#' @export
+glht2.gls <- glht2.lm
+
+## * glht2.lme
+#' @rdname glht2
+#' @export
+glht2.lme <- glht2.lm
+
+## * glht2.lvmfit
+#' @rdname glht2
+#' @export
+glht2.lvmfit <- glht2.lm
 
 ## * glht2.mmm
 #' @rdname glht2
 #' @export
 glht2.mmm <- function (model, linfct, rhs = 0,
-                       bias.correct = TRUE, df = TRUE, robust = FALSE, cluster = NULL){
-
+                       ssc = lava.options()$ssc, df = lava.options()$df,
+                       robust = FALSE, cluster = NULL){
 
     if(robust==FALSE && !is.null(cluster)){
         stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
@@ -249,7 +285,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     if(is.null(name.model)){
         stop("Argument \'model\' must be named list. \n")
     }
-    
+
     test.lm <- sapply(model, inherits, what = "lm")
     test.gls <- sapply(model, inherits, what = "gls")
     test.lme <- sapply(model, inherits, what = "lme")
@@ -290,26 +326,9 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     }
 
     ## ** check whether it is possible to compute df
-    if(identical(df, TRUE)){
-           
-        ## does each model has the same df?
-        ## test.df <- try(lapply(model, df.residual), silent = TRUE)
-        ## if(inherits(test.df, "try-error")){
-        ##     stop("Cannot check the degrees of freedom for each model - no \'df.residual\' method available \n",
-        ##          "Consider setting the argument \'df\' to FALSE \n")
-        ## }
-        
-        ## if(any(sapply(test.df,is.null))){
-        ##     stop("Cannot compute residual degrees of freedom for all models \n",
-        ##          "Consider setting the argument \'df\' to FALSE \n")
-        ## }
+    ## i.e. are linear hypothesis model specific?
+    if(!is.na(df)){
 
-        ## if(length(unique(unlist(test.df)))>1){
-        ##     stop("Residual degrees of freedom differ across models \n",
-        ##          "Consider setting the argument \'df\' to FALSE \n")
-        ## }
-
-        ## are linear hypothesis model specific?
         ls.testPerModel <- lapply(ls.contrast, function(iModel){
             rowSums(contrast[,colnames(iModel)]!=0)>0
         })
@@ -323,27 +342,27 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     ## ** Extract influence functions from all models    
     ls.res <- lapply(1:n.model, function(iM){ ## iM <- 1
 
-### *** Pre-compute quantities
-        if(!inherits(model[[iM]],"lm2") && !inherits(model[[iM]],"gls2") && !inherits(model[[iM]],"lme2") && !inherits(model[[iM]],"lvmfit2")){
-            sCorrect(model[[iM]], df = df) <- bias.correct
+        ## *** Pre-compute quantities
+        if(!inherits(model[[iM]],"sCorrect") || !identical(model[[iM]]$sCorrect$ssc$type, ssc) || !identical(model[[iM]]$sCorrect$df, df)){
+            model[[iM]] <- sCorrect(model[[iM]], ssc = ssc, df = df)
         }
-        out$param <- model[[iM]]$sCorrect$param
+        out$param <- coef2(model[[iM]], as.lava = TRUE)
         name.param <- names(out$param)
         name.object.param <- paste0(name.model[iM],": ",name.param)
         out$param <- setNames(out$param, name.object.param)
         
-### *** Compute df for each test
-        if(df){
+        ## *** Compute df for each test
+        if(!is.na(df)){
             ## here null does not matter since we only extract the degrees of freedom
             iContrast <- ls.contrast[[iM]]
             colnames(iContrast) <- name.param
-        
-            iWald <- compare2(model[[iM]], contrast = iContrast, as.lava = FALSE)
+
+            iWald <- compare2(model[[iM]], linfct = iContrast, as.lava = FALSE)
             out$df <- iWald[1:(NROW(iWald)-1),"df"]
         }else{
             out$df <- Inf
         }
-### *** get iid decomposition
+        ## *** get iid decomposition
         index.missing <- model[[iM]]$na.action
         n.obs <- stats::nobs(model[[iM]]) + length(index.missing)
 
@@ -363,11 +382,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
     seq.df <- unlist(lapply(ls.res,"[[","df"))
     seq.param <- unlist(lapply(ls.res,"[[","param"))
 
-    if(df){
-        if(length(unique(seq.df))>1){
-            warning("Unequal degrees of freedom for the Wald statistics \n",
-                    "The median of the degrees of freedom is used.")
-        }
+    if(!is.na(df)){
         df.global <- round(stats::median(seq.df), digits = 0)
     }else{
         df.global <- 0
@@ -385,9 +400,22 @@ glht2.mmm <- function (model, linfct, rhs = 0,
         M.iid[is.na(M.iid)] <- 0
     }
     vcov.model <- crossprod(M.iid)
+
+    ## ** sanity check
+    name.param <- names(seq.param)
+
+    if(!identical(colnames(linfct),name.param)){
+        stop("Column names of the contrast matrix does not match the one of the coefficients \n")
+    }
+    if(!identical(colnames(vcov.model),name.param)){
+        stop("Column names of the variance covariance matrix does not match the one of the coefficients \n")
+    }
+    if(!identical(rownames(vcov.model),name.param)){
+        stop("Rownames names of the variance covariance matrix does not match the one of the coefficients \n")
     
+    }
     
-### ** convert to the appropriate format
+    ## ** convert to the appropriate format    
     out <- list(model = model,
                 linfct = linfct,
                 rhs = unname(rhs),
@@ -397,7 +425,7 @@ glht2.mmm <- function (model, linfct, rhs = 0,
                 alternative = "two.sided",
                 type = NULL,
                 robust = robust,
-                bias.correct = bias.correct)
+                ssc = ssc)
     class(out) <- c("glht2","glht")
         
     ### ** export

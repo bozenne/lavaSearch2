@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 17 2020 (13:58) 
+## Last-Updated: jan 24 2020 (18:15) 
 ##           By: Brice Ozenne
-##     Update #: 1816
+##     Update #: 1862
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 ## * Documentation - sCorrect
 #' @title  Satterthwaite Correction and Small Sample Correction
 #' @description Correct the bias of the ML estimate of the variance and compute the first derivative of the information matrix.
-#' @name sCorrect
+#' Also@name sCorrect
 #'
 #' @param object,x a \code{gls}, \code{lme}, or \code{lvm} object.
 #' @param param [numeric vector, optional] the values of the parameters at which to perform the correction.
@@ -101,6 +101,11 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         stop("Cannot only convert object of class lm/gls/lme/lvmfit to sCorrect \n")
     }
 
+    if(identical(object$method,"REML") && !is.na(ssc)){
+        stop("Cannot perform small sample correction on model estimated using REML. \n",
+             "Consider using udpate(object, method = \"ML\")")
+    }
+    
     ## lvm
     if("multigroupfit" %in% class(object)){
         stop("sCorrect cannot handle multigroup models \n")
@@ -122,7 +127,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
     if(inherits(object,"lm") || inherits(object,"gls") || inherits(object,"lme")){
         valid.ssc <- c(valid.ssc,"REML")
         if(identical(ssc,"REML") && is.null(param)){
-            param <- .coef2(object, labels = 1, ssc = "REML")
+            param <- .coef2(object)
         }
     }
     if(is.null(ssc) || (!is.na(ssc) && ssc %in% valid.ssc == FALSE)){
@@ -209,6 +214,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         }
 
         ## *** update score, information matrix, leverage, ..., with the bias corrected parameters
+        if(trace>0){cat("Update moments/df \n")}
         object <- .init_sCorrect(object, param = iParam,
                                  initialize = FALSE, residuals = TRUE, leverage = TRUE, 
                                  first.order = first.order, second.order = !is.na(df),
@@ -218,6 +224,41 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
         object$sCorrect$ssc$type <- NA
     }
 
+    ## ** restaure original param order
+    name.param <- object$sCorrect$name.param
+    if(!is.null(name.param)){
+        object$sCorrect$param <- object$sCorrect$param[name.param]
+        names(object$sCorrect$param) <- names(name.param)
+        if(!is.null(object$sCorrect$score)){
+            object$sCorrect$score <- object$sCorrect$score[,name.param,drop=FALSE]
+            colnames(object$sCorrect$score) <- names(name.param)
+        }
+        if(!is.null(object$sCorrect$information)){
+            object$sCorrect$information <- object$sCorrect$information[name.param,name.param,drop=FALSE]
+            dimnames(object$sCorrect$information) <- list(names(name.param),names(name.param))
+        }
+        if(!is.null(object$sCorrect$vcov.param)){
+            object$sCorrect$vcov.param <- object$sCorrect$vcov.param[name.param,name.param,drop=FALSE]
+            dimnames(object$sCorrect$vcov.param) <- list(names(name.param),names(name.param))
+        }
+        if(!is.null(object$sCorrect$hessian)){
+            object$sCorrect$hessian <- object$sCorrect$hessian[name.param,name.param,,drop=FALSE]
+            dimnames(object$sCorrect$hessian) <- list(names(name.param),names(name.param),NULL)
+        }
+        if(!is.null(object$sCorrect$dInformation)){
+            object$sCorrect$dInformation <- object$sCorrect$dInformation[name.param,name.param,name.param,drop=FALSE]
+            dimnames(object$sCorrect$dInformation) <- list(names(name.param),names(name.param),names(name.param))
+        }
+        if(!is.null(object$sCorrect$dVcov.param)){
+            object$sCorrect$dVcov.param <- object$sCorrect$dVcov.param[name.param,name.param,name.param,drop=FALSE]
+            dimnames(object$sCorrect$dVcov.param) <- list(names(name.param),names(name.param),names(name.param))
+        }
+        if(!is.null(object$sCorrect$dRvcov.param)){
+            object$sCorrect$dRvcov.param <- object$sCorrect$dRvcov.param[name.param,name.param,name.param,drop=FALSE]
+            dimnames(object$sCorrect$dRvcov.param) <- list(names(name.param),names(name.param),names(name.param))
+        }
+    }
+    
     ## ** export
     object$sCorrect$df <- df
     class(object) <- append("sCorrect",class(object))
@@ -239,13 +280,28 @@ sCorrect.lme <- sCorrect.lm
 #' @export
 sCorrect.lvmfit <- sCorrect.lm
 
+## * sCorrect.list
+#' @rdname sCorrect
+#' @export
+sCorrect.list <- function(object, ...){
+    object.class <- class(object)
+    object <- lapply(object, sCorrect, ...)
+    class(object) <- object.class
+    return(object)
+}
+
+## * sCorrect.mmm
+#' @rdname sCorrect
+#' @export
+sCorrect.mmm <- sCorrect.list
+
 ## * sCorrect.sCorrect
 #' @rdname sCorrect
 #' @export
 sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                               first.order = TRUE, ssc = lava.options()$ssc, df = lava.options()$df,
                               derivative = "analytic", iter.max = 100, tol.max = 1e-6,
-                              trace = 1){
+                              trace = 0){
     class(object) <- setdiff(class(object),"sCorrect")
     return(sCorrect(object, param = param, data = data,
                     first.order = first.order, ssc = ssc, df = df,
@@ -268,11 +324,13 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                          usefit = TRUE, residuals = residuals, leverage = leverage,
                                          param = param,
                                          data = data)
+    ## object$sCorrect$missing
     name.param <- object$sCorrect$skeleton$Uparam
     n.param <- length(name.param)
 
     ## ** score
     if(first.order){
+        ## print(mean(object$sCorrect$residuals^2)) ## adjusted residuals
         object$sCorrect$score <- .score2(dmu = object$sCorrect$dmoment$dmu,
                                          dOmega = object$sCorrect$dmoment$dOmega,                    
                                          epsilon = object$sCorrect$residuals,
@@ -418,7 +476,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
 
     type <- match.arg(type, c("score","hessian","information","vcov.model","vcov.robust"))
             
-    ## update moments and their derivatives
+    ## update moments and their derivatives (and also residuals! This makes a difference when computing the hessian)
     cM <- conditionalMoment(object, param = value,
                             initialize = FALSE, first.order = TRUE, second.order = (type == "hessian"),
                             usefit = TRUE, residuals = TRUE, leverage = FALSE)
