@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 24 2020 (18:12) 
+## last-updated: jan 27 2020 (11:21) 
 ##           By: Brice Ozenne
-##     Update #: 1522
+##     Update #: 1531
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -187,10 +187,12 @@ conditionalMoment.lm <- function(object,
     ## ** update according to the value of the model coefficients
     if(usefit){
         if(is.null(param)){
-            out$param <- coef2(object, as.lava = FALSE)[out$skeleton$Uparam]            
-            out$name.param <- setNames(out$skeleton$Uparam, out$skeleton$type$name[match(out$skeleton$Uparam, out$skeleton$type$param)])
-            out$name.param <- out$name.param[names(coef2(object, as.lava = TRUE))]
-            
+            out$param <- coef2(object, as.lava = FALSE)[out$skeleton$Uparam]
+            if(inherits(object,"lvmfit")){
+                out$name.param <- setNames(out$skeleton$type[!is.na(out$skeleton$type$originalLink),"param"],
+                                           out$skeleton$type[!is.na(out$skeleton$type$originalLink),"originalLink"])
+                out$name.param <- out$name.param[names(coef2(object, as.lava = TRUE))]
+            }
         }else{
             if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
                 stop("Incorrect name for the model parameters \n",

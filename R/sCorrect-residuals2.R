@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: jan 24 2020 (15:37) 
+## Last-Updated: jan 27 2020 (09:53) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 104
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -26,8 +26,8 @@
 #' \code{"response"} for raw residuals,
 #' \code{"studentized"} for studentized residuals,
 #' \code{"normalized"} for normalized residuals.
-#' @param param [named numeric vector] the fitted parameters.
-#' @param data [data.frame] the data set.
+#' @param format [character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
+#' Otherwise use \code{"long"} to return the residuals in the long format.
 #'
 #' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
 #'
@@ -50,7 +50,7 @@
 #' @concept small sample inference
 #' @export
 `residuals2` <-
-    function(object, param, data, ssc, type, format) UseMethod("residuals2")
+    function(object, type, format) UseMethod("residuals2")
 
 ## * Examples
 #' @rdname residuals2
@@ -100,17 +100,13 @@
 #' mean(residuals2(e.lvm)^2)
 #'
 
-## * residuals2.lm
+## * residuals2.sCorrect
 #' @rdname residuals2
 #' @export
-residuals2.lm <- function(object, param = NULL, data = NULL,
-                          ssc = lava.options()$ssc, type = "response", format = "wide"){
+residuals2.sCorrect <- function(object, type = "response", format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
 
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
-        object <- sCorrect(object, param = param, data = data, first.order = !is.na(ssc), ssc = ssc, df = NA)
-    }
     residuals <- .normalizeResiduals(residuals = object$sCorrect$residuals,
                                      Omega = object$sCorrect$moment$Omega,
                                      type = type,
@@ -138,29 +134,6 @@ residuals2.lm <- function(object, param = NULL, data = NULL,
                          interaction(residualsL$cluster,residualsL$endogenous))
         return(residualsL[reorder,"residual"])
     }
-}
-
-## * residuals2.gls
-#' @rdname residuals2
-#' @export
-residuals2.gls <- residuals2.lm
-
-## * residuals2.lme
-#' @rdname residuals2
-#' @export
-residuals2.lme <- residuals2.lm
-
-## * residuals2.lvmfit
-#' @rdname residuals2
-#' @export
-residuals2.lvmfit <- residuals2.lm
-
-## * residuals2.sCorrect
-#' @rdname residuals2
-residuals2.sCorrect <- function(object, param = NULL, data = NULL,
-                               ssc = object$sCorrect$ssc$type, type = "response", format = "wide"){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(residuals2(object, param = param, data = data, ssc = ssc, type = type, format = format))
 }
 
 ## * residuals.sCorrect

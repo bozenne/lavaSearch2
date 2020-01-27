@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: jan 15 2020 (14:24) 
+## Last-Updated: jan 27 2020 (10:57) 
 ##           By: Brice Ozenne
-##     Update #: 32
+##     Update #: 41
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,10 +22,8 @@
 #' @name vcov2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param param [optional] the fitted parameters.
-#' @param data [optional] the data set.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
-#' @param ... arguments to be passed to \code{sCorrect}.
+#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
+#' Only relevant for \code{lvmfit} objects.
 #' 
 #' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
 #'
@@ -47,60 +45,36 @@
 #'
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
-#' vcov.tempo <- vcov2(e.lm, bias.correct = TRUE)
+#' vcov.tempo <- vcov2(e.lm)
 #' vcov.tempo[rownames(vcov(e.lm)),colnames(vcov(e.lm))]/vcov(e.lm)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' vcov.tempo <- vcov2(e.lvm, bias.correct = FALSE)
+#' vcov.tempo <- vcov2(e.lvm)
 #' vcov.tempo/vcov(e.lvm)
 #'
 #' @concept small sample inference
 #' @export
 `vcov2` <-
-  function(object, param, data, ssc) UseMethod("vcov2")
-
-## * vcov2.lm
-#' @rdname vcov2
-#' @export
-vcov2.lm <- function(object, param = NULL, data = NULL,
-                     ssc = lava.options()$ssc){
-    
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NA)
-    }
-    
-    return(.info2vcov(object$sCorrect$information))
-}
-
-## * vcov2.gls
-#' @rdname vcov2
-#' @export
-vcov2.gls <- vcov2.lm
-
-## * vcov2.lme
-#' @rdname vcov2
-#' @export
-vcov2.lme <- vcov2.lm
-
-## * vcov2.lvmfit
-#' @rdname vcov2
-#' @export
-vcov2.lvmfit <- vcov2.lm
+    function(object, as.lava) UseMethod("vcov2")
 
 ## * vcov2.sCorrect
 #' @rdname vcov2
 #' @export
-vcov2.sCorrect <- function(object, param = NULL, data = NULL,
-                          ssc = object$sCorrect$ssc$type){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(vcov2(object, param = param, data = data, ssc = ssc))
+vcov2.sCorrect <- function(object, as.lava = TRUE){
+    out <- .info2vcov(object$sCorrect$information)
+    if(as.lava == FALSE){ 
+        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+        dimames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
+    }
+    return(out)
 }
 
 ## * vcov.sCorrect
 #' @rdname vcov2
 #' @export
 vcov.sCorrect <- vcov2.sCorrect
+
 ## * .info2vcov (helper)
 #' @title Inverse the Information Matrix
 #' @description Compute the inverse of the information matrix.

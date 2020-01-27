@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 24 2020 (18:15) 
+## Last-Updated: jan 27 2020 (11:20) 
 ##           By: Brice Ozenne
-##     Update #: 1862
+##     Update #: 1874
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -229,6 +229,7 @@ sCorrect.lm <- function(object, param = NULL, data = NULL,
     if(!is.null(name.param)){
         object$sCorrect$param <- object$sCorrect$param[name.param]
         names(object$sCorrect$param) <- names(name.param)
+
         if(!is.null(object$sCorrect$score)){
             object$sCorrect$score <- object$sCorrect$score[,name.param,drop=FALSE]
             colnames(object$sCorrect$score) <- names(name.param)

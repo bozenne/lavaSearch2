@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 10 2020 (13:26) 
+## last-updated: jan 27 2020 (10:56) 
 ##           By: Brice Ozenne
-##     Update #: 2315
+##     Update #: 2322
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,10 +22,10 @@
 #' @name score2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param param [optional] the fitted parameters.
-#' @param data [optional] the data set.
-#' @param bias.correct [logical] should the standard errors of the coefficients be corrected for small sample bias? Only relevant if the \code{sCorrect} function has not yet be applied to the object.
-#' @param ... arguments to be passed to \code{sCorrect}.
+#' @param indiv [logical] If \code{TRUE}, the score relative to each observation is returned.
+#' Otherwise the total score is returned.
+#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
+#' Only relevant for \code{lvmfit} objects.
 #'
 #' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
 #'
@@ -48,7 +48,8 @@
 #'
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
-#' score.tempo <- score2(e.lm, bias.correct = FALSE)
+#' eS.lm <- sCorrect(e.lm, ssc = NA, df = NA)
+#' score.tempo <- score2(eS.lm)
 #' colMeans(score.tempo)
 #'
 #' ## latent variable model
@@ -59,46 +60,22 @@
 #' @concept small sample inference
 #' @export
 `score2` <-
-  function(object, param, data, ssc, indiv) UseMethod("score2")
-
-## * score2.lm
-#' @rdname score2
-#' @export
-score2.lm <- function(object, param = NULL, data = NULL,
-                      ssc = lava.options()$ssc, indiv = FALSE){
-
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type, ssc)){
-        object <- sCorrect(object, param = param, data = data, ssc = ssc, df = NA)
-    }
-
-    if(indiv){
-        return(object$sCorrect$score)
-    }else{
-        return(colSums(object$sCorrect$score))
-    }
-}
-
-## * score2.gls
-#' @rdname score2
-#' @export
-score2.gls <- score2.lm
-
-## * score2.lme
-#' @rdname score2
-#' @export
-score2.lme <- score2.lm
-
-## * score2.lvmfit
-#' @rdname score2
-#' @export
-score2.lvmfit <- score2.lm
+  function(object, indiv, as.lava) UseMethod("score2")
 
 ## * score2.sCorrect
 #' @rdname score2
-score2.sCorrect <- function(object, param = NULL, data = NULL,
-                            ssc = object$sCorrect$ssc$type, indiv = FALSE){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(score2(object, param = param, data = data, ssc = ssc, indiv = indiv))
+score2.sCorrect <- function(object, indiv = FALSE, as.lava = TRUE){
+    score <- object$sCorrect$score
+    if(as.lava == FALSE){ 
+        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+        dimames(score) <- list(NULL,as.character(object$sCorrect$skeleton$originalLink2param))
+    }
+
+    if(indiv){
+        return(score)
+    }else{
+        return(colSums(score))
+    }
 }
 
 ## * score.sCorrect

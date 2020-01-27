@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:16) 
+## Last-Updated: jan 27 2020 (11:41) 
 ##           By: Brice Ozenne
-##     Update #: 666
+##     Update #: 669
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -160,16 +160,16 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
 
     ## 1-order: score
     if(robust){
-        score <- score2(object, ssc = ssc)
+        score <- score2(object)
     }
     
     ## 2-order: variance covariance
-    vcov.param <- vcov2(object, ssc = ssc)
+    vcov.param <- vcov2(object)
     warn <- attr(vcov.param, "warning")
     attr(vcov.param, "warning") <- NULL
 
     if(robust){
-        rvcov.param <- crossprod(iid2(object, ssc = ssc, cluster = cluster))
+        rvcov.param <- crossprod(iid2(object, cluster = cluster))
         hessian <- object$sCorrect$hessian
     }
 

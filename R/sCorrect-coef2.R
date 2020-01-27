@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan 24 2020 (18:04) 
+## Last-Updated: jan 27 2020 (10:53) 
 ##           By: Brice Ozenne
-##     Update #: 160
+##     Update #: 174
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -99,20 +99,10 @@ coef2.lme <- coef2.lm
 ## * coef2.lvmfit
 #' @rdname coef2
 coef2.lvmfit <- function(object, as.lava = TRUE){
-    if(is.null(object$sCorrect)){
-        out <- .coef2(object)
-        if(as.lava){
-            tableType <- coefType(object, as.lava = FALSE)
-            index <- match(names(out),tableType$param)
-            names(out) <- tableType$name[index]
-            out <- out[order(index)] 
-        }
+    if(as.lava){
+        out <- stats::coef(object)
     }else{
-        out <- object$sCorrect$param
-        if(as.lava){ ## restaure names and order as in coef() lava
-            out <- out[object$sCorrect$skeleton$originalLink2param]
-            names(out) <- names(object$sCorrect$skeleton$originalLink2param)
-        }
+        out <- .coef2(object)
     }
     return(out)
 }
@@ -122,9 +112,12 @@ coef2.lvmfit <- function(object, as.lava = TRUE){
 ## * coef2.sCorrect
 #' @rdname coef2
 coef2.sCorrect <- function(object, as.lava = TRUE){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(coef2(object, as.lava = TRUE))
-
+    out <- object$sCorrect$param
+    if(as.lava == FALSE){ 
+        out <- out[names(object$sCorrect$skeleton$originalLink2param)]
+        names(out) <- as.character(object$sCorrect$skeleton$originalLink2param)
+    }
+    return(out)
 }
 
 ## * coef.sCorrect

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: jan 23 2020 (13:56) 
+## Last-Updated: jan 27 2020 (09:56) 
 ##           By: Brice Ozenne
-##     Update #: 111
+##     Update #: 113
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,9 +21,8 @@
 #' @name leverage2
 #' 
 #' @param object a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.
-#' @param param [optional] the fitted parameters.
-#' @param data [optional] the data set.
-#' @param ... arguments to be passed to \code{sCorrect}.
+#' @param format [character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
+#' Otherwise use \code{"long"} to return the residuals in the long format.
 #'
 #' @details The leverage are defined as the partial derivative of the fitted values with respect to the observations.
 #' \deqn{
@@ -61,18 +60,14 @@
 #' @concept small sample inference
 #' @export
 `leverage2` <-
-    function(object, param, data, ssc, format) UseMethod("leverage2")
+    function(object, format) UseMethod("leverage2")
 
-## * leverage2.lm
+## * leverage2.sCorrect
 #' @rdname leverage2
 #' @export
-leverage2.lm <- function(object, param = NULL, data = NULL,
-                         ssc = lava.options()$ssc, format = "wide"){
+leverage2.sCorrect <- function(object, format = "wide"){
 
     format <- match.arg(format, choices = c("long","wide"))
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
-        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NA)
-    }
 
     if(format == "wide"){
         return(object$sCorrect$leverage)
@@ -95,30 +90,6 @@ leverage2.lm <- function(object, param = NULL, data = NULL,
     }
 
 }
-
-## * leverage2.gls
-#' @rdname leverage2
-#' @export
-leverage2.gls <- leverage2.lm
-
-## * leverage2.lme
-#' @rdname leverage2
-#' @export
-leverage2.lme <- leverage2.lm
-
-## * leverage2.lvmfit
-#' @rdname leverage2
-#' @export
-leverage2.lvmfit <- leverage2.lm
-
-## * leverage2.sCorrect
-#' @rdname information2
-leverage2.sCorrect <- function(object, param = NULL, data = NULL,
-                               ssc = object$sCorrect$ssc$type, format = "wide"){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(leverage2(object, param = param, data = data, ssc = ssc, format = format))
-}
-
 
 ## * .leverage2
 .leverage2 <- function(Omega, epsilon, dmu, dOmega, vcov.param,

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: jan 24 2020 (11:27) 
+## Last-Updated: jan 27 2020 (10:42) 
 ##           By: Brice Ozenne
-##     Update #: 129
+##     Update #: 130
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -69,7 +69,7 @@ effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
         mu <- setNames(object.summary2[,"Estimate"],rownames(object.summary2))
         mu.se <- setNames(object.summary2[,"Std. Error"],rownames(object.summary2))
         mu.df <- setNames(object.summary2[,"df"],rownames(object.summary2))
-        Sigma <- vcov2(object, ssc = ssc)
+        Sigma <- vcov2(object)
         dSigma <- object$sCorrect$dVcov.param
         
         for(iL in 1:length(link.other)){ ## iL <- 1

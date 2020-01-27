@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:45) 
+## Last-Updated: jan 27 2020 (11:28) 
 ##           By: Brice Ozenne
-##     Update #: 72
+##     Update #: 82
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,7 +30,7 @@ lava.options(symbols = c("~","~~"))
 context("conditionalMoment")
 
 test.secondOrder <- TRUE
-a
+
 ## * simulation
 cat("- simulation \n")
 n <- 5e1
@@ -62,16 +62,16 @@ test_that("linear regression (ML) - no constrains",{
                         ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
-                 score2(test.lvm, ssc = NA, indiv = TRUE),
+                 score2(test.lvm, indiv = TRUE),
                  tol = 1e-8)
-    expect_equal(unname(score2(test.lm, ssc = NA, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)[,lvm2lm]),
+    expect_equal(unname(score2(test.lm, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)[,lvm2lm]),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
-    expect_equal(unname(information(test.lm, ssc = NA)),
-                 unname(information2(test.lvm, ssc = NA)[lvm2lm,lvm2lm]),
+    expect_equal(unname(information(test.lm)),
+                 unname(information2(test.lvm)[lvm2lm,lvm2lm]),
                  tol = 1e-8)
     expect_equal(coef(e.lvm),
                  coef2(test.lvm),
@@ -80,10 +80,10 @@ test_that("linear regression (ML) - no constrains",{
                  unname(coef2(test.lvm)[lvm2lm]),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    expect_equal(unname(residuals2(test.lm, ssc = NA, type = "response")[,1]),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")[,"Y1"]),
+    expect_equal(unname(residuals2(test.lm, type = "response")[,1]),
+                 unname(residuals2(test.lvm, type = "response")[,"Y1"]),
                  tol = 1e-8)
     
     if(test.secondOrder){
@@ -125,13 +125,13 @@ test_that("linear regression (ML+1) - no constrains",{
     test.lvm <- sCorrect(e.lvm, param = newcoef, ssc = NA, df = NA)
     
     expect_equal(lava::score(e.lvm, p = newcoef, indiv = TRUE),
-                 score2(test.lvm, ssc = NA, indiv = TRUE),
+                 score2(test.lvm, indiv = TRUE),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm, p = newcoef),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -148,16 +148,16 @@ test_that("linear regression - constrains and covariance",{
     test <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
-                 unname(score2(test, ssc = NA, indiv = TRUE)),
+                 unname(score2(test, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test, ssc = NA)),
+                 unname(information2(test)),
                  tol = 1e-8)
     expect_equal(unname(coef(e.lvm)),
-                 unname(coef2(test, ssc = NA)),
+                 unname(coef2(test)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test, ssc = NA, type = "response")),
+                 unname(residuals2(test, type = "response")),
                  tol = 1e-8)
 
     if(test.secondOrder){
@@ -172,7 +172,7 @@ test_that("linear regression - constrains and covariance",{
         GS <- matrix(c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00118648, 0.01999964, 0, -0.00554516, 3.94e-06, -3.01e-05, 0, 0, 0, 0, 0.01999964, -4.014e-05, 0, -1.68e-06, 0.00086362, -3.14e-05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -0.00554516, -1.68e-06, 0, -0.02591598, 1.841e-05, -0.00014069, 0, 0, 0, 0, 3.94e-06, 0.00086362, 0, 1.841e-05, -0.01884834, -0.00143231, 0, 0, 0, 0, -3.01e-05, -3.14e-05, 0, -0.00014069, -0.00143231, -0.01661326, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.05139595, 0.05281454, 0, 0, 0, 0, 0, 0, 0, 0.05139595, -0.02433603, 0.0498916, 0, 0, 0, 0, 0, 0, 0, 0.05281454, 0.0498916, 0), 
                      nrow = 10, 
                      ncol = 10, 
-                     dimnames = list(c("mu1", "mu2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "sigma", "Y3~~Y3", "Y2~~Y3"),c("mu1", "mu2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "sigma", "Y3~~Y3", "Y2~~Y3")) 
+                     dimnames = list(c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3"),c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3")) 
                      ) 
         expect_equal(test$sCorrect$dVcov.param[,,"Y2~~Y3"],GS,tol = 1e-6)
     }
@@ -180,16 +180,16 @@ test_that("linear regression - constrains and covariance",{
 
 test_that("linear regression (ML+1) - constrains and covariance",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -207,23 +207,23 @@ test_that("gls",{
     test.gls <- sCorrect(e.gls, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
 
-    expect_equal(unname(getVarCov2(test.gls, ssc = NA)),
-                 unname(getVarCov2(test.lvm, ssc = NA)),
+    expect_equal(unname(getVarCov2(test.gls)),
+                 unname(getVarCov2(test.lvm)),
                  tol = 1e-3)
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(coef(e.lvm)),
-                 unname(coef2(test.lvm, ssc = NA)),
+                 unname(coef2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    test <- residuals2(test.gls, ssc = NA, type = "response")
-    GS <- residuals2(test.lvm, ssc = NA, type = "response")
+    test <- residuals2(test.gls, type = "response")
+    GS <- residuals2(test.lvm, type = "response")
     expect_equal(as.vector(na.omit(as.double(test))),
                  as.double(GS),
                  tol = 1e-4)
@@ -244,24 +244,24 @@ test_that("gls",{
         GS <- matrix(c(0.00027028, 0.00027028, -1.22e-05, 0.00126055, -1.22e-05, 0, 0, 0.00027028, 0.02031147, -1.22e-05, 0.00126055, -0.00090249, 0, 0, -1.22e-05, -1.22e-05, 5.5e-07, -5.691e-05, 5.5e-07, 0, 0, 0.00126055, 0.00126055, -5.691e-05, 0.00587905, -5.691e-05, 0, 0, -1.22e-05, -0.00090249, 5.5e-07, -5.691e-05, 0.01924312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.16350761), 
                      nrow = 7, 
                      ncol = 7, 
-                     dimnames = list(c("mu1", "mu2", "Y1~X1", "b", "Y2~X1", "sigma1", "sigma2"),c("mu1", "mu2", "Y1~X1", "b", "Y2~X1", "sigma1", "sigma2")) 
+                     dimnames = list(c("Y1", "Y2", "Y1~X1", "Y1~X2", "Y2~X1", "Y1~~Y1", "Y2~~Y2"),c("Y1", "Y2", "Y1~X1", "Y1~X2", "Y2~X1", "Y1~~Y1", "Y2~~Y2")) 
                      ) 
-        expect_equal(test.lvm$sCorrect$dVcov.param[,,"sigma2"],GS,tol = 1e-6)
+        expect_equal(test.lvm$sCorrect$dVcov.param[,,"Y2~~Y2"],GS,tol = 1e-6)
     }
 })
 
 test_that("linear regression (ML+1) - gls",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -294,26 +294,26 @@ test_that("Compound symmetry", {
     test.lme <- sCorrect(e.lme, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
 
-    expect_equal(unname(getVarCov2(test.gls, ssc = NA)),
-                 unname(getVarCov2(test.lvm, ssc = NA)),
+    expect_equal(unname(getVarCov2(test.gls)),
+                 unname(getVarCov2(test.lvm)),
                  tol = 1e-3)
-    expect_equal(unname(getVarCov2(test.lme, ssc = NA)),
-                 unname(getVarCov2(test.lvm, ssc = NA)),
+    expect_equal(unname(getVarCov2(test.lme)),
+                 unname(getVarCov2(test.lvm)),
                  tol = 1e-3)
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(coef(e.lvm)),
-                 unname(coef2(test.lvm, ssc = NA)),
+                 unname(coef2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    expect_equal(unname(residuals2(test.gls, ssc = NA, type = "response")),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+    expect_equal(unname(residuals2(test.gls, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 
     if(test.secondOrder){
@@ -332,24 +332,24 @@ test_that("Compound symmetry", {
         GS <- matrix(c(0.02860806, -0.02, -0.02, -0.00089185, -0.01529786, 0, 0, -0.02, 0.04, 0.02, 0, 0, 0, 0, -0.02, 0.02, 0.04, 0, 0, 0, 0, -0.00089185, 0, 0, 0.00645539, 0.00105925, 0, 0, -0.01529786, 0, 0, 0.00105925, 0.02723009, 0, 0, 0, 0, 0, 0, 0, 0.05700596, -0.01900199, 0, 0, 0, 0, 0, -0.01900199, 0.03500504), 
                      nrow = 7, 
                      ncol = 7, 
-                     dimnames = list(c("eta", "mu2", "mu3", "eta~X1", "eta~GenderFemale", "sigma", "eta~~eta"),c("eta", "mu2", "mu3", "eta~X1", "eta~GenderFemale", "sigma", "eta~~eta")) 
+                     dimnames = list(c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta"),c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta")) 
                      )
-        expect_equal(test.lvm$sCorrect$dVcov.param[,,"sigma"],GS,tol = 1e-6)
+        expect_equal(test.lvm$sCorrect$dVcov.param[,,"Y1~~Y1"],GS,tol = 1e-6)
     }
 })
 
 test_that("mixed model (ML+1) - CS",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -384,26 +384,26 @@ test_that("Unstructured", {
     test.lme <- sCorrect(e.lme, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic") ## error: overparametrized model
     test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
 
-    expect_equal(unname(getVarCov2(test.gls, ssc = NA)),
-                 unname(getVarCov2(test.lvm, ssc = NA)),
+    expect_equal(unname(getVarCov2(test.gls)),
+                 unname(getVarCov2(test.lvm)),
                  tol = 1e-3)
-    expect_equal(unname(getVarCov2(test.lme, ssc = NA)),
-                 unname(getVarCov2(test.lvm, ssc = NA)),
+    expect_equal(unname(getVarCov2(test.lme)),
+                 unname(getVarCov2(test.lvm)),
                  tol = 1e-3)
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(coef(e.lvm)),
-                 unname(coef2(test.lvm, ssc = NA)),
+                 unname(coef2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    expect_equal(unname(residuals2(test.gls, ssc = NA, type = "response")),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+    expect_equal(unname(residuals2(test.gls, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-3)
 
     if(test.secondOrder){
@@ -431,16 +431,16 @@ test_that("Unstructured", {
 
 test_that("mixed model (ML+1) - UN",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -460,16 +460,16 @@ test_that("factor model",{
     test <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
-                 score2(test, ssc = NA, indiv = TRUE),
+                 score2(test, indiv = TRUE),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test, ssc = NA)),
+                 unname(information2(test)),
                  tol = 1e-8)
     expect_equal(coef(e.lvm),
-                 coef2(test, ssc = NA),
+                 coef2(test),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test, ssc = NA, type = "response")),
+                 unname(residuals2(test, type = "response")),
                  tol = 1e-8)
 
     if(test.secondOrder){
@@ -491,16 +491,16 @@ test_that("factor model",{
 
 test_that("factor model (ML+1)",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -520,16 +520,16 @@ test_that("two factor model - correlation",{
     test <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
-                 score2(test, ssc = NA, indiv = TRUE),
+                 score2(test, indiv = TRUE),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test, ssc = NA)),
+                 unname(information2(test)),
                  tol = 1e-8)
     expect_equal(coef(e.lvm),
-                 coef2(test, ssc = NA),
+                 coef2(test),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test, ssc = NA, type = "response")),
+                 unname(residuals2(test, type = "response")),
                  tol = 1e-8)
 
     if(test.secondOrder){
@@ -552,16 +552,16 @@ test_that("two factor model - correlation",{
 
 test_that("two factor model (ML+1) - correlation",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 
@@ -578,16 +578,16 @@ test_that("two factor model - covariance",{
     test <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "analytic")
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
-                 score2(test, ssc = NA, indiv = TRUE),
+                 score2(test, indiv = TRUE),
                  tol = 1e-8)
     expect_equal(lava::information(e.lvm),
-                 unname(information2(test, ssc = NA)),
+                 unname(information2(test)),
                  tol = 1e-8)
     expect_equal(coef(e.lvm),
-                 coef2(test, ssc = NA),
+                 coef2(test),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test, ssc = NA, type = "response")),
+                 unname(residuals2(test, type = "response")),
                  tol = 1e-8)
 
     if(test.secondOrder){
@@ -609,16 +609,16 @@ test_that("two factor model - covariance",{
 
 test_that("two factor model (ML+1) - covariance",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm, labels = 1, ssc = NA)+1, ssc = NA, df = NA)
+    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, ssc = NA, indiv = TRUE)),
+                 unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
     expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm, ssc = NA)),
+                 unname(information2(test.lvm)),
                  tol = 1e-8)
     expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, ssc = NA, type = "response")),
+                 unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
 })
 

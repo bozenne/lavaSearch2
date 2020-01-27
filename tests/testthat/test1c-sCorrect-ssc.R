@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 24 2020 (18:15) 
+## Last-Updated: jan 27 2020 (11:51) 
 ##           By: Brice Ozenne
-##     Update #: 101
+##     Update #: 104
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -51,7 +51,9 @@ test_that("linear regression - residual correction equivalent to REML", {
     eSSC1.lm <- sCorrect(e.lm, ssc = "residuals")
     eSSC1.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
-
+    ## summary2(eSSC1.lm)$table2
+    ## summary2(eSSC1.gls)$table2
+    
     ## comapre parameters
     GS <- c(coef(e.lm), sigma(e.lm)^2)
     expect_equal(unname(eSSC1.lm$sCorrect$param),
@@ -67,22 +69,27 @@ test_that("linear regression - residual correction equivalent to REML", {
                  unname(GS), tol = 1e-6)
         
     ## model based
-    GS <- data.frame("Estimate" = c(1.08233491, -0.42993475, 1.82039942, 0.15110105), 
-                     "Std. Error" = c(0.18717083, 0.20041228, 0.37551973, 0.19577922), 
-                     "t-value" = c(5.78260466, -2.14525157, 4.84767986, 0.77179308), 
-                     "P-value" = c(5.7e-07, 0.03713074, NA, 0.44410038), 
-                     "df" = c(47, 47, 11.75, 47))
-    expect_equivalent(GS,
-                      summary2(eSSC1.lvm)$coef, tol = 1e-6)
+    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.71117546), 
+                     "std.error" = c(0.19577922, 0.18717083, 0.20041228, 0.37551973), 
+                     "df" = c(47, 47, 47, 11.75), 
+                     "ci.lower" = c(-0.24275594, 0.70579577, -0.83311225, 0.89105335), 
+                     "ci.upper" = c(0.54495805, 1.45887406, -0.02675726, 2.53129757), 
+                     "statistic" = c(0.77179308, 5.78260466, -2.14525157, 4.55681908), 
+                     "p.value" = c(0.44410038, 5.7e-07, 0.03713074, NA))
 
-    ## robust
-    GS <- data.frame("Estimate" = c(1.08233491, -0.42993475, 1.82039942, 0.15110105), 
-                     "robust SE" = c(0.23395087, 0.15458464, 0.3626631, 0.1806237), 
-                     "t-value" = c(4.62633424, -2.78122563, 5.01953307, 0.83655163), 
-                     "P-value" = c(2.939e-05, 0.0077684, NA, 0.40707794), 
-                     "df" = c(47, 47, 11.75, 47))
     expect_equivalent(GS,
-                      summary2(eSSC1.lvm, robust = TRUE)$coef, tol = 1e-6)
+                      summary2(eSSC1.lvm)$table2, tol = 1e-6)
+    
+    ## robust
+    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.71117546), 
+                     "std.error" = c(0.1806237, 0.23395087, 0.15458464, 0.3626631), 
+                     "df" = c(47, 47, 47, 11.75), 
+                     "ci.lower" = c(-0.21226696, 0.61168647, -0.74091893, 0.91913178), 
+                     "ci.upper" = c(0.51446906, 1.55298335, -0.11895058, 2.50321914), 
+                     "statistic" = c(0.83655163, 4.62633424, -2.78122563, 4.7183611), 
+                     "p.value" = c(0.40707794, 2.939e-05, 0.0077684, NA))
+    expect_equivalent(GS,
+                      summary2(eSSC1.lvm, robust = TRUE)$table2, tol = 1e-6)
 
 })
 
@@ -106,9 +113,9 @@ test_that("linear regression - Cox correction equivalent to REML", {
                  unname(GS), tol = 1e-6)
 
     ## compare JJK
+    name.param <- c(names(coef(e.lm)),"sigma2")
     p <- length(name.param)
     JJK <- array(0, dim = rep(p,3), dimnames = list(name.param,name.param,name.param))
-    name.param <- c(names(coef(e.lm)),"sigma2")
     X <- model.matrix(e.lm)
 
     JJK[name.param[1:3],name.param[1:3],"sigma2"] <- -crossprod(X)/sigma(e.lm)^4

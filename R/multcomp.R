@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:22) 
+## Last-Updated: jan 27 2020 (10:44) 
 ##           By: Brice Ozenne
-##     Update #: 620
+##     Update #: 621
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -69,7 +69,8 @@
 #' @method estfun lm
 #' @export
 estfun.lm <- function(x, ...){
-    U <- score2(x, ssc = if(identical(object$method,"REML")){"REML"}else{NA})
+    x <- sCorrect(x, ssc = if(identical(object$method,"REML")){"REML"}else{NA}, df = NA)
+    U <- score2(x)
     return(U)
 }
 

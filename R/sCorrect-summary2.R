@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 24 2020 (16:48) 
+## Last-Updated: jan 27 2020 (11:50) 
 ##           By: Brice Ozenne
-##     Update #: 372
+##     Update #: 394
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,6 +39,9 @@
 #' So if \code{summary2} is to be called several times,
 #' it is more efficient to pre-compute the quantities for the small sample correction
 #' using \code{sCorrect} and then call \code{summary2}.
+#'
+#' \code{summary2} returns an object with an element \code{table2} containing the estimates, standard errors, degrees of freedom,
+#' upper and lower limits of the confidence intervals, test statistics, and p-values.
 #' 
 #' @examples
 #' m <- lvm(Y~X1+X2)
@@ -111,6 +114,19 @@ summary2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df
     object.summary$fstatistic <- NULL
 
     ## ** export
+    object.summary$table2 <- data.frame(matrix(NA, nrow = n.param, ncol = 7,
+                                              dimnames = list(name.param,
+                                                              c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
+                                              ), stringsAsFactors = FALSE)
+
+    object.summary$table2$estimate <- object.summary$coefficients[name.param,"Value"]
+    object.summary$table2$std.error <- object.summary$coefficients[name.param,"Std.Error"]
+    object.summary$table2$df <- object.summary$coefficients[name.param,"df"]
+    object.summary$table2$ci.lower <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.025, df = object.summary$table2$df)
+    object.summary$table2$ci.upper <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.975, df = object.summary$table2$df)
+    object.summary$table2$statistic <- object.summary$coefficients[name.param,"t-value"]
+    object.summary$table2$p.value <- object.summary$coefficients[name.param,"p-value"]
+
     return(object.summary)
 
 }
@@ -140,16 +156,30 @@ summary2.gls <- function(object, ssc = lava.options()$ssc, df = lava.options()$d
                              c("Value","Std.Error","t-value","p-value","df")
                              )
 
-    ### ** get summary
+    ## ** get summary
     class(object) <- setdiff(class(object),c("sCorrect"))
     object.summary <- summary(object, digits = digit, ...)
     
-    ### ** update summary
+    ## ** update summary
     object.summary$tTable <- tTable
-    object.summary$residuals <- quantile(residuals2(object, ssc = ssc, type = "normalized"), na.rm = TRUE)
+    object.summary$residuals <- quantile(residuals2(object, type = "normalized"),
+                                         na.rm = TRUE)
     object.summary$sigma <- tTable["sigma2","Value"]
     
-    ### ** export
+    ## ** export
+    object.summary$table2 <- data.frame(matrix(NA, nrow = n.param, ncol = 7,
+                                               dimnames = list(name.param,
+                                                               c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
+                                               ), stringsAsFactors = FALSE)
+
+    object.summary$table2$estimate <- object.summary$tTable[name.param,"Value"]
+    object.summary$table2$std.error <- object.summary$tTable[name.param,"Std.Error"]
+    object.summary$table2$df <- object.summary$tTable[name.param,"df"]
+    object.summary$table2$ci.lower <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.025, df = object.summary$table2$df)
+    object.summary$table2$ci.upper <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.975, df = object.summary$table2$df)
+    object.summary$table2$statistic <- object.summary$tTable[name.param,"t-value"]
+    object.summary$table2$p.value <- object.summary$tTable[name.param,"p-value"]
+
     return(object.summary)
 }
 ## * summary2.lme
@@ -271,6 +301,19 @@ summary2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options(
         colnames(object.summary$coefmat)[2] <- "robust SE"
         colnames(object.summary$coef)[2] <- "robust SE"
     }
+    object.summary$table2 <- data.frame(matrix(NA, nrow = n.param, ncol = 7,
+                                              dimnames = list(name.param,
+                                                              c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
+                                              ), stringsAsFactors = FALSE)
+
+    object.summary$table2$estimate <- object.summary$coef[name.param,"Estimate"]
+    object.summary$table2$std.error <- object.summary$coef[name.param,2]
+    object.summary$table2$df <- object.summary$coef[name.param,"df"]
+    object.summary$table2$ci.lower <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.025, df = object.summary$table2$df)
+    object.summary$table2$ci.upper <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.975, df = object.summary$table2$df)
+    object.summary$table2$statistic <- object.summary$coef[name.param,"t-value"]
+    object.summary$table2$p.value <- object.summary$coef[name.param,"P-value"]
+
     return(object.summary)    
 
 }
@@ -289,6 +332,10 @@ summary2.sCorrect <- function(object, ssc = object$sCorrect$ssc$type, df = objec
 summary.sCorrect <- summary2.sCorrect
 
 
+## * confint.sCorrect
+confint.sCorrect <- function(object,...){
+    summary2(object)$table2
+}
 
 ##----------------------------------------------------------------------
 ### Scorrect-summary2.R ends here

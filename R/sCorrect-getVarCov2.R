@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: jan 15 2020 (14:46) 
+## Last-Updated: jan 27 2020 (10:00) 
 ##           By: Brice Ozenne
-##     Update #: 61
+##     Update #: 63
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -24,10 +24,6 @@
 #' @name getVarCov2
 #'
 #' @param object a \code{gls} or \code{lme} object
-#' @param param [numeric vector] values for the model parameters.
-#' @param data [data.frame] the data set.
-#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' @param ... [internal] only used by the generic method.
 #' 
 #' @details The compound symmetry variance-covariance matrix in a gls model is of the form:
 #' \tabular{cccc}{
@@ -45,7 +41,6 @@
 #' @return A list containing the residual variance-covariance matrix in the element Omega.
 #' 
 #' @examples
-#' 
 #' ## simulate data 
 #' library(nlme)
 #' n <- 5e1
@@ -104,44 +99,14 @@
 #' 
 #' @export
 `getVarCov2` <-
-    function(fobject, param, data, ssc) UseMethod("getVarCov2")
-
-## * getVarCov2.lm
-#' @rdname getVarCov2
-#' @export
-getVarCov2.lm <- function(object, param = NULL, data = NULL,
-                          ssc = lava.options()$ssc){
-
-    if(is.null(object$sCorrect) || !is.null(param) || !is.null(data) || !identical(object$sCorrect$ssc$type,ssc)){
-        object <- sCorrect(object, param = param, data = data, first.order = !is.null(ssc), ssc = ssc, df = NA)
-    }
-    Omega <- object$sCorrect$moment$Omega
-    attr(Omega, "detail") <- NULL
-    return(Omega)
-
-}
-
-## * getVarCov2.gls
-#' @rdname getVarCov2
-#' @export
-getVarCov2.gls <- getVarCov2.lm
-
-## * getVarCov2.lme
-#' @rdname getVarCov2
-#' @export
-getVarCov2.lme <- getVarCov2.lm
-
-## * getVarCov2.lvmfit
-#' @rdname getVarCov2
-#' @export
-getVarCov2.lvmfit <- getVarCov2.lm
+    function(object) UseMethod("getVarCov2")
 
 ## * getVarCov2.sCorrect
 #' @rdname getVarCov2
-getVarCov2.sCorrect <- function(object, param = NULL, data = NULL,
-                               ssc = object$sCorrect$ssc$type){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(getVarCov2(object, param = param, data = data, ssc = ssc))
+getVarCov2.sCorrect <- function(object){
+    Omega <- object$sCorrect$moment$Omega
+    attr(Omega, "detail") <- NULL
+    return(Omega)
 }
 
 ## * getVarCov.sCorrect

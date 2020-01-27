@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:52) 
+## Last-Updated: jan 27 2020 (10:39) 
 ##           By: Brice Ozenne
-##     Update #: 1048
+##     Update #: 1061
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -147,7 +147,7 @@
     unique.pattern <- object$sCorrect$missing$unique.pattern
 
     ## ** Step (i-ii) compute individual and average bias
-    dmu <- aperm(abind::abind(dmu, along = 3), perm = c(3,2,1))
+    dmu <- aperm(abind::abind(dmu[param.mean], along = 3), perm = c(3,2,1))
     vcov.muparam <- vcov.param[param.mean,param.mean,drop=FALSE]
 
     Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
@@ -162,6 +162,7 @@
         for(iC in missing.pattern[[iP]]){ ## iC <- 1
             ## individual bias
             iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
+
             ## ls.Psi[[iC]] <- iPsi
             ## cumulated bias            
             Psi[iY,iY] <- Psi[iY,iY] + iPsi
