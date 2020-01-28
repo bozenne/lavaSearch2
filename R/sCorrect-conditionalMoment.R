@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 27 2020 (11:21) 
+## last-updated: jan 27 2020 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 1531
+##     Update #: 1533
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -192,6 +192,14 @@ conditionalMoment.lm <- function(object,
                 out$name.param <- setNames(out$skeleton$type[!is.na(out$skeleton$type$originalLink),"param"],
                                            out$skeleton$type[!is.na(out$skeleton$type$originalLink),"originalLink"])
                 out$name.param <- out$name.param[names(coef2(object, as.lava = TRUE))]
+            }else if(inherits(object,"lm") || inherits(object,"gls")){
+                out$name.param <- names(stats::coef(object))
+                out$name.param <- c(out$name.param, setdiff(names(out$param), out$name.param))
+                names(out$name.param) <- out$name.param
+            }else if(inherits(object,"lme")){
+                out$name.param <- names(nlme::fixef(object))
+                out$name.param <- c(out$name.param, setdiff(names(out$param), out$name.param))
+                names(out$name.param) <- out$name.param
             }
         }else{
             if(any(names(param) %in% out$skeleton$Uparam == FALSE)){

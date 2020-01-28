@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:57) 
+## Last-Updated: jan 27 2020 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 41
+##     Update #: 42
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -69,11 +69,6 @@ vcov2.sCorrect <- function(object, as.lava = TRUE){
     }
     return(out)
 }
-
-## * vcov.sCorrect
-#' @rdname vcov2
-#' @export
-vcov.sCorrect <- vcov2.sCorrect
 
 ## * .info2vcov (helper)
 #' @title Inverse the Information Matrix

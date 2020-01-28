@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan 27 2020 (11:41) 
+## Last-Updated: jan 27 2020 (15:48) 
 ##           By: Brice Ozenne
-##     Update #: 669
+##     Update #: 688
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,19 +22,17 @@
 #' @name compare2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
-#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
-#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
-#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' @param par [vector of characters] expression defining the linear hypotheses to be tested.
-#' See the examples section. 
-#' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
-#' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
+#' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
+#' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param F.test [logical] should a joint test be performed?
 #' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
-#' @param ...  [internal] only used by the generic method.
+#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
+#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param ... [logical] arguments passed to lower level methods.
 #'
 #' @details The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
 #' specify the set of linear hypotheses to be tested. They can be written:
@@ -103,24 +101,44 @@
 #' @concept small sample inference
 #' @export
 `compare2` <-
-    function(object, linfct, rhs, robust, cluster,
-             ssc, df,
-             as.lava, F.test, conf.level) UseMethod("compare2")
+    function(object, ...) UseMethod("compare2")
 
 ## * compare2.lm
 #' @rdname compare2
 #' @export
-compare2.lm <- function(object, linfct = NULL, rhs = NULL,
-                        robust = FALSE, cluster = NULL, 
-                        ssc = lava.options()$ssc, df = lava.options()$df,
-                        as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
+compare2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
+    object.SSC <- sCorrect(object, ssc = ssc, df = df)
+    return(compare2(object.SSC, ...))
+
+}
+
+## * compare2.gls
+#' @rdname compare2
+#' @export
+compare2.gls <- compare2.lm
+
+## * compare2.lme
+#' @rdname compare2
+#' @export
+compare2.lme <- compare2.lm
+
+## * compare2.lvmfit
+#' @rdname compare2
+#' @export
+compare2.lvmfit <- compare2.lm
+
+## * compare2.sCorrect
+#' @rdname compare2
+compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
+                              robust = FALSE, cluster = NULL,
+                              as.lava = TRUE, F.test = TRUE, conf.level = 0.95,
+                              ...){
+
+    df <- object$sCorrect$df
+    
     if(is.null(linfct)){ ## necessary for lava::gof to work
         return(lava::compare(object))
-    }
-    
-    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
-        object <- sCorrect(object, ssc = ssc, df = df)
     }
 
     if(!is.logical(robust)){ 
@@ -128,7 +146,6 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     }
 
     if(robust){
-        factor.dRvcov <- lava.options()$factor.dRvcov
 
         if(!is.null(cluster) && !inherits(cluster, "function")){
             
@@ -174,13 +191,13 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     }
 
     ## 3-order: derivative of the variance covariance
-    if(!is.null(df)){
+    if(identical(df, "Satterthwaite")){
         dVcov.param <- object$sCorrect$dVcov.param
         keep.param <- dimnames(dVcov.param)[[3]]
     }
     
     ## ** Computation of the df for the robust case
-    if(robust && identical(df, "Satterthwaite") && lava.options()$df.robust==1){
+    if(robust && identical(df, "Satterthwaite") && lava.options()$df.robust==2){
 
         ## update the score/hessian/derivative at the cluster level
         if(!is.null(cluster)){            
@@ -264,13 +281,13 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
         }
     }
 
-### ** prepare export
+    ## ** prepare export
     name.hypo <- rownames(linfct)
     n.hypo <- NROW(linfct)
 
     df.table <- as.data.frame(matrix(NA, nrow = n.hypo, ncol = 5,
                                      dimnames = list(name.hypo,
-                                                     c("estimate","std","statistic","df","p-value"))
+                                                     c("estimate","std.error","statistic","df","p.value"))
                                      ))
 
     ## ** Univariate Wald test
@@ -285,11 +302,11 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
 
     ## store
     df.table$estimate <- as.numeric(C.p)
-    df.table$std <- as.numeric(sd.C.p)
+    df.table$std.error <- as.numeric(sd.C.p)
     df.table$statistic <- as.numeric(stat.Wald)
 
     ##  degrees of freedom
-    if(identical(df,"Satterthwaite") && !is.null(dVcov.param)){
+    if(identical(df,"Satterthwaite")){
 
         ## univariate
         if(robust == FALSE){
@@ -299,19 +316,22 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
                                 keep.param = keep.param)
         }else if(robust == TRUE){
 
+            if(lava.options()$df.robust==2){
+                df.Wald <- dfSigma(contrast = linfct,
+                                   vcov = vcov.param,
+                                   dVcov = dRvcov.param,
+                                   keep.param = keep.param)
+            }else if(lava.options()$df.robust==3){
+                df.Wald <- dfSigmaRobust(contrast = linfct,
+                                         vcov = vcov.param,
+                                         rvcov = rvcov.param,
+                                         score = score)
+            }else{
                 df.Wald <- dfSigma(contrast = linfct,
                                    vcov = vcov.param,
                                    dVcov = dVcov.param,
                                    keep.param = keep.param)
-                ## df.Wald  <- dfSigma(contrast = linfct,
-                ##                     vcov = rvcov.param,
-                ##                     dVcov = dRvcov.param * factor.dRvcov,
-                ##                     keep.param = name.param)
-                ## df.Wald <- dfSigmaRobust(contrast = linfct,
-                ##                          vcov = vcov.param,
-                ##                          rvcov = rvcov.param,
-                ##                          score = score)
-            
+            }
         }
     }else{
         df.Wald <- rep(Inf, n.hypo)
@@ -320,7 +340,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
 
     ## store
     df.table$df <- as.numeric(df.Wald)
-    df.table$`p-value` <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
+    df.table$p.value <- as.numeric(2*(1-stats::pt(abs(df.table$statistic), df = df.table$df)))
     
     ## ** Multivariate Wald test
     df.table <- rbind(df.table, global = rep(NA,5))
@@ -339,19 +359,22 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
      
                 C.anova <- sqrt(D.svd) %*% t(P.svd) %*% linfct
 
-                nu_m <- dfSigma(contrast = C.anova,
-                                vcov = vcov.param,
-                                dVcov = dVcov.param,
-                                keep.param = keep.param)
-                ## nu_m <- dfSigma(contrast = C.anova,
-                ##                 vcov = rvcov.param,
-                ##                 dVcov = dRvcov.param * factor.dRvcov,
-                ##                 keep.param = keep.param)
-                ## nu_m <- dfSigmaRobust(contrast = C.anova,
-                ##                       vcov = vcov.param,
-                ##                       rvcov = rvcov.param,
-                ##                       score = score)
-        
+                if(lava.options()$df.robust==2){
+                    nu_m <- dfSigma(contrast = C.anova,
+                                    vcov = vcov.param,
+                                    dVcov = dRvcov.param,
+                                    keep.param = keep.param)
+                }else if(lava.options()$df.robust==3){
+                    nu_m <- dfSigmaRobust(contrast = C.anova,
+                                          vcov = vcov.param,
+                                          rvcov = rcov.param,
+                                          score = score)
+                }else{
+                    nu_m <- dfSigma(contrast = C.anova,
+                                    vcov = vcov.param,
+                                    dVcov = dVcov.param,
+                                    keep.param = keep.param)
+                }
                 EQ <- sum(nu_m/(nu_m-2))
                 df.F <- 2*EQ / (EQ - n.hypo)
             }else{
@@ -360,7 +383,7 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
             ## store
             df.table["global", "statistic"] <- as.numeric(stat.F)
             df.table["global", "df"] <- df.F
-            df.table["global", "p-value"] <- 1 - stats::pf(df.table["global", "statistic"],
+            df.table["global", "p.value"] <- 1 - stats::pf(df.table["global", "statistic"],
                                                            df1 = n.hypo,
                                                            df2 = df.table["global", "df"])
         }else{
@@ -380,14 +403,14 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
         df.estimate <- matrix(NA, nrow = n.hypo, ncol = 5,
                               dimnames = list(name.hypo,c("Estimate", "Std.Err", "df", level.inf.label, level.sup.label)))
         df.estimate[,"Estimate"] <- df.table[name.hypo,"estimate"]
-        df.estimate[,"Std.Err"] <- df.table[name.hypo,"std"]
+        df.estimate[,"Std.Err"] <- df.table[name.hypo,"std.error"]
         df.estimate[,"df"] <- df.table[name.hypo,"df"]
-        df.estimate[,level.inf.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.inf, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
-        df.estimate[,level.sup.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.sup, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std"]
+        df.estimate[,level.inf.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.inf, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std.error"]
+        df.estimate[,level.sup.label] <- df.table[name.hypo,"estimate"] + stats::qt(level.sup, df = df.table[name.hypo,"df"]) * df.table[name.hypo,"std.error"]
 
         out <- list(statistic = setNames(df.table["global","statistic"],"F-statistic"),
                     parameter = setNames(round(df.table["global","df"],2), paste0("df1 = ",n.hypo,", df2")), ## NOTE: cannot not be change to coefficients because of lava
-                    p.value = df.table["global","p-value"],
+                    p.value = df.table["global","p.value"],
                     method = c("- Wald test -", "", "Null Hypothesis:", name.hypo),
                     estimate = df.estimate,
                     vcov = C.vcov.C,
@@ -407,42 +430,9 @@ compare2.lm <- function(object, linfct = NULL, rhs = NULL,
     }
     attr(out,"error") <- error
     return(out)
-}
-
-## * compare2.gls
-#' @rdname compare2
-#' @export
-compare2.gls <- compare2.lm
-
-## * compare2.lme
-#' @rdname compare2
-#' @export
-compare2.lme <- compare2.lm
-
-## * compare2.lvmfit
-#' @rdname compare2
-#' @export
-compare2.lvmfit <- compare2.lm
-
-## * compare2.sCorrect
-#' @rdname compare2
-compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
-                              robust = FALSE, cluster = NULL, 
-                              ssc = object$sCorrect$ssc$type, df = object$sCorrect$df,
-                              as.lava = TRUE, F.test = TRUE, conf.level = 0.95){
-
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(compare2(object, linfct = linfct, rhs = rhs,
-                    robust = robust, cluster = cluster,
-                    ssc = ssc, df = df,
-                    as.lava = as.lava, F.test = F.test, conf.level = conf.level))
 
 }
 
-## * compare.sCorrect
-#' @rdname compare2
-compare.sCorrect <- compare2.sCorrect
-    
 ## * dfSigma
 ##' @title Degree of Freedom for the Chi-Square Test
 ##' @description Computation of the degrees of freedom of the chi-squared distribution

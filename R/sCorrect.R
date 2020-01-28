@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: jan 27 2020 (11:20) 
+## Last-Updated: jan 27 2020 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 1874
+##     Update #: 1878
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -514,6 +514,7 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                         n.cluster = object$sCorrect$cluster$n.cluster)
     }
     if(type %in% c("information","vcov.model","vcov.robust")){
+        ## print(object$sCorrect$cluster$n.cluster - colSums(object$sCorrect$leverage))
         ii <- .information2(dmu = cM$dmoment$dmu,
                             dOmega = cM$dmoment$dOmega,
                             OmegaM1 = cM$moment$OmegaM1.missing.pattern,

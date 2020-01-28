@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:56) 
+## Last-Updated: jan 27 2020 (13:35) 
 ##           By: Brice Ozenne
-##     Update #: 368
+##     Update #: 369
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,10 +66,6 @@ information2.sCorrect <- function(object, as.lava = TRUE){
     }
     return(out)
 }
-
-## * information.sCorrect
-#' @rdname information2
-information.sCorrect <- information2.sCorrect
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments

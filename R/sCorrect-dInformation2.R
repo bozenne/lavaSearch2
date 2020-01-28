@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 16 2020 (15:55) 
+## Last-Updated: jan 27 2020 (18:14) 
 ##           By: Brice Ozenne
-##     Update #: 289
+##     Update #: 328
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -91,8 +91,8 @@
                 iName3 <- grid.3varD1[iGrid,"Z"]
             
                 ## term 1
-                iDiag1 <- diag(iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% idOmega[[iName2]])
-                iDiag2 <- diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName2]])
+                iDiag1 <- diag(iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName2]] %*% iOmegaM1 %*% idOmega[[iName1]])
+                iDiag2 <- diag(iOmegaM1 %*% idOmega[[iName2]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
                 dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] - 1/2 * sum(iDiag1 * iN.corrected + iDiag2 * iN.corrected)
 
                 ## symmetrize (XYZ = XZY = YXZ = YZX = ZXY = ZYX)
@@ -130,25 +130,12 @@
                 iName1 <- grid.2varD2.1varD1[iGrid,"X"]
                 iName2 <- grid.2varD2.1varD1[iGrid,"Y"]
                 iName3 <- grid.2varD2.1varD1[iGrid,"Z"]
-
+               
                 ## term 2
-                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
-                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
-                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
-                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName2]]) * iN.corrected)
-                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
-
-                    ## symmetrize (XYZ = ZYX)
-                    if(symmetrize && (iName1 != iName3)){
-                        dInfo[iName3,iName2,iName1] <- dInfo[iName3,iName2,iName1] + iDiag
-                    }
-                }
-                
-                ## term 3
                 if(grid.2varD2.1varD1[iGrid,"d2YZ"]){
                     d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var1"]
                     d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2YZ.Var2"]
-                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% idOmega[[iName1]] %*% iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]]) * iN.corrected)
+                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]] %*% iOmegaM1 %*% idOmega[[iName1]]) * iN.corrected)
                     dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
 
                     ## symmetrize (XYZ = XZY)
@@ -156,6 +143,20 @@
                         dInfo[iName1,iName3,iName2] <- dInfo[iName1,iName3,iName2] + iDiag
                     }
                 }
+
+                ## term 3
+                if(grid.2varD2.1varD1[iGrid,"d2XZ"]){
+                    d2.Var1 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var1"]
+                    d2.Var2 <- grid.2varD2.1varD1[iGrid,"d2XZ.Var2"]
+                    iDiag <- 1/2 * sum(diag(iOmegaM1 %*% idOmega[[iName2]] %*% iOmegaM1 %*% id2Omega[[d2.Var1]][[d2.Var2]]) * iN.corrected)
+                    dInfo[iName1,iName2,iName3] <- dInfo[iName1,iName2,iName3] + iDiag
+
+                    ## symmetrize (XYZ = ZYX)
+                    if(symmetrize && (iName1 != iName3)){
+                        dInfo[iName3,iName2,iName1] <- dInfo[iName3,iName2,iName1] + iDiag
+                    }
+                }
+
             }
         }
 
@@ -194,11 +195,23 @@
             }
         }
     }
+    
     ## dInfo.bis <- .old_dInformation2(dmu = dmu, dOmega = dOmega, d2mu = d2mu, d2Omega = d2Omega, OmegaM1 = OmegaM1,
     ##                                 missing.pattern = missing.pattern, unique.pattern = unique.pattern, name.pattern = name.pattern, 
     ##                                 grid.dInformation = expand.grid(X = name.param, Y = name.param, Z = name.param, duplicated = FALSE, stringsAsFactors = FALSE),
     ##                                 name.param = name.param, name.param.dInformation = name.param,
     ##                                 leverage = leverage, n.cluster = n.cluster)
+    ## dInfo.ter <- .old_dInformation2(dmu = dmu, dOmega = dOmega, d2mu = d2mu, d2Omega = d2Omega, OmegaM1 = OmegaM1,
+    ##                                 missing.pattern = missing.pattern, unique.pattern = unique.pattern, name.pattern = name.pattern, 
+    ##                                 grid.dInformation = expand.grid(X = name.param[2:3], Y = name.param[2:3], Z = name.param[2:3], duplicated = FALSE, stringsAsFactors = FALSE),
+    ##                                 name.param = name.param[2:3], name.param.dInformation = name.param[2:3],
+    ##                                 leverage = leverage, n.cluster = n.cluster)
+
+    ## dInfo.bis[,,1]-t(dInfo.bis[,,1])
+    ## dInfo.bis[,,2]-t(dInfo.bis[,,2])
+    ## dInfo.bis[,,3]-t(dInfo.bis[,,3])
+    ## print(range(dInfo.bis - dInfo))
+    ## print(range(dInfo.ter  - dInfo))
     
     ## ** export
     return(dInfo)
@@ -279,31 +292,37 @@
             }
                 
             ## *** pre-compute 
-            if(!is.null(dOmega[[iNameD]])){
-                iOmegaM1.dOmega.D <- iOmegaM1 %*% dOmega[[iNameD]][iY,iY,drop=FALSE]
-            }
             if(!is.null(dOmega[[iName1]])){
                 iOmegaM1.dOmega.1 <- iOmegaM1 %*% dOmega[[iName1]][iY,iY,drop=FALSE]
             }
             if(!is.null(dOmega[[iName2]])){
                 iOmegaM1.dOmega.2 <- iOmegaM1 %*% dOmega[[iName2]][iY,iY,drop=FALSE]
             }                    
-
-            ## *** evaluate contributions to dInformation
-            if(test.Omega1){                
-                iDiag1 <- diag(iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.2)
-                iDiag2 <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2)
-                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum(iDiag1 * iN.corrected + iDiag2 * iN.corrected)
+            if(!is.null(dOmega[[iNameD]])){
+                iOmegaM1.dOmega.D <- iOmegaM1 %*% dOmega[[iNameD]][iY,iY,drop=FALSE]
             }
+            
+            ## *** evaluate contributions to dInformation
+            if(test.Omega1){
 
-            if(test.Omega2a || test.Omega2b){
-                iDiag <- diag(iOmegaM1 %*% d2Omega.D1 %*% iOmegaM1.dOmega.2)
-                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)
+                iOmegaM1.dOmega.1 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2
+                
+                iDiag1 <- diag(iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.2 %*% iOmegaM1.dOmega.1)
+                iDiag2 <- diag(iOmegaM1.dOmega.2 %*% iOmegaM1.dOmega.D %*% iOmegaM1.dOmega.1)
+                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - 1/2 * sum((iDiag1 + iDiag2) * iN.corrected)
+                ## if(iName1!=iName2){
+                ##     cat(iName1,"/",iName2,"/",iNameD,": ",iDiag1," ",iDiag2,"\n")
+                ## }
             }
 
             if(test.Omega3a || test.Omega3b){
-                iDiag <- diag(iOmegaM1.dOmega.1 %*% iOmegaM1 %*% d2Omega.D2)
+                iDiag <- diag(iOmegaM1 %*% d2Omega.D2 %*% iOmegaM1.dOmega.1)
                 dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)                
+            }
+            
+            if(test.Omega2a || test.Omega2b){
+                iDiag <- diag(iOmegaM1.dOmega.2 %*% iOmegaM1 %*% d2Omega.D1)
+                dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] + 1/2 * sum(iDiag * iN.corrected)
             }
 
             if(test.mu1a || test.mu1b){
@@ -318,23 +337,6 @@
                 dInfo[iName1,iName2,iNameD] <- dInfo[iName1,iName2,iNameD] - sum(dmu[[iName1]][iIndex,iY,drop=FALSE] %*% iOmegaM1.dOmega.D %*% iOmegaM1 * dmu[[iName2]][iIndex,iY,drop=FALSE])
             }
 
-        }
-    }
-
-    ## ## ** symmetrize
-    if(length(index.duplicated)>0){
-        for(iGrid in index.duplicated){ ## iGrid <- index.duplicated[1]
-
-
-            iName1 <- grid.dInformation[iGrid,"X"]
-            iName2 <- grid.dInformation[iGrid,"Y"]
-            iNameD <- grid.dInformation[iGrid,"Z"]
-
-            iName1.ref <- grid.dInformation[grid.dInformation[iGrid,"reference"],"X"]
-            iName2.ref <- grid.dInformation[grid.dInformation[iGrid,"reference"],"Y"]
-            iNameD.ref <- grid.dInformation[grid.dInformation[iGrid,"reference"],"Z"]
-            
-            dInfo[iName1,iName2,iNameD] <- dInfo[iName1.ref,iName2.ref,iNameD.ref]
         }
     }
 

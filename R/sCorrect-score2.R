@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 27 2020 (10:56) 
+## last-updated: jan 27 2020 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 2322
+##     Update #: 2323
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,10 +77,6 @@ score2.sCorrect <- function(object, indiv = FALSE, as.lava = TRUE){
         return(colSums(score))
     }
 }
-
-## * score.sCorrect
-#' @rdname score2
-score.sCorrect <- score2.sCorrect
 
 ## * .score2
 #' @title Compute the Corrected Score.

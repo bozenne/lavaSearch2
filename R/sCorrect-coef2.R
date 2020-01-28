@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:53) 
+## Last-Updated: jan 27 2020 (13:34) 
 ##           By: Brice Ozenne
-##     Update #: 174
+##     Update #: 175
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -119,9 +119,6 @@ coef2.sCorrect <- function(object, as.lava = TRUE){
     }
     return(out)
 }
-
-## * coef.sCorrect
-coef.sCorrect <- coef2.sCorrect
 
 ## * .coef2
 .coef2 <- function(object){

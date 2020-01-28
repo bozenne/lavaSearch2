@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: jan 24 2020 (15:23) 
+## Last-Updated: jan 27 2020 (16:42) 
 ##           By: Brice Ozenne
-##     Update #: 83
+##     Update #: 87
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,11 +77,11 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
                          "FALSE" = "Model-based standard errors"
                          )
 
-    txt.correction <- switch(as.character(object$ssc),
-                             "Cox" = " corrected for small sample bias (Cox correction)",
-                             "residuals" = " corrected for small sample bias (residual correction)",
-                             "NA" = ""
-                             )
+    ## txt.correction <- switch(as.character(object$ssc),
+    ##                          "Cox" = " corrected for small sample bias (Cox correction)",
+    ##                          "residuals" = " corrected for small sample bias (residual correction)",
+    ##                          "NA" = ""
+    ##                          )
     
     txt.alternative <- switch(alternative,
                               "less" = "one sided tests - inferiority",
@@ -109,7 +109,7 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
         cat("Error when computing the p-value by numerical integration: ",error,"\n",sep="")
     }
     cat("(",txt.robust,")\n",sep="")
-    if(nchar(txt.correction)>0){cat("(",txt.correction,")\n",sep="")}
+    ## if(nchar(txt.correction)>0){cat("(",txt.correction,")\n",sep="")}
     cat("\n")
     return(invisible(object))
 }

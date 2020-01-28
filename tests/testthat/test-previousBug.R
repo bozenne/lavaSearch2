@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 19 2019 (10:17) 
 ## Version: 
-## Last-Updated: jan 23 2020 (18:30) 
+## Last-Updated: jan 28 2020 (18:06) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 18
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -92,69 +92,32 @@ test_that("sCorrect in stratified GLS equivalent to separate LM", {
 
 
 
+## * Brice, 01/27/20 6:12, ssc residuals under constrains
+## path <- "C:/Users/hpl802/Downloads"
+## butils.base:::sourcePackage("lavaSearch2", path = path, c.code = TRUE, trace = TRUE) ## version 1.5.5
 
+dd <- data.frame("Y1" = c(-0.35, -0.87, -2.24, -0.7, 0.04, -1.46, -1.29, 0.6, -1.44, -1.64, -0.33, 1.12, -2, 0.66, 0.09, 1.18, -1.72, -1.02, 1.76, -0.48, -0.63, -1.95, -0.98, -2.8, -0.61), 
+                 "eta" = c(-0.37, -0.69, -0.87, -0.1, -0.25, -1.85, -0.08, 0.97, 0.18, -1.38, -1.44, 0.36, -1.76, -0.32, -0.65, 1.09, -0.76, -0.83, 0.83, -0.97, -0.03, 0.23, -0.3, -0.68, 0.66), 
+                 "Y2" = c(-0.77, -1.02, 0.5, 2.04, 0.25, -1.07, -0.98, 1.5, -0.46, -1.09, -2.67, -0.09, -2.59, 0.02, 0.41, 2.3, -0.03, -1.31, 1.4, -2.21, 0.35, -1.2, -1.35, -0.9, -0.83))
 
-e.lm <- lm(neocortex.log ~ 1, data = dd)
-vcov(e.lm)
-vcov2(e.lm, ssc = "Cox")
+m <- lvm(Y1[0:sigma1] ~ 1*eta,
+         Y2[0:sigma2] ~ 1*eta,
+         eta[mu:1]  ~ 1
+         )
+latent(m) <- ~eta
 
-e.gls0.ML <- gls(neocortex.log ~ 1, method = "ML", data = dd)
-vcov(e.gls0.ML)
-sigma(e.gls0.ML)^2
-vcov2(e.gls0, ssc = "Cox")
+e <- estimate(m, dd)
 
-e.gls0.REML <- gls(neocortex.log ~ 1, method = "REML", data = dd)
-vcov(e.gls0.REML)
-sigma(e.gls0.REML)^2
-vcov2(e.gls0.REML, ssc = "Cox")
+test_that("Comparing the two corrections (residuals,Cox): simular but not equal values", {
+    test <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
+    test2 <- sCorrect(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
 
-e.gls.ML <- gls(neocortex.log ~ group, method = "ML", weight = varIdent(form =~1|group), data = dd)
-vcov(e.gls.ML)
-sigma(e.gls.ML)^2
-vcov2(e.gls, ssc = "Cox")
-
-
-var(dd[dd$group==1,"neocortex.log"])
-var(dd[dd$group==2,"neocortex.log"])
-
-
-sum(table(dd$group)/rev(diag(eSSC.gls$sCorrect$moment$Omega)))
-sum(table(dd$group)/rev(diag(eSSC.gls$sCorrect$ssc$Omega0)))
-
-eSSC.gls <- sCorrect(e.gls, ssc = "Cox")
-
-eSSC.gls$sCorrect$param
-eSSC.gls$sCorrect$information
-eSSC.gls$sCorrect$vcov.param
-
-
-GS <- vcov(gls(neocortex.log ~ 1,
-               method = "REML", weight = varIdent(form =~1|group), data = dd))
-
-eSSC.gls <- sCorrect(e.gls, ssc = "Cox")
-
-expect_equal(vcov(e.gls),
-             eSSC.gls$sCorrect$vcov.param)
-
-summary2(xx)$tTable
-
-xx$sCorrect$information
-xx$sCorrect$vcov.param
-
-e.lm <- gls(neocortex.log ~ 1, weight = varIdent(form =~1|group), method = "ML", data = dd)
-
-e.lm <- gls(neocortex.log ~ 1, method = "ML", data = dd)
-vcov(e.lm)
-vcov2(e.lm, ssc = "Cox")
-
-
-vcov(e.gls)
-sigma(e.gls)^2/(NROW(dd)-e.gls$dim$p)
-sigma(e.gls)^2/NROW(dd)
-
-
-
-summary(e.gls)$tTable
+    expect_equal(test$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.54761303, "Y2~~Y2" = 1.01146135),
+                 tol = 1e-6)
+    expect_equal(test2$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.50602817, "Y2~~Y2" = 0.95769503),
+                 tol = 1e-6)
+    
+})
 
 
 ######################################################################

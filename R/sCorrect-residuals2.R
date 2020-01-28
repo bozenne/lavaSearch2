@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: jan 27 2020 (09:53) 
+## Last-Updated: jan 27 2020 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 104
+##     Update #: 105
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -135,10 +135,6 @@ residuals2.sCorrect <- function(object, type = "response", format = "wide"){
         return(residualsL[reorder,"residual"])
     }
 }
-
-## * residuals.sCorrect
-#' @rdname residuals2
-residuals.sCorrect <- residuals2.sCorrect
 
 ## * .normalizeResiduals
 .normalizeResiduals <- function(residuals, Omega, type,

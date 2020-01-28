@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 27 2020 (11:51) 
+## Last-Updated: jan 27 2020 (18:27) 
 ##           By: Brice Ozenne
-##     Update #: 104
+##     Update #: 106
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,6 +46,7 @@ dLred$variable.factor <- as.factor(dLred$variable)
 e.lm <- lm(Y1~X1+X2, data = d)
 e.gls <- gls(Y1~X1+X2, data = d)
 e.lvm <- estimate(lvm(Y1~X1+X2), data = d)
+
 
 test_that("linear regression - residual correction equivalent to REML", {
     eSSC1.lm <- sCorrect(e.lm, ssc = "residuals")

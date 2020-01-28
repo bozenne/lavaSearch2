@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:42) 
+## Last-Updated: jan 27 2020 (16:16) 
 ##           By: Brice Ozenne
-##     Update #: 130
+##     Update #: 143
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -30,11 +30,12 @@
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param ... [logical] arguments passed to lower level methods.
 #' 
 #' @concept small sample inference
 #' @export
 `effects2` <-
-  function(object, link, conf.level, ssc, df, transform) UseMethod("effects2")
+  function(object, ...) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
@@ -42,12 +43,16 @@
 ## * effects2.lvmfit
 #' @rdname effects2
 #' @export
-effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
-                            ssc = lava.options()$ssc, df = lava.options()$df){
+effects2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
-    if(is.null(object$sCorrect) || !identical(object$sCorrect$ssc$type, ssc) || !identical(object$sCorrect$df, df)){
-        object <- sCorrect(object, ssc = ssc, df = df)
-    }
+    object.SSC <- sCorrect(object, ssc = ssc, df = df)    
+    return(effects(object.SSC, ...))
+
+}
+
+## * effects2.sCorrect
+#' @rdname effects2
+effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL, ...){
 
     ## ** compute product
     n.link <- length(link)
@@ -82,17 +87,17 @@ effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
                 iN.node <- length(iNode)
                 iLink <- paste0(iNode[-1], lava.options()$symbols[1], iNode[-iN.node], collpase = "")
 
-                if(any(iLink %in% allCoef$originalLink == FALSE)){
+                if(any(iLink %in% allCoef$name == FALSE)){
                     stop("Part of the path could not be identified \n")
                 }
-                if(any(allCoef$type[allCoef$originalLink %in% iLink] != "regression")){
+                if(any(allCoef$type[allCoef$name %in% iLink] != "regression")){
                     stop("Part of the path does not correspond to a regression link \n")
                 }
                 if(any(length(iLink)!=2)){
                     stop("Only implemented for path of length 2 \n")
                 }                
 
-                test.noconstrain <- is.na(allCoef$value[allCoef$originalLink %in% iLink])
+                test.noconstrain <- iLink %in% allCoef$originalLink
                 if(all(test.noconstrain)){
                     out <- rbind(out,
                                  .deltaMethod_product(mu = mu, Sigma = Sigma, dSigma = dSigma, link = iLink)
@@ -112,6 +117,7 @@ effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
                               "statistic" = as.double(iEffect/iEffect.se),
                               "p.value" = as.numeric(NA)
                               )
+
                     if(is.infinite(iRow["df"])){                       
                         iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]))))
                     }else{
@@ -149,14 +155,6 @@ effects2.lvmfit <- function(object, link, conf.level = 0.95, transform = NULL,
     
     ## ** export    
     return(out)
-}
-
-## * effects2.sCorrect
-#' @rdname effects2
-effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL,
-                              ssc = object$sCorrect$ssc$type, df = object$sCorrect$df){
-    class(object) <- setdiff(class(object),"sCorrect")
-    return(effects2(object, link = link, conf.level = conf.level, transform = transform, ssc = ssc, df = df))
 
 }
 

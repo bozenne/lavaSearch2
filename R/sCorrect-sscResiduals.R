@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:39) 
+## Last-Updated: jan 28 2020 (18:04) 
 ##           By: Brice Ozenne
-##     Update #: 1061
+##     Update #: 1097
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,14 +22,18 @@
 
     ## ** extract info
     endogenous <- object$sCorrect$endogenous
+    n.endogenous <- length(endogenous)
     latent <- object$sCorrect$latent
+    n.latent <- length(latent)
     
     type <- object$sCorrect$skeleton$type
-    type <- type[!is.na(type$param),]
-    type <- type[type$detail %in% c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","sigma2","sigma2k","cor"),]
+
+    index.var <- which(type$detail %in% c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","sigma2","sigma2k","cor"))
+    index.param <- which(!is.na(type$param))
+    type.param <- type[intersect(index.var,index.param),,drop=FALSE]
 
     Omega <- object$sCorrect$moment$Omega
-    name.var <- unique(type$param)
+    name.var <- unique(type.param$param)
     n.var <- length(name.var)
 
     ## ** subset residual variance-covariance
@@ -42,31 +46,63 @@
                       sep = "")
     n.rhs <- length(name.rhs)
 
+    ## ** fixed part of the variance-covariance matrix
+    index.value <- which(!is.na(type$value))
+    index.var2 <- which(type$detail %in% c("Lambda","Sigma_var","Sigma_cov","Psi_var","Psi_cov"))
+    type.var.constrain <- type[intersect(index.value, index.var2),,drop=FALSE]
+
+    Omega.constrain <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
+                              dimnames = list(endogenous,endogenous))
+
+    if(NROW(type.var.constrain)>0){
+        value <- object$sCorrect$skeleton$value
+        Sigma.constrain <- value$Sigma
+        Lambda.constrain <- value$Lambda
+        if("B" %in% names(value)){
+            iIB.constrain <- solve(diag(1, nrow = n.latent, ncol = n.latent) - value$B)
+        }else{
+            iIB.constrain <- diag(1, nrow = n.latent, ncol = n.latent)
+        }
+        Psi.constrain <- value$Psi
+        
+        if("Sigma" %in% names(value)){
+            addSigma <- Sigma.constrain
+            addSigma[is.na(addSigma)] <- 0
+            Omega.constrain <- Omega.constrain + addSigma
+        }
+        if("Psi" %in% names(value)){
+            addPsi <- t(Lambda.constrain) %*% t(iIB.constrain) %*% Psi.constrain %*% iIB.constrain %*% Lambda.constrain
+            addPsi[is.na(addPsi)] <- addPsi
+            Omega.constrain <- Omega.constrain + addPsi
+        }
+
+    }
+
     ## ** Design matrix
     if(any(type$detail %in% c("sigma2","sigma2k","cor")) == FALSE){
         A <- matrix(0, nrow = n.rhs, ncol = n.var,
                     dimnames = list(name.rhs, name.var))
 
         ## *** Sigma_var and Sigma_cov
-        if(any(type$detail %in% c("Sigma_var","Sigma_cov"))){
-            type.Sigma <- type[type$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
+        if(any(type.param$detail %in% c("Sigma_var","Sigma_cov"))){
+            type.Sigma <- type.param[type.param$detail %in% c("Sigma_var","Sigma_cov"),,drop=FALSE]
             for(iRow in 1:NROW(type.Sigma)){ ## iRow <- 1 
                 A[paste0(type.Sigma[iRow,"Y"],"~~",type.Sigma[iRow,"X"]),type.Sigma[iRow,"param"]] <- 1
             }
         }
     }else{
-        name.param.sigma2 <- unique(type[type$detail=="sigma2","param"])
-        name.param.sigma2k <- unique(type[type$detail=="sigma2k","param"])
-        name.param.cor <- unique(type[type$detail=="cor","param"])
-        name.param.tau <- unique(type[type$detail=="Psi_var","param"])
+        name.param.sigma2 <- unique(type.param[type.param$detail=="sigma2","param"])
+        name.param.sigma2k <- unique(type.param[type.param$detail=="sigma2k","param"])
+        name.param.cor <- unique(type.param[type.param$detail=="cor","param"])
+        name.param.tau <- unique(type.param[type.param$detail=="Psi_var","param"])
         
-        if(any(type$detail %in% "Psi_var")){
-            if("cor" %in% type$detail){
+        if(any(type.param$detail %in% "Psi_var")){
+            if("cor" %in% type.param$detail){
                 stop("Invalid specification of the residual variance covariance matrix \n",
                      "Consider using \"gls\" instead of \"lme\" \n")
             }else{
                 A <- list(tau = function(Omega){mean(lower.tri(Omega))})
-                if("sigma2k" %in% type$detail){
+                if("sigma2k" %in% type.param$detail){
                     A$sigma2 <- function(Omega){Omega[1,1]-mean(lower.tri(Omega))}
                     A$sigma2k <- function(Omega){sqrt(diag(Omega-mean(lower.tri(Omega)))/(Omega[1,1]-mean(lower.tri(Omega))))[-1]}
                 }else{
@@ -75,13 +111,13 @@
             }                
         }else{
             A <- list()
-            if("sigma2k" %in% type$detail){
+            if("sigma2k" %in% type.param$detail){
                 A$sigma2 <- function(Omega){Omega[1,1]}
                 A$sigma2k <- function(Omega){sqrt(diag(Omega)/Omega[1,1])[-1]}
             }else{
                 A$sigma2 <- function(Omega){mean(diag(Omega))}
             }
-            if("cor" %in% type$detail){
+            if("cor" %in% type.param$detail){
                 if(length(name.param.cor)>1){
                     A$cor <- function(Omega){cov2cor(Omega)[upper.tri(Omega)]}
                 }else{
@@ -92,8 +128,8 @@
     }
 
     ## *** Psi_var and Psi_cov
-    if(any(type$detail %in% c("Psi_var","Psi_cov"))){
-        type.Psi <- type[type$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
+    if(any(type.param$detail %in% c("Psi_var","Psi_cov"))){
+        type.Psi <- type.param[type.param$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
         index.Psi <- cbind(row = match(type.Psi$X, latent),
                            col = match(type.Psi$Y, latent))
         rownames(index.Psi) <- type.Psi$param
@@ -109,6 +145,7 @@
                 name.rhs = name.rhs,
                 name.var = name.var,
                 A = A,
+                Omega.constrain = Omega.constrain,
                 index.Psi = index.Psi
                 ))
 }
@@ -121,11 +158,12 @@
 #' @name estimate2
 #' 
 #' @keywords internal
-.sscResiduals <- function(object, param, algorithm = "2"){
+.sscResiduals <- function(object, algorithm = "2"){
     algorithm <- match.arg(as.character(algorithm), choices = c("1","2"))
 
     ## ** current values
     Omega0 <- object$sCorrect$ssc$Omega0 ## non bias corrected value of Omega
+    Omega.constrain <- object$sCorrect$ssc$Omega.constrain ## non bias corrected value of Omega
     param0 <- object$sCorrect$ssc$param0 ## non bias corrected value of the model parameters
     residuals0 <- object$sCorrect$ssc$residuals0 ## non bias corrected value of the model residuals
     
@@ -146,6 +184,10 @@
     n.pattern <- length(name.pattern)
     unique.pattern <- object$sCorrect$missing$unique.pattern
 
+    if(length(param.mean)==0){
+        stop("No mean parameter. No small sample correction needed. \n",
+             "Consider setting  \'ssc\' to NA. \n")
+    }
     ## ** Step (i-ii) compute individual and average bias
     dmu <- aperm(abind::abind(dmu[param.mean], along = 3), perm = c(3,2,1))
     vcov.muparam <- vcov.param[param.mean,param.mean,drop=FALSE]
@@ -161,7 +203,11 @@
         
         for(iC in missing.pattern[[iP]]){ ## iC <- 1
             ## individual bias
-            iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
+            if(length(param.mean)==1){
+                iPsi <- vcov.muparam[1,1] * tcrossprod(dmu[,iY,iC])
+            }else{
+                iPsi <- t(dmu[,iY,iC])  %*% vcov.muparam %*% dmu[,iY,iC]
+            }
 
             ## ls.Psi[[iC]] <- iPsi
             ## cumulated bias            
@@ -213,7 +259,7 @@
     if(is.matrix(A)){
         ## *** right hand side of the equation
         index.upper.tri <- object$sCorrect$ssc$index.upper.tri[,"index"]
-        eq.rhs <- setNames(Omega.adj[index.upper.tri],
+        eq.rhs <- setNames((Omega.adj-Omega.constrain)[index.upper.tri],
                            object$sCorrect$ssc$name.rhs)
 
         ## *** left hand side of the equation

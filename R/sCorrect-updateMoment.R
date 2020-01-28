@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: jan 24 2020 (18:07) 
+## Last-Updated: jan 28 2020 (11:52) 
 ##           By: Brice Ozenne
-##     Update #: 195
+##     Update #: 196
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,7 +37,6 @@ updateMoment <- function(skeleton, value, toUpdate,
             }else{
                 index.update <- which(!is.na(skeleton[[iUpdate]]))
                 value[[iUpdate]][index.update] <- param[skeleton[[iUpdate]][index.update]]
-                skeleton$Sigma
             }
         }
     }
