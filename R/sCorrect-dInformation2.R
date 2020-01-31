@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 27 2020 (18:14) 
+## Last-Updated: jan 31 2020 (13:37) 
 ##           By: Brice Ozenne
-##     Update #: 328
+##     Update #: 337
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,7 +31,7 @@
 
     if(lava.options()$debug){cat(".dInformation2\n")}
     symmetrize <- TRUE
-    
+
     ## ** Prepare
     n.param <- length(name.param)
     n.pattern <- length(name.pattern)
@@ -77,7 +77,7 @@
         iY <- which(unique.pattern[iP,]==1)
 
         iOmegaM1 <- OmegaM1[[iPattern]]
-        iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
+        iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
         idmu <- .subsetList(dmu, indexRow = iIndex, indexCol = iY)
         idOmega <- .subsetList(dOmega, indexRow = iY, indexCol = iY)
         id2mu <- .subsetList2(d2mu, indexRow = iIndex, indexCol = iY)
@@ -89,7 +89,7 @@
                 iName1 <- grid.3varD1[iGrid,"X"]
                 iName2 <- grid.3varD1[iGrid,"Y"]
                 iName3 <- grid.3varD1[iGrid,"Z"]
-            
+
                 ## term 1
                 iDiag1 <- diag(iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName2]] %*% iOmegaM1 %*% idOmega[[iName1]])
                 iDiag2 <- diag(iOmegaM1 %*% idOmega[[iName2]] %*% iOmegaM1 %*% idOmega[[iName3]] %*% iOmegaM1 %*% idOmega[[iName1]])
@@ -246,7 +246,7 @@
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
 
-        iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
+        iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
         for(iGrid in index.Nduplicated){ # iGrid <- 1
             iName1 <- grid.dInformation[iGrid,"X"]
             iName2 <- grid.dInformation[iGrid,"Y"]

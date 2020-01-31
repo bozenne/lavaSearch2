@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 27 2020 (13:36) 
+## last-updated: jan 31 2020 (09:57) 
 ##           By: Brice Ozenne
-##     Update #: 2323
+##     Update #: 2327
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -112,7 +112,7 @@ score2.sCorrect <- function(object, indiv = FALSE, as.lava = TRUE){
         }
         
         ## *** Compute score relative to the variance-covariance coefficients
-        for(iP in name.varparam){ # iP <- "Y2~eta"
+        for(iP in name.varparam){ # iP <- "eta~~eta"
             term2 <- - 1/2 * tr(iOmegaM1 %*% dOmega[[iP]][iY,iY,drop=FALSE])            
             term3 <- 1/2 * rowSums(iEpsilon.OmegaM1 %*% dOmega[[iP]][iY,iY,drop=FALSE] * iEpsilon.OmegaM1)
             out.score[iIndex,iP] <- out.score[iIndex,iP] + as.double(term2) + term3

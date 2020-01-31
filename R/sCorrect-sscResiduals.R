@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 28 2020 (18:04) 
+## Last-Updated: jan 31 2020 (10:04) 
 ##           By: Brice Ozenne
-##     Update #: 1097
+##     Update #: 1102
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,7 +48,7 @@
 
     ## ** fixed part of the variance-covariance matrix
     index.value <- which(!is.na(type$value))
-    index.var2 <- which(type$detail %in% c("Lambda","Sigma_var","Sigma_cov","Psi_var","Psi_cov"))
+    index.var2 <- which(type$detail %in% c("Lambda","B","Sigma_var","Sigma_cov","Psi_var","Psi_cov"))
     type.var.constrain <- type[intersect(index.value, index.var2),,drop=FALSE]
 
     Omega.constrain <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
@@ -64,15 +64,14 @@
             iIB.constrain <- diag(1, nrow = n.latent, ncol = n.latent)
         }
         Psi.constrain <- value$Psi
-        
-        if("Sigma" %in% names(value)){
+        if(any(c("Sigma_var","Sigma_cov") %in% type.var.constrain$detail)){
             addSigma <- Sigma.constrain
             addSigma[is.na(addSigma)] <- 0
             Omega.constrain <- Omega.constrain + addSigma
         }
-        if("Psi" %in% names(value)){
+        if(any(c("Lambda","B","Psi_var","Psi_cov") %in% type.var.constrain$detail)){
             addPsi <- t(Lambda.constrain) %*% t(iIB.constrain) %*% Psi.constrain %*% iIB.constrain %*% Lambda.constrain
-            addPsi[is.na(addPsi)] <- addPsi
+            addPsi[is.na(addPsi)] <- 0
             Omega.constrain <- Omega.constrain + addPsi
         }
 

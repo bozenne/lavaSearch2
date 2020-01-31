@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 28 2020 (11:54) 
+## last-updated: jan 31 2020 (12:07) 
 ##           By: Brice Ozenne
-##     Update #: 865
+##     Update #: 866
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -350,7 +350,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef = NULL, ...
     out$detail <- factor(out$detail,
                          levels = c("nu","alpha","K","Gamma","Lambda","B","Sigma_var","Sigma_cov","sigma2","sigma2k","cor","Psi_var","Psi_cov",NA))
     out <- out[order(out$detail,out$param),]
-    df.param$detail <- as.character(df.param$detail)
+    out$detail <- as.character(out$detail)
     return(out)
 }
 

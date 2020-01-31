@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 19 2019 (10:17) 
 ## Version: 
-## Last-Updated: jan 28 2020 (18:06) 
+## Last-Updated: jan 31 2020 (10:59) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 22
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -108,16 +108,33 @@ latent(m) <- ~eta
 
 e <- estimate(m, dd)
 
-test_that("Comparing the two corrections (residuals,Cox): simular but not equal values", {
-    test <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
-    test2 <- sCorrect(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
+test_that("bug in version 1.5.4 (incorrect handling of the constrain when computing Omega)", {
+    
+    test.res1 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
+    test.cox1 <- sCorrect(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
 
-    expect_equal(test$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.54761303, "Y2~~Y2" = 1.01146135),
+    expect_equal(test.res1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.54761303, "Y2~~Y2" = 1.01146135),
                  tol = 1e-6)
-    expect_equal(test2$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.50602817, "Y2~~Y2" = 0.95769503),
+    expect_equal(test.cox1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.50602817, "Y2~~Y2" = 0.95769503),
                  tol = 1e-6)
     
 })
+
+m <- lvm(Y1[mu:sigma1] ~ 1,
+         Y2[mu:sigma2] ~ 1)
+e <- estimate(m, dd)
+
+## test_that("bug in version 1.5.4 (incorrect handling of the constrain when computing Omega)", {
+    
+##     test.res1 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
+##     test.res2 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "numeric")
+##     summary2(test.res1)$table2
+##     summary2(test.res2)$table2
+##     range( test.res1$sCorrect$dInformation - test.res1$sCorrect$dInformation )
+    
+    
+## })
+
 
 
 ######################################################################

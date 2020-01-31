@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: jan 27 2020 (09:56) 
+## Last-Updated: jan 31 2020 (10:47) 
 ##           By: Brice Ozenne
-##     Update #: 113
+##     Update #: 117
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -119,23 +119,23 @@ leverage2.sCorrect <- function(object, format = "wide"){
         iOmegaM1.epsilon <- epsilon[iIndex,iY,drop=FALSE] %*% iOmegaM1
             
         ## derivative of the score regarding Y
-        for(iP in 1:n.param.mean){
-
-            if(param.mean[iP] %in% param.hybrid){
-                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[param.mean[iP]]][iY,iY,drop=FALSE] %*% iOmegaM1
+        for(iParam in param.mean){
+            
+            if(iParam %in% param.hybrid){
+                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[iParam]][iY,iY,drop=FALSE] %*% iOmegaM1
             }else{
                 iOmegaM1.epsilon.dOmega.iOmegaM1 <- 0
             }
 
             if(length(iY)>1){
-                scoreY[iIndex,iY,param.mean[iP]] <- t(dmu[param.mean[iP],iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+                scoreY[iIndex,iY,iParam] <- t(dmu[iParam,iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
             }else{
-                scoreY[iIndex,iY,param.mean[iP]] <- dmu[param.mean[iP],iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
+                scoreY[iIndex,iY,iParam] <- dmu[iParam,iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
             }
         }
 
         ## leverage
-        for(iiY in iY){
+        for(iiY in iY){ ## iiY <- iY[2]
             if(n.param.mean==1){                
                 leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * vcov.param[param.mean,param.mean] * scoreY[iIndex,iiY,]
             }else{

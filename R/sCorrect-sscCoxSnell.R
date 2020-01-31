@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:47) 
+## Last-Updated: jan 31 2020 (09:50) 
 ##           By: Brice Ozenne
-##     Update #: 172
+##     Update #: 174
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -43,7 +43,7 @@
     
     e.lm <- lm.fit(y = Y, x = X)
     newparam <- param - e.lm$coefficient
-    print(e.lm$coefficient)
+    ## print(e.lm$coefficient)
     
     ## ** export
     attr(newparam,"JJK") <- JJK

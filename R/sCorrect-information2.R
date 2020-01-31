@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: jan 27 2020 (13:35) 
+## Last-Updated: jan 31 2020 (13:36) 
 ##           By: Brice Ozenne
-##     Update #: 369
+##     Update #: 378
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -81,7 +81,7 @@ information2.sCorrect <- function(object, as.lava = TRUE){
                           grid.mean, grid.var, name.param,
                           leverage, n.cluster){
     if(lava.options()$debug){cat(".information2\n")}
-    
+
     ## ** Prepare
     n.grid.mean <- NROW(grid.mean)
     n.grid.var <- NROW(grid.var)
@@ -108,7 +108,7 @@ information2.sCorrect <- function(object, as.lava = TRUE){
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
 
-        iN.corrected <- n.cluster - colSums(leverage[iIndex,iY,drop=FALSE])
+        iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
 
         ## *** Information relative to the mean parameters
         for(iG in index.mean){ # iG <- 1
@@ -119,9 +119,10 @@ information2.sCorrect <- function(object, as.lava = TRUE){
         }
 
         ## *** Information realtive to the variance parameters
-        for(iG in index.var){ # iG <- 1
+        for(iG in index.var){ # iG <- 2
             iP1 <- grid.var[iG,1]
             iP2 <- grid.var[iG,2]
+
             iDiag <- diag(iOmegaM1 %*% dOmega[[iP1]][iY,iY,drop=FALSE] %*% iOmegaM1 %*% dOmega[[iP2]][iY,iY,drop=FALSE])
             Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.corrected)
         }        
