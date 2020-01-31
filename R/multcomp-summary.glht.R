@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: jan 27 2020 (16:42) 
+## Last-Updated: jan 31 2020 (14:26) 
 ##           By: Brice Ozenne
-##     Update #: 87
+##     Update #: 88
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,18 +38,18 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, ...){
         }
     }
 
-    output$test2 <- data.frame(matrix(NA, nrow = n.hypo, ncol = 7,
+    output$table2 <- data.frame(matrix(NA, nrow = n.hypo, ncol = 7,
                                       dimnames = list(paste0(name.hypo, " == ", output$rhs),
                                                       c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
                                       ), stringsAsFactors = FALSE)
-    output$test2$estimate <- output$test$coefficients
-    output$test2$std.error <- output$test$sigma
-    output$test2$df <- output$df
-    output$test2$df[output$test2$df==0] <- Inf
-    output$test2$ci.lower <- output$confint[,"lwr"]
-    output$test2$ci.upper <- output$confint[,"upr"]
-    output$test2$statistic <- output$test$tstat
-    output$test2$p.value <- output$test$pvalues
+    output$table2$estimate <- output$test$coefficients
+    output$table2$std.error <- output$test$sigma
+    output$table2$df <- output$df
+    output$table2$df[output$table2$df==0] <- Inf
+    output$table2$ci.lower <- output$confint[,"lwr"]
+    output$table2$ci.upper <- output$confint[,"upr"]
+    output$table2$statistic <- output$test$tstat
+    output$table2$p.value <- output$test$pvalues
 
     class(output) <- append(c("summary.glht2","summary.glht"),keep.class)
     return(output)
@@ -99,7 +99,7 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
         cat("\n")
     }
     cat("Linear Hypotheses:\n")
-    stats::printCoefmat(object$test2[,columns,drop=FALSE], digits = digits,
+    stats::printCoefmat(object$table2[,columns,drop=FALSE], digits = digits,
                         has.Pvalue = "p.value" %in% columns, P.values = "p.value" %in% columns, eps.Pvalue = 10^{-digits.p.value})
 
     cat(txt.type,"\n")
