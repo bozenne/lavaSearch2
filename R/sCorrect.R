@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  6 2020 (13:54) 
+## Last-Updated: feb  7 2020 (12:12) 
 ##           By: Brice Ozenne
-##     Update #: 1884
+##     Update #: 1885
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -399,30 +399,21 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                                        n.cluster = object$sCorrect$cluster$n.cluster)
 
         ## delta method
-        object$sCorrect$dVcov.param <- array(0, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
-        for(iP in name.param){ ## iP <- "Y1"
-            if(any(object$sCorrect$dInformation[,,iP]!=0)){
-                object$sCorrect$dVcov.param[,,iP] <- - object$sCorrect$vcov.param %*% object$sCorrect$dInformation[,,iP] %*% object$sCorrect$vcov.param
-            }
-        }
+        object$sCorrect$dVcov.param <- .dVcov.param(vcov.param = object$sCorrect$vcov.param,
+                                                    dInformation = object$sCorrect$dInformation,
+                                                    n.param = n.param,
+                                                    name.param = name.param)
     }
 
     ## ** dRvcov.param  (robust variance, analytic)
     if((derivative == "analytic") && dVcov.robust){
 
-        object$sCorrect$dRvcov.param <- array(0, dim = c(n.param,n.param,n.param), dimnames = list(name.param,name.param,name.param))
-        score2_vcov.param <- crossprod(object$sCorrect$score) %*% object$sCorrect$vcov.param
-        score_vcov.param <- object$sCorrect$score %*% object$sCorrect$vcov.param
-        
-        for(iP in name.param){ ## iP <- 1
-            if(any(object$sCorrect$dVcov.param[,,iP]!=0)){
-                term1 <- object$sCorrect$dVcov.param[,,iP] %*% score2_vcov.param
-            }else{
-                term1 <- matrix(0, nrow = n.param, ncol = n.param)
-            }
-            term2 <- object$sCorrect$vcov.param %*% object$sCorrect$hessian[iP,,] %*% score_vcov.param
-            object$sCorrect$dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
-        }
+        object$sCorrect$dRvcov.param <- .dRvcov.param(score = object$sCorrect$score,
+                                                      hessian = object$sCorrect$hessian,
+                                                      vcov.param = object$sCorrect$vcov.param,
+                                                      dVcov.param = object$sCorrect$dVcov.param,
+                                                      n.param = n.param,
+                                                      name.param = name.param)
     }
 
     ## ** dVcov.param and dRvcov.param (numeric derivatives)

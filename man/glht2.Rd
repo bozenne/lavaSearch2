@@ -2,29 +2,47 @@
 % Please edit documentation in R/multcomp.R
 \name{glht2}
 \alias{glht2}
+\alias{glht2.lm}
+\alias{glht2.gls}
+\alias{glht2.lme}
 \alias{glht2.lvmfit}
+\alias{glht2.sCorrect}
 \alias{glht2.mmm}
 \title{General Linear Hypothesis}
 \usage{
-glht2(model, linfct, rhs, bias.correct, df, robust, cluster)
+glht2(object, ...)
 
-\method{glht2}{lvmfit}(model, linfct, rhs = 0, bias.correct = TRUE,
-  df = TRUE, robust = FALSE, cluster = NULL)
+\method{glht2}{lm}(object, ssc = lava.options()$ssc,
+  df = lava.options()$df, ...)
 
-\method{glht2}{mmm}(model, linfct, rhs = 0, bias.correct = TRUE,
-  df = TRUE, robust = FALSE, cluster = NULL)
+\method{glht2}{gls}(object, ssc = lava.options()$ssc,
+  df = lava.options()$df, ...)
+
+\method{glht2}{lme}(object, ssc = lava.options()$ssc,
+  df = lava.options()$df, ...)
+
+\method{glht2}{lvmfit}(object, ssc = lava.options()$ssc,
+  df = lava.options()$df, ...)
+
+\method{glht2}{sCorrect}(object, linfct, rhs = 0, robust = FALSE,
+  cluster = NULL, ...)
+
+\method{glht2}{mmm}(object, linfct, rhs = 0, robust = FALSE,
+  cluster = NULL, ...)
 }
 \arguments{
-\item{model}{a \code{lvmfit} or \code{mmm} object.
+\item{object}{a \code{lvmfit} or \code{mmm} object.
 The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.}
+
+\item{...}{[logical] arguments passed to lower level methods.}
+
+\item{ssc}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
+
+\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?}
 
 \item{linfct}{[matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.}
 
 \item{rhs}{[vector] the right hand side of the linear hypotheses to be tested.}
-
-\item{bias.correct}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
-
-\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?}
 
 \item{robust}{[logical] should robust standard error be used? 
 Otherwise rescale the influence function with the standard error obtained from the information matrix.}
@@ -71,7 +89,7 @@ lvmZ <- estimate(lvm(c(Y1,Y2,Y3) ~ eta, eta ~ E),
 e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 
 #### create contrast matrix ####
-resC <- createContrast(e.mmm, var.test = "E", add.variance = TRUE)
+resC <- createContrast(e.mmm, linfct = "E", add.variance = TRUE)
 
 #### adjust for multiple comparisons ####
 e.glht2 <- glht2(e.mmm, linfct = resC$contrast, df = FALSE)

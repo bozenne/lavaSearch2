@@ -2,12 +2,24 @@
 % Please edit documentation in R/coefType.R
 \name{coefType}
 \alias{coefType}
+\alias{coefType.lm}
+\alias{coefType.gls}
+\alias{coefType.lme}
 \alias{coefType.lvm}
 \alias{coefType.lvmfit}
 \alias{coefType.multigroup}
 \title{Extract the Type of Each Coefficient}
 \usage{
 coefType(object, as.lava, ...)
+
+\method{coefType}{lm}(object, data = NULL, indexOmega = NULL,
+  coef = NULL, ...)
+
+\method{coefType}{gls}(object, data = NULL, indexOmega = NULL,
+  coef = NULL, ...)
+
+\method{coefType}{lme}(object, data = NULL, indexOmega = NULL,
+  coef = NULL, ...)
 
 \method{coefType}{lvm}(object, as.lava = TRUE, data = NULL, ...)
 

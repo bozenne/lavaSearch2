@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: feb  7 2020 (10:18) 
+## Last-Updated: feb  7 2020 (17:28) 
 ##           By: Brice Ozenne
-##     Update #: 159
+##     Update #: 193
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -53,97 +53,107 @@ effects2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options(
 
 ## * effects2.sCorrect
 #' @rdname effects2
-effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL, ...){
+effects2.sCorrect <- function(object, link, conf.level = 0.95, robust = FALSE, transform = NULL, ...){
 
-    ## ** compute product
+    ## ** extract information
     n.link <- length(link)
     name.link <- names(link)
+    allCoef.type <- coefType(object, as.lava = FALSE)
     
-    name.coef <- names(coef(object))
-    link.direct <- link[link %in% name.coef]
-    link.other <- setdiff(link, link.direct)
-
-    object.summary2 <- summary2(object, ssc = ssc, df = df)$coef 
-
-    out <- NULL
-    if(length(link.direct)>0){        
-        out <- rbind(out,
-                     object.summary2[link.direct,])
-    }
-
-    if(length(link.other)>0){
-        allCoef <- coefType(object, as.lava = FALSE)
-        mu <- setNames(object.summary2[,"Estimate"],rownames(object.summary2))
-        mu.se <- setNames(object.summary2[,"Std. Error"],rownames(object.summary2))
-        mu.df <- setNames(object.summary2[,"df"],rownames(object.summary2))
-        Sigma <- vcov2(object)
-        dSigma <- object$sCorrect$dVcov.param
+    object.coef <- coef2(object)
+    object.iid <- iid2(object, robust = robust)
+    object.dVcov.param <- object$sCorrect$dVcov.param
+    object.vcov.param <- vcov2(object)
         
-        for(iL in 1:length(link.other)){ ## iL <- 1
-            iLink <- link.other[iL]
-            iPath <- lava::path(object, to = as.formula(iLink))
-            if(length(iPath$path[[1]])==0){
-                stop("No path found \n")
-            }else{
-                iNode <- iPath$path[[1]]
-                iN.node <- length(iNode)
-                iLink <- paste0(iNode[-1], lava.options()$symbols[1], iNode[-iN.node], collpase = "")
+    name.coef <- names(object.coef)
+    n.coef <- length(name.coef)
+    n.obs <- NROW(object.iid)
+    ## ** identify paths
+    ls.link <- setNames(vector(mode = "list", length = n.link), link)
+    
+    for(iL in 1:n.link){ ## iL <- 1
+        iLink <- link[iL]
+        iPath <- lava::path(object, to = as.formula(iLink))
 
-                if(any(iLink %in% allCoef$name == FALSE)){
-                    stop("Part of the path could not be identified \n")
-                }
-                if(any(allCoef$type[allCoef$name %in% iLink] != "regression")){
-                    stop("Part of the path does not correspond to a regression link \n")
-                }
-                if(any(length(iLink)!=2)){
-                    stop("Only implemented for path of length 2 \n")
-                }                
+        if(length(iPath$path[[1]])==0){
+            stop("No path found \n")
+        }else{
+            iNode <- iPath$path[[1]]
+            iN.node <- length(iNode)
+            ls.link[[iL]] <- paste0(iNode[-1], lava.options()$symbols[1], iNode[-iN.node], collpase = "")
 
-                test.noconstrain <- iLink %in% allCoef$originalLink
-                if(all(test.noconstrain)){
-                    out <- rbind(out,
-                                 .deltaMethod_product(mu = mu, Sigma = Sigma, dSigma = dSigma, link = iLink)
-                                 )
-                }else{
-                    iLink.NA <- iLink[test.noconstrain==FALSE]
-                    iLink.NNA <- iLink[test.noconstrain==TRUE]
-                    iEffect <- prod(mu[iLink])
-                    iEffect.se <- mu.se[iLink.NNA] * mu[iLink.NA]
-                    iEffect.df <- mu.df[iLink.NNA]
-
-                    iRow <- c("estimate" = as.double(iEffect),                                  
-                              "std.error" = as.double(iEffect.se),
-                              "df" = as.double(iEffect.df),
-                              "ci.lower" = as.numeric(NA),
-                              "ci.upper" = as.numeric(NA),
-                              "statistic" = as.double(iEffect/iEffect.se),
-                              "p.value" = as.numeric(NA)
-                              )
-
-                    if(is.infinite(iRow["df"])){                       
-                        iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]))))
-                    }else{
-                        iRow["p.value"] <- as.double(2*(1-pt(abs(iRow["statistic"]), df = iRow["df"])))
-                    }
-                    out <- rbind(out,iRow)                    
-                }
-                
+            if(any(ls.link[[iL]] %in% allCoef.type$name == FALSE)){
+                stop("Part of the path could not be identified \n")
             }
-
-        }            
+            if(any(allCoef.type$type[allCoef.type$name %in% ls.link[[iL]]] != "regression")){
+                stop("Part of the path does not correspond to a regression link \n")
+            }
+        }
+    }
+    ## ** apply chain rule over the path
+    vec.beta <- setNames(rep(NA, length = n.link), name.link)
+    vec.sd <- setNames(rep(NA, length = n.link), name.link)
+    vec.df <- setNames(rep(NA, length = n.link), name.link)
+    M.iid <- matrix(NA, nrow = n.obs, ncol = n.link,
+                    dimnames = list(NULL, name.link))
+    M.dVcov <- matrix(NA, nrow = n.coef, ncol = n.link,
+                    dimnames = list(name.coef, name.link))
+    
+    for(iL in 1:n.link){ ## iL <- 1
         
-    }
-    rownames(out) <- c(link.direct,link.other)
+        iLink <- ls.link[[iL]]
+        vec.beta[iL] <- object.coef[iLink[1]]
+        M.iid[,iL] <- object.iid[,iLink[1]]
+        M.dVcov[,iL] <- object.dVcov.param[iLink[1],iLink[1],]
+        
+        if(length(iLink)>1){
+            for(iL2 in 2:length(iLink)){ ## iL2 <- 2
+                iType <- allCoef.type[which(iLink[iL2] == allCoef.type$name),]
+                if(!is.na(iType$value)){
+                    vec.beta[iL] <- vec.beta[iL] * iType$value
+                    M.iid[,iL] <- M.iid[,iL] * iType$value
+                    M.dVcov[,iL] <- M.dVcov[,iL] * iType$value^2
+                }else{
+                    betaOLD <- vec.beta[iL]
+                    betaNEW <- object.coef[iLink[iL2]]
+                    iidOLD <- M.iid[,iL]
+                    iidNEW <- object.iid[,iLink[iL2]]
+                    varOLD <- sum(iidOLD^2)
+                    varNEW <- sum(iidNEW^2)
+                    covOLDNEW <- sum(iidOLD*iidNEW)
+                    dVcovOLD <- M.dVcov[,iL]
+                    dVcovNEW <- object.dVcov.param[iLink[iL2],iLink[iL2],]
 
-    ## ** transformation
-    if(all(is.infinite(out[,"df"]))){
-        out[,"ci.lower"] <- out[,"estimate"] + qnorm((1-conf.level)/2) * out[,"std.error"]
-        out[,"ci.upper"] <- out[,"estimate"] + qnorm(conf.level + (1-conf.level)/2) * out[,"std.error"]
-    }else{
-        out[,"ci.lower"] <- out[,"estimate"] + qt((1-conf.level)/2, df = out[,"df"]) * out[,"std.error"]
-        out[,"ci.upper"] <- out[,"estimate"] + qt(conf.level + (1-conf.level)/2, df = out[,"df"]) * out[,"std.error"]
+                    Ilink1 <- as.numeric(keep.param %in% link1)
+                    Ilink2 <- as.numeric(keep.param %in% link2)
+
+                    vec.beta[iL] <- betaOLD * betaNEW
+                    M.iid[,iL] <- iidOLD * betaNEW + iidNEW * betaOLD
+                    ## M.var <- varOLD * betaNEW^2 + varNEW * betaOLD^2 + 2 * covOLDNEW * betaNEW * betaOLD
+                    ## so dM.var/dtheta =
+                    M.dVcov[,iL] <- (dVcovOLD * betaNEW^2 + 2 * varOLD * betaNEW) + (dVcovNEW * betaOLD^2 + 2 * varNEW * betaOLD) + 2 * dVcovOLDNEW * 
+                    
+                    iid2 <-  object.iid[,iLink[iL2]]
+                    dSigma1 <- M.dVcov[,iL]
+                    dSigma2 <- object.dVcov.param[iLink[iL2],iLink[iL2],]
+
+                    ## effect.var <- as.double(Sigma[link1,link1] * mu[link2]^2 + Sigma[link2,link2] * mu[link1]^2 + 2 * Sigma[link1,link2] * mu[link1] * mu[link2])
+                    ## dvar1 <- dSigma[link1,link1,] * mu[link2]^2 + Sigma[link1,link1] * 2 * Ilink2 * mu[link2]
+                    ## dvar2 <- dSigma[link2,link2,] * mu[link1]^2 + Sigma[link2,link2] * 2 * Ilink1 * mu[link1]
+                    ## dvar12 <- 2 * dSigma[link1,link2,] * mu[link1] * mu[link2] + 2 * Sigma[link1,link2] * (Ilink2 * mu[link2] + mu[link1] * Ilink1)
+                    ## dvar <- dvar1 + dvar2 + dvar12
+
+                }
+            }
+        }
+
     }
 
+    vec.var <- colSums(M.iid^2)
+    vec.sd <- sqrt(vec.var)
+    vec.df <- 2*vec.var^2 / rowSums(t(M.dVcov) %*% object.vcov.param * t(M.dVcov))
+    
+    ## ** gather everything in glht object
     out <- transformSummaryTable(out, transform = transform, conf.level = conf.level)
 
     ## ** export
@@ -195,7 +205,7 @@ effects.sCorrect <- effects2.sCorrect
     if(is.infinite(iOut["df"])){                       
         iOut["p.value"] <- as.double(2*(1-pnorm(abs(iOut["statistic"]))))
     }else{
-        iOut["p.value"] <- as.double(2*(1-pnorm(abs(iOut["statistic"]), df = iOut["df"])))
+        iOut["p.value"] <- as.double(2*(1-pt(abs(iOut["statistic"]), df = iOut["df"])))
     }
     return(iOut)
 }

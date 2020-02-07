@@ -2,16 +2,22 @@
 % Please edit documentation in R/multcomp.R
 \name{estfun}
 \alias{estfun}
-\alias{estfun.lvmfit}
+\alias{estfun.lm}
 \alias{estfun.gls}
 \alias{estfun.lme}
+\alias{estfun.lvmfit}
+\alias{estfun.sCorrect}
 \title{Extract Empirical Estimating Functions (lvmfit Object)}
 \usage{
-\method{estfun}{lvmfit}(x, ...)
+\method{estfun}{lm}(x, ...)
 
 \method{estfun}{gls}(x, ...)
 
 \method{estfun}{lme}(x, ...)
+
+\method{estfun}{lvmfit}(x, ...)
+
+\method{estfun}{sCorrect}(x, ...)
 }
 \arguments{
 \item{x}{an \code{lvmfit} object.}
@@ -53,7 +59,7 @@ lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ eta, eta ~ Treatment),
 e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 
 #### create contrast matrix ####
-resC <- createContrast(e.mmm, var.test = "Treatment", add.variance = FALSE)
+resC <- createContrast(e.mmm, linfct = "Treatment", add.variance = FALSE)
 
 #### adjust for multiple comparisons ####
 e.glht <- glht(e.mmm, linfct = resC$mlf)

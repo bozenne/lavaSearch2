@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: jan 31 2020 (13:36) 
+## Last-Updated: feb  7 2020 (13:18) 
 ##           By: Brice Ozenne
-##     Update #: 378
+##     Update #: 379
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -62,7 +62,7 @@ information2.sCorrect <- function(object, as.lava = TRUE){
     out <- object$sCorrect$information
     if(as.lava == FALSE){ 
         out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
     }
     return(out)
 }

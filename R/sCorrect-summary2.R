@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 27 2020 (16:04) 
+## Last-Updated: feb  7 2020 (16:41) 
 ##           By: Brice Ozenne
-##     Update #: 440
+##     Update #: 455
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -117,11 +117,13 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
     table.all <- compare2(object,
                           linfct = name.param,
                           robust = robust,
-                          cluster = cluster,
+                          cluster = NULL,
                           ssc = ssc, df = df,
                           F.test = FALSE,
                           as.lava = FALSE)
-    rownames(table.all) <- c(name.param,"")
+
+    tableS.all <- summary(table.all, test = adjusted("none"))$table2
+    rownames(tableS.all) <- name.param
 
     ## ** get summary
     object0 <- object
@@ -130,13 +132,13 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
 
     ## ** lm
     if(inherits(object,"lm")){
-        object.summary$coefficients <- table.all[name.param,,drop=FALSE]        
+        object.summary$coefficients <- tableS.all[name.param,c("estimate","std.error","statistic","df","p.value"),drop=FALSE]        
         dimnames(object.summary$coefficients) <- list(name.param,
                                                       c("Value","Std.Error","t-value","df","p-value")
                                                       )
 
         object.summary$residuals <- residuals2(object, type = "response", format = "long")
-        object.summary$sigma <- sqrt(table.all["sigma2","estimate"])
+        object.summary$sigma <- sqrt(tableS.all["sigma2","estimate"])
 
         object.summary$cov.unscaled <- NULL
         object.summary$fstatistic <- NULL
@@ -144,20 +146,20 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
     ## ** gls / lme
     if(inherits(object,"gls") || inherits(object,"lme")){
 
-        object.summary$tTable <- table.all[name.param,,drop=FALSE]
+        object.summary$tTable <- tableS.all[name.param,c("estimate","std.error","statistic","df","p.value"),drop=FALSE]
         dimnames(object.summary$tTable) <- list(name.param,
                                                 c("Value","Std.Error","t-value","df","p-value")
                                                 )
 
         object.summary$residuals <- quantile(residuals2(object, type = "normalized", format = "long"),
                                              na.rm = TRUE)        
-        object.summary$sigma <- sqrt(table.all["sigma2","estimate"])
+        object.summary$sigma <- sqrt(tableS.all["sigma2","estimate"])
     }
     
     ## ** lvmfit
     if(inherits(object,"lvmfit")){
         previous.summary <- object.summary$coef
-        object.summary$coef <- table.all[name.param,,drop=FALSE]
+        object.summary$coef <- tableS.all[name.param,c("estimate","std.error","statistic","df","p.value"),drop=FALSE]
 
         if(!is.null(object$cluster) || inherits(object,"lvm.missing")){
         
@@ -165,7 +167,7 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
             ##     stop("Can only print summary for robust standard errors \n",
             ##          "when the object contain a cluster variable \n")
             ## }
-            colnames(object.summary$coef) <- c("Estimate","Std. Error","t-value","P-value")
+            colnames(object.summary$coef) <- c("Estimate","Std. Error","t-value","df","P-value")
             object.summary$coef[,"t-value"] <- NA
 
             colnames(object.summary$coefmat) <- c("Estimate","Std. Error","t-value","P-value", "std.xy")
@@ -248,13 +250,13 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
                                                                c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
                                                ), stringsAsFactors = FALSE)
 
-    object.summary$table2$estimate <- table.all[name.param,"estimate"]
-    object.summary$table2$std.error <- table.all[name.param,"std.error"]
-    object.summary$table2$df <- table.all[name.param,"df"]
+    object.summary$table2$estimate <- tableS.all[name.param,"estimate"]
+    object.summary$table2$std.error <- tableS.all[name.param,"std.error"]
+    object.summary$table2$df <- tableS.all[name.param,"df"]
     object.summary$table2$ci.lower <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.025, df = object.summary$table2$df)
     object.summary$table2$ci.upper <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.975, df = object.summary$table2$df)
-    object.summary$table2$statistic <- table.all[name.param,"statistic"]
-    object.summary$table2$p.value <- table.all[name.param,"p.value"]
+    object.summary$table2$statistic <- tableS.all[name.param,"statistic"]
+    object.summary$table2$p.value <- tableS.all[name.param,"p.value"]
 
     ## ** export
     return(object.summary)

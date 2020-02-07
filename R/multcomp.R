@@ -1,11 +1,11 @@
-### mlf2.R --- 
+### multcomp.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  7 2020 (10:31) 
+## Last-Updated: feb  7 2020 (14:24) 
 ##           By: Brice Ozenne
-##     Update #: 710
+##     Update #: 714
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -197,84 +197,15 @@ glht2.lvmfit <- glht2.lm
 
 ## * glht2.sCorrect
 #' @rdname glht2
-glht2.sCorrect <- function(object, linfct, rhs = 0,
+glht2.sCorrect <- function(object, linfct, rhs = NULL,
                            robust = FALSE, cluster = NULL,
                            ...){
 
-    if(robust==FALSE && !is.null(cluster)){
-        stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
-    }
-    
-    ## ** define contrast matrix
-    if(!is.matrix(linfct)){
-        name.linfct <- names(linfct)
-        resC <- createContrast(object, linfct = linfct, add.variance = TRUE)
-        linfct <- resC$contrast
-        if("rhs" %in% names(match.call()) == FALSE){
-            rhs <- resC$null
-        }
-    }else{
-        name.linfct <- NULL
-    }
-
-    ## ** Wald test with small sample correction
-    name.param <- colnames(linfct)
-    n.param <- NCOL(linfct)
-    n.hypo <- NROW(linfct)
-
-    resWald <- compare2(object, linfct = linfct, rhs = rhs, as.lava = FALSE, F.test = FALSE)
-    if(!is.null(name.linfct)){
-        rownames(linfct) <- name.linfct
-    }else{
-        ## update name according to multcomp, i.e. without second member
-        rownames(linfct) <- .contrast2name(linfct, null = NULL) 
-    }
-    
-    ## ** Global degree of freedom
-    if(!is.na(object$sCorrect$df)){
-        ## df.global <- round(resWald["global","df"], digits = 0)
-        seq.df <- resWald[1:NROW(linfct),"df"]
-        df.global <- round(stats::median(seq.df), digits = 0)
-    }else{
-        df.global <- 0
-    }
-
-    ## ** compute variance-covariance matrix
-    if(robust){
-        vcov.object <- crossprod(iid2(object, cluster = cluster))
-    }else{
-        vcov.object <- vcov2(object)
-    }
-
-    ## ** sanity check
-    param <- coef2(object, as.lava = TRUE)
-    name.param <- names(param)
-
-    if(!identical(colnames(linfct),name.param)){
-        stop("Column names of the contrast matrix does not match the one of the coefficients \n")
-    }
-    if(!identical(colnames(vcov.object),name.param)){
-        stop("Column names of the variance covariance matrix does not match the one of the coefficients \n")
-    }
-    if(!identical(rownames(vcov.object),name.param)){
-        stop("Rownames names of the variance covariance matrix does not match the one of the coefficients \n")
-    }
-
-    ## ** convert to the appropriate format
-    out <- list(model = object,
-                linfct = linfct,
-                rhs = unname(rhs),
-                coef = param,
-                vcov = vcov.object,
-                df = df.global,
-                alternative = "two.sided",
-                type = NULL,
-                robust = robust,
-                ssc = object$sCorrect$ssc$type)
-    class(out) <- c("glht2","glht")
-    ## ** export
+    out <- compare2(object, linfct = linfct, rhs = rhs,
+                    robust = robust, cluster = cluster,
+                    as.lava = FALSE, F.test = FALSE)
+        
     return(out)
-
 }
 
 

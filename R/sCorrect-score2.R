@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: jan 31 2020 (09:57) 
+## last-updated: feb  7 2020 (13:17) 
 ##           By: Brice Ozenne
-##     Update #: 2327
+##     Update #: 2336
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,9 +16,9 @@
 ### Code:
 
 ## * Documentation - score2
-#' @title  Extract the Individual Score After Small Sample Correction.
+#' @title  Extract the Individual Score.
 #' @description  Extract the individual score from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-#' Similar to \code{lava::score} but with small sample correction.
+#' Similar to \code{lava::score} but compatible with small sample correction.
 #' @name score2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
@@ -26,6 +26,7 @@
 #' Otherwise the total score is returned.
 #' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
 #' Only relevant for \code{lvmfit} objects.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #'
 #' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
 #'
@@ -49,28 +50,62 @@
 #' ## linear model
 #' e.lm <- lm(formula.lvm,data=d)
 #' eS.lm <- sCorrect(e.lm, ssc = NA, df = NA)
-#' score.tempo <- score2(eS.lm)
+#' score.tempo <- score2(eS.lm, indiv = TRUE)
 #' colMeans(score.tempo)
 #'
 #' ## latent variable model
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' score.tempo <- score2(e.lvm, bias.correct = FALSE)
+#' eS.lvm <- sCorrect(e.lvm, df = NA, ssc = NA)
+#' score.tempo <- score2(eS.lvm, indiv = TRUE)
 #' range(score.tempo-score(e.lvm, indiv = TRUE))
 #'
 #' @concept small sample inference
 #' @export
 `score2` <-
-  function(object, indiv, as.lava) UseMethod("score2")
+  function(object, indiv, cluster, as.lava) UseMethod("score2")
 
 ## * score2.sCorrect
 #' @rdname score2
-score2.sCorrect <- function(object, indiv = FALSE, as.lava = TRUE){
-    score <- object$sCorrect$score
-    if(as.lava == FALSE){ 
-        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimames(score) <- list(NULL,as.character(object$sCorrect$skeleton$originalLink2param))
+score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE){
+    
+    ## ** define cluster
+    if(is.null(cluster)){
+        n.cluster <- object$sCorrect$cluster$n.cluster
+        cluster.index <- 1:n.cluster
+    }else{
+        if(!is.numeric(cluster)){
+            data <- object$sCorrect$data
+            if(length(cluster)==1){                
+                if(cluster %in% names(data) == FALSE){
+                    stop("Invalid \'cluster\' argument \n",
+                         "Could not find variable \"",cluster,"\" in argument \'data\' \n")
+                }
+                cluster <- data[[cluster]]
+            }
+            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))            
+        }else{
+            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))
+        }
+
+        n.cluster <- length(unique(cluster.index))
     }
 
+    ## ** get score
+    score <- object$sCorrect$score
+    if(!is.null(cluster)){ ## aggregate score by cluster
+        score <- rowsum(score, group = cluster.index, reorder = FALSE)
+    }
+    
+    ## ** export
+    if(as.lava == FALSE){ 
+        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+        dimnames(score) <- list(NULL,as.character(object$sCorrect$skeleton$originalLink2param))
+    }
+    if(!is.null(cluster)){
+        index2.cluster <- tapply(1:length(cluster),cluster,list)
+        attr(score,"cluster") <- names(index2.cluster)
+    }
+    
     if(indiv){
         return(score)
     }else{

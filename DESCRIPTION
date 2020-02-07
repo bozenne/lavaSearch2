@@ -1,8 +1,8 @@
 Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
-Version: 1.5.5
-Date: 2019-07-25
+Version: 1.5.6
+Date: 2020-02-07
 Authors@R: c(
     person("Brice", "Ozenne", role = c("aut", "cre"), email = "brice.mh.ozenne@gmail.com", comment = c(ORCID = "0000-0001-9694-2956"))
 	)
@@ -14,6 +14,7 @@ Description: Tools for model specification in the latent variable framework
     adjustment for multiple comparisons when searching for local dependencies,
     and adjustment for multiple comparisons when doing inference for multiple latent variable models. 
 License: GPL-3
+Encoding: UTF-8
 VignetteBuilder: R.rsp
 Depends:
     R (>= 2.10),

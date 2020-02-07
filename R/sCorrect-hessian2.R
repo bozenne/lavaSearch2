@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 10 2020 (13:33) 
+## Last-Updated: feb  7 2020 (13:18) 
 ##           By: Brice Ozenne
-##     Update #: 49
+##     Update #: 54
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,6 +14,104 @@
 ##----------------------------------------------------------------------
 ## 
 ### Code:
+
+## * Documentation - hessian2
+#' @title  Extract the Hessian After Small Sample Correction.
+#' @description  Extract the hessian from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' @name hessian2
+#'
+#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
+#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
+#' Only relevant for \code{lvmfit} objects.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
+#'
+#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#'
+#' @return An array containing the second derivative of the likelihood relative to each sample (dim 3)
+#' and each pair of model coefficients (dim 1,2).
+#' 
+#' @examples
+#' n <- 5e1
+#' p <- 3
+#' X.name <- paste0("X",1:p)
+#' link.lvm <- paste0("Y~",X.name)
+#' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
+#'
+#' m <- lvm(formula.lvm)
+#' distribution(m,~Id) <- sequence.lvm(0)
+#' set.seed(10)
+#' d <- lava::sim(m,n)
+#'
+#' ## linear model
+#' e.lm <- lm(formula.lvm,data=d)
+#' eS.lm <- sCorrect(e.lm, ssc = NA, df = "Satterthwaite")
+#' hessian2.tempo <- hessian2(eS.lm)
+#' colMeans(score.tempo)
+#'
+#' ## latent variable model
+#' e.lvm <- estimate(lvm(formula.lvm),data=d)
+#' eS.lvm <- sCorrect(e.lvm, df = NA, ssc = NA)
+#' score.tempo <- score2(eS.lvm, indiv = TRUE)
+#' range(score.tempo-score(e.lvm, indiv = TRUE))
+#'
+#' @concept small sample inference
+#' @export
+`hessian2` <-
+  function(object, cluster, as.lava) UseMethod("hessian2")
+
+## * hessian2.sCorrect
+#' @rdname hessian2
+hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
+    
+    ## ** define cluster
+    if(is.null(cluster)){
+        n.cluster <- object$sCorrect$cluster$n.cluster
+        cluster.index <- 1:n.cluster
+    }else{
+        if(!is.numeric(cluster)){
+            data <- object$sCorrect$data
+            if(length(cluster)==1){                
+                if(cluster %in% names(data) == FALSE){
+                    stop("Invalid \'cluster\' argument \n",
+                         "Could not find variable \"",cluster,"\" in argument \'data\' \n")
+                }
+                cluster <- data[[cluster]]
+            }
+            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))            
+        }else{
+            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))
+        }
+
+        n.cluster <- length(unique(cluster.index))
+    }
+
+    ## ** get hessian
+    hessian <- object$sCorrect$hessian
+    if(is.null(hessian)){return(NULL)}
+    if(!is.null(cluster)){ ## aggregate hessian by cluster
+        hessianSave <- hessian
+        hessian <- array(0, dim = dim(hessian),
+                         dimnames = dimnames(hessian))
+        for(i in 1:length(cluster)){
+            hessian[,,cluster[i]] <- hessian[,,cluster[i]] + hessianSave[,,i]
+        }
+    }
+    
+    ## ** export
+    if(as.lava == FALSE){
+        originalLink2param <- object$sCorrect$skeleton$originalLink2param
+        
+        hessian <- hessian[names(originalLink2param),names(originalLink2param),,drop=FALSE]
+        dimnames(hessian) <- list(as.character(originalLink2param),as.character(originalLink2param),NULL)
+    }
+    if(!is.null(cluster)){
+        index2.cluster <- tapply(1:length(cluster),cluster,list)
+        attr(hessian,"cluster") <- names(index2.cluster)
+    }
+    
+    return(hessian)
+}
+
 
 ## * .hessian2
 #' @title Compute the Hessian Matrix From the Conditional Moments

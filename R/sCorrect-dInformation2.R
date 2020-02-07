@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 31 2020 (13:37) 
+## Last-Updated: feb  7 2020 (13:44) 
 ##           By: Brice Ozenne
-##     Update #: 337
+##     Update #: 342
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -216,6 +216,48 @@
     ## ** export
     return(dInfo)
 }
+
+## * .dVcov.param
+.dVcov.param <- function(vcov.param, dInformation, n.param, name.param){
+    dVcov.param <- array(0,
+                         dim = c(n.param,n.param,n.param),
+                         dimnames = list(name.param,name.param,name.param)
+                         )
+    
+    for(iP in name.param){ ## iP <- "Y1"
+        if(any(dInformation[,,iP]!=0)){
+            dVcov.param[,,iP] <- - vcov.param %*% dInformation[,,iP] %*% vcov.param
+        }
+    }
+    
+    return(dVcov.param)
+}
+
+## * .dRvcov.param
+.dRvcov.param <- function(score, hessian, vcov.param, dVcov.param, n.param, name.param){
+
+    dRvcov.param <- array(0,
+                          dim = c(n.param,n.param,n.param),
+                          dimnames = list(name.param,name.param,name.param)
+                          )
+    
+    score2_vcov.param <- crossprod(score) %*% vcov.param
+    score_vcov.param <- score %*% vcov.param
+        
+    for(iP in name.param){ ## iP <- 1
+        if(any(dVcov.param[,,iP]!=0)){
+            term1 <- dVcov.param[,,iP] %*% score2_vcov.param
+        }else{
+            term1 <- matrix(0, nrow = n.param, ncol = n.param)
+        }
+        term2 <- vcov.param %*% hessian[iP,,] %*% score_vcov.param
+        dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
+    }
+
+    return(dRvcov.param)
+}
+
+
 
 ## * .old_dInformation2
 .old_dInformation2 <- function(dmu, dOmega, d2mu, d2Omega, OmegaM1,

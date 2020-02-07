@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: jan 27 2020 (13:36) 
+## Last-Updated: feb  7 2020 (13:18) 
 ##           By: Brice Ozenne
-##     Update #: 42
+##     Update #: 44
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,9 +16,9 @@
 ### Code:
 
 ## * vcov2 (documentation)
-#' @title  Extract the Variance Covariance Matrix of the Model Parameters After Small Sample Correction
+#' @title  Extract the Variance Covariance Matrix of the Model Parameters.
 #' @description  Extract the variance covariance matrix of the model parameters from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-#' Similar to \code{vcov} but with small sample correction (if any).
+#' Similar to \code{vcov} but compatible with small sample correction.
 #' @name vcov2
 #'
 #' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
@@ -65,7 +65,7 @@ vcov2.sCorrect <- function(object, as.lava = TRUE){
     out <- .info2vcov(object$sCorrect$information)
     if(as.lava == FALSE){ 
         out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
     }
     return(out)
 }
