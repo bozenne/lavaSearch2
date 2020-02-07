@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 17 2020 (09:37) 
+## Last-Updated: feb  6 2020 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 1661
+##     Update #: 1664
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -79,7 +79,7 @@ skeleton <- function(object, X,
                      endogenous, latent,
                      n.cluster, index.Omega){
     if(lava.options()$debug){cat("skeleton \n")}
-    
+
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)
     n.obs <- NROW(X)

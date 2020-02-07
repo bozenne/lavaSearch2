@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: jan 31 2020 (12:07) 
+## last-updated: feb  6 2020 (13:55) 
 ##           By: Brice Ozenne
-##     Update #: 866
+##     Update #: 867
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -182,7 +182,7 @@ coefType.lm <- function(object, data = NULL, indexOmega = NULL, coef = NULL, ...
         for(iE in 1:n.endogenous){
             index.endpoint <- which(indexOmega==iE)
 
-            iTest.0 <- apply(X[index.endpoint,],2, function(iCol){any(iCol!=0)})
+            iTest.0 <- apply(X[index.endpoint,,drop=FALSE],2, function(iCol){any(iCol!=0)})
             iName.exogenous <- setdiff(names(iTest.0[iTest.0]),"(Intercept)")
             if(length(iName.exogenous)==0){
                 next

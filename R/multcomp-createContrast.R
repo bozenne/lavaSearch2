@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: jan 24 2020 (17:14) 
+## Last-Updated: feb  6 2020 (09:30) 
 ##           By: Brice Ozenne
-##     Update #: 330
+##     Update #: 341
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -200,7 +200,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     class(out$mlf) <- "mlf"
 
     ## remove right hand side from the names (like in multicomp)
-    if(length(linfct)>0){
+    if(length(linfct)>0 && is.null(names(linfct))){
         rownames(out$contrast) <- .contrast2name(out$contrast, null = NULL)
         out$mlf <- lapply(out$mlf, function(x){ ## x <- name.model[1]
             if(NROW(x)>0){
@@ -241,6 +241,7 @@ createContrast.mmm <- createContrast.list
     }
 
     n.hypo <- length(linfct)
+    name.hypo <- names(linfct)
     if(any(nchar(linfct)==0)){
         stop("Argument contains empty character string(s) instead of an expression involving the model mean coefficients \n")
     }
@@ -299,14 +300,14 @@ createContrast.mmm <- createContrast.list
                 contrast[iH,iName] <- c(1,-1)[test.sign+1] * iFactor
             }
         }
-    
         if(add.rowname){
-            name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL})
+            if(is.null(name.hypo)){
+                name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL})
+            }
             rownames(contrast) <- name.hypo
             null <- setNames(null, name.hypo)
         }
     }
-    
     return(list(contrast = contrast,
                 null = null,
                 Q = n.hypo))

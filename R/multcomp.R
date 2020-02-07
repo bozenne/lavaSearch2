@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 27 2020 (16:42) 
+## Last-Updated: feb  7 2020 (10:31) 
 ##           By: Brice Ozenne
-##     Update #: 674
+##     Update #: 710
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -207,11 +207,14 @@ glht2.sCorrect <- function(object, linfct, rhs = 0,
     
     ## ** define contrast matrix
     if(!is.matrix(linfct)){
+        name.linfct <- names(linfct)
         resC <- createContrast(object, linfct = linfct, add.variance = TRUE)
         linfct <- resC$contrast
         if("rhs" %in% names(match.call()) == FALSE){
             rhs <- resC$null
         }
+    }else{
+        name.linfct <- NULL
     }
 
     ## ** Wald test with small sample correction
@@ -220,9 +223,13 @@ glht2.sCorrect <- function(object, linfct, rhs = 0,
     n.hypo <- NROW(linfct)
 
     resWald <- compare2(object, linfct = linfct, rhs = rhs, as.lava = FALSE, F.test = FALSE)
-    ## update name according to multcomp, i.e. without second member
-    rownames(linfct) <- .contrast2name(linfct, null = NULL) 
-
+    if(!is.null(name.linfct)){
+        rownames(linfct) <- name.linfct
+    }else{
+        ## update name according to multcomp, i.e. without second member
+        rownames(linfct) <- .contrast2name(linfct, null = NULL) 
+    }
+    
     ## ** Global degree of freedom
     if(!is.na(object$sCorrect$df)){
         ## df.global <- round(resWald["global","df"], digits = 0)
@@ -265,7 +272,6 @@ glht2.sCorrect <- function(object, linfct, rhs = 0,
                 robust = robust,
                 ssc = object$sCorrect$ssc$type)
     class(out) <- c("glht2","glht")
-        
     ## ** export
     return(out)
 
@@ -279,10 +285,6 @@ glht2.mmm <- function (object, linfct, rhs = 0,
                        robust = FALSE, cluster = NULL,
                        ...){
 
-    if(robust==FALSE && !is.null(cluster)){
-        stop("Argument \'cluster\' must be NULL when argument \'robust\' is FALSE \n")
-    }
-    
     ### ** check the class of each model
     n.object <- length(object)
     name.object <- names(object)    
@@ -330,7 +332,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
 
     ## ** check whether it is possible to compute df
     ## i.e. are linear hypothesis model specific?
-    test.df <- all(unlist(lapply(object, function(iModel){iModel$sCorrect$df}))=="Satterthwaite")
+    test.df <- all(unlist(lapply(object, function(iModel){identical(iModel$sCorrect$df,"Satterthwaite")})))
     if(test.df){
         n.hypo <- NROW(linfct)
         ls.modelPerTest <- lapply(1:n.hypo, function(iHypo){ ## iHypo <- 1
@@ -347,8 +349,8 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     }else if(identical(df,"Satterthwaite")){
         test.df <- TRUE
     }
-    
-    ## ** Extract influence functions from all models    
+
+    ## ** Extract influence functions from all models
     ls.res <- lapply(1:n.object, function(iM){ ## iM <- 1
 
         ## *** Pre-compute quantities
@@ -365,24 +367,27 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             ## here null does not matter since we only extract the degrees of freedom
             iContrast <- ls.contrast[[iM]]
             colnames(iContrast) <- name.param
-
-            iWald <- compare2(object[[iM]], linfct = iContrast, as.lava = FALSE)
+            iWald <- compare2(object[[iM]], linfct = iContrast, as.lava = FALSE, F.test = FALSE)
             out$df <- iWald[1:(NROW(iWald)-1),"df"]
         }else{
             out$df <- Inf
         }
         ## *** get iid decomposition
-        index.missing <- object[[iM]]$na.action
-        n.obs <- stats::nobs(object[[iM]]) + length(index.missing)
+        iid.tempo <- iid2(object[[iM]], robust = robust, cluster = cluster)
 
-        out$iid <- matrix(NA, nrow = n.obs, ncol = length(name.param),
-                          dimnames = list(NULL, name.param))
-        
-        ## dim(iid2(object[[iM]], robust = robust, cluster = cluster))
-        ## dim(out$iid)
-        ## names(object[[iM]])
-        out$iid[setdiff(1:n.obs,index.missing),] <- iid2(object[[iM]], robust = robust, cluster = cluster)
-        
+        if(!is.null(cluster)){
+            ## identify missing values
+            iName.obs <- extractData(object[[iM]], rm.na = FALSE)[[cluster]]
+            iN.obs <- length(iName.obs)
+            index.missing <- which(iName.obs %in% object[[iM]]$sCorrect$data[[cluster]] == FALSE)
+
+            ## collect iid
+            out$iid <- matrix(NA, nrow = iN.obs, ncol = length(name.param),
+                              dimnames = list(iName.obs, name.param))
+            out$iid[setdiff(1:iN.obs,index.missing),] <- iid.tempo
+        }else{
+            out$iid <- iid.tempo
+        }
         colnames(out$iid) <- name.object.param
 
         return(out)
@@ -396,20 +401,17 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     }else{
         df.global <- 0
     }
-        
     ls.iid <- lapply(ls.res,"[[","iid")
     n.obs <- unique(unlist(lapply(ls.iid, NROW)))
     if(length(n.obs)>1){
         stop("Mismatch between the number of observations in the iid \n",
-                "Likely to be due to the presence of missing values \n")
-        
+             "Likely to be due to the presence of missing values \n",
+             "Consider specifying the \'cluster\' argument \n")
     }
     M.iid <- do.call(cbind,ls.iid)
-    if(any(is.na(M.iid))){
-        M.iid[is.na(M.iid)] <- 0
-    }
-    vcov.object <- crossprod(M.iid)
-
+    vec.sd <- apply(M.iid,2,function(iCol){sqrt(sum(iCol^2,na.rm = TRUE))})
+    vcov.object <- cor(M.iid, use = "pairwise") * tcrossprod(vec.sd)
+    
     ## ** sanity check
     name.param <- names(seq.param)
     if(!identical(colnames(linfct),name.param)){

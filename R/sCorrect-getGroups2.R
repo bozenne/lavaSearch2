@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: jan 23 2020 (14:57) 
+## Last-Updated: feb  6 2020 (17:12) 
 ##           By: Brice Ozenne
-##     Update #: 135
+##     Update #: 141
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -86,7 +86,6 @@
     if(is.null(index.Omega)){
         index.Omega <- .getIndexOmega(object, data = data)
     }
-    
     n.obs <- NROW(data)
     out <- list(index.cluster = 1:n.obs,
                 name.cluster = 1:n.obs,                
@@ -174,7 +173,6 @@
     }else{
         index.Omega <- tapply(index.Omega, index.cluster, list)
     }
-
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,

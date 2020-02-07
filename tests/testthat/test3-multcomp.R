@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: jan 24 2020 (10:26) 
+## Last-Updated: feb  5 2020 (13:34) 
 ##           By: Brice Ozenne
-##     Update #: 120
+##     Update #: 121
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -114,7 +114,7 @@ test_that("glht vs. glht2 (list ml): robust std", {
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
     e.glht2 <- glht2(ls.lm, linfct = resC$contrast,
-                     bias.correct = FALSE, robust = TRUE)
+                     ssc = NA, robust = TRUE)
 
     expect_equivalent(e.glht$vcov,
                       e.glht2$vcov[name.mean,name.mean])
@@ -137,7 +137,7 @@ test_that("glht2 vs. lava (ml): robust std", {
     name.all <- colnames(resC$contrast)
     name.mean <- name.all[-grep("sigma",name.all)]
     e.glht2 <- glht2(lsRed.lm, linfct = resC$contrast,
-                     bias.correct = FALSE, robust = TRUE, df = FALSE)
+                     ssc = NA, robust = TRUE, df = NA)
 
     GS <- estimate(ls.lm[[1]], cluster = 1:n)$coefmat
     test <- summary(e.glht2, test = adjusted("none"))$test

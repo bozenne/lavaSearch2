@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: jan 27 2020 (16:16) 
+## Last-Updated: feb  7 2020 (10:18) 
 ##           By: Brice Ozenne
-##     Update #: 143
+##     Update #: 159
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,8 @@
 #' @param object an object that inherits from lvmfit.
 #' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
-#' @param transform [function] function to backtransform the estimates and the associated confidence intervals.
+#' @param transform [function] function to backtransform the estimates and the associated confidence intervals
+#' (e.g. \code{exp} if the outcomes have been log-transformed).
 #' @param conf.level [numeric, 0-1] confidence level of the interval.
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
@@ -56,7 +57,8 @@ effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL,
 
     ## ** compute product
     n.link <- length(link)
-
+    name.link <- names(link)
+    
     name.coef <- names(coef(object))
     link.direct <- link[link %in% name.coef]
     link.other <- setdiff(link, link.direct)
@@ -121,7 +123,7 @@ effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL,
                     if(is.infinite(iRow["df"])){                       
                         iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]))))
                     }else{
-                        iRow["p.value"] <- as.double(2*(1-pnorm(abs(iRow["statistic"]), df = iRow["df"])))
+                        iRow["p.value"] <- as.double(2*(1-pt(abs(iRow["statistic"]), df = iRow["df"])))
                     }
                     out <- rbind(out,iRow)                    
                 }
@@ -133,27 +135,21 @@ effects2.sCorrect <- function(object, link, conf.level = 0.95, transform = NULL,
     }
     rownames(out) <- c(link.direct,link.other)
 
-    ## ** transform
-    if(is.null(transform)){
-        transform <- function(x){x}
-        dtransform <- function(x){x}
-    }else if(!is.null(attr(transform,"derivative"))){
-        dtransform <- attr(transform,"derivative")
+    ## ** transformation
+    if(all(is.infinite(out[,"df"]))){
+        out[,"ci.lower"] <- out[,"estimate"] + qnorm((1-conf.level)/2) * out[,"std.error"]
+        out[,"ci.upper"] <- out[,"estimate"] + qnorm(conf.level + (1-conf.level)/2) * out[,"std.error"]
     }else{
-        dtransform <- function(x){numDeriv::jacobian(transform, x)[1,1]}
+        out[,"ci.lower"] <- out[,"estimate"] + qt((1-conf.level)/2, df = out[,"df"]) * out[,"std.error"]
+        out[,"ci.upper"] <- out[,"estimate"] + qt(conf.level + (1-conf.level)/2, df = out[,"df"]) * out[,"std.error"]
     }
 
-    if(all(is.infinite(out[,"df"]))){
-        out[,"ci.lower"] <- sapply(out[,"estimate"] + qnorm((1-conf.level)/2) * out[,"std.error"], transform)
-        out[,"ci.upper"] <- sapply(out[,"estimate"] + qnorm(conf.level + (1-conf.level)/2) * out[,"std.error"], transform)
-    }else{
-        out[,"ci.lower"] <- sapply(out[,"estimate"] + qt((1-conf.level)/2, df = out[,"df"]) * out[,"std.error"], transform)
-        out[,"ci.upper"] <- sapply(out[,"estimate"] + qt(conf.level + (1-conf.level)/2, df = out[,"df"]) * out[,"std.error"], transform)
+    out <- transformSummaryTable(out, transform = transform, conf.level = conf.level)
+
+    ## ** export
+    if(!is.null(name.link)){
+        rownames(out) <- name.link
     }
-    out[,"std.error"] <- out[,"std.error"]*dtransform(out[,"estimate"])
-    out[,"estimate"] <- transform(out[,"estimate"])
-    
-    ## ** export    
     return(out)
 
 }

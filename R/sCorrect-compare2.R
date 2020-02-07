@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan 27 2020 (15:48) 
+## Last-Updated: feb  7 2020 (10:29) 
 ##           By: Brice Ozenne
-##     Update #: 688
+##     Update #: 698
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -29,6 +29,8 @@
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param F.test [logical] should a joint test be performed?
 #' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
+#' @param transform [function] function to backtransform the estimates and the associated confidence intervals
+#' (e.g. \code{exp} if the outcomes have been log-transformed).
 #' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
 #' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
 #' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
@@ -132,7 +134,8 @@ compare2.lvmfit <- compare2.lm
 #' @rdname compare2
 compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
-                              as.lava = TRUE, F.test = TRUE, conf.level = 0.95,
+                              as.lava = TRUE, F.test = TRUE,
+                              conf.level = 0.95, transform = NULL,
                               ...){
 
     df <- object$sCorrect$df
@@ -391,6 +394,16 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
             error <- iC.vcov.C
         }
     }
+    
+    browser()
+    if(all(is.infinite(df.table[,"df"]))){
+        df.table[,"ci.lower"] <- df.table[,"estimate"] + qnorm((1-conf.level)/2) * df.table[,"std.error"]
+        df.table[,"ci.upper"] <- df.table[,"estimate"] + qnorm(conf.level + (1-conf.level)/2) * df.table[,"std.error"]
+    }else{
+        df.table[,"ci.lower"] <- df.table[,"estimate"] + qt((1-conf.level)/2, df = df.table[,"df"]) * df.table[,"std.error"]
+        df.table[,"ci.upper"] <- df.table[,"estimate"] + qt(conf.level + (1-conf.level)/2, df = df.table[,"df"]) * df.table[,"std.error"]
+    }
+    df.table <- transformSummaryTable(df.table, transform = transform, conf.level = conf.level)
 
     ## ** export
     if(as.lava == TRUE){
@@ -424,7 +437,8 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
         attr(out, "B") <- linfct
         class(out) <- "htest"
     }else{
-        out <- df.table
+        out <- df.table[,c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value")]
+        browser()
         attr(out, "warning") <- warn
         attr(out, "contrast") <- linfct
     }

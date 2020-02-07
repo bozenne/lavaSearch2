@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: jan 31 2020 (14:26) 
+## Last-Updated: feb  7 2020 (10:17) 
 ##           By: Brice Ozenne
-##     Update #: 88
+##     Update #: 117
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,17 +15,21 @@
 ## 
 ### Code:
 
-## * summary.glht2
-summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, ...){
+#' @param transform [function] function to backtransform the estimates and the associated confidence intervals
+#' (e.g. \code{exp} if the outcomes have been log-transformed).
 
+## * summary.glht2
+summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform = NULL, ...){
     keep.class <- class(object)
+    object$test <- NULL
+    object$confint <- NULL
     class(object) <- setdiff(keep.class, "glht2")
     output <- summary(object, ...)
 
     name.hypo <- rownames(output$linfct)
     n.hypo <- length(name.hypo)
 
-    if(confint && is.null(output$confint) && output$test$type %in% c("none","bonferroni","single-step")){
+    if(confint && output$test$type %in% c("none","bonferroni","single-step")){
         if(output$test$type == "none"){
             output <- confint(output, level = conf.level, calpha = univariate_calpha())
         }else if(output$test$type == "bonferroni"){
@@ -51,6 +55,12 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, ...){
     output$table2$statistic <- output$test$tstat
     output$table2$p.value <- output$test$pvalues
 
+    ## ** transformation
+    output$table2 <- transformSummaryTable(output$table2,
+                                           transform = transform,
+                                           conf.level = conf.level)
+
+    ## ** export    
     class(output) <- append(c("summary.glht2","summary.glht"),keep.class)
     return(output)
 }
@@ -70,7 +80,7 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
                        "single-step" = paste0("(Adjusted p values reported -- max-test method (single-step)"), 
                        "free" = paste0("(Adjusted p values reported -- max-test method (step-down)"), 
                        "Westfall" = paste0("(Adjusted p values reported -- max-test method (step-down with logical restrictions))"), 
-                       paste0("(Adjusted p values reported --", type, "method)")
+                       paste0("(Adjusted p values reported -- ", type, " method)")
                        )
     txt.robust <- switch(as.character(object$robust),
                          "TRUE" = "Robust standard errors",
@@ -99,7 +109,7 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
         cat("\n")
     }
     cat("Linear Hypotheses:\n")
-    stats::printCoefmat(object$table2[,columns,drop=FALSE], digits = digits,
+    stats::printCoefmat(object$table2[,columns[columns %in% names(object$table2)],drop=FALSE], digits = digits,
                         has.Pvalue = "p.value" %in% columns, P.values = "p.value" %in% columns, eps.Pvalue = 10^{-digits.p.value})
 
     cat(txt.type,"\n")
