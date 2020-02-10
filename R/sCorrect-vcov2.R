@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: feb  7 2020 (13:18) 
+## Last-Updated: feb 10 2020 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 44
+##     Update #: 47
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,9 +63,10 @@
 #' @export
 vcov2.sCorrect <- function(object, as.lava = TRUE){
     out <- .info2vcov(object$sCorrect$information)
-    if(as.lava == FALSE){ 
-        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),as.character(object$sCorrect$skeleton$originalLink2param))
+    if(as.lava == FALSE){
+        name.param <- object$sCorrect$name.param
+        out <- out[names(name.param),names(name.param),drop=FALSE]
+        dimnames(out) <- list(as.character(name.param),as.character(name.param))
     }
     return(out)
 }

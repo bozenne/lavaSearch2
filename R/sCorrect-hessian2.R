@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb  7 2020 (13:18) 
+## Last-Updated: feb 10 2020 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 54
+##     Update #: 57
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -99,10 +99,9 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
     
     ## ** export
     if(as.lava == FALSE){
-        originalLink2param <- object$sCorrect$skeleton$originalLink2param
-        
-        hessian <- hessian[names(originalLink2param),names(originalLink2param),,drop=FALSE]
-        dimnames(hessian) <- list(as.character(originalLink2param),as.character(originalLink2param),NULL)
+        name.param <- object$sCorrect$name.param
+        hessian <- hessian[names(name.param),names(name.param),,drop=FALSE]
+        dimnames(hessian) <- list(as.character(name.param),as.character(name.param),NULL)
     }
     if(!is.null(cluster)){
         index2.cluster <- tapply(1:length(cluster),cluster,list)

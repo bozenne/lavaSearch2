@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb  7 2020 (13:17) 
+## last-updated: feb 10 2020 (11:46) 
 ##           By: Brice Ozenne
-##     Update #: 2336
+##     Update #: 2340
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -97,9 +97,11 @@ score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRU
     }
     
     ## ** export
-    if(as.lava == FALSE){ 
-        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimnames(score) <- list(NULL,as.character(object$sCorrect$skeleton$originalLink2param))
+    if(as.lava == FALSE){
+        name.param <- object$sCorrect$name.param
+        ## all(object$sCorrect$skeleton$originalLink2param  == name.param)
+        score <- score[,names(name.param),drop=FALSE]
+        dimnames(score) <- list(NULL,as.character(name.param))
     }
     if(!is.null(cluster)){
         index2.cluster <- tapply(1:length(cluster),cluster,list)

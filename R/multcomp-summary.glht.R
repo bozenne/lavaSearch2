@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: feb  7 2020 (16:54) 
+## Last-Updated: feb 10 2020 (17:29) 
 ##           By: Brice Ozenne
-##     Update #: 161
+##     Update #: 178
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,21 +19,26 @@
 #' (e.g. \code{exp} if the outcomes have been log-transformed).
 
 ## * summary.glht2
-summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform = NULL, ...){
-
+summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform = NULL, seed = NA, ...){
+    if(!is.na(seed)){
+        old.seed <- get0(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+        on.exit( assign(".Random.seed", old.seed, envir = .GlobalEnv, inherits = FALSE) )
+        set.seed(seed)
+    }
+    
     keep.class <- class(object)
     object$test <- NULL
     object$confint <- NULL
     class(object) <- setdiff(keep.class, "glht2")
-
+    
     keep.df <- object$df
+    test.df <- any( (keep.df>0) * (is.infinite(keep.df)) == 1 )
     object$df <- round(median(object$df))
     output <- summary(object, ...)
-
     ## restaure df when possible
     method.adjust <- output$test$type
     if(NROW(object$linfct)==1){method.adjust <- "none"}
-    if(method.adjust %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")){
+    if(test.df && method.adjust %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")){
         output$df <- keep.df
         output$test$pvalues <- p.adjust(2*(1-pt(abs(output$test$tstat), df = keep.df)), method = method.adjust)
     }
@@ -46,8 +51,11 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
             alpha <- switch(method.adjust,
                             "none" = 1-conf.level,
                             "bonferroni" = (1-conf.level)/n.hypo)
-
-            q <- qt(1-alpha/2, df = output$df)
+            if(test.df){
+                q <- qt(1-alpha/2, df = output$df)
+            }else{
+                q <- qnorm(1-alpha/2)
+            }
             output$confint <- data.frame(matrix(NA, ncol = 3, nrow = n.hypo,
                                                 dimnames = list(name.hypo, c("Estimate","lwr","upr"))))
             output$confint$Estimate <- as.double(output$test$coef)
@@ -73,7 +81,8 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     output$table2$ci.upper <- output$confint[,"upr"]
     output$table2$statistic <- output$test$tstat
     output$table2$p.value <- output$test$pvalues
-
+    output$seed <- seed
+    
     ## ** transformation
     output$table2 <- transformSummaryTable(output$table2,
                                            transform = transform,
@@ -85,7 +94,9 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
 }
 
 ## * print.summary.glht2
-print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
+print.summary.glht2 <- function(object,
+                                digits = max(3L, getOption("digits") - 2L),
+                                digits.p.value = max(3L, getOption("digits") - 2L),
                                 columns = c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"),
                                 ...){
     
@@ -130,14 +141,21 @@ print.summary.glht2 <- function(object, digits = 3, digits.p.value = 4,
     }
     cat("Linear Hypotheses:\n")
     stats::printCoefmat(object$table2[,columns[columns %in% names(object$table2)],drop=FALSE], digits = digits,
-                        has.Pvalue = "p.value" %in% columns, P.values = "p.value" %in% columns, eps.Pvalue = 10^{-digits.p.value})
+                        has.Pvalue = "p.value" %in% columns,
+                        P.values = "p.value" %in% columns,
+                        eps.Pvalue = 10^{-digits.p.value})
 
     cat(txt.type,"\n")
     error <- attr(object$test$pvalues,"error")
     if(!is.null(error) && error > 1e-12 && "p.value" %in% columns){
-        cat("Error when computing the p-value by numerical integration: ",error,"\n",sep="")
+        txt.error <- paste0("Error when computing the p-value by numerical integration: ", signif(error, digits = digits))
+        if(!is.na(object$seed)){
+            txt.error <- paste0(txt.error," (seed ",object$seed,")")
+        }
+        cat(txt.error,"\n")
     }
 
+    
     if(!is.null(object$global)){
         cat("\nGlobal test: p.value=",format.pval(object$global["p.value"], digits = digits, eps = 10^(-digits.p.value)),
             " (statistic=",round(object$global["statistic"], digits = digits),

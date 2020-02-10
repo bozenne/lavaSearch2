@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb  7 2020 (14:24) 
+## Last-Updated: feb 10 2020 (11:38) 
 ##           By: Brice Ozenne
-##     Update #: 714
+##     Update #: 718
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -299,7 +299,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             iContrast <- ls.contrast[[iM]]
             colnames(iContrast) <- name.param
             iWald <- compare2(object[[iM]], linfct = iContrast, as.lava = FALSE, F.test = FALSE)
-            out$df <- iWald[1:(NROW(iWald)-1),"df"]
+            out$df <- iWald$df
         }else{
             out$df <- Inf
         }
