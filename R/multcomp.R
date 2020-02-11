@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb 10 2020 (11:38) 
+## Last-Updated: feb 11 2020 (17:22) 
 ##           By: Brice Ozenne
-##     Update #: 718
+##     Update #: 719
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -197,6 +197,7 @@ glht2.lvmfit <- glht2.lm
 
 ## * glht2.sCorrect
 #' @rdname glht2
+#' @export
 glht2.sCorrect <- function(object, linfct, rhs = NULL,
                            robust = FALSE, cluster = NULL,
                            ...){

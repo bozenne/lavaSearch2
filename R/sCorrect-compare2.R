@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb  7 2020 (16:56) 
+## Last-Updated: feb 11 2020 (17:21) 
 ##           By: Brice Ozenne
-##     Update #: 772
+##     Update #: 773
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -132,6 +132,7 @@ compare2.lvmfit <- compare2.lm
 
 ## * compare2.sCorrect
 #' @rdname compare2
+#' @export
 compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
                               as.lava = TRUE, F.test = TRUE,

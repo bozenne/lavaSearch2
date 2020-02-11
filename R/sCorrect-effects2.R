@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: feb 10 2020 (17:24) 
+## Last-Updated: feb 11 2020 (17:22) 
 ##           By: Brice Ozenne
-##     Update #: 225
+##     Update #: 226
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -51,6 +51,7 @@ effects2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options(
 
 ## * effects2.sCorrect
 #' @rdname effects2
+#' @export
 effects2.sCorrect <- function(object, link, conf.level = 0.95, robust = FALSE, ...){
 
     ## ** extract information

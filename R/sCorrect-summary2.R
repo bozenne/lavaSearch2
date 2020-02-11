@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb  7 2020 (16:41) 
+## Last-Updated: feb 11 2020 (17:24) 
 ##           By: Brice Ozenne
-##     Update #: 455
+##     Update #: 456
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,6 +105,7 @@ summary2.lvmfit <- summary2.lm
 
 ## * summary2.sCorrect
 #' @rdname summary2
+#' @export
 summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("digit")),
                               ...){
 
@@ -122,7 +123,7 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
                           F.test = FALSE,
                           as.lava = FALSE)
 
-    tableS.all <- summary(table.all, test = adjusted("none"))$table2
+    tableS.all <- summary(table.all, test = multcomp::adjusted("none"))$table2
     rownames(tableS.all) <- name.param
 
     ## ** get summary

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb 10 2020 (11:47) 
+## Last-Updated: feb 11 2020 (17:23) 
 ##           By: Brice Ozenne
-##     Update #: 57
+##     Update #: 58
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -61,6 +61,7 @@
 
 ## * hessian2.sCorrect
 #' @rdname hessian2
+#' @export
 hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
     
     ## ** define cluster

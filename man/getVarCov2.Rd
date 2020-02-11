@@ -3,14 +3,11 @@
 \name{getVarCov2}
 \alias{getVarCov2}
 \alias{getVarCov2.sCorrect}
-\alias{getVarCov.sCorrect}
 \title{Reconstruct the Conditional Variance Covariance Matrix After Small Sample Correction.}
 \usage{
 getVarCov2(object)
 
 \method{getVarCov2}{sCorrect}(object)
-
-getVarCov.sCorrect(object)
 }
 \arguments{
 \item{object}{a \code{gls} or \code{lme} object}

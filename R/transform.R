@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: feb  6 2020 (14:05) 
+## Last-Updated: feb 11 2020 (17:35) 
 ##           By: Brice Ozenne
-##     Update #: 14
+##     Update #: 15
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,7 +15,7 @@
 ## 
 ### Code:
 
-
+#' @export
 transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
     if(is.null(transform)){
         return(object)

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: feb 10 2020 (11:47) 
+## Last-Updated: feb 11 2020 (17:23) 
 ##           By: Brice Ozenne
-##     Update #: 382
+##     Update #: 383
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,6 +58,7 @@
 
 ## * information2.sCorrect
 #' @rdname information2
+#' @export
 information2.sCorrect <- function(object, as.lava = TRUE){
     out <- object$sCorrect$information
     if(as.lava == FALSE){

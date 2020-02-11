@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: jan 27 2020 (13:34) 
+## Last-Updated: feb 11 2020 (17:21) 
 ##           By: Brice Ozenne
-##     Update #: 175
+##     Update #: 176
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,6 +38,7 @@
 #'
 #' @concept extractor
 #' @keywords smallSampleCorrection
+#' @export
 `coef2` <-
     function(object, as.lava) UseMethod("coef2")
 
@@ -79,6 +80,7 @@
 
 ## * coef2.lm
 #' @rdname coef2
+#' @export
 coef2.lm <- function(object, as.lava = TRUE){
     if(is.null(object$sCorrect)){
         out <- .coef2(object)
@@ -90,14 +92,17 @@ coef2.lm <- function(object, as.lava = TRUE){
 
 ## * coef2.gls
 #' @rdname coef2
+#' @export
 coef2.gls <- coef2.lm
 
 ## * coef2.lme
 #' @rdname coef2
+#' @export
 coef2.lme <- coef2.lm
 
 ## * coef2.lvmfit
 #' @rdname coef2
+#' @export
 coef2.lvmfit <- function(object, as.lava = TRUE){
     if(as.lava){
         out <- stats::coef(object)
@@ -111,6 +116,7 @@ coef2.lvmfit <- function(object, as.lava = TRUE){
 
 ## * coef2.sCorrect
 #' @rdname coef2
+#' @export
 coef2.sCorrect <- function(object, as.lava = TRUE){
     out <- object$sCorrect$param
     if(as.lava == FALSE){ 

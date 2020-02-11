@@ -24,7 +24,7 @@ glht2(object, ...)
 \method{glht2}{lvmfit}(object, ssc = lava.options()$ssc,
   df = lava.options()$df, ...)
 
-\method{glht2}{sCorrect}(object, linfct, rhs = 0, robust = FALSE,
+\method{glht2}{sCorrect}(object, linfct, rhs = NULL, robust = FALSE,
   cluster = NULL, ...)
 
 \method{glht2}{mmm}(object, linfct, rhs = 0, robust = FALSE,

@@ -4,7 +4,6 @@
 \alias{effects2}
 \alias{effects2.lvmfit}
 \alias{effects2.sCorrect}
-\alias{effects.sCorrect}
 \title{Effects From a Fitted Model After Small Sample Correction}
 \usage{
 effects2(object, ...)
@@ -13,10 +12,7 @@ effects2(object, ...)
   df = lava.options()$df, ...)
 
 \method{effects2}{sCorrect}(object, link, conf.level = 0.95,
-  transform = NULL, ...)
-
-\method{effects}{sCorrect}(object, link, conf.level = 0.95,
-  transform = NULL, ...)
+  robust = FALSE, ...)
 }
 \arguments{
 \item{object}{an object that inherits from lvmfit.}
@@ -32,9 +28,6 @@ Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distributi
 i.e. the effect of the right variable (B) on the left variable (A).}
 
 \item{conf.level}{[numeric, 0-1] confidence level of the interval.}
-
-\item{transform}{[function] function to backtransform the estimates and the associated confidence intervals
-(e.g. \code{exp} if the outcomes have been log-transformed).}
 }
 \description{
 Test whether a path in the latent variable model correspond to a null effect.

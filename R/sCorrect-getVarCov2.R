@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: jan 27 2020 (10:00) 
+## Last-Updated: feb 11 2020 (17:23) 
 ##           By: Brice Ozenne
-##     Update #: 63
+##     Update #: 65
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -103,17 +103,12 @@
 
 ## * getVarCov2.sCorrect
 #' @rdname getVarCov2
+#' @export
 getVarCov2.sCorrect <- function(object){
     Omega <- object$sCorrect$moment$Omega
     attr(Omega, "detail") <- NULL
     return(Omega)
 }
-
-## * getVarCov.sCorrect
-#' @rdname getVarCov2
-getVarCov.sCorrect <- getVarCov2.sCorrect
-
-
 
 ######################################################################
 ### sCorrect-getVarCov2.R ends here

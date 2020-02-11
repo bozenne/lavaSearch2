@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb 10 2020 (11:46) 
+## last-updated: feb 11 2020 (17:24) 
 ##           By: Brice Ozenne
-##     Update #: 2340
+##     Update #: 2341
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,6 +66,7 @@
 
 ## * score2.sCorrect
 #' @rdname score2
+#' @export
 score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE){
     
     ## ** define cluster

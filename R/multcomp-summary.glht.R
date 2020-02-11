@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: feb 10 2020 (17:29) 
+## Last-Updated: feb 11 2020 (17:22) 
 ##           By: Brice Ozenne
-##     Update #: 178
+##     Update #: 180
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,6 +19,7 @@
 #' (e.g. \code{exp} if the outcomes have been log-transformed).
 
 ## * summary.glht2
+#' @export
 summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform = NULL, seed = NA, ...){
     if(!is.na(seed)){
         old.seed <- get0(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
@@ -94,6 +95,7 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
 }
 
 ## * print.summary.glht2
+#' @export
 print.summary.glht2 <- function(object,
                                 digits = max(3L, getOption("digits") - 2L),
                                 digits.p.value = max(3L, getOption("digits") - 2L),
