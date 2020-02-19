@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:57) 
 ## Version: 
-## Last-Updated: dec 10 2019 (11:04) 
+## Last-Updated: feb 19 2020 (12:10) 
 ##           By: Brice Ozenne
-##     Update #: 10
+##     Update #: 18
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,11 +36,19 @@
 ## ** .getDesign.lme
 .getDesign.lme <- .getDesign.lm
 
+## ** .getDesign.lvm
+.getDesign.lvm <- function(object, data, ...){
+    if(all(apply(data[,lava::manifest(object),drop=FALSE],2,is.numeric))){
+        return(as.matrix(data[,lava::manifest(object),drop=FALSE]))
+    }else{
+        stop("Cannot export design matrix because some of the variables are categorical. \n")
+    }
+}
+
 ## ** .getDesign.lvmfit
 .getDesign.lvmfit <- function(object, data, ...){
     return(as.matrix(data[,lava::manifest(object),drop=FALSE]))
 }
-
 
 
 

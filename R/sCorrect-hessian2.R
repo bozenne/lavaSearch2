@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:23) 
+## Last-Updated: feb 19 2020 (15:13) 
 ##           By: Brice Ozenne
-##     Update #: 58
+##     Update #: 64
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -125,7 +125,7 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
 .hessian2 <- function(dmu, dOmega, d2mu, d2Omega, epsilon, OmegaM1,
                       missing.pattern, unique.pattern, name.pattern,
                       grid.mean, grid.var, grid.hybrid, name.param,
-                      leverage, n.cluster){
+                      leverage, n.cluster, weights){
     if(lava.options()$debug){cat(".hessian2\n")}
 
     ## ** Prepare
@@ -168,7 +168,7 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
         iLeverage <- leverage[iIndex,iY,drop=FALSE]
 
         ## *** second derivative relative to the mean parameters
-        for(iG in index.mean){ # iG <- 2
+        for(iG in index.mean){ # iG <- 1
             iP1 <- grid.mean[iG,1]
             iP2 <- grid.mean[iG,2]
             if(grid.mean[iG,"d2.12"]){
@@ -225,6 +225,11 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
     }
 
     ## ** export
+    if(!is.null(weights)){
+        for(iI in 1:length(weights)){
+            hessian[,,iI] <- weights[iI] * hessian[,,iI]
+        }
+    }
     return(hessian)
 }
 

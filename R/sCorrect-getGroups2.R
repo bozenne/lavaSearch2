@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: feb  6 2020 (17:12) 
+## Last-Updated: feb 17 2020 (16:38) 
 ##           By: Brice Ozenne
-##     Update #: 141
+##     Update #: 142
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -147,9 +147,9 @@
 .getGroups2.lme <- .getGroups2.gls
 
 
-## * .getGroups2.lvmfit
+## * .getGroups2.lvm
 #' @rdname getGroups2-internal
-.getGroups2.lvmfit <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
+.getGroups2.lvm <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
     if(is.null(data)){
         data <- extractData(object)
     }
@@ -181,7 +181,9 @@
     
 }
 
-
+## * .getGroups2.lvmfit
+#' @rdname getGroups2-internal
+.getGroups2.lvmfit <- .getGroups2.lvm
 
 
 

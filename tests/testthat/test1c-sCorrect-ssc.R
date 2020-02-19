@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 27 2020 (18:27) 
+## Last-Updated: feb 17 2020 (19:03) 
 ##           By: Brice Ozenne
-##     Update #: 106
+##     Update #: 107
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -250,6 +250,7 @@ e.gls <- nlme::gls(value ~ X1 + X2,
  
 test_that("mixed model (CS) - residual correction equivalent to REML", {
     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    ## eSSC1.lvm <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
 
     GS <- c(intervals(e.lme)$fixed[,2],
             sigma2 = as.double(intervals(e.lme)$sigma[2])^2,

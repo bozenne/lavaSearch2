@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: jan 23 2020 (14:58) 
+## Last-Updated: feb 17 2020 (16:39) 
 ##           By: Brice Ozenne
-##     Update #: 71
+##     Update #: 73
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,9 +155,9 @@
 #' @rdname getIndexOmega-internal
 .getIndexOmega.lme <- .getIndexOmega.gls
 
-## * .getIndexOmega.lvmfit
+## * .getIndexOmega.lvm
 #' @rdname getIndexOmega-internal
-.getIndexOmega.lvmfit <- function(object, data, ...){
+.getIndexOmega.lvm <- function(object, data, ...){
 
     ## ** check missing value in exogenous variables
     name.exogenous <- exogenous(object)
@@ -186,5 +186,10 @@
     }
     return(as.double(t(M.index)))
 }
+
+## * .getIndexOmega.lvmfit
+#' @rdname getIndexOmega-internal
+.getIndexOmega.lvmfit <- .getIndexOmega.lvm
+
 ######################################################################
 ### sCorrect-getIndexOmega.R ends here

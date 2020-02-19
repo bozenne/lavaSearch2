@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: feb  7 2020 (12:12) 
+## Last-Updated: feb 19 2020 (15:10) 
 ##           By: Brice Ozenne
-##     Update #: 1885
+##     Update #: 1891
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -342,7 +342,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                          name.param = object$sCorrect$skeleton$Uparam,
                                          name.meanparam = object$sCorrect$skeleton$Uparam.mean,
                                          name.varparam = object$sCorrect$skeleton$Uparam.var,
-                                         n.cluster = object$sCorrect$cluster$n.cluster)
+                                         n.cluster = object$sCorrect$cluster$n.cluster,
+                                         weights = object$sCorrect$weights)
     }
     
     ## ** information matrix
@@ -357,7 +358,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                                      grid.var = object$sCorrect$skeleton$grid.dmoment$var, 
                                                      name.param = object$sCorrect$skeleton$Uparam,
                                                      leverage = object$sCorrect$leverage,
-                                                     n.cluster = object$sCorrect$cluster$n.cluster)
+                                                     n.cluster = object$sCorrect$cluster$n.cluster,
+                                                     weights = object$sCorrect$weights)
         object$sCorrect$vcov.param  <- .info2vcov(object$sCorrect$information, attr.info = FALSE)
     }
     
@@ -377,7 +379,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                              grid.hybrid = object$sCorrect$skeleton$grid.dmoment$hybrid, 
                                              name.param = object$sCorrect$skeleton$Uparam,
                                              leverage = object$sCorrect$leverage,
-                                             n.cluster = object$sCorrect$cluster$n.cluster)
+                                             n.cluster = object$sCorrect$cluster$n.cluster,
+                                             weights = object$sCorrect$weights)
     }
 
     ## ** dVcov.param (model based variance, analytic)
@@ -396,7 +399,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                                                        grid.2varD2.1varD1 = object$sCorrect$skeleton$grid.2varD2.1varD1,
                                                        name.param = object$sCorrect$skeleton$Uparam,
                                                        leverage = object$sCorrect$leverage,
-                                                       n.cluster = object$sCorrect$cluster$n.cluster)
+                                                       n.cluster = object$sCorrect$cluster$n.cluster,
+                                                       weights = object$sCorrect$weights)
 
         ## delta method
         object$sCorrect$dVcov.param <- .dVcov.param(vcov.param = object$sCorrect$vcov.param,
@@ -485,7 +489,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                       name.param = object$sCorrect$skeleton$Uparam,
                       name.meanparam = object$sCorrect$skeleton$Uparam.mean,
                       name.varparam = object$sCorrect$skeleton$Uparam.var,
-                      n.cluster = object$sCorrect$cluster$n.cluster)
+                      n.cluster = object$sCorrect$cluster$n.cluster,
+                      weights = object$sCorrect$weights)
     }
     if(type=="hessian"){
         hh <- .hessian2(dmu = cM$dmoment$dmu,
@@ -502,7 +507,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                         grid.hybrid = object$sCorrect$skeleton$grid.dmoment$hybrid,
                         name.param = object$sCorrect$skeleton$Uparam,
                         leverage = object$sCorrect$leverage,
-                        n.cluster = object$sCorrect$cluster$n.cluster)
+                        n.cluster = object$sCorrect$cluster$n.cluster,
+                        weights = object$sCorrect$weights)
     }
     if(type %in% c("information","vcov.model","vcov.robust")){
         ## print(object$sCorrect$cluster$n.cluster - colSums(object$sCorrect$leverage))
@@ -516,7 +522,8 @@ sCorrect.sCorrect <- function(object, param = NULL, data = NULL,
                             grid.var = object$sCorrect$skeleton$grid.dmoment$var,
                             name.param = object$sCorrect$skeleton$Uparam,
                             leverage = object$sCorrect$leverage,
-                            n.cluster = object$sCorrect$cluster$n.cluster)
+                            n.cluster = object$sCorrect$cluster$n.cluster,
+                            weights = object$sCorrect$weights)
     }
 
     return(switch(type,

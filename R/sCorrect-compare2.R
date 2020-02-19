@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:21) 
+## Last-Updated: feb 17 2020 (13:59) 
 ##           By: Brice Ozenne
-##     Update #: 773
+##     Update #: 774
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -36,10 +36,10 @@
 #' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
 #' @param ... [logical] arguments passed to lower level methods.
 #'
-#' @details The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
+#' @details The \code{par} argument or the arguments \code{contrast} and \code{rhs} (or equivalenty \code{rhs})
 #' specify the set of linear hypotheses to be tested. They can be written:
 #' \deqn{
-#'   contrast * \theta = null
+#'   linfct * \theta = rhs
 #' }
 #' where \eqn{\theta} is the vector of the model coefficients. \cr
 #' The \code{par} argument must contain expression(s) involving the model coefficients.
@@ -49,11 +49,8 @@
 #' When directly specified, the contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
 #' Each hypothesis correspond to a row in the contrast matrix. \cr
 #'
-#' The null vector should contain as many elements as there are row in the contrast matrix. \cr
+#' The rhs vector should contain as many elements as there are row in the contrast matrix. \cr
 #' 
-#' Argument rhs and null are equivalent.
-#' This redondance enable compatibility between \code{lava::compare}, \code{compare2}, \code{multcomp::glht}, and \code{glht2}.
-#'
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
 #' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
 #' 

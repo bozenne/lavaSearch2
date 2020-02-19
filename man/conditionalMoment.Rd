@@ -5,6 +5,7 @@
 \alias{conditionalMoment.lm}
 \alias{conditionalMoment.gls}
 \alias{conditionalMoment.lme}
+\alias{conditionalMoment.lvm}
 \alias{conditionalMoment.lvmfit}
 \title{Prepare the Computation of score2}
 \usage{
@@ -18,6 +19,9 @@ conditionalMoment(object, initialize, first.order, second.order, usefit,
   second.order, usefit, residuals, leverage, param = NULL, data = NULL)
 
 \method{conditionalMoment}{lme}(object, initialize, first.order,
+  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+
+\method{conditionalMoment}{lvm}(object, initialize, first.order,
   second.order, usefit, residuals, leverage, param = NULL, data = NULL)
 
 \method{conditionalMoment}{lvmfit}(object, initialize, first.order,

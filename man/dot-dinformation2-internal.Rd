@@ -8,7 +8,7 @@
 .dInformation2(dmu, dOmega, d2mu, d2Omega, OmegaM1, missing.pattern,
   unique.pattern, name.pattern, grid.3varD1, grid.2meanD1.1varD1,
   grid.2meanD2.1meanD1, grid.2varD2.1varD1, name.param, leverage,
-  n.cluster)
+  n.cluster, weights)
 }
 \description{
 Compute the first derivative of the expected information matrix.

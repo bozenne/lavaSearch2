@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb  7 2020 (13:44) 
+## Last-Updated: feb 19 2020 (15:14) 
 ##           By: Brice Ozenne
-##     Update #: 342
+##     Update #: 343
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,9 +27,12 @@
 .dInformation2 <- function(dmu, dOmega, d2mu, d2Omega, OmegaM1,
                            missing.pattern, unique.pattern, name.pattern,
                            grid.3varD1, grid.2meanD1.1varD1, grid.2meanD2.1meanD1, grid.2varD2.1varD1,
-                           name.param, leverage, n.cluster){
+                           name.param, leverage, n.cluster, weights){
 
     if(lava.options()$debug){cat(".dInformation2\n")}
+    if(!is.null(weights)){
+        stop(".dInformation2 does not support weights. \n")
+    }
     symmetrize <- TRUE
 
     ## ** Prepare

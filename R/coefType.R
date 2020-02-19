@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: feb  6 2020 (13:55) 
+## last-updated: feb 17 2020 (16:44) 
 ##           By: Brice Ozenne
-##     Update #: 867
+##     Update #: 869
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -554,8 +554,9 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
     df.param[df.param$factitious,c("param","lava")] <- as.character(NA)
     df.param <- df.param[order(df.param$type,df.param$detail,df.param$name),,drop=FALSE]
     df.param$originalLink[is.na(df.param$lava)] <- NA
+    df.param$param[is.na(df.param$lava)] <- NA
     rownames(df.param) <- NULL
-    
+
     ## ** export
     if(as.lava){
         ## add extra mean as links

@@ -6,6 +6,7 @@
 \alias{.getIndexOmega.lm}
 \alias{.getIndexOmega.gls}
 \alias{.getIndexOmega.lme}
+\alias{.getIndexOmega.lvm}
 \alias{.getIndexOmega.lvmfit}
 \title{Identify the Endogenous Variables}
 \usage{
@@ -16,6 +17,8 @@
 \method{.getIndexOmega}{gls}(object, data, ...)
 
 \method{.getIndexOmega}{lme}(object, data, ...)
+
+\method{.getIndexOmega}{lvm}(object, data, ...)
 
 \method{.getIndexOmega}{lvmfit}(object, data, ...)
 }

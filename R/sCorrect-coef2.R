@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:21) 
+## Last-Updated: feb 17 2020 (18:50) 
 ##           By: Brice Ozenne
-##     Update #: 176
+##     Update #: 182
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -197,7 +197,7 @@ coef2.sCorrect <- function(object, as.lava = TRUE){
             table.cor.coef <- NULL
             cor.coef <- NULL
         }
-        out <- c(mean.coef, cor.coef, var.coef, random.coef)
+        out <- c(mean.coef, var.coef, cor.coef, random.coef)
         attr(out, "mean.coef") <- names(mean.coef)
         attr(out, "var.coef") <- names(var.coef)
         attr(out, "cor.coef") <- names(cor.coef)

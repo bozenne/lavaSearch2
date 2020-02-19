@@ -63,10 +63,10 @@ Test Linear Hypotheses using a multivariate Wald statistic from \code{lm}, \code
 Similar to \code{lava::compare} but with small sample correction (if any).
 }
 \details{
-The \code{par} argument or the arguments \code{contrast} and \code{null} (or equivalenty \code{rhs})
+The \code{par} argument or the arguments \code{contrast} and \code{rhs} (or equivalenty \code{rhs})
 specify the set of linear hypotheses to be tested. They can be written:
 \deqn{
-  contrast * \theta = null
+  linfct * \theta = rhs
 }
 where \eqn{\theta} is the vector of the model coefficients. \cr
 The \code{par} argument must contain expression(s) involving the model coefficients.
@@ -76,10 +76,7 @@ A contrast matrix and the right hand side will be generated inside the function.
 When directly specified, the contrast matrix must contain as many columns as there are coefficients in the model (mean and variance coefficients).
 Each hypothesis correspond to a row in the contrast matrix. \cr
 
-The null vector should contain as many elements as there are row in the contrast matrix. \cr
-
-Argument rhs and null are equivalent.
-This redondance enable compatibility between \code{lava::compare}, \code{compare2}, \code{multcomp::glht}, and \code{glht2}.
+The rhs vector should contain as many elements as there are row in the contrast matrix. \cr
 }
 \examples{
 #### simulate data ####

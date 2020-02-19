@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb 11 2020 (17:24) 
+## last-updated: feb 19 2020 (15:11) 
 ##           By: Brice Ozenne
-##     Update #: 2341
+##     Update #: 2346
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -127,7 +127,7 @@ score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRU
 .score2 <- function(dmu, dOmega, epsilon, OmegaM1,
                     missing.pattern, unique.pattern, name.pattern,
                     name.param, name.meanparam, name.varparam,
-                    n.cluster){
+                    n.cluster, weights){
     if(lava.options()$debug){cat(".score2\n")}
 
     ## ** Prepare
@@ -157,7 +157,10 @@ score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRU
         }        
     }
 
-    ### ** export
+    ## ** export
+    if(!is.null(weights)){
+        out.score <- sweep(out.score, STATS = weights, MARGIN = 1, FUN = "*")
+    }
     return(out.score)
 }
 

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: feb  6 2020 (16:19) 
+## last-updated: feb 19 2020 (15:08) 
 ##           By: Brice Ozenne
-##     Update #: 1538
+##     Update #: 1564
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -143,7 +143,7 @@ conditionalMoment.lm <- function(object,
         out$old2new.order$XXclusterXX.new <- out$old2new.order$XXclusterXX
         out$old2new.order$XXendogenousXX.new <- out$old2new.order$XXendogenousXX
         out$old2new.order$XXvalueXX.new <- out$old2new.order$XXvalueXX
-
+                
         ## *** identify missing pattern
         pattern <- X.wide
         pattern[!is.na(pattern)] <- 1
@@ -155,7 +155,7 @@ conditionalMoment.lm <- function(object,
         out$missing$pattern <- tapply(1:out$cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)[name.pattern]
         out$missing$unique.pattern <- unique.pattern
         out$missing$name.pattern <- name.pattern
-
+        
         ## *** initialize conditional moments
         out$skeleton <- skeleton(object, X = X.long,
                                  endogenous = out$endogenous, latent = out$latent,
@@ -178,7 +178,11 @@ conditionalMoment.lm <- function(object,
         if(second.order){
             out$skeleton <- skeletonDtheta2(out$skeleton)
         }
-        
+
+        ## *** weights
+        if(!is.null(object$weights)){
+            out$weights <- object$weights[,1]
+        }
     }else{
         rm.name <- c("moment","dmoment","d2moment","score","vcov.param","information","hessian","dInformation","dVcov.param","dRvcov.param","leverage","residuals")
         out <- object$sCorrect[setdiff(names(object$sCorrect),rm.name)]
@@ -266,8 +270,7 @@ conditionalMoment.lm <- function(object,
         }else{
             out$leverage <- object$sCorrect$leverage
         }
-    
-
+        
     }
 
     ## ** export
@@ -283,6 +286,11 @@ conditionalMoment.gls <- conditionalMoment.lm
 #' @rdname conditionalMoment
 #' @export
 conditionalMoment.lme <- conditionalMoment.lm
+
+## * conditionalMoment.lvm
+#' @rdname conditionalMoment
+#' @export
+conditionalMoment.lvm <- conditionalMoment.lm
 
 ## * conditionalMoment.lvmfit
 #' @rdname conditionalMoment

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: jan 31 2020 (10:04) 
+## Last-Updated: feb 17 2020 (19:03) 
 ##           By: Brice Ozenne
-##     Update #: 1102
+##     Update #: 1162
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,8 +31,10 @@
     index.var <- which(type$detail %in% c("Sigma_var","Sigma_cov","Psi_var","Psi_cov","sigma2","sigma2k","cor"))
     index.param <- which(!is.na(type$param))
     type.param <- type[intersect(index.var,index.param),,drop=FALSE]
-
+    
+    
     Omega <- object$sCorrect$moment$Omega
+    ## name.var <- object$sCorrect$name.param[object$sCorrect$name.param %in% unique(type.param$param)] ## make sure to keep the same order as in the original vector of parameters
     name.var <- unique(type.param$param)
     n.var <- length(name.var)
 
@@ -89,10 +91,20 @@
                 A[paste0(type.Sigma[iRow,"Y"],"~~",type.Sigma[iRow,"X"]),type.Sigma[iRow,"param"]] <- 1
             }
         }
+        attr(A,"name") <- name.var
     }else{
         name.param.sigma2 <- unique(type.param[type.param$detail=="sigma2","param"])
-        name.param.sigma2k <- unique(type.param[type.param$detail=="sigma2k","param"])
-        name.param.cor <- unique(type.param[type.param$detail=="cor","param"])
+        if("sigma2k" %in% type.param$detail){
+            name.param.sigma2k <- as.character(na.omit(diag(object$sCorrect$skeleton$param$SigmaParam[,,"sigma2kX"])))
+        }else{
+            name.param.sigma2k <- NULL
+        }
+        if("cor" %in% type.param$detail){
+            M.cor <- object$sCorrect$skeleton$param$SigmaParam[,,"cor"]
+            name.param.cor <- unique(M.cor[upper.tri(M.cor)])
+        }else{
+            name.param.cor <- NULL
+        }
         name.param.tau <- unique(type.param[type.param$detail=="Psi_var","param"])
         
         if(any(type.param$detail %in% "Psi_var")){
@@ -100,21 +112,21 @@
                 stop("Invalid specification of the residual variance covariance matrix \n",
                      "Consider using \"gls\" instead of \"lme\" \n")
             }else{
-                A <- list(tau = function(Omega){mean(lower.tri(Omega))})
                 if("sigma2k" %in% type.param$detail){
-                    A$sigma2 <- function(Omega){Omega[1,1]-mean(lower.tri(Omega))}
+                    A$sigma2 <- function(Omega){c(Omega[1,1]-mean(lower.tri(Omega)))}
                     A$sigma2k <- function(Omega){sqrt(diag(Omega-mean(lower.tri(Omega)))/(Omega[1,1]-mean(lower.tri(Omega))))[-1]}
                 }else{
-                    A$sigma2 <- function(Omega){mean(diag(Omega))-mean(lower.tri(Omega))}
+                    A$sigma2 <- function(Omega){c(mean(diag(Omega))-mean(lower.tri(Omega)))}
                 }
+                A <- list(tau = function(Omega){c(mean(lower.tri(Omega)))})
             }                
         }else{
             A <- list()
             if("sigma2k" %in% type.param$detail){
-                A$sigma2 <- function(Omega){Omega[1,1]}
+                A$sigma2 <- function(Omega){c(Omega[1,1])}
                 A$sigma2k <- function(Omega){sqrt(diag(Omega)/Omega[1,1])[-1]}
             }else{
-                A$sigma2 <- function(Omega){mean(diag(Omega))}
+                A$sigma2 <- function(Omega){c(mean(diag(Omega)))}
             }
             if("cor" %in% type.param$detail){
                 if(length(name.param.cor)>1){
@@ -124,8 +136,11 @@
                 }
             }
         }
-    }
+        attr(A,"name") <- c(name.param.sigma2, name.param.sigma2k, name.param.cor, name.param.tau)
 
+    }
+    
+    browser()
     ## *** Psi_var and Psi_cov
     if(any(type.param$detail %in% c("Psi_var","Psi_cov"))){
         type.Psi <- type.param[type.param$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
@@ -190,7 +205,6 @@
     ## ** Step (i-ii) compute individual and average bias
     dmu <- aperm(abind::abind(dmu[param.mean], along = 3), perm = c(3,2,1))
     vcov.muparam <- vcov.param[param.mean,param.mean,drop=FALSE]
-
     Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
                   dimnames = list(endogenous, endogenous))
     n.Psi <- matrix(0, nrow = n.endogenous, ncol = n.endogenous,
@@ -216,7 +230,7 @@
     }
     ## take the average
     Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
-
+    
     ## ** Step (iii): compute corrected residuals and effective sample size
     if(algorithm == "2"){
         epsilon.adj <- .adjustResiduals(Omega = Omega0,
@@ -307,17 +321,16 @@
                 stop(iSolution)
             }
         }
+        names(iSolution) <- object$sCorrect$ssc$name.var
     }else{
-        iSolution <- as.double(unlist(lapply(A, function(iFCT){iFCT(Omega.adj)})))
-        ## print(setNames(iSolution,object$sCorrect$ssc$name.var))
-
+        iSolution <- unname(unlist(lapply(A, function(iFCT){iFCT(Omega.adj)})))
         ## tempo <- Omega.adj
         ## attr(tempo,"detail") <- NULL
         ## print(tempo)
     }
 
     ## ** update parameters in conditional moments
-    ## iSolution - param0[object$sCorrect$ssc$name.var]
+    ## param0[object$sCorrect$ssc$name.var] - iSolution
     param0[object$sCorrect$ssc$name.var] <- iSolution
 
     ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the parent function

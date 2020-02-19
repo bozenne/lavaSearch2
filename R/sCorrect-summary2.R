@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:24) 
+## Last-Updated: feb 17 2020 (14:00) 
 ##           By: Brice Ozenne
-##     Update #: 456
+##     Update #: 462
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -115,8 +115,20 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
     n.param <- length(name.param)
 
     ## ** new Wald test
+    type <- object$sCorrect$skeleton$type
+    type <- type[!is.na(type$originalLink),]
+    null <- setNames(rep(0, n.param),name.param)
+    if(any(type$detail %in% c("sigma2","Sigma_var","Psi_var"))){
+        param.var <- type[type$detail %in% c("sigma2","Sigma_var","Psi_var"),"param"]
+        null[param.var] <- NA
+    }
+    if(any(type$detail %in% c("sigma2k"))){
+        param.mult <- type[type$detail %in% c("sigma2k"),"param"]
+        null[param.mult] <- 1
+    }
     table.all <- compare2(object,
                           linfct = name.param,
+                          rhs = null,
                           robust = robust,
                           cluster = NULL,
                           ssc = ssc, df = df,
@@ -137,7 +149,6 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
         dimnames(object.summary$coefficients) <- list(name.param,
                                                       c("Value","Std.Error","t-value","df","p-value")
                                                       )
-
         object.summary$residuals <- residuals2(object, type = "response", format = "long")
         object.summary$sigma <- sqrt(tableS.all["sigma2","estimate"])
 
@@ -151,7 +162,6 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
         dimnames(object.summary$tTable) <- list(name.param,
                                                 c("Value","Std.Error","t-value","df","p-value")
                                                 )
-
         object.summary$residuals <- quantile(residuals2(object, type = "normalized", format = "long"),
                                              na.rm = TRUE)        
         object.summary$sigma <- sqrt(tableS.all["sigma2","estimate"])
