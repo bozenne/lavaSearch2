@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb 17 2020 (19:03) 
+## Last-Updated: feb 19 2020 (15:23) 
 ##           By: Brice Ozenne
-##     Update #: 1162
+##     Update #: 1163
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -140,7 +140,6 @@
 
     }
     
-    browser()
     ## *** Psi_var and Psi_cov
     if(any(type.param$detail %in% c("Psi_var","Psi_cov"))){
         type.Psi <- type.param[type.param$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
