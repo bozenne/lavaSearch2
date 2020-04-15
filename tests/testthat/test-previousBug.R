@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 19 2019 (10:17) 
 ## Version: 
-## Last-Updated: jan 31 2020 (10:59) 
+## Last-Updated: apr 15 2020 (11:19) 
 ##           By: Brice Ozenne
-##     Update #: 22
+##     Update #: 26
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -135,7 +135,33 @@ e <- estimate(m, dd)
     
 ## })
 
+## * Brice 04/15/20 9:26 multcomp
+mSim <- lvm(Y1~X1,Y2~X1)
+n <- 25
 
+set.seed(10)
+d <- lava::sim(mSim, n)
+dNA <- rbind(d,c(Y1=NA,X1=1,Y2=2))
+dNA$id <- 1:26
+ls.lmALL <- list("Y1" = lm(Y1~X1, data = d),
+                 "Y2" = lm(Y2~X1, data = d))
+ls.lmRED <- list("Y1" = lm(Y1~X1, data = d))
+ls.lmNA <- list("Y1" = lm(Y1~X1, data = dNA),
+                 "Y2" = lm(Y2~X1, data = dNA))
+class(ls.lmALL) <- "mmm"
+class(ls.lmRED) <- "mmm"
+class(ls.lmNA) <- "mmm"
+
+
+test_that("Stability by subset", {
+    glht.ALL <- glht2(ls.lmALL, linfct = "X1=0")
+    glht.RED <- glht2(ls.lmRED, linfct = "X1=0")
+    glht.NA <- glht2(ls.lmNA, linfct = "X1=0", cluster = "id")
+
+    index.model1 <- which(grepl("Y1: ",colnames(glht.ALL$vcov)))
+    expect_equal(glht.ALL$vcov[index.model1,index.model1], glht.RED$vcov, tol = 1e-6)
+    expect_equal(glht.RED$vcov[index.model1,index.model1], glht.NA$vcov[index.model1,index.model1], tol = 1e-6)
+})
 
 ######################################################################
 ### test-previousBug.R ends here

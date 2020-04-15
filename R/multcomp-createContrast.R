@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: apr 14 2020 (16:06) 
+## Last-Updated: apr 15 2020 (09:32) 
 ##           By: Brice Ozenne
-##     Update #: 375
+##     Update #: 380
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -186,6 +186,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
                                           dimnames = list(paste0(name.model,": ",name.linfct), object.coefname)),
                         null = rep(as.numeric(base::trimws(linfct.split[2])), n.model),
                         Q = n.model)
+            if(all(is.na(out$null))){out$null[] <- 0}
             for(iM in 1:n.model){ ## iM <- 1
                 iModel <- name.model[iM]
                 out$contrast[iM,paste0(iModel,": ",colnames(iTemplate$contrast))] <-  as.double(iTemplate$contrast[1,])
@@ -196,7 +197,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     }else{
         out <- .createContrast(linfct, name.param = object.coefname)
     }
-    
+
     ## ** create contrast matrix relative to each model
     out$mlf <- lapply(name.model, function(iModel){ ## iModel <- name.model[1]
         ## only keep columns corresponding to coefficients belonging the the current model

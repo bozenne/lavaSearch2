@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:22) 
+## Last-Updated: apr 15 2020 (11:16) 
 ##           By: Brice Ozenne
-##     Update #: 719
+##     Update #: 742
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -234,7 +234,6 @@ glht2.mmm <- function (object, linfct, rhs = 0,
              "Incorrect element(s): ",paste(index.wrong, collapse = " "),".\n")
     }
 
-
     ## ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
@@ -282,6 +281,13 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         test.df <- TRUE
     }
 
+    ## ** Total number of observations
+    if(!is.null(cluster)){
+        ls.cluster <- lapply(object, function(iO){extractData(iO, rm.na = FALSE)[[cluster]]})
+        Ucluster <- unique(unlist(ls.cluster))
+        n.cluster <- length(Ucluster)
+    }
+    
     ## ** Extract influence functions from all models
     ls.res <- lapply(1:n.object, function(iM){ ## iM <- 1
 
@@ -306,17 +312,10 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         }
         ## *** get iid decomposition
         iid.tempo <- iid2(object[[iM]], robust = robust, cluster = cluster)
-
         if(!is.null(cluster)){
-            ## identify missing values
-            iName.obs <- extractData(object[[iM]], rm.na = FALSE)[[cluster]]
-            iN.obs <- length(iName.obs)
-            index.missing <- which(iName.obs %in% object[[iM]]$sCorrect$data[[cluster]] == FALSE)
-
-            ## collect iid
-            out$iid <- matrix(NA, nrow = iN.obs, ncol = length(name.param),
-                              dimnames = list(iName.obs, name.param))
-            out$iid[setdiff(1:iN.obs,index.missing),] <- iid.tempo
+            out$iid <- matrix(NA, nrow = n.cluster, ncol = length(name.param),
+                              dimnames = list(Ucluster, name.param))
+            out$iid[attr(iid.tempo,"cluster"),] <- iid.tempo
         }else{
             out$iid <- iid.tempo
         }
@@ -341,8 +340,17 @@ glht2.mmm <- function (object, linfct, rhs = 0,
              "Consider specifying the \'cluster\' argument \n")
     }
     M.iid <- do.call(cbind,ls.iid)
-    vec.sd <- apply(M.iid,2,function(iCol){sqrt(sum(iCol^2,na.rm = TRUE))})
-    vcov.object <- cor(M.iid, use = "pairwise") * tcrossprod(vec.sd)
+    vcov.object <- crossprod(M.iid)
+    if(any(is.na(vcov.object))){
+        Mindex <- which(is.na(vcov.object), arr.ind = TRUE)
+        for(iIndex in 1:NROW(Mindex)){ # iIndex <- 1
+            iRow <- Mindex[iIndex,1]
+            iCol <- Mindex[iIndex,2]
+            iIID2 <- M.iid[,iRow]*M.iid[,iCol]
+            ## vcov.object[iRow,iCol] <- (length(iIID2)/sum(!is.na(iIID2)))^2 * sum(iIID2, na.rm = TRUE)
+            vcov.object[iRow,iCol] <- sum(iIID2, na.rm = TRUE)
+        }
+    }
     
     ## ** sanity check
     name.param <- names(seq.param)
