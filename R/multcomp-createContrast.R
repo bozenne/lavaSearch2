@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: feb  6 2020 (09:30) 
+## Last-Updated: apr 14 2020 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 341
+##     Update #: 375
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -147,6 +147,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
 
     ## ** find the names of the coefficients
     name.model <- names(object)
+    n.model <- length(name.model)
     if(is.null(name.model)){
         stop("Incorrect argument  \'object\' \n",
              "Each element of the list must be named \n")
@@ -168,18 +169,34 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     object.coefname <- unname(unlist(ls.object.coefname)) ## vector
     n.coef <- length(object.coefname)
     
-    ## ** normalize arguments
-    if(length(linfct)==1 && all(linfct %in% object.coefname == FALSE) & all(sapply(linfct, function(iL){any(grepl(iL, object.coefname, fixed = TRUE))}))){
-        object.coefname.red <- unlist(lapply(object.coefname, function(iName){strsplit(iName, split = ": ", fixed = TRUE)[[1]][2]}))
-        linfct <- object.coefname[grep(linfct, object.coefname.red, value = FALSE)]
-    }
-
     ## ** create full contrast matrix
-    out <- .createContrast(linfct, name.param = object.coefname)
-    if(any(out$null!=0)){
-        warning("glht ignores the \'rhs\' argument when dealing with a multiple models \n")
-    }
+    if(length(linfct)==1){
+        ## linfct.split <-
+        linfct.split <- strsplit(linfct,split = "=")[[1]]
+        linfct.rhs <- base::trimws(strsplit(linfct.split[[1]],split = "\\+|\\-")[[1]], which = "both")
 
+        ls.linfct.index <- lapply(ls.coefname, function(iM){na.omit(match(linfct.rhs, iM))})
+        if(all(sapply(ls.linfct.index, length) == length(linfct.rhs))){
+            iTemplate <- .createContrast(linfct, ls.coefname[[1]])
+            name.linfct <- names(linfct)
+            if(is.null(name.linfct)){
+                name.linfct <- linfct.split[1]
+            }
+            out <- list(contrast = matrix(0, nrow = n.model, ncol = n.coef,
+                                          dimnames = list(paste0(name.model,": ",name.linfct), object.coefname)),
+                        null = rep(as.numeric(base::trimws(linfct.split[2])), n.model),
+                        Q = n.model)
+            for(iM in 1:n.model){ ## iM <- 1
+                iModel <- name.model[iM]
+                out$contrast[iM,paste0(iModel,": ",colnames(iTemplate$contrast))] <-  as.double(iTemplate$contrast[1,])
+            }
+        }else{
+            stop("Could not find coefficients based on the argument linfct=",linfct,"\n")
+        }
+    }else{
+        out <- .createContrast(linfct, name.param = object.coefname)
+    }
+    
     ## ** create contrast matrix relative to each model
     out$mlf <- lapply(name.model, function(iModel){ ## iModel <- name.model[1]
         ## only keep columns corresponding to coefficients belonging the the current model

@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: feb 17 2020 (14:00) 
+## Last-Updated: feb 19 2020 (15:53) 
 ##           By: Brice Ozenne
-##     Update #: 462
+##     Update #: 466
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -134,7 +134,6 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
                           ssc = ssc, df = df,
                           F.test = FALSE,
                           as.lava = FALSE)
-
     tableS.all <- summary(table.all, test = multcomp::adjusted("none"))$table2
     rownames(tableS.all) <- name.param
 
@@ -157,7 +156,6 @@ summary2.sCorrect <- function(object, robust = FALSE, digit = max(3, getOption("
     }
     ## ** gls / lme
     if(inherits(object,"gls") || inherits(object,"lme")){
-
         object.summary$tTable <- tableS.all[name.param,c("estimate","std.error","statistic","df","p.value"),drop=FALSE]
         dimnames(object.summary$tTable) <- list(name.param,
                                                 c("Value","Std.Error","t-value","df","p-value")

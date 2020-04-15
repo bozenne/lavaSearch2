@@ -10,6 +10,9 @@
                        df = "Satterthwaite",
                        df.robust = 1
                        )
+
+    lava::addhook("gaussian_weight.estimate.hook", hook = "estimate.hooks")
+
 }
 
 ## * .onAttach

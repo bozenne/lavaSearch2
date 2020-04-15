@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:22) 
+## Last-Updated: feb 19 2020 (15:53) 
 ##           By: Brice Ozenne
-##     Update #: 180
+##     Update #: 184
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -31,9 +31,8 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     object$test <- NULL
     object$confint <- NULL
     class(object) <- setdiff(keep.class, "glht2")
-    
     keep.df <- object$df
-    test.df <- any( (keep.df>0) * (is.infinite(keep.df)) == 1 )
+    test.df <- any( (keep.df>0) * (!is.infinite(keep.df)) == 1 )
     object$df <- round(median(object$df))
     output <- summary(object, ...)
     ## restaure df when possible

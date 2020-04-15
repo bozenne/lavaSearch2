@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: feb 17 2020 (16:39) 
+## Last-Updated: feb 20 2020 (10:46) 
 ##           By: Brice Ozenne
-##     Update #: 73
+##     Update #: 91
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -126,7 +126,11 @@
     }
     
     if(!is.null(object$modelStruct$corStruct) && length(varIndex.cor)>0){
-        index.Omega <- data[[varIndex.cor]]
+        index.Omega <- as.numeric(as.factor(data[[varIndex.cor]]))
+        if(!is.null(object$modelStruct$varStruct)){
+            index.Omega2 <- as.numeric(factor(data[[var.var]], levels = level.var.var))
+            attr(index.Omega,"index2endogenous") <- tapply(index.Omega, index.Omega2, unique)
+        }
     }else if(!is.null(object$modelStruct$varStruct)){
         index.Omega <- as.numeric(factor(data[[var.var]], levels = level.var.var))
     }else if(!is.null(object$modelStruct$reStruct)){
@@ -146,6 +150,10 @@
     ## ** ref.group
     if(!is.null(object$modelStruct$varStruct)){
         attr(index.Omega,"ref") <- level.var.var[1]
+    }
+    if(is.null(attr(index.Omega,"index2endogenous"))){
+        Uindex.Omega <- unique(index.Omega)
+        attr(index.Omega,"index2endogenous") <- setNames(as.list(Uindex.Omega),Uindex.Omega)
     }
     return(index.Omega)
 }

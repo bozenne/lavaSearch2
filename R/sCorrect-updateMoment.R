@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: jan 31 2020 (10:00) 
+## Last-Updated: feb 20 2020 (10:46) 
 ##           By: Brice Ozenne
-##     Update #: 198
+##     Update #: 202
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -105,7 +105,6 @@ updateMoment <- function(skeleton, value, toUpdate,
     if("Psi" %in% names(value)){
         value$Omega <- value$Omega + value$tLambda.tiIB.Psi.iIB %*% value$Lambda
     }
-
     value$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
         iIndex <- which(unique.pattern[iM,]==1)
         return(value$Omega[iIndex,iIndex,drop=FALSE])

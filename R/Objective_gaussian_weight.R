@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 17 2020 (16:29) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:11) 
+## Last-Updated: feb 21 2020 (09:48) 
 ##           By: Brice Ozenne
-##     Update #: 88
+##     Update #: 89
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,9 +39,6 @@
 ##'                    weights = df[df$missing==0,"weights"],
 ##'                    estimator = "gaussian_weight")
 ##' 
-
-
-lava::addhook("gaussian_weight.estimate.hook", hook = "estimate.hooks")
 
 ## * gaussian_weight.estimate.hook
 ##' @name gaussian_weight

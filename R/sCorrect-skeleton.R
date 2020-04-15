@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb  6 2020 (13:55) 
+## Last-Updated: feb 20 2020 (10:51) 
 ##           By: Brice Ozenne
-##     Update #: 1664
+##     Update #: 1668
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -104,7 +104,6 @@ skeleton <- function(object, X,
         if(any(!is.na(type.nu$param))){
             theta.param$nu[type.nu[!is.na(type.nu$param),"Y"]] <- type.nu[!is.na(type.nu$param),"param"]
         }
-
         theta.param$Xnu <- matrix(NA,
                                   nrow = n.cluster, ncol = n.endogenous, byrow = TRUE,
                                   dimnames = list(NULL,endogenous))

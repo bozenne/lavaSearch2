@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: feb 17 2020 (16:38) 
+## Last-Updated: feb 20 2020 (10:30) 
 ##           By: Brice Ozenne
-##     Update #: 142
+##     Update #: 151
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -87,10 +87,12 @@
         index.Omega <- .getIndexOmega(object, data = data)
     }
     n.obs <- NROW(data)
+    Uindex.Omega <- unique(index.Omega)
     out <- list(index.cluster = 1:n.obs,
                 name.cluster = 1:n.obs,                
                 n.cluster = n.obs,
-                index.Omega = as.list(index.Omega)
+                index.Omega = as.list(index.Omega),
+                index2endogenous = setNames(as.list(Uindex.Omega),Uindex.Omega)
                 )
     return(out)
     
@@ -104,6 +106,7 @@
     }
     if(is.null(index.Omega)){
         index.Omega <- .getIndexOmega(object, data = data)
+        index2endogenous <- attr(index.Omega,"index2endogenous")
     }
     if(is.null(endogenous)){
         endogenous <- lava::endogenous(object)
@@ -138,7 +141,8 @@
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,
-                index.Omega = tapply(index.Omega,index.cluster, list)
+                index.Omega = tapply(index.Omega,index.cluster, list),
+                index2endogenous = index2endogenous
                 ))
 }
 
@@ -173,10 +177,12 @@
     }else{
         index.Omega <- tapply(index.Omega, index.cluster, list)
     }
+    Uindex.Omega <- unique(index.Omega)
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,
-                index.Omega = index.Omega
+                index.Omega = index.Omega,
+                index2endogenous = setNames(as.list(Uindex.Omega),Uindex.Omega)
                 ))
     
 }

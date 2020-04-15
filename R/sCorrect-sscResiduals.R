@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:23) 
+## Last-Updated: feb 19 2020 (15:45) 
 ##           By: Brice Ozenne
-##     Update #: 1163
+##     Update #: 1168
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -139,7 +139,7 @@
         attr(A,"name") <- c(name.param.sigma2, name.param.sigma2k, name.param.cor, name.param.tau)
 
     }
-    
+
     ## *** Psi_var and Psi_cov
     if(any(type.param$detail %in% c("Psi_var","Psi_cov"))){
         type.Psi <- type.param[type.param$detail %in% c("Psi_var","Psi_cov"),,drop=FALSE]
@@ -320,9 +320,10 @@
                 stop(iSolution)
             }
         }
-        names(iSolution) <- object$sCorrect$ssc$name.var
+        names(iSolution) <- attr(A,"name")
     }else{
         iSolution <- unname(unlist(lapply(A, function(iFCT){iFCT(Omega.adj)})))
+        names(iSolution) <- attr(A,"name")
         ## tempo <- Omega.adj
         ## attr(tempo,"detail") <- NULL
         ## print(tempo)
@@ -330,7 +331,7 @@
 
     ## ** update parameters in conditional moments
     ## param0[object$sCorrect$ssc$name.var] - iSolution
-    param0[object$sCorrect$ssc$name.var] <- iSolution
+    param0[names(iSolution)] <- iSolution
 
     ## ** Step (vi-vii): update derivatives and information matrix (performed by .init_sCorrect) in the parent function
         

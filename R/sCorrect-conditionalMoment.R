@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: feb 19 2020 (15:08) 
+## last-updated: apr 14 2020 (16:00) 
 ##           By: Brice Ozenne
-##     Update #: 1564
+##     Update #: 1587
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -106,8 +106,8 @@ conditionalMoment.lm <- function(object,
         out$X <- .getDesign(object, data = out$data, add.Y = TRUE)
         out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
 
-        if(any(colnames(out$X) %in% c("XXvalueXX","XXendogenousXX","XXclusterXX"))){
-            stop("\"XXvalueXX\", \"XXendogenousXX\", and \"XXclusterXX\" should not correspond to variable names \n",
+        if(any(colnames(out$X) %in% c("XXvalueXX","XXendogenousXX","XXendogenousXX.index","XXclusterXX"))){
+            stop("\"XXvalueXX\", \"XXendogenousXX\", \"XXendogenousXX.index\", and \"XXclusterXX\" should not correspond to variable names \n",
                  "It is used internally for data manipulation \n")
         }
 
@@ -126,16 +126,33 @@ conditionalMoment.lm <- function(object,
         }else{
             X.long <- out$X
             names(X.long)[names(X.long) == lava::endogenous(object, format = "long")] <- "XXvalueXX"
-            X.long$XXendogenousXX <- NA
-            for(iC in 1:out$cluster$n.cluster){ ## iC <- 10
-                X.long$XXendogenousXX[out$cluster$index.cluster == iC] <- out$endogenous[na.omit(out$cluster$index.Omega[[iC]])]
+            X.long$XXendogenousXX <- as.character(NA)
+            X.long$XXendogenousXX.index <- NA
+            
+            index2endogenous <- unlist(lapply(1:length(out$endogenous), function(iE){
+                setNames(out$cluster$index2endogenous[[iE]],
+                         rep(out$endogenous[iE],length(out$cluster$index2endogenous[[iE]])))
+            }))
+            
+            for(iC in 1:out$cluster$n.cluster){ ## iC <- 1
+                iEndo <- names(index2endogenous)[match(out$cluster$index.Omega[[iC]],index2endogenous)]
+                ## if(any(duplicated(out$cluster$index.Omega[[iC]]))){
+                ##     stop("Repetitions of the same endogenous variable in the same cluster \n")
+                ## }
+                ## if(length(unique(iEndo))>1 && any(duplicated(iEndo)) && is.unsorted(factor(iEndo, levels = out$endogenous)) ){
+                ##     stop("Sort the dataset according to the endogenous variable before fitting the model \n")
+                ## }
+                if(any(duplicated(iEndo))){
+                    stop("Repetitions of the same endogenous variable in the same cluster \n")
+                }
+                X.long$XXendogenousXX[out$cluster$index.cluster == iC] <- iEndo
+                X.long$XXendogenousXX.index[out$cluster$index.cluster == iC] <- out$cluster$index.Omega[[iC]]
             }
             X.long <- cbind(X.long, XXclusterXX = out$cluster$index.cluster)
-
-            X.wide <- dcast(X.long[X.long$XXendogenousXX %in% out$endogenous,c("XXclusterXX","XXendogenousXX","XXvalueXX")],
-                            value.var = "XXvalueXX",
-                            formula = XXclusterXX ~ XXendogenousXX)
-            X.wide <- X.wide[order(X.wide$XXclusterXX),out$endogenous,drop=FALSE]
+            X.wide <- reshape2::dcast(X.long[,c("XXclusterXX","XXendogenousXX","XXendogenousXX.index","XXvalueXX")],
+                                      value.var = "XXvalueXX",
+                                      formula = XXclusterXX ~ XXendogenousXX.index)
+            X.wide <- X.wide[order(X.wide$XXclusterXX),setdiff(names(X.wide), "XXclusterXX"),drop=FALSE]
         }
         out$old2new.order <- X.long[,c("XXclusterXX","XXendogenousXX","XXvalueXX")]
         names(out$old2new.order) <- c("XXclusterXX.old","XXendogenousXX.old","XXvalueXX.old")
@@ -148,6 +165,7 @@ conditionalMoment.lm <- function(object,
         pattern <- X.wide
         pattern[!is.na(pattern)] <- 1
         pattern[is.na(pattern)] <- 0
+
         unique.pattern <- unique(pattern)
         name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
         rownames(unique.pattern) <- name.pattern
@@ -155,7 +173,7 @@ conditionalMoment.lm <- function(object,
         out$missing$pattern <- tapply(1:out$cluster$n.cluster,apply(pattern, MARGIN = 1, FUN = paste0, collapse=""),list)[name.pattern]
         out$missing$unique.pattern <- unique.pattern
         out$missing$name.pattern <- name.pattern
-        
+
         ## *** initialize conditional moments
         out$skeleton <- skeleton(object, X = X.long,
                                  endogenous = out$endogenous, latent = out$latent,
