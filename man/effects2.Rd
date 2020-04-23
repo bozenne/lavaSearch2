@@ -8,11 +8,9 @@
 \usage{
 effects2(object, ...)
 
-\method{effects2}{lvmfit}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{effects2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{effects2}{sCorrect}(object, link, conf.level = 0.95,
-  robust = FALSE, ...)
+\method{effects2}{sCorrect}(object, link, conf.level = 0.95, robust = FALSE, ...)
 }
 \arguments{
 \item{object}{an object that inherits from lvmfit.}

@@ -11,21 +11,25 @@
 \usage{
 compare2(object, ...)
 
-\method{compare2}{lm}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{compare2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{compare2}{gls}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{compare2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{compare2}{lme}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{compare2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{compare2}{lvmfit}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{compare2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{compare2}{sCorrect}(object, linfct = NULL, rhs = NULL,
-  robust = FALSE, cluster = NULL, as.lava = TRUE, F.test = TRUE,
-  conf.level = 0.95, ...)
+\method{compare2}{sCorrect}(
+  object,
+  linfct = NULL,
+  rhs = NULL,
+  robust = FALSE,
+  cluster = NULL,
+  as.lava = TRUE,
+  F.test = TRUE,
+  conf.level = 0.95,
+  ...
+)
 }
 \arguments{
 \item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}

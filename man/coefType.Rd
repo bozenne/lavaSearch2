@@ -12,14 +12,11 @@
 \usage{
 coefType(object, as.lava, ...)
 
-\method{coefType}{lm}(object, data = NULL, indexOmega = NULL,
-  coef = NULL, ...)
+\method{coefType}{lm}(object, data = NULL, indexOmega = NULL, coef = NULL, ...)
 
-\method{coefType}{gls}(object, data = NULL, indexOmega = NULL,
-  coef = NULL, ...)
+\method{coefType}{gls}(object, data = NULL, indexOmega = NULL, coef = NULL, ...)
 
-\method{coefType}{lme}(object, data = NULL, indexOmega = NULL,
-  coef = NULL, ...)
+\method{coefType}{lme}(object, data = NULL, indexOmega = NULL, coef = NULL, ...)
 
 \method{coefType}{lvm}(object, as.lava = TRUE, data = NULL, ...)
 

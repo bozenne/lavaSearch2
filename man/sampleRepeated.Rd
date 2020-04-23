@@ -4,8 +4,7 @@
 \alias{sampleRepeated}
 \title{Simulate Repeated Measurements over time}
 \usage{
-sampleRepeated(n, n.Xcont = 2, n.Xcat = 2, n.rep = 5,
-  format = "long")
+sampleRepeated(n, n.Xcont = 2, n.Xcat = 2, n.rep = 5, format = "long")
 }
 \arguments{
 \item{n}{[integer] sample size.}

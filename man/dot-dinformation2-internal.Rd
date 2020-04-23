@@ -5,10 +5,24 @@
 \alias{.dInformation2}
 \title{Compute the First Derivative of the Expected Information Matrix}
 \usage{
-.dInformation2(dmu, dOmega, d2mu, d2Omega, OmegaM1, missing.pattern,
-  unique.pattern, name.pattern, grid.3varD1, grid.2meanD1.1varD1,
-  grid.2meanD2.1meanD1, grid.2varD2.1varD1, name.param, leverage,
-  n.cluster, weights)
+.dInformation2(
+  dmu,
+  dOmega,
+  d2mu,
+  d2Omega,
+  OmegaM1,
+  missing.pattern,
+  unique.pattern,
+  name.pattern,
+  grid.3varD1,
+  grid.2meanD1.1varD1,
+  grid.2meanD2.1meanD1,
+  grid.2varD2.1varD1,
+  name.param,
+  leverage,
+  n.cluster,
+  weights
+)
 }
 \description{
 Compute the first derivative of the expected information matrix.

@@ -7,8 +7,7 @@
 \usage{
 score2(object, indiv, cluster, as.lava)
 
-\method{score2}{sCorrect}(object, indiv = FALSE, cluster = NULL,
-  as.lava = TRUE)
+\method{score2}{sCorrect}(object, indiv = FALSE, cluster = NULL, as.lava = TRUE)
 }
 \arguments{
 \item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}

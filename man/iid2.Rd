@@ -11,20 +11,15 @@
 \usage{
 iid2(object, ...)
 
-\method{iid2}{lm}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{iid2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{iid2}{gls}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{iid2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{iid2}{lme}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{iid2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{iid2}{lvmfit}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{iid2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{iid2}{sCorrect}(object, robust = TRUE, cluster = NULL,
-  as.lava = TRUE, ...)
+\method{iid2}{sCorrect}(object, robust = TRUE, cluster = NULL, as.lava = TRUE, ...)
 }
 \arguments{
 \item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}

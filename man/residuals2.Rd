@@ -7,8 +7,7 @@
 \usage{
 residuals2(object, type, format)
 
-\method{residuals2}{sCorrect}(object, type = "response",
-  format = "wide")
+\method{residuals2}{sCorrect}(object, type = "response", format = "wide")
 }
 \arguments{
 \item{object}{a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.}

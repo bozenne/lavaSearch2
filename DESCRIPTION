@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
 Version: 1.5.7
-Date: 2020-04-01
+Date: 2020-04-23
 Authors@R: c(
     person("Brice", "Ozenne", role = c("aut", "cre"), email = "brice.mh.ozenne@gmail.com", comment = c(ORCID = "0000-0001-9694-2956"))
 	)
@@ -49,4 +49,4 @@ Suggests:
     testthat
 LinkingTo: Rcpp, RcppArmadillo
 NeedsCompilation: yes
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.0

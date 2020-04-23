@@ -9,23 +9,77 @@
 \alias{conditionalMoment.lvmfit}
 \title{Prepare the Computation of score2}
 \usage{
-conditionalMoment(object, initialize, first.order, second.order, usefit,
-  residuals, leverage, param = NULL, data = NULL)
+conditionalMoment(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 
-\method{conditionalMoment}{lm}(object, initialize, first.order,
-  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+\method{conditionalMoment}{lm}(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 
-\method{conditionalMoment}{gls}(object, initialize, first.order,
-  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+\method{conditionalMoment}{gls}(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 
-\method{conditionalMoment}{lme}(object, initialize, first.order,
-  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+\method{conditionalMoment}{lme}(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 
-\method{conditionalMoment}{lvm}(object, initialize, first.order,
-  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+\method{conditionalMoment}{lvm}(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 
-\method{conditionalMoment}{lvmfit}(object, initialize, first.order,
-  second.order, usefit, residuals, leverage, param = NULL, data = NULL)
+\method{conditionalMoment}{lvmfit}(
+  object,
+  initialize,
+  first.order,
+  second.order,
+  usefit,
+  residuals,
+  leverage,
+  param = NULL,
+  data = NULL
+)
 }
 \arguments{
 \item{object, x}{a latent variable model.}

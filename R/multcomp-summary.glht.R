@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:53) 
+## Last-Updated: apr 23 2020 (12:44) 
 ##           By: Brice Ozenne
-##     Update #: 184
+##     Update #: 186
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -38,18 +38,18 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     ## restaure df when possible
     method.adjust <- output$test$type
     if(NROW(object$linfct)==1){method.adjust <- "none"}
-    if(test.df && method.adjust %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none")){
+    if(test.df && method.adjust %in% c("holm", "hochberg", "hommel", "bonferroni", "BH", "BY", "fdr", "none","univariate")){
         output$df <- keep.df
         output$test$pvalues <- p.adjust(2*(1-pt(abs(output$test$tstat), df = keep.df)), method = method.adjust)
     }
     
     name.hypo <- rownames(output$linfct)
     n.hypo <- length(name.hypo)
-
-    if(confint && method.adjust %in% c("none","bonferroni","single-step")){
-        if(method.adjust %in% c("none","bonferroni")){
+    if(confint && method.adjust %in% c("univariate","none","bonferroni","single-step")){
+        if(method.adjust %in% c("none","univariate","bonferroni")){
             alpha <- switch(method.adjust,
                             "none" = 1-conf.level,
+                            "univariate" = 1-conf.level,
                             "bonferroni" = (1-conf.level)/n.hypo)
             if(test.df){
                 q <- qt(1-alpha/2, df = output$df)

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: apr 15 2020 (11:16) 
+## Last-Updated: apr 23 2020 (11:47) 
 ##           By: Brice Ozenne
-##     Update #: 742
+##     Update #: 755
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,94 +14,6 @@
 ##----------------------------------------------------------------------
 ## User 
 ### Code:
-
-
-## * estfun
-#' @title Extract Empirical Estimating Functions (lvmfit Object)
-#' @description Extract the empirical estimating functions of a lvmfit object.
-#' This function is for internal use but need to be public to enable its use by \code{multcomp::glht}.
-#' @name estfun
-#' 
-#' @param x an \code{lvmfit} object.
-#' @param ... arguments passed to methods.
-#'
-#' @details This function enables to use the \code{glht} function with lvmfit object.
-#' Otherwise when calling \code{multcomp:::vcov.mmm} then \code{sandwich::sandwich} and then \code{sandwich::meat}, \code{sandwich::meat} will complain that \code{estfun} is not defined for \code{lvmfit} objects.
-#'
-#' @examples
-#' library(multcomp)
-#' 
-#' #### generative model ####
-#' mSim <- lvm(X ~ Age + 0.5*Treatment,
-#'             Y ~ Gender + 0.25*Treatment,
-#'             c(Z1,Z2,Z3) ~ eta, eta ~ 0.75*treatment,
-#'             Age[40:5]~1)
-#' latent(mSim) <- ~eta
-#' categorical(mSim, labels = c("placebo","SSRI")) <- ~Treatment
-#' categorical(mSim, labels = c("male","female")) <- ~Gender
-#'
-#' #### simulate data ####
-#' n <- 5e1
-#' set.seed(10)
-#' df.data <- lava::sim(mSim, n = n, latent = FALSE)
-#'
-#' #### fit separate models ####
-#' lmX <- lm(X ~ Age + Treatment, data = df.data)
-#' lvmY <- estimate(lvm(Y ~ Gender + Treatment), data = df.data)
-#' lvmZ <- estimate(lvm(c(Z1,Z2,Z3) ~ eta, eta ~ Treatment), 
-#'                  data = df.data)
-#'
-#' #### create mmm object #### 
-#' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
-#'
-#' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, linfct = "Treatment", add.variance = FALSE)
-#'
-#' #### adjust for multiple comparisons ####
-#' e.glht <- glht(e.mmm, linfct = resC$mlf)
-#' summary(e.glht)
-#' @concept multiple comparison
-
-
-## * estfun.lm
-#' @rdname estfun
-#' @method estfun lm
-#' @export
-estfun.lm <- function(x, ...){
-    x <- sCorrect(x, ssc = if(identical(object$method,"REML")){"REML"}else{NA}, df = NA)
-    U <- score2(x)
-    return(U)
-}
-
-## * estfun.gls
-#' @rdname estfun
-#' @method estfun gls
-#' @export
-estfun.gls <- estfun.lm
-
-## * estfun.lme
-#' @rdname estfun
-#' @method estfun lme
-#' @export
-estfun.lme <- estfun.lm
-
-## * estfun.lvmfit
-#' @rdname estfun
-#' @method estfun lvmfit
-#' @export
-estfun.lvmfit <- function(x, ...){
-    U <- lava::score(x, indiv = TRUE)
-    return(U)
-}
-
-## * estfun.sCorrect
-#' @rdname estfun
-#' @method estfun sCorrect
-#' @export
-estfun.sCorrect <- function(x, ...){
-    U <- score2(x)
-    return(U)
-}
 
 ## * Documentation - glht2
 #' @title General Linear Hypothesis
@@ -311,7 +223,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             out$df <- Inf
         }
         ## *** get iid decomposition
-        iid.tempo <- iid2(object[[iM]], robust = robust, cluster = cluster)
+        iid.tempo <- iid2(object[[iM]], robust = TRUE, cluster = cluster)
         if(!is.null(cluster)){
             out$iid <- matrix(NA, nrow = n.cluster, ncol = length(name.param),
                               dimnames = list(Ucluster, name.param))
@@ -320,7 +232,13 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             out$iid <- iid.tempo
         }
         colnames(out$iid) <- name.object.param
-
+        
+        ## *** get se
+        if(robust){
+            out$se <- sqrt(diag(crossprod(iid.tempo)))
+        }else{
+            out$se <- sqrt(diag(vcov2(object[[iM]])))
+        }
         return(out)
         
     })
@@ -333,6 +251,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         df.global <- 0
     }
     ls.iid <- lapply(ls.res,"[[","iid")
+    ls.se <- lapply(ls.res,"[[","se")
     n.obs <- unique(unlist(lapply(ls.iid, NROW)))
     if(length(n.obs)>1){
         stop("Mismatch between the number of observations in the iid \n",
@@ -340,17 +259,12 @@ glht2.mmm <- function (object, linfct, rhs = 0,
              "Consider specifying the \'cluster\' argument \n")
     }
     M.iid <- do.call(cbind,ls.iid)
-    vcov.object <- crossprod(M.iid)
-    if(any(is.na(vcov.object))){
-        Mindex <- which(is.na(vcov.object), arr.ind = TRUE)
-        for(iIndex in 1:NROW(Mindex)){ # iIndex <- 1
-            iRow <- Mindex[iIndex,1]
-            iCol <- Mindex[iIndex,2]
-            iIID2 <- M.iid[,iRow]*M.iid[,iCol]
-            ## vcov.object[iRow,iCol] <- (length(iIID2)/sum(!is.na(iIID2)))^2 * sum(iIID2, na.rm = TRUE)
-            vcov.object[iRow,iCol] <- sum(iIID2, na.rm = TRUE)
-        }
+    diag.se <- diag(do.call(c,ls.se))
+    if(any(is.na(M.iid))){
+       M.iid[is.na(M.iid)] <- 0
     }
+    vcov.object <- diag.se %*% cov2cor(crossprod(M.iid)) %*% diag.se ## same as multcomp:::vcov.mmm
+    dimnames(vcov.object) <- list(colnames(M.iid), colnames(M.iid))
     
     ## ** sanity check
     name.param <- names(seq.param)

@@ -20,11 +20,9 @@ createContrast(object, linfct, ...)
 
 \method{createContrast}{lvmfit}(object, linfct, ...)
 
-\method{createContrast}{list}(object, linfct = NULL,
-  add.variance = NULL, ...)
+\method{createContrast}{list}(object, linfct = NULL, add.variance = NULL, ...)
 
-\method{createContrast}{mmm}(object, linfct = NULL,
-  add.variance = NULL, ...)
+\method{createContrast}{mmm}(object, linfct = NULL, add.variance = NULL, ...)
 }
 \arguments{
 \item{object}{a \code{ls.lvmfit} object.}

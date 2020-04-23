@@ -5,9 +5,20 @@
 \alias{.information2}
 \title{Compute the Expected Information Matrix From the Conditional Moments}
 \usage{
-.information2(dmu, dOmega, OmegaM1, missing.pattern, unique.pattern,
-  name.pattern, grid.mean, grid.var, name.param, leverage,
-  weights = NULL, n.cluster)
+.information2(
+  dmu,
+  dOmega,
+  OmegaM1,
+  missing.pattern,
+  unique.pattern,
+  name.pattern,
+  grid.mean,
+  grid.var,
+  name.param,
+  leverage,
+  weights = NULL,
+  n.cluster
+)
 }
 \description{
 Compute the expected information matrix from the conditional moments.

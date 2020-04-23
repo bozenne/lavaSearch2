@@ -5,9 +5,24 @@
 \alias{.hessian2}
 \title{Compute the Hessian Matrix From the Conditional Moments}
 \usage{
-.hessian2(dmu, dOmega, d2mu, d2Omega, epsilon, OmegaM1, missing.pattern,
-  unique.pattern, name.pattern, grid.mean, grid.var, grid.hybrid,
-  name.param, leverage, n.cluster, weights)
+.hessian2(
+  dmu,
+  dOmega,
+  d2mu,
+  d2Omega,
+  epsilon,
+  OmegaM1,
+  missing.pattern,
+  unique.pattern,
+  name.pattern,
+  grid.mean,
+  grid.var,
+  grid.hybrid,
+  name.param,
+  leverage,
+  n.cluster,
+  weights
+)
 }
 \description{
 Compute the Hessian matrix from the conditional moments.

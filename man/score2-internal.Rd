@@ -5,9 +5,20 @@
 \alias{.score2}
 \title{Compute the Corrected Score.}
 \usage{
-.score2(dmu, dOmega, epsilon, OmegaM1, missing.pattern, unique.pattern,
-  name.pattern, name.param, name.meanparam, name.varparam, n.cluster,
-  weights)
+.score2(
+  dmu,
+  dOmega,
+  epsilon,
+  OmegaM1,
+  missing.pattern,
+  unique.pattern,
+  name.pattern,
+  name.param,
+  name.meanparam,
+  name.varparam,
+  n.cluster,
+  weights
+)
 }
 \arguments{
 \item{n.cluster}{[integer >0] the number of observations.}

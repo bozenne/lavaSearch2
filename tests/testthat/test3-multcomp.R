@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (15:22) 
 ## Version: 
-## Last-Updated: feb  5 2020 (13:34) 
+## Last-Updated: apr 23 2020 (12:53) 
 ##           By: Brice Ozenne
-##     Update #: 121
+##     Update #: 126
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -37,6 +37,7 @@ if(FALSE){ ## already called in test-all.R
 
 library(multcomp)
 library(sandwich)
+library(emmeans)
 lava.options(symbols = c("~","~~"))
 
 context("multcomp - mmm")
@@ -49,7 +50,7 @@ set.seed(10)
 n <- 1e2
 
 df.data <- lava::sim(mSim, n, latent = FALSE, p = c(beta = 1))
-
+df.data$eY1 <- exp(df.data$Y1)
 ## * linear regressions with logical constrains
 e.lm <- lm(Y1 ~ T1 + T2 + T3, data = df.data)
 ## summary(e.lm)
@@ -75,19 +76,30 @@ test_that("glht vs. glht2 (logical constrains)", {
                       eS.glht2$test[c("coefficients","sigma","tstat","pvalues")], tol = 1e-6)
 })
 
+test_that("glht2 (back-transformation)", {
+    e.log.lm <- lm(log(eY1) ~ T1 + T2 + T3, data = df.data)
+
+    e.glht2 <- glht2(e.log.lm, linfct = c("T1","T2","T3"))
+    df.glht2 <- summary(e.glht2, transform = "exp", test = adjusted("none"))$table2
+
+    e.glht2.bis <- glht2(e.log.lm, linfct = c("T3"))
+    df.glht2.bis <- summary(e.glht2.bis, transform = "exp", test = adjusted("none"))$table2
+
+    expect_equal(as.double(df.glht2[3,]) , as.double(df.glht2.bis[1,]))
+})
 
 ## * list of linear regressions
-name.Y <- setdiff(endogenous(mSim),"E")
+name.Y <- setdiff(endogenous(mSim),"E")[1:2]
 n.Y <- length(name.Y)
 
-ls.formula <- lapply(paste0(name.Y,"~","E"),as.formula)
-ls.lm <- lapply(ls.formula, lm, data = df.data)
+ls.lm <- lapply(name.Y, function(iY){
+    eval(parse( text = paste("lm(",iY,"~E, data = df.data)")))
+})
 names(ls.lm) <- name.Y
 class(ls.lm) <- "mmm"
 
 test_that("glht vs. glht2 (list lm): information std", {
     e.glht <- glht(ls.lm, mlf("E = 0"))
-    ## lsSSC.lm <- sCorrect(ls.lm, ssc = NA, df = NA)
 
     resC <- createContrast(ls.lm, linfct = "E", add.variance = TRUE)
     name.all <- colnames(resC$contrast)
@@ -178,14 +190,14 @@ e.lvm <- estimate(m.lvm, df.data)
 
 test_that("glht vs. glht2 (lvm): information std", {
 
-    resC <- createContrast(e.lvm, par = c("eta~E","Y2=1","Y3=1"))
+    resC <- createContrast(e.lvm, linfct = c("eta~E","Y2=1","Y3=1"))
     e.glht.null <- glht(e.lvm, linfct = resC$contrast)
     e.glht.H1 <- glht(e.lvm, linfct = resC$contrast, rhs = resC$null)
 
     e.glht2.null <- glht2(e.lvm, linfct = resC$contrast, rhs = rep(0,3),
-                          bias.correct = FALSE)
+                          ssc = NA)
     e.glht2.H1 <- glht2(e.lvm, linfct = resC$contrast, rhs = resC$null,
-                        bias.correct = FALSE)
+                        ssc = NA)
 
 
     eS.glht.null <- summary(e.glht.null)
@@ -208,34 +220,18 @@ mmm.lvm <- mmm(Y1 = estimate(lvm(Y1~E), data = df.data),
                Y4 = estimate(lvm(Y4~E), data = df.data)
                )
 
-test_that("glht vs. glht2 (list lvm): information std", {
+test_that("glht2 (list lvm): information std", {
 
-    ##
-    resC <- createContrast(mmm.lvm, linfct = "E")
+    ##    
+    resC <- createContrast(mmm.lvm, linfct = paste0("Y",1:4,": Y",1:4,"~E"))
     lvm2.glht <- glht2(mmm.lvm, linfct = resC$contrast,
-                       bias.correct = FALSE, robust = FALSE)
+                       ssc = NA, robust = FALSE)
     lvm2.sglht <- summary(lvm2.glht)    
 
     lvm3.glht <- glht2(mmm.lvm, linfct = resC$contrast,
                        rhs = rnorm(4),
-                       bias.correct = FALSE, robust = FALSE)
+                       ssc = NA, robust = FALSE)
     lvm3.sglht <- summary(lvm3.glht)    
-
-    ##
-    lvm.glht <- glht(mmm.lvm, linfct = resC$contrast)
-    lvm.glht$df <- NROW(df.data)
-    lvm.sglht <- summary(lvm.glht)
-
-    ## compare
-    expect_equal(as.numeric(lvm2.sglht$test$coefficients),
-                 as.numeric(lvm.sglht$test$coefficients))
-
-    expect_equal(as.numeric(lvm2.sglht$test$sigma),
-                 as.numeric(lvm.sglht$test$sigma))
-
-    expect_equal(as.numeric(lvm2.sglht$test$pvalues),
-                 as.numeric(lvm.sglht$test$pvalues),
-                 tol = attr(lvm.sglht$test$pvalues,"error"))
 })
 
 ##----------------------------------------------------------------------

@@ -11,7 +11,9 @@
 \alias{gaussian_weight_gradient.lvm}
 \alias{gaussian_weight_hessian.lvm}
 \title{Estimate LVM With Weights}
-\format{An object of class \code{character} of length 1.}
+\format{
+An object of class \code{character} of length 1.
+}
 \usage{
 gaussian_weight.estimate.hook(x, data, estimator, ...)
 
@@ -21,9 +23,21 @@ gaussian_weight_logLik.lvm(object, type = "cond", p, data, weights, ...)
 
 gaussian_weight_objective.lvm(x, ...)
 
-gaussian_weight_score.lvm(x, data, p, S, n, mu = NULL, weights = NULL,
-  debug = FALSE, reindex = FALSE, mean = TRUE, constrain = TRUE,
-  indiv = FALSE, ...)
+gaussian_weight_score.lvm(
+  x,
+  data,
+  p,
+  S,
+  n,
+  mu = NULL,
+  weights = NULL,
+  debug = FALSE,
+  reindex = FALSE,
+  mean = TRUE,
+  constrain = TRUE,
+  indiv = FALSE,
+  ...
+)
 
 gaussian_weight_gradient.lvm(...)
 

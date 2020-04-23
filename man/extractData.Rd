@@ -13,26 +13,53 @@
 \usage{
 extractData(object, design.matrix, as.data.frame, envir, rm.na)
 
-\method{extractData}{lm}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment(), rm.na = TRUE)
+\method{extractData}{lm}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment(),
+  rm.na = TRUE
+)
 
-\method{extractData}{coxph}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment())
+\method{extractData}{coxph}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment()
+)
 
-\method{extractData}{cph}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment())
+\method{extractData}{cph}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment()
+)
 
-\method{extractData}{lvmfit}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment(), rm.na = TRUE)
+\method{extractData}{lvmfit}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment(),
+  rm.na = TRUE
+)
 
-\method{extractData}{gls}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment(), rm.na = TRUE)
+\method{extractData}{gls}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment(),
+  rm.na = TRUE
+)
 
-\method{extractData}{lme}(object, design.matrix = FALSE,
-  as.data.frame = TRUE, envir = environment(), rm.na = TRUE)
+\method{extractData}{lme}(
+  object,
+  design.matrix = FALSE,
+  as.data.frame = TRUE,
+  envir = environment(),
+  rm.na = TRUE
+)
 
-\method{extractData}{merMod}(object, design.matrix = FALSE,
-  as.data.frame = TRUE)
+\method{extractData}{merMod}(object, design.matrix = FALSE, as.data.frame = TRUE)
 }
 \arguments{
 \item{object}{the fitted model.}

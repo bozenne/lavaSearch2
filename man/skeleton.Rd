@@ -8,8 +8,17 @@
 \usage{
 skeleton(object, X, endogenous, latent, n.cluster, index.Omega)
 
-skeletonDtheta(object, X, endogenous, latent, missing.pattern,
-  unique.pattern, name.pattern, n.cluster, index.Omega)
+skeletonDtheta(
+  object,
+  X,
+  endogenous,
+  latent,
+  missing.pattern,
+  unique.pattern,
+  name.pattern,
+  n.cluster,
+  index.Omega
+)
 
 skeletonDtheta2(object)
 }

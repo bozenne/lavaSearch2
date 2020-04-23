@@ -5,13 +5,33 @@
 \alias{modelsearch2.lvmfit}
 \title{Data-driven Extension of a Latent Variable Model}
 \usage{
-modelsearch2(object, link, data, method.p.adjust, method.maxdist, n.sample,
-  na.omit, alpha, nStep, trace, cpus)
+modelsearch2(
+  object,
+  link,
+  data,
+  method.p.adjust,
+  method.maxdist,
+  n.sample,
+  na.omit,
+  alpha,
+  nStep,
+  trace,
+  cpus
+)
 
-\method{modelsearch2}{lvmfit}(object, link = NULL, data = NULL,
-  method.p.adjust = "fastmax", method.maxdist = "approximate",
-  n.sample = 1e+05, na.omit = TRUE, alpha = 0.05, nStep = NULL,
-  trace = TRUE, cpus = 1)
+\method{modelsearch2}{lvmfit}(
+  object,
+  link = NULL,
+  data = NULL,
+  method.p.adjust = "fastmax",
+  method.maxdist = "approximate",
+  n.sample = 1e+05,
+  na.omit = TRUE,
+  alpha = 0.05,
+  nStep = NULL,
+  trace = TRUE,
+  cpus = 1
+)
 }
 \arguments{
 \item{object}{a \code{lvmfit} object.}

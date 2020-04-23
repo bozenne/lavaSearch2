@@ -11,37 +11,87 @@
 \alias{sCorrect.sCorrect}
 \title{Satterthwaite Correction and Small Sample Correction}
 \usage{
-sCorrect(object, param, data, first.order, ssc, df, derivative, iter.max,
-  tol.max, trace)
+sCorrect(
+  object,
+  param,
+  data,
+  first.order,
+  ssc,
+  df,
+  derivative,
+  iter.max,
+  tol.max,
+  trace
+)
 
-\method{sCorrect}{lm}(object, param = NULL, data = NULL,
-  first.order = TRUE, ssc = lava.options()$ssc,
-  df = lava.options()$df, derivative = "analytic", iter.max = 100,
-  tol.max = 1e-06, trace = 0)
+\method{sCorrect}{lm}(
+  object,
+  param = NULL,
+  data = NULL,
+  first.order = TRUE,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  derivative = "analytic",
+  iter.max = 100,
+  tol.max = 1e-06,
+  trace = 0
+)
 
-\method{sCorrect}{gls}(object, param = NULL, data = NULL,
-  first.order = TRUE, ssc = lava.options()$ssc,
-  df = lava.options()$df, derivative = "analytic", iter.max = 100,
-  tol.max = 1e-06, trace = 0)
+\method{sCorrect}{gls}(
+  object,
+  param = NULL,
+  data = NULL,
+  first.order = TRUE,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  derivative = "analytic",
+  iter.max = 100,
+  tol.max = 1e-06,
+  trace = 0
+)
 
-\method{sCorrect}{lme}(object, param = NULL, data = NULL,
-  first.order = TRUE, ssc = lava.options()$ssc,
-  df = lava.options()$df, derivative = "analytic", iter.max = 100,
-  tol.max = 1e-06, trace = 0)
+\method{sCorrect}{lme}(
+  object,
+  param = NULL,
+  data = NULL,
+  first.order = TRUE,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  derivative = "analytic",
+  iter.max = 100,
+  tol.max = 1e-06,
+  trace = 0
+)
 
-\method{sCorrect}{lvmfit}(object, param = NULL, data = NULL,
-  first.order = TRUE, ssc = lava.options()$ssc,
-  df = lava.options()$df, derivative = "analytic", iter.max = 100,
-  tol.max = 1e-06, trace = 0)
+\method{sCorrect}{lvmfit}(
+  object,
+  param = NULL,
+  data = NULL,
+  first.order = TRUE,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  derivative = "analytic",
+  iter.max = 100,
+  tol.max = 1e-06,
+  trace = 0
+)
 
 \method{sCorrect}{list}(object, ...)
 
 \method{sCorrect}{mmm}(object, ...)
 
-\method{sCorrect}{sCorrect}(object, param = NULL, data = NULL,
-  first.order = TRUE, ssc = lava.options()$ssc,
-  df = lava.options()$df, derivative = "analytic", iter.max = 100,
-  tol.max = 1e-06, trace = 0)
+\method{sCorrect}{sCorrect}(
+  object,
+  param = NULL,
+  data = NULL,
+  first.order = TRUE,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  derivative = "analytic",
+  iter.max = 100,
+  tol.max = 1e-06,
+  trace = 0
+)
 }
 \arguments{
 \item{object, x}{a \code{gls}, \code{lme}, or \code{lvm} object.}

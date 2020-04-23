@@ -11,20 +11,15 @@
 \usage{
 summary2(object, ...)
 
-\method{summary2}{lm}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{summary2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{summary2}{gls}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{summary2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{summary2}{lme}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{summary2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{summary2}{lvmfit}(object, ssc = lava.options()$ssc,
-  df = lava.options()$df, ...)
+\method{summary2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
 
-\method{summary2}{sCorrect}(object, robust = FALSE, digit = max(3,
-  getOption("digit")), ...)
+\method{summary2}{sCorrect}(object, robust = FALSE, digit = max(3, getOption("digit")), ...)
 }
 \arguments{
 \item{object}{a \code{lm}, \code{gls}, \code{lme} or \code{lvm} object.}
