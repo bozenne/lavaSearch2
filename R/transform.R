@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:35) 
+## Last-Updated: apr 17 2020 (13:07) 
 ##           By: Brice Ozenne
-##     Update #: 15
+##     Update #: 18
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,6 +22,9 @@ transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
     }else if(identical(transform,"atanh")){
         transform <- atanh
         dtransform <- function(x){1/(1-x^2)}
+    }else if(identical(transform,"exp")){
+        transform <- exp
+        dtransform <- function(x){exp(x)}
     }else if(identical(transform,"log")){
         transform <- log
         dtransform <- function(x){1/x}
@@ -34,7 +37,7 @@ transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
     }else if(!is.null(attr(transform,"derivative"))){
         dtransform <- attr(transform,"derivative")
     }else{
-        dtransform <- function(x){numDeriv::jacobian(transform, x)[1,1]}
+        dtransform <- function(x){diag(numDeriv::jacobian(transform, x))}
     }
     object[,"std.error"] <- object[,"std.error"]*dtransform(object[,"estimate"])
     object[,"estimate"] <- transform(object[,"estimate"])
