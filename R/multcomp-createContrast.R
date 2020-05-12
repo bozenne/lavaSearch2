@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: apr 23 2020 (11:54) 
+## Last-Updated: maj 12 2020 (14:58) 
 ##           By: Brice Ozenne
-##     Update #: 382
+##     Update #: 384
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -172,10 +172,11 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     ## ** create full contrast matrix
     if(length(linfct)==1){
         ## linfct.split <-
-        linfct.split <- strsplit(linfct,split = "=")[[1]]
-        linfct.rhs <- base::trimws(strsplit(linfct.split[[1]],split = "\\+|\\-")[[1]], which = "both")
+        linfct.split <- strsplit(linfct,split = "=")[[1]] ## rm rhs
+        linfct.rhs <- base::trimws(strsplit(linfct.split[[1]],split = "\\+|\\-")[[1]], which = "both") ## split with +/-
+        linfct.coefname <- sapply(linfct.rhs, function(iE){tail(strsplit(iE,split="*",fixed=TRUE)[[1]],1)}) ## remove *
 
-        ls.linfct.index <- lapply(ls.coefname, function(iM){na.omit(match(linfct.rhs, iM))})
+        ls.linfct.index <- lapply(ls.coefname, function(iM){na.omit(match(linfct.coefname, iM))})
         if(all(sapply(ls.linfct.index, length) == length(linfct.rhs))){
             iTemplate <- .createContrast(linfct, ls.coefname[[1]])
             name.linfct <- names(linfct)
