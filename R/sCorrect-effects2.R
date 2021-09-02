@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:22) 
+## Last-Updated: sep  2 2021 (14:14) 
 ##           By: Brice Ozenne
-##     Update #: 226
+##     Update #: 229
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -45,7 +45,7 @@
 effects2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
     object.SSC <- sCorrect(object, ssc = ssc, df = df)    
-    return(effects(object.SSC, ...))
+    return(effects2(object.SSC, ...))
 
 }
 
