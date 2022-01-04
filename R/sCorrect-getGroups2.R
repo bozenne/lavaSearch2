@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: feb 20 2020 (10:30) 
+## Last-Updated: Jan  3 2022 (09:51) 
 ##           By: Brice Ozenne
-##     Update #: 151
+##     Update #: 154
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -48,108 +48,9 @@
 #' dL <- sampleRepeated(10, format = "long")
 #' dL$time2 <- paste0("visit",dL$time)
 #' 
-#' #### linear model ####
-#' e.lm <- lm(Y1~X1, data = dW)
-#' .getGroups2(e.lm, data = dW)
-#'
-#' #### gls model ####
-#' e.gls1 <- gls(Y1~X1, data = dW)
-#' .getGroups2(e.gls1, data = dW)
-#' 
-#' e.gls2 <- gls(Y~X1, correlation = corCompSymm(form=~1|id), data = dL)
-#' .getGroups2(e.gls2, data = dL)
-#'
-#' e.gls3 <- gls(Y~X1, correlation = corCompSymm(form=~time|id), data = dL)
-#' .getGroups2(e.gls3, data = dL)
-#'
-#' e.gls4 <- gls(Y~X1, weight = varIdent(form=~1|time2), data = dL)
-#' .getGroups2(e.gls4, data = dL)
-#'
-#' e.gls5 <- gls(Y~X1, weight = varIdent(form=~1|time2),
-#'               correlation = corSymm(form=~time|id), data = dL)
-#' .getGroups2(e.gls5, data = dL)
-#'
-#' #### lme model ####
-#' e.lme <- lme(Y~X1, random=~1|id, data = dL)
-#' .getGroups2(e.lme, data = dL)
-#' 
-#' #### lvm model ####
+#' #### latent variable model ####
 #' e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
 #' .getGroups2(e.lvm, data = dW)
-
-## * .getGroups2.lm
-#' @rdname getGroups2-internal
-.getGroups2.lm <- function(object, data = NULL, index.Omega = NULL, endogenous){
-    if(is.null(data)){
-        data <- extractData(object)
-    }
-    if(is.null(index.Omega)){
-        index.Omega <- .getIndexOmega(object, data = data)
-    }
-    n.obs <- NROW(data)
-    Uindex.Omega <- unique(index.Omega)
-    out <- list(index.cluster = 1:n.obs,
-                name.cluster = 1:n.obs,                
-                n.cluster = n.obs,
-                index.Omega = as.list(index.Omega),
-                index2endogenous = setNames(as.list(Uindex.Omega),Uindex.Omega)
-                )
-    return(out)
-    
-}
-    
-## * .getGroups2.gls
-#' @rdname getGroups2-internal
-.getGroups2.gls <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
-    if(is.null(data)){
-        data <- extractData(object)
-    }
-    if(is.null(index.Omega)){
-        index.Omega <- .getIndexOmega(object, data = data)
-        index2endogenous <- attr(index.Omega,"index2endogenous")
-    }
-    if(is.null(endogenous)){
-        endogenous <- lava::endogenous(object)
-    }
-    n.obs <- NROW(data)
-
-    ## ** find clusters
-    if(!is.null(object$modelStruct$reStruct)){
-        iFormula <- formula(object$modelStruct$reStruct)
-        if(length(iFormula)>1){
-            stop(".getGroups2 does not handle multiple random effects \n")
-        }
-        index.cluster <- as.numeric(nlme::getGroups(data,
-                                                    form = iFormula[[1]])
-                                    )
-    }else if(!is.null(object$modelStruct$corStruct)){
-        iFormula <- formula(object$modelStruct$corStruct)
-        index.cluster <- as.numeric(nlme::getGroups(data,
-                                                    form = iFormula)
-                                    )
-        ## as.numeric(nlme::getGroups(object))
-    }else{
-        index.cluster <- 1:n.obs
-    }
-    name.cluster <- unique(index.cluster)
-    n.cluster <- length(name.cluster)
-
-    ## ** reorder cluster according to the data ordering
-    index.cluster <- as.numeric(factor(index.cluster, levels = name.cluster))
-
-    ## ** export
-    return(list(index.cluster = index.cluster,
-                name.cluster = name.cluster,
-                n.cluster = n.cluster,
-                index.Omega = tapply(index.Omega,index.cluster, list),
-                index2endogenous = index2endogenous
-                ))
-}
-
-## * .getGroups2.lme
-#' @name getGroups2-internal
-.getGroups2.lme <- .getGroups2.gls
-
 
 ## * .getGroups2.lvm
 #' @rdname getGroups2-internal

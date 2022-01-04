@@ -7,7 +7,7 @@
                        method.estimate2 = "ols", ## hidden argument for sCorrect
                        factor.dRvcov = 1/2,
                        ssc = "residuals",
-                       df = "Satterthwaite",
+                       df = "satterthwaite",
                        df.robust = 1
                        )
 

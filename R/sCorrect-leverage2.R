@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: jan 31 2020 (10:47) 
+## Last-Updated: Jan  4 2022 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 117
+##     Update #: 139
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,13 +16,15 @@
 ### Code:
 
 ## * documentation - leverage2
-#' @title Extract Leverage Values
-#' @description Extract leverage values from a Gaussian linear model. 
+#' @title Leverage With Small Sample Correction.
+#' @description Extract leverage values from the latent variable model, with small sample correction. 
 #' @name leverage2
 #' 
-#' @param object a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param format [character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
 #' Otherwise use \code{"long"} to return the residuals in the long format.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @details The leverage are defined as the partial derivative of the fitted values with respect to the observations.
 #' \deqn{
@@ -30,9 +32,9 @@
 #' }
 #' See Wei et al. (1998). \cr \cr
 #' 
-#' If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals.
+#' When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the leverage.
 #'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 #' 
 #' @return a matrix containing the leverage relative to each sample (in rows)
 #' and each endogenous variable (in column).
@@ -40,32 +42,40 @@
 #' @references Bo-Cheng Wei et al., Generalized Leverage and its applications (1998), Scandinavian Journal of Statistics 25:1:25-37.
 #' 
 #' @examples
-#' ## simulate data
+#' #### simulate data ####
 #' set.seed(10)
 #' m <- lvm(Y1~eta,Y2~eta,Y3~eta)
 #' latent(m) <- ~eta
 #' d <- lava::sim(m,20, latent = FALSE)
 #'
-#' ## standard linear model
-#' e.lm <- lm(Y1~Y2, data = d)
-#'
-#' sCorrect(e.lm) <- TRUE
-#' range(as.double(leverage2(e.lm)) - influence(e.lm)$hat)
-#'
-#' ## latent variable model
+#' #### latent variable models ####
 #' e.lvm <- estimate(m, data = d)
 #' sCorrect(e.lvm) <- TRUE
 #' leverage2(e.lvm)
 #' 
-#' @concept small sample inference
+#' @concept estimator
+#' @keywords smallSampleCorrection
+#' 
 #' @export
 `leverage2` <-
-    function(object, format) UseMethod("leverage2")
+    function(object, format, ssc, ...) UseMethod("leverage2")
 
-## * leverage2.sCorrect
+## * leverage2.lvmfit
 #' @rdname leverage2
-#' @export
-leverage2.sCorrect <- function(object, format = "wide"){
+leverage2.lvmfit <- function(object, format = "wide", ssc = lava.options()$ssc, ...){
+
+    return(leverage2(estimate2(object, ssc = ssc, ...), format = format))
+
+}
+
+## * leverage2.lvmfit2
+#' @rdname leverage2
+leverage2.lvmfit2 <- function(object, format = "wide", ...){
+
+    dots <- list(...)
+    if(length(dots)>0){
+        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+    }
 
     format <- match.arg(format, choices = c("long","wide"))
 
@@ -103,8 +113,9 @@ leverage2.sCorrect <- function(object, format = "wide"){
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL, endogenous))
     if(is.null(vcov.param)){
-        leverage[] <- 0
-        return(leverage)
+
+        stop("Cannot compute the leverage values without the variance-covariance matrix of the coefficients. \n")
+
     }
 
     scoreY <- array(NA, dim = c(n.cluster, n.endogenous, n.param.mean),

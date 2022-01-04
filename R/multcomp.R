@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: apr 23 2020 (11:47) 
+## Last-Updated: Jan  4 2022 (10:57) 
 ##           By: Brice Ozenne
-##     Update #: 755
+##     Update #: 758
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -175,7 +175,8 @@ glht2.mmm <- function (object, linfct, rhs = 0,
 
     ## ** check whether it is possible to compute df
     ## i.e. are linear hypothesis model specific?
-    test.df <- all(unlist(lapply(object, function(iModel){identical(iModel$sCorrect$df,"Satterthwaite")})))
+    test.df <- all(unlist(lapply(object, function(iModel){iModel$sCorrect$df == "satterthwaite"})))
+    browser()
     if(test.df){
         n.hypo <- NROW(linfct)
         ls.modelPerTest <- lapply(1:n.hypo, function(iHypo){ ## iHypo <- 1
@@ -189,7 +190,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             stop("Cannot compute the degrees of freedom for tests performed across several models \n",
                  "Consider setting the argument \'df\' to FALSE \n")
         }    
-    }else if(identical(df,"Satterthwaite")){
+    }else if(df == "satterthwaite"){
         test.df <- TRUE
     }
 

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: feb 20 2020 (10:46) 
+## Last-Updated: Jan  3 2022 (12:37) 
 ##           By: Brice Ozenne
-##     Update #: 202
+##     Update #: 203
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -184,30 +184,7 @@ updateDMoment <- function(moment, skeleton, param){
         }
     }
 
-    if("sigma2" %in% names(skeleton$dmat.dparam)){
-        dOmega[["sigma2"]] <- Sigma/param["sigma2"]
-    }
-
-    if("sigma2k" %in% names(skeleton$dmat.dparam)){
-        iName.param <- names(skeleton$dmat.dparam$sigma2k)
-        for(iParam in iName.param){ ## iParam <- iName.param[1]
-            iFactor <- skeleton$dmat.dparam$sigma2k[[iParam]][,,"X"]+skeleton$dmat.dparam$sigma2k[[iParam]][,,"Y"]
-            dOmega[[iParam]] <- Sigma*iFactor/param[iParam]
-        }
-    }
-
-    if("cor" %in% names(skeleton$dmat.dparam)){
-        iName.param <- names(skeleton$dmat.dparam$cor)
-        for(iParam in iName.param){ ## iParam <- iName.param[1]
-            if(abs(param[iParam])>1e-10){
-                dOmega[[iParam]] <- Sigma*skeleton$dmat.dparam$cor[[iParam]]/param[iParam]
-            }else{
-                dOmega[[iParam]] <- Sigma*0
-            }
-        }
-    }
-
-    ## *** Export
+   ## *** Export
     return(list(dmu = dmu, dOmega = dOmega))
 
 }
@@ -227,9 +204,6 @@ updateD2Moment <- function(moment, skeleton, param){
     dGamma <- skeleton$dmat.dparam$Gamma
     dB <- skeleton$dmat.dparam$B
     dPsi <- skeleton$dmat.dparam$Psi
-    dsigma2 <- skeleton$dmat.dparam$sigma2
-    dsigma2k <- skeleton$dmat.dparam$sigma2k
-    dcor <- skeleton$dmat.dparam$cor
 
     Psi <- moment$Psi
     Lambda <- moment$Lambda
@@ -241,9 +215,6 @@ updateD2Moment <- function(moment, skeleton, param){
     tiIB.Psi.iIB <- moment$tiIB.Psi.iIB
     tiIB.Psi.iIB.Lambda <- moment$tiIB.Psi.iIB.Lambda
     tLambda.tiIB.Psi.iIB <- moment$tLambda.tiIB.Psi.iIB
-    Sigma <- moment$Sigma
-    attr(Sigma,"detail") <- NULL
-    SigmaValue <- attr(moment$Sigma,"detail")
     
     grid.mean <- skeleton$grid.d2moment$mean
     grid.var <- skeleton$grid.d2moment$var
@@ -354,49 +325,6 @@ updateD2Moment <- function(moment, skeleton, param){
             term2 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% t(dB[[iName2]]) %*% t(iIB) %*% Psi.iIB %*% Lambda
             term3 <- t(iIB.Lambda) %*% t(dB[[iName1]]) %*% t(iIB) %*% Psi.iIB %*% dB[[iName2]] %*% iIB %*% Lambda
             d2Omega[[iName1]][[iName2]] <- term1 + t(term1) + term2 + t(term2) + term3 + t(term3)
-        }
-    }
-
-    if("sigma2.cor" %in% names.grid.var){
-        for(iP in 1:NROW(grid.var$sigma2.cor)){ # iP <- 1
-            iName1 <- grid.var$sigma2.cor[iP,"sigma2"]
-            iName2 <- grid.var$sigma2.cor[iP,"cor"]
-            d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (dcor[[iName2]]/param[iName2])
-        }
-    }
-
-    if("sigma2.sigma2k" %in% names.grid.var){
-        for(iP in 1:NROW(grid.var$sigma2.sigma2k)){ # iP <- 1
-            iName1 <- grid.var$sigma2.sigma2k[iP,"sigma2"]
-            iName2 <- grid.var$sigma2.sigma2k[iP,"sigma2k"]
-
-            iFactor <- dsigma2k[[iName2]][,,"X"] + dsigma2k[[iName2]][,,"Y"]
-            d2Omega[[iName1]][[iName2]] <- Sigma * (dsigma2[[iName1]]/param[iName1]) * (iFactor/param[iName2])
-            ## 2*param["Y2"]
-            ## Sigma
-            ## param["sigma2"]*param["Y2"]^2
-        }
-    }
-
-    if("cor.sigma2k" %in% names.grid.var){
-        for(iP in 1:NROW(grid.var$cor.sigma2k)){ # iP <- 1
-            iName1 <- grid.var$cor.sigma2k[iP,"cor"]
-            iName2 <- grid.var$cor.sigma2k[iP,"sigma2k"]
-
-            iFactor <- dsigma2k[[iName2]][,,"X"] + dsigma2k[[iName2]][,,"Y"]
-            d2Omega[[iName1]][[iName2]] <- Sigma * (dcor[[iName1]]/param[iName1]) * (iFactor/param[iName2])
-        }
-    }
-
-    if("sigma2k.sigma2k" %in% names.grid.var){
-        for(iP in 1:NROW(grid.var$sigma2k.sigma2k)){ # iP <- 3
-            iName1 <- grid.var$sigma2k.sigma2k[iP,"sigma2k1"]
-            iName2 <- grid.var$sigma2k.sigma2k[iP,"sigma2k2"]
-            iFactor <- dsigma2k[[iName1]][,,"X"] * dsigma2k[[iName2]][,,"Y"]
-            if(iName1==iName2){
-                iFactor <- 2 * iFactor
-            }
-            d2Omega[[iName1]][[iName2]] <- Sigma * (iFactor/(param[iName1]*param[iName2]))
         }
     }
 

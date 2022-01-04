@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: feb 20 2020 (10:51) 
+## Last-Updated: Jan  4 2022 (14:32) 
 ##           By: Brice Ozenne
-##     Update #: 1668
+##     Update #: 1675
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,7 +27,8 @@
 #' @param ... [internal] only used by the generic method.
 #' 
 #' @details
-#' When the use specify names for the coefficients (e.g. Y1[mu:sigma]) or uses constrains (Y1~beta*X1), \code{as.lava=FALSE} will use the names specified by the user (e.g. mu, sigma, beta) while \code{as.lava=TRUE} will use the name of the first link defining the coefficient.
+#' When the user specifies names for the coefficients (e.g. Y1[mu:sigma]) or uses constraints (Y1~beta*X1), \code{as.lava=FALSE} will use the names specified by the user (e.g. mu, sigma, beta)
+#' while \code{as.lava=TRUE} will use the name of the first link defining the coefficient.
 #'
 #' @examples
 #' \dontrun{
@@ -215,71 +216,8 @@ skeleton <- function(object, X,
                 theta.param$Sigma[type.Sigma_cov[iSigma_cov,"Y"],type.Sigma_cov[iSigma_cov,"X"]] <- type.Sigma_cov[iSigma_cov,"param"]
             }
         }
-    }else if(any(c("sigma2", "sigma2k", "cor") %in% type.theta$detail)){
-
-        name.layer <- NULL
-        if("sigma2" %in% type.theta$detail){
-            name.layer <- c(name.layer,"sigma2")
-        }
-        if("sigma2k" %in% type.theta$detail){
-            name.layer <- c(name.layer,"sigma2kX","sigma2kY")
-        }
-        if("cor" %in% type.theta$detail){
-            name.layer <- c(name.layer,"cor")
-        }
-        n.layer <- length(name.layer)
-        theta.param$SigmaValue <- array(0, dim = c(n.endogenous, n.endogenous, n.layer),
-                                   dimnames = list(endogenous, endogenous, name.layer))
-        theta.param$SigmaParam <- array(as.character(NA), dim = c(n.endogenous, n.endogenous, n.layer),
-                                   dimnames = list(endogenous, endogenous, name.layer))
-
-        if("sigma2" %in% type.theta$detail){
-            type.sigma2 <- type.theta[type.theta$detail %in% "sigma2",,drop=FALSE]
-            type.sigmacor2 <- type.theta[type.theta$detail %in% c("cor","sigma2"),,drop=FALSE]
-
-            for(isigma2 in 1:NROW(type.sigmacor2)){ ## isigma2 <- 1
-                theta.param$SigmaValue[type.sigmacor2[isigma2,"X"],type.sigmacor2[isigma2,"Y"],"sigma2"] <- type.sigma2[1,"value"]
-                theta.param$SigmaValue[type.sigmacor2[isigma2,"Y"],type.sigmacor2[isigma2,"X"],"sigma2"] <- type.sigma2[1,"value"]
-                
-                theta.param$SigmaParam[type.sigmacor2[isigma2,"X"],type.sigmacor2[isigma2,"Y"],"sigma2"] <- type.sigma2[1,"param"]
-                theta.param$SigmaParam[type.sigmacor2[isigma2,"Y"],type.sigmacor2[isigma2,"X"],"sigma2"] <- type.sigma2[1,"param"]
-            }
-        }
-            
-
-        if("sigma2k" %in% type.theta$detail){
-            type.sigma2k <- type.theta[type.theta$detail %in% "sigma2k",,drop=FALSE]
-            type.sigmacor2k <- type.theta[type.theta$detail %in% c("sigma2k","cor"),,drop=FALSE]
-            
-            for(isigma2k in 1:NROW(type.sigmacor2k)){ ## isigma2k <- 1
-                theta.param$SigmaValue[type.sigmacor2k[isigma2k,"X"],type.sigmacor2k[isigma2k,"Y"],"sigma2kX"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"X"],"value"]
-                theta.param$SigmaValue[type.sigmacor2k[isigma2k,"Y"],type.sigmacor2k[isigma2k,"X"],"sigma2kX"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"X"],"value"]
-
-                theta.param$SigmaValue[type.sigmacor2k[isigma2k,"X"],type.sigmacor2k[isigma2k,"Y"],"sigma2kY"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"Y"],"value"]
-                theta.param$SigmaValue[type.sigmacor2k[isigma2k,"Y"],type.sigmacor2k[isigma2k,"X"],"sigma2kY"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"Y"],"value"]
-
-                theta.param$SigmaParam[type.sigmacor2k[isigma2k,"X"],type.sigmacor2k[isigma2k,"Y"],"sigma2kX"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"X"],"param"]
-                theta.param$SigmaParam[type.sigmacor2k[isigma2k,"Y"],type.sigmacor2k[isigma2k,"X"],"sigma2kX"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"X"],"param"]
-
-                theta.param$SigmaParam[type.sigmacor2k[isigma2k,"X"],type.sigmacor2k[isigma2k,"Y"],"sigma2kY"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"Y"],"param"]
-                theta.param$SigmaParam[type.sigmacor2k[isigma2k,"Y"],type.sigmacor2k[isigma2k,"X"],"sigma2kY"] <- type.sigma2k[type.sigma2k$Y == type.sigmacor2k[isigma2k,"Y"],"param"]
-
-            }
-        }
-
-        if("cor" %in% type.theta$detail){
-            type.cor <- type.theta[type.theta$detail %in% "cor",,drop=FALSE]
-            diag(theta.param$SigmaValue[,,"cor"]) <- 1
-            for(icor in 1:NROW(type.cor)){ ## icor <- 1
-                theta.param$SigmaValue[type.cor[icor,"X"],type.cor[icor,"Y"],"cor"] <- type.cor[icor,"value"]
-                theta.param$SigmaValue[type.cor[icor,"Y"],type.cor[icor,"X"],"cor"] <- type.cor[icor,"value"]
-                
-                theta.param$SigmaParam[type.cor[icor,"X"],type.cor[icor,"Y"],"cor"] <- type.cor[icor,"param"]
-                theta.param$SigmaParam[type.cor[icor,"Y"],type.cor[icor,"X"],"cor"] <- type.cor[icor,"param"]
-            }
-        }
-    }    
-
+    }
+    
     if(any(c("Psi_var", "Psi_cov") %in% type.theta$detail)){
         type.Psi_var <- type.theta[type.theta$detail %in% "Psi_var",,drop=FALSE]
         type.Psi_cov <- type.theta[type.theta$detail %in% "Psi_cov",,drop=FALSE]
@@ -317,7 +255,7 @@ skeleton <- function(object, X,
     ## ** type of parameters
     type.param <- type[!is.na(type$param),,drop=FALSE]
     type.mean <- c("nu","alpha","K","Gamma","Lambda","B")
-    type.var <- c("Lambda","B","Sigma_var","Sigma_cov","sigma2","sigma2k","cor","Psi_var","Psi_cov")
+    type.var <- c("Lambda","B","Sigma_var","Sigma_cov","Psi_var","Psi_cov")
 
     Uparam <- as.character(originalLink2param)
     Uparam.mean <- unique(type.param[type.param$detail %in% type.mean,"param"])
@@ -328,7 +266,6 @@ skeleton <- function(object, X,
                   "K" = "K" %in% type.param$detail,
                   "Lambda" = "Lambda" %in% type.param$detail,
                   "Sigma" = ("Sigma_cov" %in% type.param$detail) || ("Sigma_var" %in% type.param$detail),
-                  "SigmaValue" = ("sigma2" %in% type.param$detail) || ("sigma2k" %in% type.param$detail) || ("cor" %in% type.param$detail), 
                   "alpha" = "alpha" %in% type.param$detail,
                   "Gamma" = "Gamma" %in% type.param$detail,
                   "B" = "B" %in% type.param$detail,
@@ -488,46 +425,6 @@ skeletonDtheta <- function(object, X,
         }
     }
 
-    if(any(c("sigma2") %in% type$detail)){
-        type.sigma2 <- type[type$detail %in% c("sigma2"),]
-        Utype.sigma2 <- unique(type.sigma2$param)
-        nUtype.sigma2 <- length(Utype.sigma2)
-        dmat.dparam$sigma2 <- setNames(vector(mode = "list", length = nUtype.sigma2), Utype.sigma2)
-
-        for(isigma2 in Utype.sigma2){ ## isigma2 <- Utype.sigma2[1]
-            dmat.dparam$sigma2[[isigma2]] <- matrix(as.double(object$param$SigmaParam[,,"sigma2"] %in% isigma2),
-                                                    nrow = n.endogenous, ncol = n.endogenous,
-                                                    dimnames = list(endogenous,endogenous))
-        }
-    }
-
-    if(any(c("sigma2k") %in% type$detail)){
-        type.sigma2k <- type[type$detail %in% c("sigma2k"),]
-        Utype.sigma2k <- unique(type.sigma2k$param)
-        nUtype.sigma2k <- length(Utype.sigma2k)
-        dmat.dparam$sigma2k <- setNames(vector(mode = "list", length = nUtype.sigma2k), Utype.sigma2k)
-
-        for(isigma2k in Utype.sigma2k){ ## isigma2k <- Utype.sigma2k[1]
-            dmat.dparam$sigma2k[[isigma2k]] <- array(0, dim = c(n.endogenous,n.endogenous, 2),
-                                                     dimnames = list(endogenous,endogenous, c("X","Y")))
-            dmat.dparam$sigma2k[[isigma2k]][,,"X"] <- as.double(object$param$SigmaParam[,,"sigma2kX"] %in% isigma2k)
-            dmat.dparam$sigma2k[[isigma2k]][,,"Y"] <- as.double(object$param$SigmaParam[,,"sigma2kY"] %in% isigma2k)
-        }
-    }
-
-    if(any(c("cor") %in% type$detail)){
-        type.cor <- type[type$detail %in% c("cor"),]
-        Utype.cor <- unique(type.cor$param)
-        nUtype.cor <- length(Utype.cor)
-        dmat.dparam$cor <- setNames(vector(mode = "list", length = nUtype.cor), Utype.cor)
-        
-        for(icor in Utype.cor){ ## icor <- Utype.cor[1]
-            dmat.dparam$cor[[icor]] <- matrix(as.double(object$param$SigmaParam[,,"cor"] %in% icor),
-                                              nrow = n.endogenous, ncol = n.endogenous,
-                                              dimnames = list(endogenous,endogenous))
-        }
-    }
-
     if(any(c("Psi_var","Psi_cov") %in% type$detail)){
         type.Psi <- type[type$detail %in% c("Psi_var","Psi_cov"),]
         Utype.Psi <- unique(type.Psi$param)
@@ -628,22 +525,6 @@ skeletonDtheta2 <- function(object){
                                         detail1 = "B", name1 = "B1",
                                         detail2 = "B", name2 = "B2")
 
-    grid.param$var$sigma2.cor <- .combinationDF(type.param,
-                                                detail1 = "sigma2", name1 = "sigma2",
-                                                detail2 = "cor", name2 = "cor")
-
-    grid.param$var$sigma2.sigma2k <- .combinationDF(type.param,
-                                                    detail1 = "sigma2", name1 = "sigma2",
-                                                    detail2 = "sigma2k", name2 = "sigma2k")
-
-    grid.param$var$cor.sigma2k <- .combinationDF(type.param,
-                                                 detail1 = "cor", name1 = "cor",
-                                                 detail2 = "sigma2k", name2 = "sigma2k")
-
-    grid.param$var$sigma2k.sigma2k <- .combinationDF(type.param,
-                                                     detail1 = "sigma2k", name1 = "sigma2k1",
-                                                     detail2 = "sigma2k", name2 = "sigma2k2")
-
     
     grid.param$mean <- grid.param$mean[lengths(grid.param$mean)>0]
     grid.param$var <- grid.param$var[lengths(grid.param$var)>0]
@@ -668,7 +549,7 @@ skeletonDtheta2 <- function(object){
     }else{
         d2mu <- list()
     }
-    
+
     if(length(grid.param$var)>0){
         grid.tempo <- lapply(grid.param$var, function(x){
             if(NROW(x)>0){
@@ -710,7 +591,7 @@ skeletonDtheta2 <- function(object){
             }
         }
     }
-    
+
     if(NROW(object$grid.dmoment$var)>0){
         object$grid.dmoment$var$d2.12 <- FALSE
         object$grid.dmoment$var$d2.21 <- FALSE

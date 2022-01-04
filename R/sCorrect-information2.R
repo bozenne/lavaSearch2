@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: feb 20 2020 (09:54) 
+## Last-Updated: Jan  4 2022 (16:50) 
 ##           By: Brice Ozenne
-##     Update #: 393
+##     Update #: 413
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,20 +16,24 @@
 ### Code:
 
 ## * Documentation - information2
-#' @title  Extract The Full Information Matrix After Small Sample Correction. 
-#' @description  Extract the full information matrix from  from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' @title  Expected Information With Small Sample Correction. 
+#' @description  Extract the expected information matrix from a latent variable model.
 #' Similar to \code{lava::information} but with small sample correction.
 #' @name information2
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-#' Only relevant for \code{lvmfit} objects.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the information matrix.
 #'
-#' @return A matrix.
+#' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
+#'
+#' @return A matrix with as many rows and columns as the number of coefficients.
 #' 
 #' @examples
+#' #### simulate data ####
 #' n <- 5e1
 #' p <- 3
 #' X.name <- paste0("X",1:p)
@@ -37,29 +41,42 @@
 #' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 #'
 #' m <- lvm(formula.lvm)
-#' distribution(m,~Id) <- sequence.lvm(0)
+#' distribution(m,~Id) <- Sequence.lvm(0)
 #' set.seed(10)
 #' d <- lava::sim(m,n)
-#'
-#' ## linear model
+#' 
+#' #### linear models ####
 #' e.lm <- lm(formula.lvm,data=d)
-#' info.tempo <- vcov2(e.lm)
-#' info.tempo[names(coef(e.lm)),names(coef(e.lm))] - vcov(e.lm)
-#'
-#' ## latent variable model
+#' 
+#' #### latent variable models ####
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' vcov.tempo <- vcov2(e.lvm)
-#' round(vcov.tempo %*% information(e.lvm), 5)
+#' information(e.lvm)
+#' information2(e.lvm)
+#' information2(e.lvm)[1:4,1:4] -  solve(vcov(e.lm))
 #'
-#' @concept small sample inference
+#' @concept extractor
+#' @keywords smallSampleCorrection
 #' @export
 `information2` <-
-  function(object, as.lava) UseMethod("information2")
+  function(object, as.lava, ssc, ...) UseMethod("information2")
 
-## * information2.sCorrect
+## * information2.lvmfit
 #' @rdname information2
-#' @export
-information2.sCorrect <- function(object, as.lava = TRUE){
+information2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc, ...){
+
+    return(information(estimate2(object, ssc = ssc, ...), as.lava = as.lava))
+
+}
+
+## * information2.lvmfit2
+#' @rdname information2
+information2.lvmfit2 <- function(object, as.lava = TRUE, ...){
+
+    dots <- list(...)
+    if(length(dots)>0){
+        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+    }
+
     out <- object$sCorrect$information
     if(as.lava == FALSE){
         name.param <- object$sCorrect$name.param
@@ -68,6 +85,12 @@ information2.sCorrect <- function(object, as.lava = TRUE){
     }
     return(out)
 }
+
+## * information.lvmfit2
+#' @rdname information2
+#' @export
+information.lvmfit2 <- information2.lvmfit2
+
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments
@@ -111,7 +134,11 @@ information2.sCorrect <- function(object, as.lava = TRUE){
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
 
-        iN.corrected <- sum(weights[iIndex]) - colSums(leverage[iIndex,iY,drop=FALSE])
+        if(!is.null(leverage)){
+            iN.corrected <- sum(weights[iIndex]) - colSums(leverage[iIndex,iY,drop=FALSE])
+        }else{
+            iN.corrected <- sum(weights[iIndex]) 
+        }
         
         ## *** Information relative to the mean parameters
         for(iG in index.mean){ # iG <- 1

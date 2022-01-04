@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:13) 
+## Last-Updated: Jan  4 2022 (16:50) 
 ##           By: Brice Ozenne
-##     Update #: 64
+##     Update #: 103
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,21 +16,25 @@
 ### Code:
 
 ## * Documentation - hessian2
-#' @title  Extract the Hessian After Small Sample Correction.
-#' @description  Extract the hessian from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+#' @title  Hessian With Small Sample Correction.
+#' @description  Extract the hessian from the latent variable model, with small sample correction
 #' @name hessian2
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-#' Only relevant for \code{lvmfit} objects.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
+#' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the hessian.
 #'
+#' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
+#' 
 #' @return An array containing the second derivative of the likelihood relative to each sample (dim 3)
 #' and each pair of model coefficients (dim 1,2).
 #' 
 #' @examples
+#' #### simulate data ####
 #' n <- 5e1
 #' p <- 3
 #' X.name <- paste0("X",1:p)
@@ -38,32 +42,37 @@
 #' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 #'
 #' m <- lvm(formula.lvm)
-#' distribution(m,~Id) <- sequence.lvm(0)
+#' distribution(m,~Id) <- Sequence.lvm(0)
 #' set.seed(10)
 #' d <- lava::sim(m,n)
 #'
-#' ## linear model
-#' e.lm <- lm(formula.lvm,data=d)
-#' eS.lm <- sCorrect(e.lm, ssc = NA, df = "Satterthwaite")
-#' hessian2.tempo <- hessian2(eS.lm)
-#' colMeans(score.tempo)
-#'
-#' ## latent variable model
+#' #### latent variable models ####
 #' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' eS.lvm <- sCorrect(e.lvm, df = NA, ssc = NA)
-#' score.tempo <- score2(eS.lvm, indiv = TRUE)
-#' range(score.tempo-score(e.lvm, indiv = TRUE))
+#' hessian2(e.lvm)
 #'
 #' @concept small sample inference
 #' @export
 `hessian2` <-
-  function(object, cluster, as.lava) UseMethod("hessian2")
+  function(object, cluster, as.lava, ssc, ...) UseMethod("hessian2")
 
-## * hessian2.sCorrect
+## * hessian2.lvmfit
 #' @rdname hessian2
-#' @export
-hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
+hessian2.lvmfit <- function(object, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
+
+    return(hessian2(estimate2(object, ssc = ssc, hessian = TRUE, ...), cluster = cluster, as.lava = as.lava))
+
+}
+
+
+## * hessian2.lvmfit2
+#' @rdname hessian2
+hessian2.lvmfit2 <- function(object, cluster = NULL, as.lava = TRUE, ...){
     
+    dots <- list(...)
+    if(length(dots)>0){
+        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+    }
+
     ## ** define cluster
     if(is.null(cluster)){
         n.cluster <- object$sCorrect$cluster$n.cluster
@@ -88,7 +97,25 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
 
     ## ** get hessian
     hessian <- object$sCorrect$hessian
-    if(is.null(hessian)){return(NULL)}
+    if(is.null(hessian)){
+        hessian <- .hessian2(dmu = object$sCorrect$dmoment$dmu,
+                             dOmega = object$sCorrect$dmoment$dOmega,
+                             d2mu = object$sCorrect$d2moment$d2mu,
+                             d2Omega = object$sCorrect$d2moment$d2Omega,
+                             epsilon = object$sCorrect$residuals,                                     
+                             OmegaM1 = object$sCorrect$moment$OmegaM1.missing.pattern,
+                             missing.pattern = object$sCorrect$missing$pattern,
+                             unique.pattern = object$sCorrect$missing$unique.pattern,
+                             name.pattern = object$sCorrect$missing$name.pattern,
+                             grid.mean = object$sCorrect$skeleton$grid.dmoment$mean, 
+                             grid.var = object$sCorrect$skeleton$grid.dmoment$var, 
+                             grid.hybrid = object$sCorrect$skeleton$grid.dmoment$hybrid, 
+                             name.param = object$sCorrect$skeleton$Uparam,
+                             leverage = object$sCorrect$leverage,
+                             n.cluster = object$sCorrect$cluster$n.cluster,
+                             weights = object$sCorrect$weights)
+    }
+
     if(!is.null(cluster)){ ## aggregate hessian by cluster
         hessianSave <- hessian
         hessian <- array(0, dim = dim(hessian),
@@ -111,7 +138,6 @@ hessian2.sCorrect <- function(object, cluster = NULL, as.lava = TRUE){
     
     return(hessian)
 }
-
 
 ## * .hessian2
 #' @title Compute the Hessian Matrix From the Conditional Moments

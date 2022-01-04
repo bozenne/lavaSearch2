@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: feb 17 2020 (18:50) 
+## Last-Updated: Jan  4 2022 (17:45) 
 ##           By: Brice Ozenne
-##     Update #: 182
+##     Update #: 261
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,31 +16,27 @@
 ### Code:
 
 ## * Documentation
-#' @title Export Mean and Variance Coefficients
-#' @description Export mean and variance coefficients from a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit}.
-#' Similar to \code{coef} but extract all model coefficients, including variance, correlation, and random effects,
-#' possibly after application of the small sample correction.
+#' @title Model Coefficients With Small Sample Correction
+#' @description Extract the coefficients from the latent variable model.
+#' Similar to \code{lava::compare} but with small sample correction.
 #' @name coef2
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, \code{lvmfit} object.
-#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-#' Only relevant for \code{lvmfit} objects.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
+#'
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the model coefficients.
 #' 
-#' @details For \code{gls} and \code{lme} models, the variance coefficients that are exported are the residual variance of each outcome. 
-#' This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
-#'
-#' @return A numeric vector named with the names of the coefficient with three attributes:
-#' \itemize{
-#' \item mean.coef: the name of the mean coefficients.
-#' \item var.coef: the name of the variance coefficients.
-#' \item cor.coef: the name of the correlation coefficients.
-#' }
-#'
+#' @return A numeric vector named with the names of the coefficients.
+#' 
+#' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
+#' 
 #' @concept extractor
 #' @keywords smallSampleCorrection
 #' @export
 `coef2` <-
-    function(object, as.lava) UseMethod("coef2")
+    function(object, as.lava, ...) UseMethod("coef2")
 
 
 ## * Examples
@@ -53,166 +49,57 @@
 #' dL <- sampleRepeated(10, format = "long")
 #' dL$time2 <- paste0("visit",dL$time)
 #' 
-#' #### linear model ####
-#' e.lm <- lm(Y1~X1, data = dW)
-#' coef2(e.lm)
-#'
-#' #### gls model ####
-#' e.gls1 <- gls(Y1~X1, data = dW)
-#' coef2(e.gls1)
-#' 
-#' e.gls5 <- gls(Y~X1, weight = varIdent(form=~1|time2),
-#'               correlation = corSymm(form=~time|id), data = dL)
-#' coef2(e.gls5)
-#'
-#' #### lme model ####
-#' e.lme1 <- lme(Y~X1, random = ~1|id, data = dL)
-#' coef2(e.lme1)
-#' 
-#' e.lme2 <- lme(Y~X1, random = ~1|id, data = dL,
-#'               weight = varIdent(form=~1|time2))
-#' coef2(e.lme2)
-#' 
 #' #### latent variable models ####
 #' e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
-#' coef2(e.lvm)
 #' coef(e.lvm)
-
-## * coef2.lm
-#' @rdname coef2
-#' @export
-coef2.lm <- function(object, as.lava = TRUE){
-    if(is.null(object$sCorrect)){
-        out <- .coef2(object)
-    }else{
-        out <- object$sCorrect$param
-    }
-    return(out)
-}
-
-## * coef2.gls
-#' @rdname coef2
-#' @export
-coef2.gls <- coef2.lm
-
-## * coef2.lme
-#' @rdname coef2
-#' @export
-coef2.lme <- coef2.lm
+#' coef2(e.lvm)
+#' coef2(e.lvm, as.lava = FALSE)
 
 ## * coef2.lvmfit
 #' @rdname coef2
-#' @export
-coef2.lvmfit <- function(object, as.lava = TRUE){
-    if(as.lava){
-        out <- stats::coef(object)
-    }else{
-        out <- .coef2(object)
+coef2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc, ...){
+
+    return(coef(estimate2(object, ssc = ssc, ...), as.lava = as.lava))
+
+}
+
+## * coef2.lvmfit2
+#' @rdname coef2
+coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
+
+    dots <- list(...)
+    if(length(dots)>1){ ## for the print function
+
+        ## extract structure from lava
+        object0 <- object
+        class(object0) <- setdiff(class(object), "lvmfit2")
+        out <- do.call(stats::coef, args = c(list(object0),dots))
+        ## get the full name from lava
+        dots$symbol <- NULL
+        out.names <- rownames(do.call(stats::coef, args = c(list(object0),dots)))
+        ## extract value from lavaSearch2
+        res <- confint(object, as.lava = FALSE)[names(object$sCorrect$skeleton$originalLink2param),]
+        rownames(res) <- as.character(object$sCorrect$skeleton$originalLink2param)
+
+        out[,"Estimate"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"estimate"]
+        out[,"Std. Error"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"std.error"]
+        out[,"Z-value"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"statistic"]
+        colnames(out)[colnames(out)=="Z-value"] <- "t-value"
+        out[,"P-value"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"p.value"]
+    }else{        
+        out <- object$sCorrect$param
+        if(as.lava == FALSE){
+            out <- out[names(object$sCorrect$skeleton$originalLink2param)]
+            names(out) <- as.character(object$sCorrect$skeleton$originalLink2param)
+        }
     }
     return(out)
 }
 
-
-
-## * coef2.sCorrect
+## * coef.lvmfit2
 #' @rdname coef2
 #' @export
-coef2.sCorrect <- function(object, as.lava = TRUE){
-    out <- object$sCorrect$param
-    if(as.lava == FALSE){ 
-        out <- out[names(object$sCorrect$skeleton$originalLink2param)]
-        names(out) <- as.character(object$sCorrect$skeleton$originalLink2param)
-    }
-    return(out)
-}
-
-## * .coef2
-.coef2 <- function(object){
-
-    if(inherits(object,"lm")){        
-        coef.object <- coef(object)
-        out <- c(coef.object,sigma2=mean(residuals(object)^2))
-        attr(out, "mean.coef") <- names(coef.object)
-        attr(out, "var.coef") <- "sigma2"
-
-    }else if(inherits(object,"gls") || inherits(object,"lme")){
-
-        ## ** mean coefficients
-        if(inherits(object,"gls")){
-            mean.coef <- stats::coef(object)
-        }else if(inherits(object,"lme")){
-            mean.coef <- nlme::fixef(object)
-        }
-            
-        ## ** variance coefficients
-        var.coef <- c(sigma2 = stats::sigma(object)^2)
-        if(!is.null(object$modelStruct$varStruct)){
-            var.coef <- c(var.coef,
-                          stats::coef(object$modelStruct$varStruct, unconstrained = FALSE, allCoef = FALSE))          
-        }
-
-        ## ** random effect coefficients
-        if(inherits(object,"lme")){
-            random.coef <- as.double(nlme::getVarCov(object))    
-            names(random.coef) <- paste0("ranCoef",1:length(random.coef))
-        }else{
-            random.coef <- NULL
-        }
-        
-        ## ** correlation coefficients
-        if(!is.null(object$modelStruct$corStruct)){
-            cor.coef <- stats::coef(object$modelStruct$corStruct, unconstrained = FALSE)
-
-            n.var <- length(var.coef)
-            n.cor <- length(cor.coef)
-
-        ## check unstructured covariance matrix
-        if(!is.null(object$modelStruct$varStruct) && ((n.var*(n.var-1))/2 == n.cor)){
-
-            vecgroup <- attr(unclass(object$modelStruct$corStruct), "group")
-            veccov.cor <- unname(unlist(attr(object$modelStruct$corStruct, "covariate")))
-            veccov.var <- attr(object$modelStruct$varStruct, "groups")
-
-            table.covvar <- table(veccov.cor,veccov.var)
-            newlevels.cor <- colnames(table.covvar)[apply(table.covvar, 1, which.max)]
-            veccov.cor2 <- factor(veccov.cor, levels = 0:max(veccov.cor), labels = newlevels.cor)
-            
-            if(identical(as.character(veccov.cor2),as.character(veccov.var))){
-                table.cor.coef <- utils::combn(newlevels.cor, m = 2)
-                cor.coefName <- apply(table.cor.coef, MARGIN = 2, FUN = paste, collapse = "")
-                names(cor.coef) <- paste0("corCoef",cor.coefName)
-
-            }else{
-                table.cor.coef <- NULL
-                names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-            }
-            
-        }else{
-            table.cor.coef <- NULL
-            names(cor.coef) <- paste0("corCoef",1:length(cor.coef))
-        }
-        
-        
-        }else{
-            table.cor.coef <- NULL
-            cor.coef <- NULL
-        }
-        out <- c(mean.coef, var.coef, cor.coef, random.coef)
-        attr(out, "mean.coef") <- names(mean.coef)
-        attr(out, "var.coef") <- names(var.coef)
-        attr(out, "cor.coef") <- names(cor.coef)
-        attr(out, "ran.coef") <- names(random.coef)
-        attr(out, "table.cor.coef") <- table.cor.coef
-        
-    }else if(inherits(object,"lvmfit")){
-        tempo <- stats::coef(object, type = 2, labels = 1)
-        out <- setNames(tempo[,1],rownames(tempo))
-        attr(out, "mean.coef") <- rownames(tempo)[attr(tempo,"type")!="variance"]
-        attr(out, "var.coef") <- rownames(tempo)[attr(tempo,"type")=="variance"]
-    }
-
-    return(out)
-}
+coef.lvmfit2 <- coef2.lvmfit2
 
 ######################################################################
 ### sCorrect-coef2.R ends here

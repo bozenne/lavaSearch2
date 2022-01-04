@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:14) 
+## Last-Updated: Jan  4 2022 (17:23) 
 ##           By: Brice Ozenne
-##     Update #: 343
+##     Update #: 345
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -80,7 +80,11 @@
         iY <- which(unique.pattern[iP,]==1)
 
         iOmegaM1 <- OmegaM1[[iPattern]]
-        iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
+        if(!is.null(leverage)){
+            iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
+        }else{
+            iN.corrected <- length(iIndex)
+        }
         idmu <- .subsetList(dmu, indexRow = iIndex, indexCol = iY)
         idOmega <- .subsetList(dOmega, indexRow = iY, indexCol = iY)
         id2mu <- .subsetList2(d2mu, indexRow = iIndex, indexCol = iY)
@@ -291,7 +295,11 @@
         iIndex <- missing.pattern[[iPattern]]
         iY <- which(unique.pattern[iP,]==1)
 
-        iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
+        if(!is.null(leverage)){
+            iN.corrected <- length(iIndex) - colSums(leverage[iIndex,iY,drop=FALSE])
+        }else{
+            iN.corrected <- length(iIndex)
+        }
         for(iGrid in index.Nduplicated){ # iGrid <- 1
             iName1 <- grid.dInformation[iGrid,"X"]
             iName2 <- grid.dInformation[iGrid,"Y"]

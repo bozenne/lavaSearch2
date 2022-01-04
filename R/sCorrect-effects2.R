@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: sep  2 2021 (14:14) 
+## Last-Updated: Jan  4 2022 (10:57) 
 ##           By: Brice Ozenne
-##     Update #: 229
+##     Update #: 232
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -59,7 +59,7 @@ effects2.sCorrect <- function(object, link, conf.level = 0.95, robust = FALSE, .
     n.hypo <- length(link)
     name.hypo <- names(link)
     if(is.null(name.hypo)){name.hypo <- link}
-    test.df <- identical(object$sCorrect$df,"Satterthwaite")
+    test.df <- (object$sCorrect$df == "satterthwaite")
     
     object.coef <- coef2(object)
     object.iid <- iid2(object, robust = robust)

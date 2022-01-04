@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: feb 19 2020 (15:49) 
+## Last-Updated: Jan  4 2022 (17:05) 
 ##           By: Brice Ozenne
-##     Update #: 778
+##     Update #: 811
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,12 +16,12 @@
 ### Code:
 
 ## * Documentation - compare2
-#' @title Test Linear Hypotheses with small sample correction
-#' @description Test Linear Hypotheses using a multivariate Wald statistic from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-#' Similar to \code{lava::compare} but with small sample correction (if any).
+#' @title Test Linear Hypotheses With Small Sample Correction
+#' @description Test Linear Hypotheses using Wald statistics in Latent variable models.
+#' Similar to \code{lava::compare} but with small sample correction.
 #' @name compare2
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param robust [logical] should the robust standard errors be used instead of the model based standard errors?
@@ -31,13 +31,11 @@
 #' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
 #' @param transform [function] function to backtransform the estimates and the associated confidence intervals
 #' (e.g. \code{exp} if the outcomes have been log-transformed).
-#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
-#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
-#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
+#' @param df [logical] method used to compute the degree of freedoms of the Wald statistic (code{"none"}, \code{"satterthwaite"}).
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
 #' @param ... [logical] arguments passed to lower level methods.
 #'
-#' @details The \code{par} argument or the arguments \code{contrast} and \code{rhs} (or equivalenty \code{rhs})
-#' specify the set of linear hypotheses to be tested. They can be written:
+#' @details The \code{linfct} argument and \code{rhs} specify the set of linear hypotheses to be tested. They can be written:
 #' \deqn{
 #'   linfct * \theta = rhs
 #' }
@@ -52,7 +50,7 @@
 #' The rhs vector should contain as many elements as there are row in the contrast matrix. \cr
 #' 
 #' @seealso \code{\link{createContrast}} to create contrast matrices. \cr
-#' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
+#' \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 #' 
 #' @return If \code{as.lava=TRUE} an object of class \code{htest}.
 #' Otherwise a \code{data.frame} object.
@@ -66,77 +64,47 @@
 #' transform(mSim, Id~Y) <- function(x){1:NROW(x)}
 #' df.data <- lava::sim(mSim, 1e2)
 #'
-#' #### with lm ####
-#' ## direct use of compare2
-#' e.lm <- lm(Y~X1+X2, data = df.data)
-#' anova(e.lm)
-#' compare2(e.lm, par = c("X1b=0","X1c=0"))
-#' 
-#' ## or first compute the derivative of the information matrix
-#' sCorrect(e.lm) <- TRUE
-#' 
-#' ## and define the contrast matrix
-#' C <- createContrast(e.lm, linfct = c("X1b=0","X1c=0"), add.variance = TRUE)
-#'
-#' ## run compare2
-#' compare2(e.lm, linfct = C$contrast, rhs = C$null)
-#' compare2(e.lm, linfct = C$contrast, rhs = C$null, robust = TRUE)
-#' 
-#' #### with gls ####
-#' library(nlme)
-#' e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
-#'
-#' ## first compute the derivative of the information matrix
-#' sCorrect(e.gls, cluster = 1:NROW(df.data)) <- TRUE
-#' 
-#' compare2(e.gls, par = c("5*X1b+2*X2 = 0","(Intercept) = 0"))
-#' 
 #' #### with lvm ####
 #' m <- lvm(Y~X1+X2)
 #' e.lvm <- estimate(m, df.data)
 #' 
-#' compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
-#' compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"), robust = TRUE)
-#' @concept small sample inference
+#' compare2(e.lvm, linfct = c("Y~X1b","Y~X1c","Y~X2"))
+#' compare2(e.lvm, linfct = c("Y~X1b","Y~X1c","Y~X2"), robust = TRUE)
+#' 
+#' @concept inference
+#' @keywords smallSampleCorrection
 #' @export
 `compare2` <-
-    function(object, ...) UseMethod("compare2")
-
-## * compare2.lm
-#' @rdname compare2
-#' @export
-compare2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
-
-    object.SSC <- sCorrect(object, ssc = ssc, df = df)
-    return(compare2(object.SSC, ...))
-
-}
-
-## * compare2.gls
-#' @rdname compare2
-#' @export
-compare2.gls <- compare2.lm
-
-## * compare2.lme
-#' @rdname compare2
-#' @export
-compare2.lme <- compare2.lm
+    function(object, linfct, rhs,
+             robust, cluster,
+             as.lava, F.test,
+             conf.level, ...) UseMethod("compare2")
 
 ## * compare2.lvmfit
 #' @rdname compare2
-#' @export
-compare2.lvmfit <- compare2.lm
+compare2.lvmfit <- function(object, linfct = NULL, rhs = NULL,
+                            robust = FALSE, cluster = NULL,
+                            as.lava = TRUE, F.test = TRUE,
+                            conf.level = 0.95,
+                            ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
-## * compare2.sCorrect
+    return(compare(estimate2(object, ssc = ssc, df = df, ...),
+                    linfct = linfct, rhs = rhs, robust = robust, cluster = cluster, as.lava = as.lava, F.test = F.test, conf.level = conf.level)
+           )
+
+}
+
+## * compare2.lvmfit2
 #' @rdname compare2
-#' @export
-compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
+compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
                               as.lava = TRUE, F.test = TRUE,
                               conf.level = 0.95, ...){
-
-    df <- object$sCorrect$df
     
+    dots <- list(...)
+    if(length(dots)>0){
+        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+    }
     if(is.null(linfct)){ ## necessary for lava::gof to work
         return(lava::compare(object))
     }
@@ -148,6 +116,8 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
     }
 
     ## ** extract information
+    df <- object$sCorrect$df
+    
     ## 0-order: param
     param <- coef2(object, as.lava = TRUE)
     n.param <- length(param)
@@ -167,7 +137,7 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
     }
 
     ## 3-order: derivative of the variance covariance matrices
-    if(identical(df, "Satterthwaite")){
+    if(df == "satterthwaite"){
         dVcov.param <- object$sCorrect$dVcov.param
         keep.param <- dimnames(dVcov.param)[[3]]
 
@@ -250,7 +220,7 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
     }
 
     ## df
-    if(identical(df, "Satterthwaite")){
+    if(df == "satterthwaite"){
         df.Wald  <- dfSigma(contrast = linfct,
                             score = score,
                             vcov = vcov.param,
@@ -271,7 +241,7 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
             stat.F <- t(C.p.rhs) %*% iC.vcov.C %*% (C.p.rhs) / n.hypo
 
             ## df (independent t statistics)
-            if(identical(df,"Satterthwaite")){
+            if(df == "satterthwaite"){
                 svd.tempo <- eigen(iC.vcov.C)
                 D.svd <- diag(svd.tempo$values, nrow = n.hypo, ncol = n.hypo)
                 P.svd <- svd.tempo$vectors
@@ -357,6 +327,11 @@ compare2.sCorrect <- function(object, linfct = NULL, rhs = NULL,
     return(out)
 
 }
+
+## * compare.lvmfit2
+#' @rdname compare2
+#' @export
+compare.lvmfit2 <- compare2.lvmfit2
 
 ## * dfSigma
 ##' @title Degree of Freedom for the Chi-Square Test

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: feb 11 2020 (17:23) 
+## Last-Updated: Jan  4 2022 (16:50) 
 ##           By: Brice Ozenne
-##     Update #: 65
+##     Update #: 77
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,98 +16,57 @@
 ### Code:
 
 ## * getVarCov2
-#' @title Reconstruct the Conditional Variance Covariance Matrix After Small Sample Correction.
-#' @description Reconstruct the conditional variance covariance matrix from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects. 
-#' For \code{gls} and \code{lme} object, it is only compatible with specific correlation and variance structure.
-#' It is similar to \code{nlme::getVarCov} but with small sample correction (if any).
-#' 
+#' @title Residual Variance-Covariance Matrix With Small Sample Correction.
+#' @description Reconstruct the residual variance-covariance matrix from a latent variable model. 
+#' It is similar to \code{nlme::getVarCov} but with small sample correction.
 #' @name getVarCov2
 #'
-#' @param object a \code{gls} or \code{lme} object
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #' 
-#' @details The compound symmetry variance-covariance matrix in a gls model is of the form:
-#' \tabular{cccc}{
-#' \eqn{\Sigma =} \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \rho} \tab \eqn{\sigma^2 \rho} \cr
-#' \tab . \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \rho} \cr
-#' \tab . \tab . \tab \eqn{\sigma^2}
-#' }
-#'
-#' The unstructured variance-covariance matrix in a gls model is of the form:
-#'  \tabular{cccc}{
-#' \eqn{\Sigma =} \tab \eqn{\sigma^2} \tab \eqn{\sigma^2 \sigma_2 \rho_{1,2}} \tab \eqn{\sigma^2 \sigma_3 \rho_{1,3}} \cr
-#' \tab . \tab \eqn{\sigma^2 \sigma_2^2} \tab \eqn{\sigma^2 \sigma_2 \sigma_3 \rho_{2,3}} \cr
-#' \tab . \tab . \tab \eqn{\sigma^2 \sigma_3^2}
-#' }
-#' @return A list containing the residual variance-covariance matrix in the element Omega.
+#' @return A matrix with as many rows and column as the number of endogenous variables
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the residuals.
 #' 
 #' @examples
-#' ## simulate data 
-#' library(nlme)
-#' n <- 5e1
-#' mSim <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
-#' latent(mSim) <- ~eta
-#' transform(mSim,Id~Y1) <- function(x){1:NROW(x)}
+#' #### simulate data ####
 #' set.seed(10)
-#' dW <- lava::sim(mSim,n,latent = FALSE)
-#' dW <- dW[order(dW$Id),,drop=FALSE]
-#' dL <- reshape2::melt(dW,id.vars = c("G","Id"), variable.name = "time")
-#' dL <- dL[order(dL$Id),,drop=FALSE]
-#' dL$Z1 <- rnorm(NROW(dL))
-#' dL$time.num <- as.numeric(as.factor(dL$time))
+#' n <- 101
 #'
-#' #### linear regression ####
-#' e1.lm <- lm(Y1 ~ G, data = dW)
-#' getVarCov2(e1.lm)
-#' 
-#' #### iid model #### 
-#' e1.gls <- nlme::gls(Y1 ~ G, data = dW, method = "ML")
-#' getVarCov2(e1.gls, cluster = 1:n)$Omega
-#' 
-#' #### heteroschedasticity ####
-#' dW$group <- rbinom(n, size = 1, prob = 1/2)
-#' dW$repetition <- as.numeric(as.factor(dW$group))
-#' e2a.gls <- nlme::gls(Y1 ~ G, data = dW, method = "ML",
-#'                     weights = varIdent(form =~ repetition|group))
-#' getVarCov2(e2a.gls, cluster = 1:n)$Omega
+#' Y1 <- rnorm(n, mean = 0)
+#' Y2 <- rnorm(n, mean = 0.3)
+#' Id <- findInterval(runif(n), seq(0.1,1,0.1))
+#' data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
+#'            data.frame(Y=Y2,G="2",Id = Id)
+#'            )
 #'
-#' 
-#' e2b.gls <- nlme::gls(value ~ 0+time + time:G,
-#'                    weight = varIdent(form = ~ time.num|time),
-#'                    data = dL, method = "ML")
-#' getVarCov2(e2b.gls, cluster = "Id")$Omega
-#'
-#' #### compound symmetry ####
-#' e3.gls <- nlme::gls(value ~ time + G,
-#'                    correlation = corCompSymm(form = ~1| Id),
-#'                    data = dL, method = "ML")
-#' getVarCov2(e3.gls)$Omega
-#' 
-#' #### unstructured ####
-#' e4.gls <- nlme::gls(value ~ time,
-#'                     correlation = corSymm(form = ~time.num| Id),
-#'                     weight = varIdent(form = ~ 1|time),
-#'                     data = dL, method = "ML")
-#' getVarCov2(e4.gls)$Omega
-#'
-#' #### lvm model ####
-#' m <- lvm(c(Y1~1*eta,Y2~1*eta,Y3~1*eta,eta~G))
-#' latent(m) <- ~eta
-#' e <- estimate(m, dW)
-#' getVarCov2(e)
+#' #### latent variable models ####
+#' library(lava)
+#' e.lvm <- estimate(lvm(Y ~ G), data = data.df)
+#' getVarCov2(e.lvm)
 #' 
 #' @concept extractor
-#' 
+#' @keywords smallSampleCorrection
 #' @export
 `getVarCov2` <-
-    function(object) UseMethod("getVarCov2")
+    function(object, ssc, ...) UseMethod("getVarCov2")
 
-## * getVarCov2.sCorrect
+## * getVarCov2.lvmfit
 #' @rdname getVarCov2
-#' @export
-getVarCov2.sCorrect <- function(object){
+getVarCov2.lvmfit <- function(object, ssc = lava.options()$ssc, ...){
+
+    return(getVarCov2(estimate2(object, ssc = ssc, ...)))
+
+}
+
+## * getVarCov2.lvmfit2
+#' @rdname getVarCov2
+getVarCov2.lvmfit2 <- function(object){
+    
     Omega <- object$sCorrect$moment$Omega
     attr(Omega, "detail") <- NULL
     return(Omega)
+    
 }
 
 ######################################################################

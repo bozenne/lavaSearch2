@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: feb 20 2020 (09:54) 
+## last-updated: Jan  4 2022 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 2353
+##     Update #: 2387
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,26 +16,27 @@
 ### Code:
 
 ## * Documentation - score2
-#' @title  Extract the Individual Score.
-#' @description  Extract the individual score from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-#' Similar to \code{lava::score} but compatible with small sample correction.
+#' @title  Score With Small Sample Correction
+#' @description  Extract the (individual) score from the latent variable model.
+#' Similar to \code{lava::score} but with small sample correction.
 #' @name score2
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
-#' @param indiv [logical] If \code{TRUE}, the score relative to each observation is returned.
-#' Otherwise the total score is returned.
-#' @param as.lava [logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-#' Only relevant for \code{lvmfit} objects.
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param indiv [logical] If \code{TRUE}, the score relative to each observation is returned. Otherwise the total score is returned.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
+#' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
-#' @details If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the confidence intervals.
 #'
-#' @seealso \code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+#' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 #'
-#' @return A matrix containing the score relative to each sample (in rows)
-#' and each model coefficient (in columns).
+#' @return When argument indiv is \code{TRUE}, a matrix containing the score relative to each sample (in rows)
+#' and each model coefficient (in columns). Otherwise a numeric vector of length the number of model coefficients.
 #' 
 #' @examples
+#' #### simulate data ####
 #' n <- 5e1
 #' p <- 3
 #' X.name <- paste0("X",1:p)
@@ -43,52 +44,63 @@
 #' formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 #'
 #' m <- lvm(formula.lvm)
-#' distribution(m,~Id) <- sequence.lvm(0)
+#' distribution(m,~Id) <- Sequence.lvm(0)
 #' set.seed(10)
 #' d <- lava::sim(m,n)
 #'
-#' ## linear model
-#' e.lm <- lm(formula.lvm,data=d)
-#' eS.lm <- sCorrect(e.lm, ssc = NA, df = NA)
-#' score.tempo <- score2(eS.lm, indiv = TRUE)
-#' colMeans(score.tempo)
+#' #### linear models ####
+#' e.lm <- lm(Y~X1+X2+X3, data = d)
+#' 
+#' #### latent variable models ####
+#' m.lvm <- lvm(formula.lvm)
+#' e.lvm <- estimate(m.lvm,data=d)
+#' e2.lvm <- estimate2(m.lvm,data=d)
+#' score.tempo <- score(e2.lvm, indiv = TRUE)
+#' colSums(score.tempo)
 #'
-#' ## latent variable model
-#' e.lvm <- estimate(lvm(formula.lvm),data=d)
-#' eS.lvm <- sCorrect(e.lvm, df = NA, ssc = NA)
-#' score.tempo <- score2(eS.lvm, indiv = TRUE)
-#' range(score.tempo-score(e.lvm, indiv = TRUE))
-#'
-#' @concept small sample inference
+#' @concept extractor
+#' @keywords smallSampleCorrection
 #' @export
 `score2` <-
-  function(object, indiv, cluster, as.lava) UseMethod("score2")
+  function(object, indiv, cluster, as.lava, ...) UseMethod("score2")
 
-## * score2.sCorrect
+## * score2.lvmfit
 #' @rdname score2
-#' @export
-score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE){
+score2.lvmfit <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
+
+    return(lava::score(estimate2(object, ssc = ssc, ...), indiv = indiv, cluster = cluster, as.lava = as.lava))
+
+}
+
+## * score2.lvmfit2
+#' @rdname score2
+score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...){
     
+    dots <- list(...)
+    if(length(dots)>0){
+        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+    }
     ## ** define cluster
-    if(is.null(cluster)){
+    if(length(cluster) == 1 && (is.numeric(cluster) || is.character(cluster) || is.factor(cluster))){
+        data <- object$sCorrect$data
+        if(length(cluster)==1){                
+            if(cluster %in% names(data) == FALSE){
+                stop("Invalid \'cluster\' argument \n",
+                     "Could not find variable \"",cluster,"\" in argument \'data\' \n")
+            }
+            cluster <- data[[cluster]]
+        }
+        cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))            
+        n.cluster <- length(unique(cluster.index))
+    }else if(is.vector(cluster)){
+        cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))
+        n.cluster <- length(unique(cluster.index))
+    }else if(is.null(cluster)){ ## NOTE: cluster is a function in the survival package
+        cluster <- NULL
         n.cluster <- object$sCorrect$cluster$n.cluster
         cluster.index <- 1:n.cluster
     }else{
-        if(!is.numeric(cluster)){
-            data <- object$sCorrect$data
-            if(length(cluster)==1){                
-                if(cluster %in% names(data) == FALSE){
-                    stop("Invalid \'cluster\' argument \n",
-                         "Could not find variable \"",cluster,"\" in argument \'data\' \n")
-                }
-                cluster <- data[[cluster]]
-            }
-            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))            
-        }else{
-            cluster.index <- as.numeric(factor(cluster, levels = unique(cluster)))
-        }
-
-        n.cluster <- length(unique(cluster.index))
+        stop("Do not know how to handle argument cluster of class ",class(cluster),"\n")
     }
 
     ## ** get score
@@ -116,9 +128,14 @@ score2.sCorrect <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRU
     }
 }
 
+## * score.lvmfit2
+#' @rdname score2
+#' @export
+score.lvmfit2 <- score2.lvmfit2
+
 ## * .score2
 #' @title Compute the Corrected Score.
-#' @description Compute the corrected score when there is no missing value.
+#' @description Compute the corrected score.
 #' @name score2-internal
 #' 
 #' @param n.cluster [integer >0] the number of observations.
