@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:51) 
+## Last-Updated: Jan 10 2022 (12:19) 
 ##           By: Brice Ozenne
-##     Update #: 129
+##     Update #: 138
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,7 +28,9 @@
 #' \code{"normalized"} for normalized residuals.
 #' @param format [character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
 #' Otherwise use \code{"long"} to return the residuals in the long format.
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
@@ -92,7 +94,7 @@ residuals2.lvmfit2 <- function(object, type = "response", format = "wide", ...){
 
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
     format <- match.arg(format, choices = c("long","wide"))
@@ -167,8 +169,8 @@ residuals.lvmfit2 <- residuals2.lvmfit2
                              name.pattern, missing.pattern, unique.pattern,
                              endogenous, n.endogenous, n.cluster){
     if(is.null(Psi)){return(epsilon)}
-    
     n.endogenous <- length(endogenous)
+
     epsilon.adj <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                           dimnames = list(NULL, endogenous))
     n.pattern <- NROW(unique.pattern)

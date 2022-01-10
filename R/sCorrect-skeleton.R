@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (14:32) 
+## Last-Updated: Jan 10 2022 (12:49) 
 ##           By: Brice Ozenne
-##     Update #: 1675
+##     Update #: 1680
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -135,6 +135,7 @@ skeleton <- function(object, X,
                                 dimnames = list(K.exogenous, endogenous))
         theta.param$K <- matrix(as.character(NA), nrow = length(K.exogenous), ncol = n.endogenous,
                                 dimnames = list(K.exogenous, endogenous))
+
         theta.param$XK <- lapply(endogenous, function(iE){ ## iE <- endogenous[1]
             iXK <- matrix(NA, nrow = n.cluster, ncol = length(K.exogenous),
                           dimnames = list(NULL, K.exogenous))
@@ -260,6 +261,7 @@ skeleton <- function(object, X,
     Uparam <- as.character(originalLink2param)
     Uparam.mean <- unique(type.param[type.param$detail %in% type.mean,"param"])
     Uparam.variance <- unique(type.param[type.param$detail %in% type.var,"param"])
+    Uparam.hybrid <- intersect(Uparam.mean,Uparam.variance)
     
     ## ** to update
     toUpdate <- c("nu" = "nu" %in% type.param$detail,
@@ -288,6 +290,7 @@ skeleton <- function(object, X,
                 Uparam = Uparam,
                 Uparam.mean = Uparam.mean,
                 Uparam.variance = Uparam.variance,
+                Uparam.hybrid = Uparam.hybrid,
                 toUpdate.moment = toUpdate,
                 originalLink2param = originalLink2param,
                 obsByEndoInX = obsByEndoInX)
@@ -455,7 +458,6 @@ skeletonDtheta <- function(object, X,
     grid.param <- list(mean = .combination(object$Uparam.mean, object$Uparam.mean),
                        var = .combination(object$Uparam.var, object$Uparam.var),
                        hybrid = .combination(object$Uparam.mean, object$Uparam.var))
-
 
     ## ** export
     return(c(object,

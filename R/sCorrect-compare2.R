@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (17:05) 
+## Last-Updated: Jan 10 2022 (16:06) 
 ##           By: Brice Ozenne
-##     Update #: 811
+##     Update #: 868
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * Documentation - compare2
 #' @title Test Linear Hypotheses With Small Sample Correction
-#' @description Test Linear Hypotheses using Wald statistics in Latent variable models.
+#' @description Test Linear Hypotheses using Wald statistics in a latent variable model.
 #' Similar to \code{lava::compare} but with small sample correction.
 #' @name compare2
 #'
@@ -31,9 +31,13 @@
 #' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
 #' @param transform [function] function to backtransform the estimates and the associated confidence intervals
 #' (e.g. \code{exp} if the outcomes have been log-transformed).
-#' @param df [logical] method used to compute the degree of freedoms of the Wald statistic (code{"none"}, \code{"satterthwaite"}).
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
-#' @param ... [logical] arguments passed to lower level methods.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+#' Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @details The \code{linfct} argument and \code{rhs} specify the set of linear hypotheses to be tested. They can be written:
 #' \deqn{
@@ -88,7 +92,7 @@ compare2.lvmfit <- function(object, linfct = NULL, rhs = NULL,
                             conf.level = 0.95,
                             ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
-    return(compare(estimate2(object, ssc = ssc, df = df, ...),
+    return(compare(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...),
                     linfct = linfct, rhs = rhs, robust = robust, cluster = cluster, as.lava = as.lava, F.test = F.test, conf.level = conf.level)
            )
 
@@ -103,7 +107,7 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
     
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
     if(is.null(linfct)){ ## necessary for lava::gof to work
         return(lava::compare(object))
@@ -119,21 +123,23 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
     df <- object$sCorrect$df
     
     ## 0-order: param
-    param <- coef2(object, as.lava = TRUE)
+    param <- coef(object, as.lava = FALSE)
     n.param <- length(param)
     name.param <- names(param)
 
     ## 1-order: score
     if(robust){
-        score <- score2(object, cluster = cluster)
+        score <- score(object, cluster = cluster, as.lava = FALSE, indiv = TRUE)
+    }else{
+        score <- NULL
     }
     
     ## 2-order: variance covariance
-    vcov.param <- vcov2(object)
+    vcov.param <- vcov(object, as.lava = FALSE)
     warn <- attr(vcov.param, "warning")
     attr(vcov.param, "warning") <- NULL
     if(robust){
-        rvcov.param <- crossprod(iid2(object, cluster = cluster))
+        rvcov.param <- vcov(object, robust = TRUE, cluster = cluster, as.lava = FALSE)
     }
 
     ## 3-order: derivative of the variance covariance matrices
@@ -142,9 +148,9 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
         keep.param <- dimnames(dVcov.param)[[3]]
 
         if(robust && (lava.options()$df.robust != 1)){
-
-            if(!is.null(cluster)){ ## update derivative according to cluster
-                hessian <- hessian2(object, cluster = cluster)
+            if(!is.null(cluster) || is.null(object$sCorrect$dRvcov.param)){
+                ## update derivative according to cluster
+                hessian <- hessian2(object, cluster = cluster, as.lava = FALSE)
                 dRvcov.param <- .dRvcov.param(score = score,
                                               hessian = hessian,
                                               vcov.param = vcov.param,
@@ -160,7 +166,7 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
 
     ## ** normalize linear hypotheses
     if(!is.matrix(linfct)){
-        res.C <- createContrast(object, linfct = linfct, add.variance = TRUE, rowname.rhs = FALSE)
+        res.C <- createContrast(object, linfct = linfct, rowname.rhs = FALSE)
         linfct <- res.C$contrast
         if(is.null(rhs)){
             rhs <- res.C$null
@@ -171,6 +177,8 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
             }
             rhs <- setNames(rhs, names(res.C$null))
         }
+        name.hypoShort <- rownames(linfct)
+        name.hypo <- paste0(name.hypoShort," = ",rhs)
     }else{
         if(is.null(colnames(linfct))){
             stop("Argument \'linfct\' must have column names \n")
@@ -202,10 +210,12 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
             rownames(linfct) <- .contrast2name(linfct, null = rhs)
             rhs <- setNames(rhs, rownames(linfct))
         }
+        name.hypo <- rownames(linfct)
+        name.hypoShort <- sapply(strsplit(name.hypo, split = " = ", fixed = TRUE),"[[",1)
     }
 
-    n.hypo <- NROW(linfct)
-    name.hypo <- rownames(linfct)
+    n.hypo <- length(name.hypo)
+    linfct <- linfct[,names(param),drop=FALSE] ## column in contrast may not be in the same order as param
 
     ## ** Univariate Wald test
     ## coefficient (used for F.test and lava export)
@@ -228,7 +238,11 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                             dVcov = dVcov.param,
                             dRvcov = dRvcov.param,
                             keep.param = keep.param,                            
-                            type = if(robust){lava.options()$df.robust}else{1})       
+                            type = if(robust){lava.options()$df.robust}else{1})
+
+        ##
+        ## 2 * vcov.param["Y","Y"]^2 / (vcov.param["Y~~Y","Y~~Y"]*dVcov.param["Y","Y","Y~~Y"]^2)
+        ## 
     }else{
         df.Wald <- rep(Inf, n.hypo)
     }
@@ -283,26 +297,28 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
         level.sup.label <- paste0(100*level.sup,"%")
 
         df.estimate <- matrix(NA, nrow = n.hypo, ncol = 5,
-                              dimnames = list(name.hypo,c("Estimate", "Std.Err", "df", level.inf.label, level.sup.label)))
+                              dimnames = list(name.hypoShort,c("Estimate", "Std.Err", "df", level.inf.label, level.sup.label)))
         df.estimate[,"Estimate"] <- C.p
         df.estimate[,"Std.Err"] <- sqrt(diag(C.vcov.C))
         df.estimate[,"df"] <- df.Wald
         df.estimate[,level.inf.label] <- df.estimate[,"Estimate"] + stats::qt(level.inf, df = df.estimate[,"df"]) * df.estimate[,"Std.Err"]
         df.estimate[,level.sup.label] <- df.estimate[,"Estimate"] + stats::qt(level.sup, df = df.estimate[,"df"]) * df.estimate[,"Std.Err"]
 
+        dimnames(C.vcov.C) <- list(name.hypoShort,name.hypoShort)
         out <- list(statistic = setNames(F.res["statistic"],"F-statistic"),
                     parameter = setNames(round(F.res["df"],2), paste0("df1 = ",n.hypo,", df2")), ## NOTE: cannot not be change to coefficients because of lava
                     p.value = F.res["p.value"],
                     method = c("- Wald test -", "", "Null Hypothesis:", name.hypo),
                     estimate = df.estimate,
                     vcov = C.vcov.C,
-                    coef = C.p[,1],
-                    null = rhs,
+                    coef = stats::setNames(C.p[,1], name.hypoShort),
+                    null = stats::setNames(rhs, name.hypoShort),
                     cnames = name.hypo                    
                     )
         if(robust){
             colnames(out$estimate)[2] <- "robust SE"
-        }        
+        }
+        rownames(linfct) <- name.hypo
         attr(out, "B") <- linfct
         class(out) <- "htest"
     }else{
@@ -313,7 +329,7 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                     linfct = linfct,
                     rhs = unname(rhs),
                     coef = param,
-                    vcov = if(robust){rvcov.parm}else{vcov.param},
+                    vcov = if(robust){rvcov.param}else{vcov.param},
                     df = df.Wald,
                     alternative = "two.sided",
                     type = NULL,
@@ -370,16 +386,23 @@ dfSigma <- function(contrast, score, vcov, rvcov, dVcov, dRvcov, keep.param, typ
         denom <- rowSums(C.dRvcov.C %*% rvcov[keep.param,keep.param,drop=FALSE] * C.dRvcov.C)
         df <- numerator/denom
     }else if(type==3){
-        n <- NROW(score)
-        vcov.S <- vcov %*% t(contrast)
-        E.score2 <- crossprod(score)
-        iid.score2 <- lapply(1:n, function(iRow){
-            (tcrossprod(score[iRow,]) - E.score2/n)^2
-        })
-        var.rvcov <- t(vcov.S^2) %*% Reduce("+",iid.score2) %*% vcov.S^2
-        E.rvcov <- contrast %*% rvcov %*% t(contrast)
-        df.rvcov <- (2*E.rvcov^2)/var.rvcov
-        df <- diag(df.rvcov)
+        vcov.S <- contrast %*% vcov
+        index.var <- diag(matrix(1:NROW(contrast)^2,NROW(contrast),NROW(contrast)))
+        
+        K <- NROW(score)
+        ls.Pi <- lapply(1:K, function(iC){as.double(tcrossprod(score[iC,]))})
+        M.Pi <- do.call(rbind,Pi)
+        M.Pi_center <- sweep(M.Pi, MARGIN = 2, STATS = colMeans(M.Pi), FUN = "-")
+        ## M.Pi_center - M.Pi
+        T <- t(M.Pi_center) %*% M.Pi_center / (K*(K-1))
+        ## range(var(M.Pi)/K - T)
+        eq.3 <- K^2 * (vcov.S %x% vcov.S) %*% T %*%  (vcov.S %x% vcov.S)
+
+        Vs <- (vcov.S %x% vcov.S) %*% Reduce("+",ls.Pi)
+        ## range(Vs - as.double(rvcov))
+        ## range(Vs[index.var] - diag(rvcov))
+        df <- 2*Vs[index.var]^2/sapply(index.var, function(iIndex){eq.3[iIndex,iIndex]})
+        
     }
     
     return(setNames(df, rownames(contrast)))

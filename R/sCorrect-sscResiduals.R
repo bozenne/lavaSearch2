@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (15:26) 
+## Last-Updated: Jan 10 2022 (10:38) 
 ##           By: Brice Ozenne
-##     Update #: 1187
+##     Update #: 1195
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -185,35 +185,7 @@
     Psi[n.Psi>0] <- Psi[n.Psi>0]/n.Psi[n.Psi>0]
     
     ## ** Step (iii): compute corrected residuals and effective sample size
-    if(algorithm == "2"){
-        epsilon.adj <- .adjustResiduals(Omega = Omega, ## value of Omega from the previous iteration
-                                        Psi = Psi,
-                                        epsilon = residuals0,
-                                        name.pattern = name.pattern,
-                                        missing.pattern = missing.pattern,
-                                        unique.pattern = unique.pattern,
-                                        endogenous = endogenous,
-                                        n.cluster = n.cluster)
-
-        leverage.adj <- .leverage2(Omega = Omega, ## value of Omega from the previous iteration
-                                   epsilon = epsilon.adj,
-                                   dmu = dmu,
-                                   dOmega = dOmega,
-                                   vcov.param = vcov.param,
-                                   name.pattern = name.pattern,
-                                   missing.pattern = missing.pattern,
-                                   unique.pattern = unique.pattern,
-                                   endogenous = endogenous,
-                                   n.endogenous = n.endogenous,
-                                   param = object$sCorrect$skeleton$Uparam,
-                                   param.mean = param.mean,
-                                   param.hybrid = param.hybrid,
-                                   n.cluster = n.cluster)
-     
-    }else{
-        epsilon.adj <- epsilon
-        leverage.adj <- leverage
-    }
+    ## done in estimate2 via moments2
         
     ## ** Step (iv): bias-corrected residual covariance matrix
     Omega.adj <- Omega0 + Psi
@@ -274,15 +246,15 @@
     }
     names(iSolution) <- attr(A,"name")
 
-    ## ** update parameters in conditional moments
+    ## *** update parameters
     ## param0[ssc$name.var] - iSolution
     param0[names(iSolution)] <- iSolution
 
-    ## ** Step (vi-vii): update derivatives and information matrix (performed by estimat2) in the parent function
+    ## ** Step (vi-vii): update derivatives and information matrix
+    ## done in estimate2 via moments2
         
     ## ** Export
-    attr(param0,"leverage") <- leverage.adj
-    attr(param0,"residuals") <- epsilon.adj
+    attr(param0,"Omega") <- Omega.adj 
     attr(param0,"Psi") <- Psi
     return(param0)
 }

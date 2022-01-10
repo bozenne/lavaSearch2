@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:50) 
+## Last-Updated: Jan 10 2022 (15:08) 
 ##           By: Brice Ozenne
-##     Update #: 2029
+##     Update #: 2108
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,9 +23,12 @@
 #' @param object a \code{lvm} object.
 #' @param param [numeric vector, optional] the values of the parameters at which to perform the correction.
 #' @param data [data.frame, optional] the dataset relative to which the correction should be performed.
-#' @param ssc [character] type of small sample correction: \code{"cox"} or \code{"residuals"}, or \code{"none"}.
-#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: \code{"satterthwaite"}, or \code{"none"}
-#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+#' Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param tol.max [numeric >0] the largest acceptable absolute difference between two succesive estimates of the bias correction.
 #' @param iter.max [integer >0] the maximum number of iterations used to estimate the bias correction.
 #' @param derivative [character] should the first derivative of the information matrix be computed using a formula (\code{"analytic"}) or numerical derivative (\code{"numeric"})?
@@ -60,13 +63,14 @@
 #' @rdname estimate2
 estimate2.lvm <- function(object, data = NULL,
                           ssc = lava.options()$ssc, df = lava.options()$df,
-                          derivative = "analytic", hessian = NULL, iter.max = 100, tol.max = 1e-6,
-                          trace = 0, ...){
+                          derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
+                          iter.max = 100, tol.max = 1e-6, trace = 0, ...){
 
     out <- lava::estimate(x = object, data = data, ...)
     return(estimate2(out, param = NULL, data = NULL,
                      ssc = ssc, df = df,
-                     derivative = derivative, hessian = hessian, iter.max = iter.max, tol.max = tol.max, trace = trace))
+                     derivative = derivative, hessian = hessian, dVcov.robust = FALSE,
+                     iter.max = iter.max, tol.max = tol.max, trace = trace))
 
 }
 
@@ -74,12 +78,13 @@ estimate2.lvm <- function(object, data = NULL,
 #' @rdname estimate2
 estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                              ssc = lava.options()$ssc, df = lava.options()$df,
-                             derivative = "analytic", hessian = NULL, iter.max = 100, tol.max = 1e-6,
-                             trace = 0, ...){
+                             derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
+                             iter.max = 100, tol.max = 1e-6, trace = 0, ...){
 
     ## ** preliminary tests
-    if(length(list(...))>0){
-        stop("Argument \"",paste(names(list(...)), collapse = "\" \""),"\" not used. \n")
+    dots <- list(...)
+    if(length(dots)>0){
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
     if("multigroupfit" %in% class(object)){
@@ -99,6 +104,12 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
     }
 
     ## arguments
+    if(identical(ssc,FALSE) || identical(ssc,NA)){
+        ssc <- "none"
+    }
+    if(identical(df,FALSE) || identical(df,NA)){
+        df <- "none"
+    }
     ssc <- match.arg(tolower(ssc), c("none","residuals","cox"))
     df <- match.arg(tolower(df), c("none","satterthwaite"))
 
@@ -109,13 +120,13 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
     }else{
         second.order <- FALSE
     }
-    
+
     ## ** initialize object
     if(trace>0){cat("Initialization:")}
     object$sCorrect <- moments2(object, data = data, param = param, Psi = NULL,
                                 initialize = TRUE, usefit = TRUE,
                                 score = TRUE, information = TRUE, hessian = hessian, vcov = TRUE,
-                                dVcov = (ssc == "cox")  || (ssc == "none" && df == "satterthwaite"), dVcov.robust = FALSE,
+                                dVcov = (ssc == "cox")  || (ssc == "none" && df == "satterthwaite"), dVcov.robust = (ssc == "none" && df == "satterthwaite" && dVcov.robust),
                                 residuals = TRUE, leverage = FALSE, derivative = derivative)  ## setting leverage to FALSE is like initialization to 0
     if(trace>0){cat(" done \n")}
 
@@ -128,7 +139,7 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
             object.ssc <- list(type = "Cox",
                                param0 = object$sCorrect$param,
                                Omega0 = object$sCorrect$moment$Omega)
-        }else if(ssc=="residuals"){
+        }else if(ssc %in% "residuals"){
             object.ssc <- .init_sscResiduals(object)
         }
         
@@ -149,19 +160,15 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                 object.ssc$JJK <- attr(iParam,"JJK")
                 object.ssc$lm <- attr(iParam,"lm")
                 object.ssc$Psi <- object$sCorrect$moment$Omega - object.ssc$Omega0
-            }else if(ssc=="residuals"){
+            }else if(ssc %in% "residuals"){
                 iParam <- .sscResiduals(object, ssc = object.ssc)
+                object.ssc$Omega <- attr(iParam,"Omega")
                 object.ssc$Psi <- attr(iParam,"Psi")
-                object$sCorrect$leverage <- attr(iParam,"leverage")
-                object$sCorrect$residuals <- attr(iParam,"residuals")
+                attr(object.ssc$Omega,"Omega.leverage") <- object$sCorrect$moment$Omega
+                attr(object.ssc$Omega,"dOmega") <- object$sCorrect$dmoment$dOmega
+                attr(object.ssc$Omega,"Omega.residuals") <- object$sCorrect$moment$Omega
             }
-            ## update moments
-            ## object.ssc$Omega0 + object.ssc$Psi - object$sCorrect$moment$Omega
-            object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, 
-                                        initialize = FALSE, usefit = TRUE,
-                                        score = TRUE, information = TRUE, hessian = NULL, vcov = TRUE,
-                                        dVcov = (ssc == "cox"), dVcov.robust = FALSE,
-                                        residuals = TRUE, leverage = TRUE, derivative = derivative)
+            ## object.ssc$Omega0 + object.ssc$Psi - object.ssc$Omega
 
             ## cv criteria
             iIter <- iIter + 1
@@ -169,32 +176,43 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
             ## cat(iTol," (",iParam,") \n")
             iiParam <- iParam
             iCV <- iTol <= tol.max
-        }
 
-        ## *** assess convergence
-        object.ssc$cv <- iCV
-        object.ssc$iter <- iIter
-        object.ssc$tol <- iTol
-        object.ssc$iter.max <- iter.max
-        object.ssc$tol.max <- tol.max
+            ## update moments
+            if(iCV==FALSE && iIter < iter.max){
+                object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, Omega = object.ssc$Omega, 
+                                            initialize = FALSE, usefit = TRUE,
+                                            score = TRUE, information = TRUE, hessian = NULL, vcov = TRUE,
+                                            dVcov = (ssc == "cox"), dVcov.robust = FALSE,
+                                            residuals = TRUE, leverage = TRUE, derivative = derivative)
+       
+            }else{
+                object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, Omega = object.ssc$Omega, 
+                                            initialize = FALSE, usefit = TRUE,
+                                            score = TRUE, information = TRUE, hessian = hessian, vcov = TRUE,
+                                            dVcov = (df == "satterthwaite"), dVcov.robust = dVcov.robust,
+                                            residuals = TRUE, leverage = TRUE, derivative = derivative)
+               
+                object$sCorrect$ssc <- c(object.ssc,
+                                         cv = iCV,
+                                         iter = iIter,
+                                         tol = iTol,
+                                         iter.max = iter.max,
+                                         tol.max = tol.max
+                                         )
+                
+            }
+        }
         
-        if(iCV == FALSE  && trace > 0){
-            warning("small sample correction did not reach convergence after ",iIter," iterations \n")
+        ## *** assess convergence
+        if(iCV == FALSE){
+            warning("small sample correction did not reach convergence after ",iIter," iteration",if(iIter>1){"s"}else{""},". \n")
         }
         if(trace > 0){
             cat("\n")
         }
 
-        ## *** update score, information matrix, leverage, ..., with the bias corrected parameters
-        if(trace>0){cat("Update moments/df \n")}
-        object$sCorrect <- moments2(object, data = data, param = iParam, Psi = object.ssc$Psi,
-                                    initialize = FALSE, usefit = TRUE,
-                                    score = TRUE, information = TRUE, hessian = hessian, vcov = TRUE,
-                                    dVcov = (df == "satterthwaite"), dVcov.robust = FALSE,
-                                    residuals = TRUE, leverage = TRUE, derivative = derivative)
-        object$sCorrect$ssc <- object.ssc
     }else{
-        object$sCorrect$ssc$type <- NA
+        object$sCorrect$ssc$type <- "none"
     }
 
     ## ** degrees of freedom    

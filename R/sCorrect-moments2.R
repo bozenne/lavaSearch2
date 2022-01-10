@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: Jan  4 2022 (17:22) 
+## last-updated: Jan 10 2022 (15:03) 
 ##           By: Brice Ozenne
-##     Update #: 1707
+##     Update #: 1771
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,8 @@
 #' @param param [numeric vector] value of the model parameters if different from the estimated ones.
 #' @param initialize [logical] Pre-compute quantities dependent on the data but not on the parameters values.
 #' @param usefit [logical] Compute key quantities based on the parameter values.
+#' @param update.dmoment [logical] should the first derivative of the moments be computed/updated?
+#' @param update.d2moment [logical] should the second derivative of the the moments be computed/updated?
 #' @param score [logical] should the score be output?
 #' @param information [logical] should the expected information be output?
 #' @param hessian [logical] should the hessian be output?
@@ -63,16 +65,16 @@
 #' @keywords internal
 #' @export
 `moments2` <-
-    function(object, data = NULL, param = NULL, Psi = NULL,
+    function(object, param, data, Omega, Psi,
              initialize, usefit,
-             score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage, derivative) UseMethod("moments2")
+             update.dmoment, update.d2moment, score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage, derivative) UseMethod("moments2")
 
 ## * moments2.lvm
 #' @rdname moments
 #' @export
-moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
+moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = NULL,
                          initialize, usefit,
-                         score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage,
+                         update.dmoment = TRUE, update.d2moment = TRUE, score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage,
                          derivative){
     if(lava.options()$debug){cat("moments2 \n")}
     
@@ -119,8 +121,9 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
         out$X <- as.matrix(out$data[,lava::manifest(object),drop=FALSE])
         out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
 
-        if(any(colnames(out$X) %in% c("XXvalueXX","XXendogenousXX","XXendogenousXX.index","XXclusterXX"))){
-            stop("\"XXvalueXX\", \"XXendogenousXX\", \"XXendogenousXX.index\", and \"XXclusterXX\" should not correspond to variable names \n",
+        reserved.name <- c("XXindexXX","XXvalueXX","XXendogenousXX","XXendogenousXX.index","XXclusterXX")
+        if(any(colnames(out$X) %in% reserved.name)){
+            stop("\"",paste(reserved.name[colnames(out$X) %in% reserved.name], collapse="\" \""),"\" should not correspond to variable names \n",
                  "It is used internally for data manipulation \n")
         }
 
@@ -128,11 +131,12 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
         X.latent <- matrix(NA, nrow = NROW(out$X), ncol = length(out$latent),
                            dimnames = list(NULL, out$latent))
 
-        X.long <- melt(data.frame(out$X,X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
-                       id.vars = c("XXclusterXX",setdiff(colnames(out$X),c(out$endogenous,out$latent))),
+        X.long <- melt(data.frame(XXindexXX = 1:NROW(out$X), out$X, X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
+                       id.vars = c("XXclusterXX","XXindexXX"),
                        measure.vars = c(out$endogenous,out$latent),
                        variable.name = "XXendogenousXX",
                        value.name = "XXvalueXX")
+        X.long <- cbind(X.long,out$X[X.long$XXindexXX,,drop=FALSE]) ## add all variable (endo and exo) in case some endo are regressors
 
         X.wide <- out$X[,out$endogenous,drop=FALSE]
 
@@ -207,15 +211,16 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
         out$moment <- updateMoment(skeleton = out$skeleton$param,
                                    value = out$skeleton$value,
                                    toUpdate = out$skeleton$toUpdate.moment,
-                                   param = out$param,
+                                   param = out$param, Omega = Omega,
                                    name.pattern = out$missing$name.pattern,
                                    unique.pattern = out$missing$unique.pattern,
                                    endogenous = out$endogenous,
                                    latent = out$latent,
                                    n.cluster = out$cluster$n.cluster)
+    
         
         ## *** first order derivatives
-        if(first.order){            
+        if(update.dmoment && first.order){
             out$dmoment <- updateDMoment(moment = out$moment,
                                          skeleton = out$skeleton,
                                          param = out$param)
@@ -223,18 +228,25 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
 
         
         ## *** second order derivatives
-        if(second.order){
+        if(update.d2moment && second.order){
             out$d2moment <- updateD2Moment(moment = out$moment,
                                            skeleton = out$skeleton,
                                            param = out$param)
         }
+        
 
         ## *** update residuals
         if(residuals){
+            if(!is.null(attr(Omega,"Omega.residuals"))){
+                OOmega <- attr(Omega,"Omega.residuals")
+            }else{
+                OOmega <- out$moment$Omega
+            }
             out$residuals <- .adjustResiduals(epsilon = out$skeleton$param$endogenous - out$moment$mu,
-                                              Omega = out$moment$Omega, Psi = Psi, ## Note: if Psi is null returns epsilon i.e. no adjustment
+                                              Omega = OOmega, Psi = Psi, ## Note: if Psi is null returns epsilon i.e. no adjustment
                                               name.pattern = out$missing$name.pattern, missing.pattern = out$missing$pattern, unique.pattern = out$missing$unique.pattern,
                                               endogenous = out$endogenous, n.cluster = out$cluster$n.cluster)
+
         }
         ## mean(out$residuals^2)
         ## out$moment$Omega
@@ -254,14 +266,26 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
                                  n.cluster = out$cluster$n.cluster,
                                  weights = out$weights)
         }
-    
-       
+
         ## *** leverage
         if(leverage){
-            out$leverage <- .leverage2(Omega = out$moment$Omega, 
+            if(!is.null(attr(Omega,"Omega.leverage"))){
+                OOmega <- attr(Omega,"Omega.leverage")
+            }else{
+                OOmega <- out$moment$Omega
+            }
+            if(!is.null(attr(Omega,"dOmega"))){
+                ddOOmega <- attr(Omega,"dOmega")
+            }else{
+                ddOOmega <- out$dmoment$dOmega
+                ## sum(abs(unlist(out$dmoment$dOmega)))
+                ## sum(abs(unlist(previous.dOmega)))
+            }
+
+            out$leverage <- .leverage2(Omega = OOmega, 
                                        epsilon = out$residuals,
                                        dmu = aperm(abind::abind(out$dmoment$dmu, along = 3), perm = c(3,2,1)),
-                                       dOmega = out$dmoment$dOmega,
+                                       dOmega = ddOOmega,
                                        vcov.param = previous.vcov.param,
                                        name.pattern = out$missing$name.pattern,
                                        missing.pattern = out$missing$pattern,
@@ -270,7 +294,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
                                        n.endogenous = length(out$endogenous),
                                        param = out$skeleton$Uparam,
                                        param.mean = out$skeleton$Uparam.mean,
-                                       param.hybrid = out$skeleton$Uparam.hybrid,
+                                       param.var = out$skeleton$Uparam.var,
                                        n.cluster = out$cluster$n.cluster)
         }
 
@@ -348,6 +372,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Psi = NULL,
                                           dVcov.param = out$dVcov.param,
                                           n.param = length(out$skeleton$Uparam),
                                           name.param = out$skeleton$Uparam)
+
     }
 
     ## *** dVcov.param and dRvcov.param (numeric derivatives)

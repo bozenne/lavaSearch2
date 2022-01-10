@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:50) 
+## Last-Updated: Jan  6 2022 (12:48) 
 ##           By: Brice Ozenne
-##     Update #: 77
+##     Update #: 79
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,9 @@
 #' @name getVarCov2
 #'
 #' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #' 
 #' @return A matrix with as many rows and column as the number of endogenous variables

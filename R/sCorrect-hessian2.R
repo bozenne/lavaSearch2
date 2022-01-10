@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:50) 
+## Last-Updated: Jan 10 2022 (15:07) 
 ##           By: Brice Ozenne
-##     Update #: 103
+##     Update #: 126
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,13 +17,16 @@
 
 ## * Documentation - hessian2
 #' @title  Hessian With Small Sample Correction.
-#' @description  Extract the hessian from the latent variable model, with small sample correction
+#' @description  Extract the hessian from a latent variable model, with small sample correction
 #' @name hessian2
 #'
 #' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param indiv [logical] If \code{TRUE}, the hessian relative to each observation is returned. Otherwise the total hessian is returned.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the hessian.
@@ -66,11 +69,11 @@ hessian2.lvmfit <- function(object, cluster = NULL, as.lava = TRUE, ssc = lava.o
 
 ## * hessian2.lvmfit2
 #' @rdname hessian2
-hessian2.lvmfit2 <- function(object, cluster = NULL, as.lava = TRUE, ...){
+hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...){
     
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
     ## ** define cluster
@@ -124,14 +127,18 @@ hessian2.lvmfit2 <- function(object, cluster = NULL, as.lava = TRUE, ...){
             hessian[,,cluster[i]] <- hessian[,,cluster[i]] + hessianSave[,,i]
         }
     }
-    
+
     ## ** export
     if(as.lava == FALSE){
-        name.param <- object$sCorrect$name.param
-        hessian <- hessian[names(name.param),names(name.param),,drop=FALSE]
-        dimnames(hessian) <- list(as.character(name.param),as.character(name.param),NULL)
+        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),,drop=FALSE]
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                              as.character(object$sCorrect$skeleton$originalLink2param),
+                              NULL)
     }
-    if(!is.null(cluster)){
+    if(indiv==FALSE){
+        hessian <- apply(hessian, 1:2, sum)
+        
+    }else if(!is.null(cluster)){
         index2.cluster <- tapply(1:length(cluster),cluster,list)
         attr(hessian,"cluster") <- names(index2.cluster)
     }
@@ -191,7 +198,9 @@ hessian2.lvmfit2 <- function(object, cluster = NULL, as.lava = TRUE, ...){
         idOmega <- .subsetList(dOmega, indexRow = iY, indexCol = iY)
         id2mu <- .subsetList2(d2mu, indexRow = iIndex, indexCol = iY)
         id2Omega <- .subsetList2(d2Omega, indexRow = iY, indexCol = iY)
-        iLeverage <- leverage[iIndex,iY,drop=FALSE]
+        if(!is.null(leverage)){
+            iLeverage <- leverage[iIndex,iY,drop=FALSE]
+        }
 
         ## *** second derivative relative to the mean parameters
         for(iG in index.mean){ # iG <- 1
@@ -225,7 +234,11 @@ hessian2.lvmfit2 <- function(object, cluster = NULL, as.lava = TRUE, ...){
                 term1b <- 0
                 term3 <- 0
             }
-            hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] - 1/2 * rowSums( sweep(1-iLeverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+            if(is.null(leverage)){
+                hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] - 1/2 * rep(sum(term1a + term1b), length(iIndex)) + term2 + term3
+            }else{
+                hessian[iP1,iP2,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE] - 1/2 * rowSums( sweep(1-iLeverage, FUN = "*", STATS = term1a + term1b, MARGIN = 2) ) + term2 + term3
+            }
             hessian[iP2,iP1,iIndex] <- hessian[iP1,iP2,iIndex,drop=FALSE]
         }
         

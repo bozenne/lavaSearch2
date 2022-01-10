@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: apr 17 2020 (13:07) 
+## Last-Updated: Jan  5 2022 (12:47) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 20
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -39,13 +39,13 @@ transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
     }else{
         dtransform <- function(x){diag(numDeriv::jacobian(transform, x))}
     }
-    object[,"std.error"] <- object[,"std.error"]*dtransform(object[,"estimate"])
+    object[,"se"] <- object[,"se"]*dtransform(object[,"estimate"])
     object[,"estimate"] <- transform(object[,"estimate"])
-    if("ci.lower" %in% names(object)){
-        object[,"ci.lower"] <- transform(object[,"ci.lower"])
+    if("lower" %in% names(object)){
+        object[,"lower"] <- transform(object[,"lower"])
     }
-    if("ci.upper" %in% names(object)){
-        object[,"ci.upper"] <- transform(object[,"ci.upper"])
+    if("upper" %in% names(object)){
+        object[,"upper"] <- transform(object[,"upper"])
     }
     return(object)
 }

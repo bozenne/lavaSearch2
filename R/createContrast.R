@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: maj 12 2020 (14:58) 
+## Last-Updated: Jan 10 2022 (17:25) 
 ##           By: Brice Ozenne
-##     Update #: 384
+##     Update #: 479
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,25 +21,21 @@
 #' The contrast matrix will contains the hypotheses in rows and the model coefficients in columns.
 #' @name createContrast
 #' 
-#' @param object a \code{ls.lvmfit} object.
+#' @param object a \code{lvmfit} object or a list of  a \code{lvmfit} objects.
 #' @param linfct [vector of characters] expression defining the linear hypotheses to be tested.
 #' Can also be a regular expression (of length 1) that is used to identify the coefficients to be tested using \code{grep}.
 #' See the examples section.
-#' @param add.variance [logical] should the variance coefficients be considered as model coefficients?
-#' Required for lm, gls, and lme models.
 #' @param ... Argument to be passed to \code{.createContrast}:
 #' \itemize{
 #' \item diff.first [logical] should the contrasts between the first and any of the other coefficients define the null hypotheses.
 #' \item add.rowname [logical] add rownames to the contrast matrix and names to the right-hand side.
 #' \item rowname.rhs [logical] when naming the hypotheses, add the right-hand side (i.e. "X1-X2=0" instead of "X1-X2").
+#' \item sep [character vector of length2] character surrounding the left part of the row names.
 #' }
 #'
 #' @details
 #' One can initialize an empty contrast matrix setting the argument\code{linfct} to \code{character(0)}. \cr \cr
 #'
-#' When using \code{multcomp::glht} one should set the argument \code{add.variance} to \code{FALSE}. \cr
-#' When using \code{lavaSearch2::glht2} one should set the argument \code{add.variance} to \code{TRUE}.
-#' 
 #' @return A list containing
 #' \itemize{
 #' \item{contrast} [matrix] a contrast matrix corresponding to the left hand side of the linear hypotheses.
@@ -70,12 +66,14 @@
 #' ## Contrast matrix for a given model
 #' createContrast(lmX, linfct = "X~Age")
 #' createContrast(lmX, linfct = c("X~Age=0","X~Age+5*X~TreatmentSSRI=0"))
+#' createContrast(lmX, linfct = c("X~Age=0","X~Age+5*X~TreatmentSSRI=0"), sep = NULL)
 #' createContrast(lmX, linfct = character(0))
 #'
 #' ## Contrast matrix for the join model
 #' ls.lvm <- list(X = lmX, Y = lmY, Z = lvmZ)
-#' createContrast(ls.lvm, linfct = "Treatment", add.variance = FALSE)
-#' createContrast(ls.lvm, linfct = character(0), add.variance = FALSE)
+#' createContrast(ls.lvm, linfct = "TreatmentSSRI=0")
+#' createContrast(ls.lvm, linfct = "TreatmentSSRI=0", rowname.rhs = FALSE)
+#' createContrast(ls.lvm, linfct = character(0))
 #'
 #' ## Contrast for multigroup models
 #' m <- lava::lvm(Y~Age+Treatment)
@@ -86,39 +84,20 @@
 #' 
 #' @export
 `createContrast` <-
-    function(object, linfct, ...) UseMethod("createContrast")
+    function(object, ...) UseMethod("createContrast")
 
-
-## * createContrast.lm
+## * createContrast.character
 #' @rdname createContrast
 #' @export
-createContrast.lm <- function(object, linfct, add.variance, ...){
-    if(add.variance){
-        param <- coef2(object, as.lava = TRUE)
-        name.param <- names(param)
-    }else{
-        name.param <- names(coef(object))
-    }
-    if(!identical(class(linfct),"character")){
-        stop("Argument \'linfct\' must be of type character (or vector of character) \n")
-    }
-    if(length(linfct)==1 && all(linfct %in% name.param == FALSE) & all(sapply(linfct, function(iL){any(grepl(iL, name.param, fixed = TRUE))}))){
-        linfct <- grep(linfct, name.param,  value = TRUE)
-    }
-    out <- .createContrast(linfct = linfct, name.param = name.param, ...)
-    return(out)
-    
+createContrast.character <- function(object, ...){
+
+    object.lhs <- strsplit(object,split = "=")[[1]] ## rm rhs
+    object.term.lhs <- base::trimws(strsplit(object.lhs[[1]],split = "\\+|\\-")[[1]], which = "both") ## split with +/-
+    object.coefname <- sapply(object.term.lhs, function(iE){tail(strsplit(iE,split="*",fixed=TRUE)[[1]],1)}) ## remove *
+
+    return(.createContrast(object, object.coefname, ...))
+        
 }
-
-## * createContrast.gls
-#' @rdname createContrast
-#' @export
-createContrast.gls <- createContrast.lm
-
-## * createContrast.lme
-#' @rdname createContrast
-#' @export
-createContrast.lme <- createContrast.lm
 
 ## * createContrast.lvmfit
 #' @rdname createContrast
@@ -139,7 +118,7 @@ createContrast.lvmfit <- function(object, linfct, ...){
 ## * createContrast.list
 #' @rdname createContrast
 #' @export
-createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...){
+createContrast.list <- function(object, linfct = NULL, ...){
 
     if(!identical(class(linfct),"character")){
         stop("Argument \'linfct\' must be of type character (or vector of character) \n")
@@ -155,8 +134,7 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
 
     ls.coefname <- lapply(name.model, function(iModel){ ## list by model
         iResC <- createContrast(object[[iModel]],
-                                linfct = character(0),
-                                add.variance = add.variance)
+                                linfct = character(0))
         return(colnames(iResC$contrast))
     })
     names(ls.coefname) <- name.model
@@ -168,35 +146,59 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     
     object.coefname <- unname(unlist(ls.object.coefname)) ## vector
     n.coef <- length(object.coefname)
-    
+        
     ## ** create full contrast matrix
     if(length(linfct)==1){
-        ## linfct.split <-
-        linfct.split <- strsplit(linfct,split = "=")[[1]] ## rm rhs
-        linfct.rhs <- base::trimws(strsplit(linfct.split[[1]],split = "\\+|\\-")[[1]], which = "both") ## split with +/-
-        linfct.coefname <- sapply(linfct.rhs, function(iE){tail(strsplit(iE,split="*",fixed=TRUE)[[1]],1)}) ## remove *
 
-        ls.linfct.index <- lapply(ls.coefname, function(iM){na.omit(match(linfct.coefname, iM))})
-        if(all(sapply(ls.linfct.index, length) == length(linfct.rhs))){
-            iTemplate <- .createContrast(linfct, ls.coefname[[1]])
-            name.linfct <- names(linfct)
-            if(is.null(name.linfct)){
-                name.linfct <- linfct.split[1]
-            }
-            out <- list(contrast = matrix(0, nrow = n.model, ncol = n.coef,
-                                          dimnames = list(paste0(name.model,": ",name.linfct), object.coefname)),
-                        null = rep(as.numeric(base::trimws(linfct.split[2])), n.model),
-                        Q = n.model)
-            if(all(is.na(out$null))){out$null[] <- 0}
-            for(iM in 1:n.model){ ## iM <- 1
-                iModel <- name.model[iM]
-                out$contrast[iM,paste0(iModel,": ",colnames(iTemplate$contrast))] <-  as.double(iTemplate$contrast[1,])
-            }
-        }else{
-            stop("Could not find coefficients based on the argument linfct=",linfct,"\n")
+        ## isolate left hand side of the linfct and remove multiplicative factor (e.g. 2*Age=0 -> Age)
+        linfct.contrast <- createContrast(linfct, ...)
+        linfct.coefname <- colnames(linfct.contrast$contrast)
+        linfct.rhs <- as.double(linfct.contrast$null)
+        linfct.factor <- as.double(linfct.contrast$contrast)
+        
+        ## name associated with each hypothesis
+        name.linfct <- names(linfct)
+        if(is.null(name.linfct)){
+            name.linfct <- rownames(linfct.contrast$contrast)
         }
+        ## generate contrast matrix with only 0
+        out <- list(contrast = matrix(0, nrow = 0, ncol = n.coef,
+                                      dimnames = list(NULL, object.coefname)),
+                    null = numeric(0),
+                    Q = 0)
+        
+        ## regressor corresponding to each coefficient
+        tableCoef <- data.frame(name = unlist(lapply(object, function(iO){rownames(coef(iO, type = 9, labels = 2))})),
+                                model = unlist(lapply(1:n.model, function(iO){rep(name.model[iO], NROW(coef(object[[iO]], type = 9, labels = 2)))})),
+                                type = unlist(lapply(object, function(iO){attr(coef(iO, type = 9, labels = 2),"type")})),
+                                to = unlist(lapply(object, function(iO){attr(coef(iO, type = 9, labels = 2),"var")})),
+                                from = unlist(lapply(object, function(iO){attr(coef(iO, type = 9, labels = 2),"from")})))
+        tableCoef <- tableCoef[tableCoef$type=="regression",]
+        tableCoef$group <- interaction(tableCoef$model,tableCoef$to,drop=TRUE)
+        tableCoef$group <- as.numeric(factor(tableCoef$group,unique(tableCoef$group)))
+
+        ## fill contrast matrix
+        for(iG in 1:max(tableCoef$group)){ ## iG <- 3
+            if(all(linfct.coefname %in% tableCoef[tableCoef$group==iG,"from"])){
+
+                iTemplate <- .createContrast(linfct, tableCoef[tableCoef$group==iG,"from"], ...)
+
+                iRow <- matrix(0, nrow = 1, ncol = n.coef, dimnames = list(NULL,object.coefname))
+                if(!is.null(rownames(iTemplate$contrast))){
+                        rownames(iRow) <- paste0(unique(tableCoef[tableCoef$group==iG,"model"]),": ",name.linfct)
+                }
+                iRow[,paste0(tableCoef[tableCoef$group==iG,"model"],": ",tableCoef[tableCoef$group==iG,"name"])] <- unname(iTemplate$contrast)
+
+                out$contrast <- rbind(out$contrast,iRow)
+                out$null <- c(out$null, unname(iTemplate$null))
+                out$Q <- out$Q+1
+
+                tableCoef[tableCoef$group==iG,"contrast"] <- as.double(iTemplate$contrast)
+            }
+        }
+
     }else{
-        out <- .createContrast(linfct, name.param = object.coefname)
+        out <- .createContrast(linfct, name.param = object.coefname, ...)
     }
 
     ## ** create contrast matrix relative to each model
@@ -219,18 +221,21 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
     class(out$mlf) <- "mlf"
 
     ## remove right hand side from the names (like in multicomp)
-    if(length(linfct)>0 && is.null(names(linfct))){
-        rownames(out$contrast) <- .contrast2name(out$contrast, null = NULL)
+    if(!is.null(list(...)$rowname.rhs) && list(...)$rowname.rhs==FALSE){
         out$mlf <- lapply(out$mlf, function(x){ ## x <- name.model[1]
             if(NROW(x)>0){
-                rownames(x) <- .contrast2name(x, null = NULL)
+                if("sep" %in% names(list(...))){
+                    rownames(x) <- .contrast2name(x, null = NULL, sep = list(...)$sep)
+                }else{
+                    rownames(x) <- .contrast2name(x, null = NULL)
+                }
             }
             return(x)
         })
             
         class(out$mlf) <- "mlf"
-        names(out$null) <- rownames(out$contrast)
     }
+    names(out$null) <- rownames(out$contrast)
    
     ## ** export
     return(out)    
@@ -242,17 +247,15 @@ createContrast.list <- function(object, linfct = NULL, add.variance = NULL, ...)
 createContrast.mmm <- createContrast.list
 
 ## * .createContrast
-.createContrast <- function(linfct, name.param, diff.first = FALSE,
-                            add.rowname = TRUE, rowname.rhs = TRUE,
-                            ...){
+.createContrast <- function(linfct, name.param, diff.first = FALSE, add.rowname = TRUE, rowname.rhs = TRUE, sep = c("[","]"), ...){
 
     n.param <- length(name.param)
     dots <- list(...)
-    dots[["add.variance"]] <- NULL
     if(length(dots)>0){
         txt.args <- paste(names(dots), collapse = "\" \"")
         txt.s <- if(length(dots)>1){"s"}else{""}
-        warning("Extra argument",txt.s," \"",txt.args,"\" are ignored. \n")
+        txt.verb <- if(length(dots)>1){"are"}else{"is"}
+        warning("Extra argument",txt.s," \"",txt.args,"\" ",txt.verb," ignored. \n")
     }
 
     if(diff.first){
@@ -283,7 +286,7 @@ createContrast.mmm <- createContrast.list
             ls.iRh <- lapply(strsplit(iRh, split = "*", fixed = TRUE), trim)
                     
             iN.tempo <- length(ls.iRh)
-                    
+
             for(iCoef in 1:iN.tempo){ # iCoef <- 1
 
                 if(length(ls.iRh[[iCoef]])==1){
@@ -321,7 +324,7 @@ createContrast.mmm <- createContrast.list
         }
         if(add.rowname){
             if(is.null(name.hypo)){
-                name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL})
+                name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL}, sep = sep)
             }
             rownames(contrast) <- name.hypo
             null <- setNames(null, name.hypo)
@@ -339,13 +342,14 @@ createContrast.mmm <- createContrast.list
 #'
 #' @param contrast [matrix] a contrast matrix defining the left hand side of the linear hypotheses to be tested.
 #' @param null [vector, optional] the right hand side of the linear hypotheses to be tested.
+#' @param sep [character of length 2, optional] character used in rownames to wrap the left hand side of the equation.
 #'
 #' @details When argument \code{NULL} is null then the rownames will not be put into brackets and the right hand side will not be added to the name.
 #'
 #' @return a character vector.
 #' 
 #' @keywords internal
-.contrast2name <- function(contrast, null = NULL){
+.contrast2name <- function(contrast, null = NULL, sep = c("[","]")){
     contrast.names <- colnames(contrast)
     
     df.index <- as.data.frame(which(contrast != 0, arr.ind = TRUE))
@@ -383,8 +387,10 @@ createContrast.mmm <- createContrast.list
 
     ## add right hand side
     if(!is.null(null)){
-        out <- paste0("[",out,"] = ",null)
-        
+        ## out <- paste0("[",out,"] = ",null)
+        out <- paste0(sep[1],out,sep[2]," = ",null)
+    }else if(!is.null(sep)){
+        out <- paste0(sep[1],out,sep[2])
     }
 
     return(as.character(out))

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: Jan  3 2022 (12:37) 
+## Last-Updated: Jan 10 2022 (14:02) 
 ##           By: Brice Ozenne
-##     Update #: 203
+##     Update #: 212
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,7 @@
 #' @rdname updateMoment
 updateMoment <- function(skeleton, value, toUpdate,
                          name.pattern, unique.pattern,
-                         param, endogenous, latent, n.cluster){
+                         param, Omega, endogenous, latent, n.cluster){
     if(lava.options()$debug){cat("updateMoment \n")}
 
     n.endogenous <- length(endogenous)
@@ -96,15 +96,22 @@ updateMoment <- function(skeleton, value, toUpdate,
     }
 
     ## ** Compute variance
-    value$Omega <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
+    Omega.param <- matrix(0, nrow = n.endogenous, ncol = n.endogenous, 
                           dimnames = list(endogenous,endogenous))
-
     if("Sigma" %in% names(value)){
-        value$Omega <- value$Omega + value$Sigma
+        Omega.param <- Omega.param + value$Sigma
     }
     if("Psi" %in% names(value)){
-        value$Omega <- value$Omega + value$tLambda.tiIB.Psi.iIB %*% value$Lambda
+        Omega.param <- Omega.param + value$tLambda.tiIB.Psi.iIB %*% value$Lambda
     }
+
+    if(!is.null(Omega)){
+        value$Omega <- Omega
+        attr(value$Omega,"discrepancy") <- Omega-Omega.param
+    }else{
+        value$Omega <- Omega.param
+    }
+    
     value$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
         iIndex <- which(unique.pattern[iM,]==1)
         return(value$Omega[iIndex,iIndex,drop=FALSE])

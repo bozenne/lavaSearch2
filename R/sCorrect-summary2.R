@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (17:45) 
+## Last-Updated: Jan 10 2022 (15:00) 
 ##           By: Brice Ozenne
-##     Update #: 511
+##     Update #: 522
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,7 +18,7 @@
 
 ## * Documentation - summary2
 #' @title Latent Variable Model Summary After Small Sample Correction
-#' @description Summarize the fitted latent variable model.
+#' @description Summarize a fitted latent variable model.
 #' Similar to \code{stats::summary} with small sample correction.
 #' @name summary2
 #'
@@ -26,8 +26,12 @@
 #' @param digit [integer > 0] the number of decimal places to use when displaying the summary.
 #' @param robust [logical] should robust standard errors be used instead of the model based standard errors? Should be \code{TRUE} if argument cluster is not \code{NULL}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' @param df [logical] method used to compute the degree of freedoms of the Wald statistic (code{"none"}, \code{"satterthwaite"}).
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+#' Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... [logical] arguments passed to lower level methods.
 #' 
 #' @seealso \code{\link{estimate2}} to obtain \code{lvmfit2} objects.
@@ -63,7 +67,7 @@
 #' @rdname summary2
 summary2.lvmfit <- function(object, robust = FALSE, cluster = NULL, digit = max(5, getOption("digit")), ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
-    return(summary(estimate2(object, ssc = ssc, df = df, ...), robust = robust, cluster = NULL, digit = digit))
+    return(summary(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), robust = robust, cluster = NULL, digit = digit))
 
 }
 
@@ -73,7 +77,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
 
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
     ## ** table with se, df, confint, p-value for the corrected parameters
@@ -87,7 +91,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     object.summary <- summary(object0, digits = digit)
     
     previous.summary <- object.summary$coef
-    object.summary$coef <- tableS.all[name.param,c("estimate","std.error","statistic","df","p.value"),drop=FALSE]
+    object.summary$coef <- tableS.all[name.param,c("estimate","se","statistic","df","p.value"),drop=FALSE]
 
     if(!is.null(object$cluster) || inherits(object,"lvm.missing")){
         
@@ -174,14 +178,14 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     ## ** gather all results in one table
     object.summary$table2 <- data.frame(matrix(NA, nrow = n.param, ncol = 7,
                                                dimnames = list(name.param,
-                                                               c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
+                                                               c("estimate","se","df","lower","upper","statistic","p.value"))
                                                ), stringsAsFactors = FALSE)
 
     object.summary$table2$estimate <- tableS.all[name.param,"estimate"]
-    object.summary$table2$std.error <- tableS.all[name.param,"std.error"]
+    object.summary$table2$se <- tableS.all[name.param,"se"]
     object.summary$table2$df <- tableS.all[name.param,"df"]
-    object.summary$table2$ci.lower <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.025, df = object.summary$table2$df)
-    object.summary$table2$ci.upper <- object.summary$table2$estimate + object.summary$table2$std.error * qt(p=0.975, df = object.summary$table2$df)
+    object.summary$table2$lower <- object.summary$table2$estimate + object.summary$table2$se * qt(p=0.025, df = object.summary$table2$df)
+    object.summary$table2$upper <- object.summary$table2$estimate + object.summary$table2$se * qt(p=0.975, df = object.summary$table2$df)
     object.summary$table2$statistic <- tableS.all[name.param,"statistic"]
     object.summary$table2$p.value <- tableS.all[name.param,"p.value"]
 

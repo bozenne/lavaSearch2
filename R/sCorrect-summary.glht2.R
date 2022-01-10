@@ -1,11 +1,11 @@
-### summary.glht2.R --- 
+### sCorrect-summary.glht2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: apr 23 2020 (12:44) 
+## Last-Updated: Jan  5 2022 (12:48) 
 ##           By: Brice Ozenne
-##     Update #: 186
+##     Update #: 191
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -71,14 +71,14 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     }
     output$table2 <- data.frame(matrix(NA, nrow = n.hypo, ncol = 7,
                                        dimnames = list(paste0(name.hypo, " == ", output$rhs),
-                                                       c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"))
+                                                       c("estimate","se","df","lower","upper","statistic","p.value"))
                                        ), stringsAsFactors = FALSE)
     output$table2$estimate <- output$test$coefficients
-    output$table2$std.error <- output$test$sigma
+    output$table2$se <- output$test$sigma
     output$table2$df <- output$df
     output$table2$df[output$table2$df==0] <- Inf
-    output$table2$ci.lower <- output$confint[,"lwr"]
-    output$table2$ci.upper <- output$confint[,"upr"]
+    output$table2$lower <- output$confint[,"lwr"]
+    output$table2$upper <- output$confint[,"upr"]
     output$table2$statistic <- output$test$tstat
     output$table2$p.value <- output$test$pvalues
     output$seed <- seed
@@ -98,10 +98,10 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
 print.summary.glht2 <- function(object,
                                 digits = max(3L, getOption("digits") - 2L),
                                 digits.p.value = max(3L, getOption("digits") - 2L),
-                                columns = c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"),
+                                columns = c("estimate","se","df","lower","upper","statistic","p.value"),
                                 ...){
     
-    columns <- match.arg(columns, choices = c("estimate","std.error","df","ci.lower","ci.upper","statistic","p.value"), several.ok = TRUE)
+    columns <- match.arg(columns, choices = c("estimate","se","df","lower","upper","statistic","p.value"), several.ok = TRUE)
     type <- object$type
     call <- if(isS4(object$model)){object$model@call}else{object$model$call}
     alternative <- object$alternativ
@@ -169,4 +169,4 @@ print.summary.glht2 <- function(object,
 
 
 ######################################################################
-### summary.glht2.R ends here
+### sCorrect-summary.glht2.R ends here

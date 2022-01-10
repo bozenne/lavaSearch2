@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (10:57) 
+## Last-Updated: Jan 10 2022 (15:00) 
 ##           By: Brice Ozenne
-##     Update #: 232
+##     Update #: 356
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,219 +16,256 @@
 ### Code:
 
 ## * effects2 (documentation)
-#' @title Effects From a Fitted Model After Small Sample Correction 
+#' @title Effects Through Pathways With Small Sample Correction 
 #' @description Test whether a path in the latent variable model correspond to a null effect.
 #' Similar to \code{lava::effects} but with small sample correction (if any).
-#' So far it only work for paths composed of two edges.
+#' So far it only work for a single path related two variable composed of one or two edges.
 #' @name effects2
 #'
-#' @param object an object that inherits from lvmfit.
-#' @param link [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
+#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param linfct [character vector] The path for which the effect should be assessed (e.g. \code{"A~B"}),
 #' i.e. the effect of the right variable (B) on the left variable (A). 
+#' @param robust [logical] should robust standard errors be used instead of the model based standard errors? Should be \code{TRUE} if argument cluster is not \code{NULL}.
+#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param conf.level [numeric, 0-1] confidence level of the interval.
-#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
-#' Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.
-#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.
-#' @param ... [logical] arguments passed to lower level methods.
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+#' Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object.
 #' 
-#' @concept small sample inference
+#' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the confidence intervals.
+#' 
+#' @return A data.frame with a row per path.
+#' 
+#' @concept inference
+#' @keywords smallSampleCorrection
 #' @export
 `effects2` <-
-  function(object, ...) UseMethod("effects2")
+  function(object, linfct, robust, cluster, conf.level, df, ssc, ...) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
 
 ## * effects2.lvmfit
 #' @rdname effects2
-#' @export
-effects2.lvmfit <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
+effects2.lvmfit <- function(object, linfct, to = NULL, from = NULL, robust = FALSE, cluster = NULL, conf.level = 0.95, df = lava.options()$df, ssc = lava.options()$ssc, ...){
 
-    object.SSC <- sCorrect(object, ssc = ssc, df = df)    
-    return(effects2(object.SSC, ...))
+    return(effects2(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), linfct = linfct, to = to, from = from, robust = robust, cluster = cluster, conf.level = conf.level))
 
 }
 
-## * effects2.sCorrect
-#' @rdname effects2
+## * effects2.lvmfit2
+#' @rdname effects2p
 #' @export
-effects2.sCorrect <- function(object, link, conf.level = 0.95, robust = FALSE, ...){
+effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FALSE, cluster = NULL, conf.level = 0.95, ...){
+
+    dots <- list(...)
+    if(length(dots)>0){
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
+    }
+    object0 <- object
+    class(object0) <- setdiff(class(object0),"lvmfit2")
+        
+    ## ** identify path
+    if(!is.null(to) || !is.null(from)){
+        n.hypo <- 1
+
+        if(!missing(linfct)){
+            stop("Cannot specify argument \'linfct\' at the same time as argument \'from\' or \'to\'. \n")
+        }
+
+        e.effects <- effects(object0, from = from, to = to)
+        pathEffect <- stats::setNames(list(stats::setNames(list(e.effects$path), paste0(e.effects["to"],"~",e.effects["from"]))),paste0(e.effects["to"],"~",e.effects["from"]))
+        type <- "total"
+        null <- 0
+
+    }else{
+        n.hypo <- length(linfct)
+        pathEffect <- vector(mode = "list", length = n.hypo)
+        if(is.null(names(linfct))){
+            names(pathEffect) <- linfct
+        }else{
+            if(any(duplicated(names(linfct)))){
+                stop("Duplicated names for argument \'linfct\'. \n")
+            }
+            names(pathEffect) <- names(linfct)
+        }
+        type <- rep(as.character(NA), n.hypo)
+        null <- rep(as.numeric(NA), n.hypo)
+
+        for(iH in 1:n.hypo){
+
+            if(grepl("|",linfct[iH])){
+                type[iH] <- base::trimws(strsplit(linfct[iH],split="|",fixed=TRUE)[[1]][2], which = "both")
+                type[iH] <- match.arg(type[iH], c("indirect","direct","total"))
+                linfct[iH] <- strsplit(linfct[iH],split="|",fixed=TRUE)[[1]][1]
+            }else{
+                type[iH] <- "total"
+            }
+            
+            ## extract left and right side of the equation
+            if(length(grep("=",linfct[iH]))>1){
+                stop("Each element of argument \'linfct\' should contain at most one \'=\' sign.\n",
+                     "Something like: coef1-2*coef2=0. \n")
+            }
+            iContrast <- createContrast(linfct[iH])
+            if(iContrast$null==0){
+                iContrast <- createContrast(linfct[iH], rowname.rhs = FALSE)
+            }
+
+            null[iH] <- unname(iContrast$null)
+            iLHS.hypo_factor <- as.double(iContrast$contrast)
+            iLHS.hypo_coef <- unname(colnames(iContrast$contrast))
+            iN.param <- length(iLHS.hypo_coef)
+
+            pathEffect[[iH]] <- stats::setNames(vector(mode = "list", length = iN.param), iLHS.hypo_coef)
+            attr(pathEffect[[iH]], "factor") <- iLHS.hypo_factor
+            
+            for(iCoef in 1:iN.param){ ## iCoef <- 1
+                ## extract all paths for each coefficient
+                pathEffect[[iH]][[iCoef]] <- effects(object0, as.formula(iLHS.hypo_coef[[iN.param]]))$path
+                if(length(pathEffect[[iH]][[iCoef]])==0){
+                    stop("Could not find path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                }else if(type[iH]=="direct" && any(sapply(pathEffect[[iH]][[iCoef]],length)>2)){
+                    pathEffect[[iH]][[iCoef]] <- pathEffect[[iH]][[iCoef]][sapply(pathEffect[[iH]][[iCoef]],length)==2]
+                    if(length(pathEffect[[iH]][[iCoef]])==0){
+                        stop("Could not find direct path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                    }
+                }else if(type[iH]=="indirect" && any(sapply(pathEffect[[iH]][[iCoef]],length)>2)){
+                    pathEffect[[iH]][[iCoef]] <- pathEffect[[iH]][[iCoef]][sapply(pathEffect[[iH]][[iCoef]],length)>2]
+                    if(length(pathEffect[[iH]][[iCoef]])==0){
+                        stop("Could not find indirect path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                    }
+                }
+            }
+            
+        }
+    }
 
     ## ** extract information
-    allCoef.type <- coefType(object, as.lava = FALSE)
-    n.hypo <- length(link)
-    name.hypo <- names(link)
-    if(is.null(name.hypo)){name.hypo <- link}
-    test.df <- (object$sCorrect$df == "satterthwaite")
+    ## 0-order: param
+    object.param <- coef(object, as.lava = FALSE)
+    name.param <- names(object.param)
+    n.param <- length(name.param)
+
+    ## 1-order: score
+    if(robust){
+        object.score <- score(object, cluster = cluster, as.lava = FALSE)
+    }
+
+    ## 2-order: variance covariance
+    object.vcov.param <- vcov(object, as.lava = FALSE)
+    if(robust){
+        object.rvcov.param <- vcov(object, robust = TRUE, cluster = cluster, as.lava = FALSE)
+    }
     
-    object.coef <- coef2(object)
-    object.iid <- iid2(object, robust = robust)
-    object.vcov.param <- vcov2(object)
+    test.df <- (object$sCorrect$df == "satterthwaite")
     if(test.df){
         object.dVcov.param <- object$sCorrect$dVcov.param
-    }
-        
-    name.coef <- names(object.coef)
-    n.coef <- length(name.coef)
-    n.obs <- NROW(object.iid)
 
-    ## ** extract coefficient and contrast matrix
-    null <- rep(NA, n.hypo)
-    ls.contrast <- vector(mode = "list", length = n.hypo)
-    for(iH in 1:n.hypo){ # iH <- 1
-        iTempo.eq <- strsplit(link[iH], split = "=", fixed = TRUE)[[1]]
-        if(length(iTempo.eq)==1){ ## set null to 0 when second side of the equation is missing
-            iTempo.eq <- c(iTempo.eq,"0")
-        }
+        if(robust && (lava.options()$df.robust != 1)){
 
-        null[iH] <- as.numeric(trim(iTempo.eq[2]))
-        iRh.plus <- strsplit(iTempo.eq[[1]], split = "+", fixed = TRUE)[[1]]
-        iRh <- trim(unlist(sapply(iRh.plus, strsplit, split = "-", fixed = TRUE)))
-        iRh <- iRh[iRh!="",drop=FALSE]
-                            
-        ls.iRh <- lapply(strsplit(iRh, split = "*", fixed = TRUE), trim)
-        iN.tempo <- length(ls.iRh)
-        ls.contrast[[iH]] <- setNames(rep(0, iN.tempo), sapply(ls.iRh, function(x){tail(x,1)}))
-        for(iCoef in 1:iN.tempo){ # iCoef <- 2
-            if(length(ls.iRh[[iCoef]])==1){
-                iFactor <- 1
-                iName <- ls.iRh[[iCoef]][1]                
+            if(!is.null(cluster)){ ## update derivative according to cluster
+                object.dRvcov.param <- .dRvcov.param(score = object.score,
+                                                     hessian = hessian(object, cluster = cluster),
+                                                     vcov.param = object.vcov.param,
+                                                     dVcov.param = object.dVcov.param,
+                                                     n.param = n.param,
+                                                     name.param = name.param)
+                                              
             }else{
-                iFactor <- as.numeric(ls.iRh[[iCoef]][1])
-                iName <- ls.iRh[[iCoef]][2]
-            }
-
-            ## identify if it is a minus sign
-            iBeforeCoef <- strsplit(iTempo.eq[[1]], split = ls.iRh[iCoef])[[1]][1]
-            if(iCoef > 1){
-                iBeforeCoef <- strsplit(iBeforeCoef, split = ls.iRh[iCoef-1])[[1]][2]
-            }
-            test.sign <- length(grep("-",iBeforeCoef))>0
-            ls.contrast[[iH]][iName] <- c(1,-1)[test.sign+1] * iFactor
-        }
-                    
-    }
-
-    name.link <- unique(unlist(lapply(ls.contrast,names)))
-    n.link <- length(name.link)
-    contrast <- matrix(0, nrow = n.hypo, ncol = n.link,
-                       dimnames = list(name.hypo, name.link))
-    for(iH in 1:n.hypo){ # iH <- 1
-        contrast[iH, names(ls.contrast[[iH]])] <- unname(ls.contrast[[iH]])
-    }
-
-    ## ** identify paths
-    ls.link <- setNames(vector(mode = "list", length = n.link), name.link)
-    
-    for(iL in 1:n.link){ ## iL <- 1
-        iLink <- name.link[iL]
-        iPath <- lava::path(object, to = as.formula(iLink))
-
-        if(length(iPath$path[[1]])==0){
-            stop("No path found \n")
-        }else{
-            iNode <- iPath$path[[1]]
-            iN.node <- length(iNode)
-            ls.link[[iL]] <- paste0(iNode[-1], lava.options()$symbols[1], iNode[-iN.node], collpase = "")
-
-            if(any(ls.link[[iL]] %in% allCoef.type$name == FALSE)){
-                stop("Part of the path could not be identified \n")
-            }
-            if(any(allCoef.type$type[allCoef.type$name %in% ls.link[[iL]]] != "regression")){
-                stop("Part of the path does not correspond to a regression link \n")
+                dRvcov.param <- object$sCorrect$dRvcov.param
             }
         }
     }
-    ## ** apply chain rule over the path
-    vec.beta <- setNames(rep(NA, length = n.link), name.link)
-    vec.sd <- setNames(rep(NA, length = n.link), name.link)
-    vec.df <- setNames(rep(NA, length = n.link), name.link)
-    M.iid <- matrix(NA, nrow = n.obs, ncol = n.link,
-                    dimnames = list(NULL, name.link))
-    if(test.df){
-        M.dVcov <- matrix(NA, nrow = n.coef, ncol = n.link,
-                          dimnames = list(name.coef, name.link))
-    }
-    
-    for(iL in 1:n.link){ ## iL <- 1
-        iLink <- ls.link[[iL]]
-        vec.beta[iL] <- object.coef[iLink[1]]
-        M.iid[,iL] <- object.iid[,iLink[1]]
-        if(test.df){
-            M.dVcov[,iL] <- object.dVcov.param[iLink[1],iLink[1],]
-        }
-        
-        if(length(iLink)>1){
-            for(iL2 in 2:length(iLink)){ ## iL2 <- 2
-                iType <- allCoef.type[which(iLink[iL2] == allCoef.type$name),]
-                if(!is.na(iType$value)){
-                    vec.beta[iL] <- vec.beta[iL] * iType$value
-                    M.iid[,iL] <- M.iid[,iL] * iType$value
-                    if(test.df){
-                        M.dVcov[,iL] <- M.dVcov[,iL] * iType$value^2
-                    }
-                }else{
-                    betaOLD <- vec.beta[iL]
-                    betaNEW <- object.coef[iLink[iL2]]
-                    vec.beta[iL] <- betaOLD * betaNEW
 
-                    iidOLD <- M.iid[,iL]
-                    iidNEW <- object.iid[,iLink[iL2]]
-                    M.iid[,iL] <- iidOLD * betaNEW + iidNEW * betaOLD
+    coefEffect <- pathEffect
 
-                    if(test.df){
-                        varOLD <- sum(iidOLD^2)
-                        varNEW <- sum(iidNEW^2)
-                        covOLDNEW <- sum(iidOLD*iidNEW)
-
-                        dVcovOLD <- M.dVcov[,iL]
-                        dVcovNEW <- object.dVcov.param[iLink[iL2],iLink[iL2],]
-                        dVcovCOV <- object.dVcov.param[iLink[iL],iLink[iL2],]
-                        object.dVcov.param[iLink[iL],iLink[iL2],]
-                        object.dVcov.param[iLink[iL2],iLink[iL],]
-                    
-                        browser()
-
-                        Ilink1 <- as.numeric(keep.param %in% link1)
-                        Ilink2 <- as.numeric(keep.param %in% link2)
-
-                        ## M.var <- varOLD * betaNEW^2 + varNEW * betaOLD^2 + 2 * covOLDNEW * betaNEW * betaOLD
-                        ## so dM.var/dtheta =
-                        M.dVcov[,iL] <- (dVcovOLD * betaNEW^2 + 2 * varOLD * betaNEW) + (dVcovNEW * betaOLD^2 + 2 * varNEW * betaOLD) + 2 * dVcovOLDNEW * 
-                            dSigma1 <- M.dVcov[,iL]
-                        dSigma2 <- object.dVcov.param[iLink[iL2],iLink[iL2],]
-
-
-                        ## effect.var <- as.double(Sigma[link1,link1] * mu[link2]^2 + Sigma[link2,link2] * mu[link1]^2 + 2 * Sigma[link1,link2] * mu[link1] * mu[link2])
-                        ## dvar1 <- dSigma[link1,link1,] * mu[link2]^2 + Sigma[link1,link1] * 2 * Ilink2 * mu[link2]
-                        ## dvar2 <- dSigma[link2,link2,] * mu[link1]^2 + Sigma[link2,link2] * 2 * Ilink1 * mu[link1]
-                        ## dvar12 <- 2 * dSigma[link1,link2,] * mu[link1] * mu[link2] + 2 * Sigma[link1,link2] * (Ilink2 * mu[link2] + mu[link1] * Ilink1)
-                        ## dvar <- dvar1 + dvar2 + dvar12
-                    }
-                    
-
+    ## ** identify coefficients corresponding to path
+    for(iH in 1:n.hypo){ ## iH <- 1
+        for(iCoef in 1:iN.param){ ## iCoef <- 1
+            iN.path <- length(pathEffect[[iH]][[iCoef]])
+            for(iPath in 1:iN.path){ ## iPath <- 1
+                coefEffect[[iH]][[iCoef]][[iPath]] <- paste(pathEffect[[iH]][[iCoef]][[iPath]][-1], pathEffect[[iH]][[iCoef]][[iPath]][-length(pathEffect[[iH]][[iCoef]][[iPath]])], sep = lava.options()$symbols[1])
+                if(any(coefEffect[[iH]][[iCoef]][[iPath]] %in% name.param) == FALSE){
+                    stop("Incorrect path: ",paste(pathEffect[[iH]][[iCoef]][[iPath]], collapse="->"),"\n",
+                         "Could not find coefficient: \"",paste(coefEffect[[iH]][[iCoef]][[iPath]][coefEffect[[iH]][[iCoef]][[iPath]] %in% name.param == FALSE], collapse = "\" \""),"\".\n")
                 }
             }
         }
+    }
 
+    ## ** point estimate
+    vec.beta <- setNames(rep(NA, length = n.hypo), names(pathEffect))
+    for(iH in 1:n.hypo){ ## iH <- 1
+        iValue.param <- lapply(coefEffect[[iH]], function(iCoef){ ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
+            iValue.path <- lapply(iCoef, function(iName){prod(object.param[iName])}) ## get effect through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
+            return(do.call("sum", iValue.path)) ## return total effect (e.g. \beta1 + \beta2*\beta3)
+        })
+        if(is.null(attr(coefEffect[[iH]],"factor"))){
+            vec.beta[iH] <- unlist(iValue.param)
+        }else{
+            vec.beta[iH] <- sum(attr(coefEffect[[iH]],"factor") * unlist(iValue.param))
+        }
+    }
+
+    ## ** variance
+    ## *** partial derivative
+    dbeta.dtheta <- matrix(NA, nrow = n.hypo, ncol = n.param, dimnames = list(names(pathEffect), name.param))
+    for(iH in 1:n.hypo){ ## iH <- 1
+        iValue.param <- lapply(coefEffect[[iH]], function(iCoef){ ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
+            iDValue.path <- colSums(do.call(rbind,lapply(iCoef, function(iName){ ## get derivative through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
+                iDeriv <- stats::setNames(rep(0, n.param), name.param)
+                iDeriv[iName] <- prod(object.param[iName])/object.param[iName]
+                return(iDeriv)
+            })))
+        })
+        if(is.null(attr(coefEffect[[iH]],"factor"))){
+            dbeta.dtheta[iH,] <- iValue.param[[1]]
+        }else{
+            dbeta.dtheta[iH,] <- attr(coefEffect[[iH]],"factor") %*% do.call(rbind,iValue.param)
+        }   
+    }
+
+    if(robust){
+        Mvcov.beta <- dbeta.dtheta %*% object.rvcov.param %*% t(dbeta.dtheta)
+    }else{
+        Mvcov.beta <- dbeta.dtheta %*% object.vcov.param %*% t(dbeta.dtheta)
     }
 
     ## ** compute df
     if(test.df){
-        vec.df <- 2*vec.var^2 / rowSums(t(M.dVcov) %*% object.vcov.param * t(M.dVcov))
+        vec.df <- dfSigma(contrast = dbeta.dtheta,
+                          score = object.score,
+                          vcov = object.vcov.param,
+                          rvcov = object.rvcov.param,
+                          dVcov = object.dVcov.param,
+                          dRvcov = object.dRvcov.param,
+                          keep.param = dimnames(object.dVcov.param)[[3]],                            
+                          type = if(robust){lava.options()$df.robust}else{1})
+    }else{
+        vec.df <- rep(0, n.hypo)
     }
 
     ## ** gather everything in glht object
+    linfct2 <- diag(1, ncol = n.hypo, nrow = n.hypo)
+    dimnames(linfct2) <- list(names(pathEffect),names(pathEffect))
+
     out <- list(model = object,
-                linfct = contrast,
+                linfct = linfct2,
                 rhs = null,
                 coef = vec.beta,
-                vcov = crossprod(M.iid),
-                df = if(test.df){vec.df}else{0},
+                vcov = Mvcov.beta,
+                df = vec.df,
                 alternative = "two.sided",
                 type = NULL,
                 robust = robust,
                 ssc = object$sCorrect$ssc$type,
+                grad = dbeta.dtheta,
+                path = pathEffect,
                 global = NULL)
     class(out) <- c("glht2","glht")
 
@@ -237,47 +274,9 @@ effects2.sCorrect <- function(object, link, conf.level = 0.95, robust = FALSE, .
 
 }
 
-## ## * .deltaMethod_product
-## .deltaMethod_product <- function(mu,Sigma,dSigma,link){
-##     link1 <- link[1]
-##     link2 <- link[2]
-
-##     effect <- as.double(prod(mu[link]))
-##     effect.var <- as.double(Sigma[link1,link1] * mu[link2]^2 + Sigma[link2,link2] * mu[link1]^2 + 2 * Sigma[link1,link2] * mu[link1] * mu[link2])
-##     effect.se <- sqrt(effect.var)
-##     effect.Wald <- effect/effect.se
-
-##     if(!is.null(dSigma)){
-##         keep.param <- dimnames(dSigma)[[3]]
-##         Ilink1 <- as.numeric(keep.param %in% link1)
-##         Ilink2 <- as.numeric(keep.param %in% link2)
-    
-##         dvar1 <- dSigma[link1,link1,] * mu[link2]^2 + Sigma[link1,link1] * 2 * Ilink2 * mu[link2]
-##         dvar2 <- dSigma[link2,link2,] * mu[link1]^2 + Sigma[link2,link2] * 2 * Ilink1 * mu[link1]
-##         dvar12 <- 2 * dSigma[link1,link2,] * mu[link1] * mu[link2] + 2 * Sigma[link1,link2] * (Ilink2 * mu[link2] + mu[link1] * Ilink1)
-##         dvar <- dvar1 + dvar2 + dvar12
-
-##         effect.df <- 2 * effect.var^2 / (t(dvar) %*% Sigma[keep.param,keep.param,drop=FALSE] %*% dvar)[1,1]
-##     }else{
-##         effect.df <- Inf
-##     }
-
-##     ## ** export
-##     iOut <- c("estimate" = as.double(effect),
-##               "std.error" = as.double(effect.se),
-##               "df" = as.double(effect.df),
-##               "ci.lower" = as.numeric(NA),
-##               "ci.upper" = as.numeric(NA),
-##               "statistic" = as.double(effect.Wald),
-##               "p.value" = as.numeric(NA)
-##               )
-##     if(is.infinite(iOut["df"])){                       
-##         iOut["p.value"] <- as.double(2*(1-pnorm(abs(iOut["statistic"]))))
-##     }else{
-##         iOut["p.value"] <- as.double(2*(1-pt(abs(iOut["statistic"]), df = iOut["df"])))
-##     }
-##     return(iOut)
-## }
+## * effects.lvmfit2
+#' @rdname effects2
+effects.lvmfit2 <- effects2.lvmfit2
 
 ######################################################################
 ### effects2.R ends here

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: Jan  3 2022 (09:51) 
+## Last-Updated: Jan  5 2022 (09:50) 
 ##           By: Brice Ozenne
-##     Update #: 154
+##     Update #: 155
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' Similar to \code{nlme::getGroups}.
 #' @name getGroup2-internal
 #'
-#' @param object a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.
+#' @param object a \code{lvmfit} object.
 #' @param data dataset.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' Only required for \code{gls} models with no correlation argument.

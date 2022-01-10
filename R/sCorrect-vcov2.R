@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:51) 
+## Last-Updated: Jan  6 2022 (15:54) 
 ##           By: Brice Ozenne
-##     Update #: 78
+##     Update #: 92
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * vcov2 (documentation)
 #' @title  Variance-Covariance With Small Sample Correction
-#' @description  Extract the variance-covariance matrix from the latent variable model.
+#' @description  Extract the variance-covariance matrix from a latent variable model.
 #' Similar to \code{stats::vcov} but with small sample correction.
 #' @name vcov2
 #'
@@ -25,7 +25,9 @@
 #' @param robust [logical] should robust standard errors be used instead of the model based standard errors? Should be \code{TRUE} if argument cluster is not \code{NULL}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
-n#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #' 
 #' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the variance-covariance matrix.
@@ -78,14 +80,21 @@ vcov2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, as.lava = TRUE
 
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
+    
 
-    out <- object$sCorrect$vcov.param
-    if(as.lava == FALSE){
-        name.param <- object$sCorrect$name.param
-        out <- out[names(name.param),names(name.param),drop=FALSE]
-        dimnames(out) <- list(as.character(name.param),as.character(name.param))
+    if(robust){
+        out <- crossprod(iid(object, cluster = cluster, as.lava = as.lava))
+    }else{
+        if(!is.null(cluster)){
+            warning("Argument \'cluster\' disregarded when argument \'robust\' is FALSE. \n")
+        }
+        out <- object$sCorrect$vcov.param
+    }
+    if(as.lava){
+        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param), as.character(object$sCorrect$skeleton$originalLink2param))
     }
 
     return(out)

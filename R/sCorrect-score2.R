@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: Jan  4 2022 (16:51) 
+## last-updated: Jan  6 2022 (15:53) 
 ##           By: Brice Ozenne
-##     Update #: 2387
+##     Update #: 2393
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,7 +17,7 @@
 
 ## * Documentation - score2
 #' @title  Score With Small Sample Correction
-#' @description  Extract the (individual) score from the latent variable model.
+#' @description  Extract the (individual) score a the latent variable model.
 #' Similar to \code{lava::score} but with small sample correction.
 #' @name score2
 #'
@@ -25,7 +25,9 @@
 #' @param indiv [logical] If \code{TRUE}, the score relative to each observation is returned. Otherwise the total score is returned.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @details When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the confidence intervals.
@@ -78,7 +80,7 @@ score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE
     
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
     ## ** define cluster
     if(length(cluster) == 1 && (is.numeric(cluster) || is.character(cluster) || is.factor(cluster))){
@@ -110,11 +112,9 @@ score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE
     }
     
     ## ** export
-    if(as.lava == FALSE){
-        name.param <- object$sCorrect$name.param
-        ## all(object$sCorrect$skeleton$originalLink2param  == name.param)
-        score <- score[,names(name.param),drop=FALSE]
-        dimnames(score) <- list(NULL,as.character(name.param))
+    if(as.lava){
+        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+        colnames(score) <- as.character(object$sCorrect$skeleton$originalLink2param)
     }
     if(!is.null(cluster)){
         index2.cluster <- tapply(1:length(cluster),cluster,list)

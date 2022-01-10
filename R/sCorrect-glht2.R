@@ -1,11 +1,11 @@
-### multcomp.R --- 
+### sCorrect-glht2.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (10:57) 
+## Last-Updated: Jan 10 2022 (17:18) 
 ##           By: Brice Ozenne
-##     Update #: 758
+##     Update #: 790
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * Documentation - glht2
-#' @title General Linear Hypothesis
-#' @description Test general linear hypotheses and across latent variable models with small sample corrections.
+#' @title General Linear Hypothesis Testing With Small Sample Correction
+#' @description Test linear hypotheses on coefficients from a latent variable models with small sample corrections.
 #' @name glht2
 #' 
 #' @param object a \code{lvmfit} or \code{mmm} object.
@@ -27,8 +27,12 @@
 #' @param robust [logical] should robust standard error be used? 
 #' Otherwise rescale the influence function with the standard error obtained from the information matrix.
 #' @param cluster  [integer vector] the grouping variable relative to which the observations are iid.
-#' @param ssc [logical] should the standard errors of the coefficients be corrected for small sample bias?
-#' @param df [logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
+#' @param df [character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+#' Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... [logical] arguments passed to lower level methods.
 #'
 #' @details
@@ -72,7 +76,7 @@
 #' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
-#' resC <- createContrast(e.mmm, linfct = "E", add.variance = TRUE)
+#' resC <- createContrast(e.mmm, linfct = "E")
 #'
 #' #### adjust for multiple comparisons ####
 #' e.glht2 <- glht2(e.mmm, linfct = resC$contrast, df = FALSE)
@@ -84,39 +88,24 @@
     function(object, ...) UseMethod("glht2")
 
 
-## * glht2.lm
-#' @rdname glht2
-#' @export
-glht2.lm <- function(object, ssc = lava.options()$ssc, df = lava.options()$df, ...){
-    object.SSC <- sCorrect(object, ssc = ssc, df = df)    
-    return(glht2(object.SSC, ...))
-}
-
-## * glht2.gls
-#' @rdname glht2
-#' @export
-glht2.gls <- glht2.lm
-
-## * glht2.lme
-#' @rdname glht2
-#' @export
-glht2.lme <- glht2.lm
-
 ## * glht2.lvmfit
 #' @rdname glht2
 #' @export
-glht2.lvmfit <- glht2.lm
+glht2.lvmfit <- function(object, linfct, rhs = NULL, robust = FALSE, cluster = NULL, ssc = lava.options()$ssc, df = lava.options()$df, ...){
+    return(glht2(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), linfct = linfct, rhs = rhs, robust = robust, cluster = cluster))
 
-## * glht2.sCorrect
+}
+
+## * glht2.lvmfit2
 #' @rdname glht2
 #' @export
-glht2.sCorrect <- function(object, linfct, rhs = NULL,
-                           robust = FALSE, cluster = NULL,
-                           ...){
+glht2.lvmfit2 <- function(object, linfct, rhs = NULL,
+                          robust = FALSE, cluster = NULL,
+                          ...){
 
     out <- compare2(object, linfct = linfct, rhs = rhs,
                     robust = robust, cluster = cluster,
-                    as.lava = FALSE, F.test = FALSE)
+                    as.lava = FALSE, F.test = FALSE, ...)
         
     return(out)
 }
@@ -136,20 +125,23 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         stop("Argument \'object\' must be named list. \n")
     }
 
-    test.lm <- sapply(object, inherits, what = "lm")
-    test.gls <- sapply(object, inherits, what = "gls")
-    test.lme <- sapply(object, inherits, what = "lme")
     test.lvmfit <- sapply(object, inherits, what = "lvmfit")
-    if(any(test.lm + test.gls + test.lme + test.lvmfit == 0)){
-        index.wrong <- which(test.lm + test.gls + test.lme + test.lvmfit == 0)
-        stop("Argument \'object\' must be a list of objects that inherits from lm/gls/lme/lvmfit. \n",
+    if(any(test.lvmfit == 0)){
+        index.wrong <- which(test.lvmfit == 0)
+        stop("Argument \'object\' must be a list of objects that inherits from lvmfit. \n",
              "Incorrect element(s): ",paste(index.wrong, collapse = " "),".\n")
     }
-
+    test.lvmfit2 <- sapply(object, inherits, what = "lvmfit2")
+    if(any(test.lvmfit2 == 0)){
+        for(iO in which(test.lvmfit2==0)){
+            object[[iO]] <- estimate2(object[[iO]], dVcov.robust = robust, ...)
+        }
+    }
+    
     ## ** define the contrast matrix
     out <- list()
     if (is.character(linfct)){
-        resC <- createContrast(object, linfct = linfct, add.variance = TRUE)
+        resC <- createContrast(object, linfct = linfct, rowname.rhs = FALSE)
         linfct <- resC$contrast
         ls.contrast <- resC$mlf
         if("rhs" %in% names(match.call()) == FALSE){
@@ -176,7 +168,6 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     ## ** check whether it is possible to compute df
     ## i.e. are linear hypothesis model specific?
     test.df <- all(unlist(lapply(object, function(iModel){iModel$sCorrect$df == "satterthwaite"})))
-    browser()
     if(test.df){
         n.hypo <- NROW(linfct)
         ls.modelPerTest <- lapply(1:n.hypo, function(iHypo){ ## iHypo <- 1
@@ -190,8 +181,6 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             stop("Cannot compute the degrees of freedom for tests performed across several models \n",
                  "Consider setting the argument \'df\' to FALSE \n")
         }    
-    }else if(df == "satterthwaite"){
-        test.df <- TRUE
     }
 
     ## ** Total number of observations
@@ -205,10 +194,10 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     ls.res <- lapply(1:n.object, function(iM){ ## iM <- 1
 
         ## *** Pre-compute quantities
-        if(!inherits(object[[iM]],"sCorrect")){
-            object[[iM]] <- sCorrect(object[[iM]], ...)
+        if(!inherits(object[[iM]],"lvmfit2")){
+            object[[iM]] <- estimate2(object[[iM]], ...)
         }
-        out$param <- coef2(object[[iM]], as.lava = TRUE)
+        out$param <- coef(object[[iM]], as.lava = FALSE)
         name.param <- names(out$param)
         name.object.param <- paste0(name.object[iM],": ",name.param)
         out$param <- setNames(out$param, name.object.param)
@@ -224,7 +213,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             out$df <- Inf
         }
         ## *** get iid decomposition
-        iid.tempo <- iid2(object[[iM]], robust = TRUE, cluster = cluster)
+        iid.tempo <- iid(object[[iM]], robust = robust, cluster = cluster, as.lava = FALSE)
         if(!is.null(cluster)){
             out$iid <- matrix(NA, nrow = n.cluster, ncol = length(name.param),
                               dimnames = list(Ucluster, name.param))
@@ -238,7 +227,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         if(robust){
             out$se <- sqrt(diag(crossprod(iid.tempo)))
         }else{
-            out$se <- sqrt(diag(vcov2(object[[iM]])))
+            out$se <- sqrt(diag(vcov(object[[iM]], as.lava = FALSE)))
         }
         return(out)
         
@@ -279,7 +268,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         stop("Rownames names of the variance covariance matrix does not match the one of the coefficients \n")
     
     }
-    
+
     ## ** convert to the appropriate format    
     out <- list(model = object,
                 linfct = linfct,
@@ -296,6 +285,11 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     return(out)    
 }
 
+
+## * glht.lvmfit2
+#' @rdname glht2
+#' @export
+glht.lvmfit2 <- glht2.lvmfit2
 
 ## * .calcClosure
 .calcClosure <- function(name, estimate, covariance, type, df){

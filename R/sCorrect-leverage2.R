@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (16:51) 
+## Last-Updated: Jan 10 2022 (13:41) 
 ##           By: Brice Ozenne
-##     Update #: 139
+##     Update #: 166
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -17,13 +17,15 @@
 
 ## * documentation - leverage2
 #' @title Leverage With Small Sample Correction.
-#' @description Extract leverage values from the latent variable model, with small sample correction. 
+#' @description Extract leverage values from a latent variable model, with small sample correction. 
 #' @name leverage2
 #' 
 #' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param format [character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
 #' Otherwise use \code{"long"} to return the residuals in the long format.
-#' @param ssc [character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object. 
+#' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+#' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+#' Only relevant when using a \code{lvmfit} object. 
 #' @param ... additional argument passed to \code{estimate2} when using a \code{lvmfit} object. 
 #'
 #' @details The leverage are defined as the partial derivative of the fitted values with respect to the observations.
@@ -74,7 +76,7 @@ leverage2.lvmfit2 <- function(object, format = "wide", ...){
 
     dots <- list(...)
     if(length(dots)>0){
-        stop("Unknown argument(s) \'",paste(names(dots),collapse="\' \'"),"\'. \n")
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
     format <- match.arg(format, choices = c("long","wide"))
@@ -104,22 +106,24 @@ leverage2.lvmfit2 <- function(object, format = "wide", ...){
 ## * .leverage2
 .leverage2 <- function(Omega, epsilon, dmu, dOmega, vcov.param,
                        name.pattern, missing.pattern, unique.pattern,
-                       endogenous, n.endogenous, param, param.mean, param.hybrid, n.cluster){
+                       endogenous, n.endogenous, param, param.mean, param.var, n.cluster){
 
     n.pattern <- NROW(unique.pattern)
     n.param <- length(param)
-    n.param.mean <- length(param.mean)
-    n.param.hybrid <- length(param.hybrid)
     leverage <- matrix(NA, nrow = n.cluster, ncol = n.endogenous,
                        dimnames = list(NULL, endogenous))
+    if(length(param.mean)==0){
+        leverage[] <- 0
+        return(leverage)
+    }
     if(is.null(vcov.param)){
 
         stop("Cannot compute the leverage values without the variance-covariance matrix of the coefficients. \n")
 
     }
 
-    scoreY <- array(NA, dim = c(n.cluster, n.endogenous, n.param.mean),
-                    dimnames = list(NULL, endogenous, param.mean))
+    scoreY <- array(0, dim = c(n.cluster, n.endogenous, n.param),
+                    dimnames = list(NULL, endogenous, param))
     
     for(iP in 1:n.pattern){ ## iP <- 1 
         iIndex <- missing.pattern[[iP]]
@@ -130,32 +134,35 @@ leverage2.lvmfit2 <- function(object, format = "wide", ...){
         iOmegaM1.epsilon <- epsilon[iIndex,iY,drop=FALSE] %*% iOmegaM1
             
         ## derivative of the score regarding Y
-        for(iParam in param.mean){
+        for(iParam in param){
             
-            if(iParam %in% param.hybrid){
-                iOmegaM1.epsilon.dOmega.iOmegaM1 <- iOmegaM1.epsilon %*% dOmega[[iParam]][iY,iY,drop=FALSE] %*% iOmegaM1
-            }else{
-                iOmegaM1.epsilon.dOmega.iOmegaM1 <- 0
+            if(iParam %in% param.mean){
+                if(length(iY)>1){
+                    scoreY[iIndex,iY,iParam] <- scoreY[iIndex,iY,iParam] + t(dmu[iParam,iY,iIndex]) %*% iOmegaM1 
+                }else{
+                    scoreY[iIndex,iY,iParam] <- scoreY[iIndex,iY,iParam] + dmu[iParam,iY,iIndex] * iOmegaM1[1,1] 
+                }
+            }
+            if(iParam %in% param.var){
+                scoreY[iIndex,iY,iParam] <- scoreY[iIndex,iY,iParam] + 2 * iOmegaM1.epsilon %*% dOmega[[iParam]][iY,iY,drop=FALSE] %*% iOmegaM1
             }
 
-            if(length(iY)>1){
-                scoreY[iIndex,iY,iParam] <- t(dmu[iParam,iY,iIndex]) %*% iOmegaM1 + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
-            }else{
-                scoreY[iIndex,iY,iParam] <- dmu[iParam,iY,iIndex] * iOmegaM1[1,1] + 2 * iOmegaM1.epsilon.dOmega.iOmegaM1
-            }
+        
+
         }
 
         ## leverage
         for(iiY in iY){ ## iiY <- iY[2]
-            if(n.param.mean==1){                
-                leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * vcov.param[param.mean,param.mean] * scoreY[iIndex,iiY,]
+            if(n.param==1){
+                leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * vcov.param * scoreY[iIndex,iiY,]
             }else{
-                leverage[iIndex,iiY] <- rowSums((t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE]) * scoreY[iIndex,iiY,])
+                leverage[iIndex,iiY] <- rowSums(t(dmu[,iiY,iIndex]) * (scoreY[iIndex,iiY,] %*% vcov.param)[,param.mean,drop=FALSE] )
             }
-            ## diag( t(dmu[,iiY,iIndex]) %*% vcov.param[param.mean,param.mean,drop=FALSE] %*% t(scoreY[iIndex,iiY,]) )
+            ## dmu2 <- matrix(0, nrow = n.param, ncol = length(iIndex), dimnames = list(param,NULL))
+            ## dmu2[param.mean,] <- dmu[param.mean,iiY,iIndex]
+            ## diag( t(dmu2) %*% vcov.param %*% t(scoreY[iIndex,iiY,]) )
         }
-    }        
-
+    }
     return(leverage)            
 }
 
