@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: Jan  6 2022 (15:54) 
+## Last-Updated: Jan 12 2022 (09:51) 
 ##           By: Brice Ozenne
-##     Update #: 420
+##     Update #: 430
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' Similar to \code{lava::information} but with small sample correction.
 #' @name information2
 #'
-#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param object,x a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
 #' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
 #' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
@@ -64,6 +64,7 @@
 
 ## * information2.lvmfit
 #' @rdname information2
+#' @export
 information2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 
     return(information(estimate2(object, ssc = ssc, ...), as.lava = as.lava))
@@ -72,6 +73,7 @@ information2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc
 
 ## * information2.lvmfit2
 #' @rdname information2
+#' @export
 information2.lvmfit2 <- function(object, as.lava = TRUE, ...){
 
     dots <- list(...)
@@ -79,10 +81,12 @@ information2.lvmfit2 <- function(object, as.lava = TRUE, ...){
         warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
 
-    out <- object$sCorrect$information
-    if(as.lava){
-        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param), as.character(object$sCorrect$skeleton$originalLink2param))
+    out <- object$sCorrect$information[names(object$sCorrect$skeleton$originalLink2param),
+                                       names(object$sCorrect$skeleton$originalLink2param),
+                                       drop=FALSE]
+    if(as.lava==FALSE){
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                              as.character(object$sCorrect$skeleton$originalLink2param))
     }
     return(out)
 }
@@ -90,8 +94,9 @@ information2.lvmfit2 <- function(object, as.lava = TRUE, ...){
 ## * information.lvmfit2
 #' @rdname information2
 #' @export
-information.lvmfit2 <- information2.lvmfit2
-
+information.lvmfit2 <- function(x, ...){ ## necessary as first argument of information must be x 
+    information2(x, ...)
+}
 
 ## * .information2
 #' @title Compute the Expected Information Matrix From the Conditional Moments

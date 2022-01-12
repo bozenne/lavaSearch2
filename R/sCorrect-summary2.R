@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (15:00) 
+## Last-Updated: Jan 12 2022 (11:37) 
 ##           By: Brice Ozenne
-##     Update #: 522
+##     Update #: 532
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -65,6 +65,7 @@
 
 ## * summary2.lvmfit
 #' @rdname summary2
+#' @export
 summary2.lvmfit <- function(object, robust = FALSE, cluster = NULL, digit = max(5, getOption("digit")), ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
     return(summary(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), robust = robust, cluster = NULL, digit = digit))
@@ -73,6 +74,7 @@ summary2.lvmfit <- function(object, robust = FALSE, cluster = NULL, digit = max(
 
 ## * summary2.lvmfit2
 #' @rdname summary2
+#' @export
 summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max(5, getOption("digit")), ...){
 
     dots <- list(...)
@@ -81,7 +83,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     }
 
     ## ** table with se, df, confint, p-value for the corrected parameters
-    tableS.all <- confint2(object, robust = robust, cluster = cluster, as.lava = FALSE)
+    tableS.all <- model.tables(object, robust = robust, cluster = cluster, as.lava = TRUE)
     name.param <- rownames(tableS.all)
     n.param <- length(name.param)
 
@@ -184,8 +186,8 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     object.summary$table2$estimate <- tableS.all[name.param,"estimate"]
     object.summary$table2$se <- tableS.all[name.param,"se"]
     object.summary$table2$df <- tableS.all[name.param,"df"]
-    object.summary$table2$lower <- object.summary$table2$estimate + object.summary$table2$se * qt(p=0.025, df = object.summary$table2$df)
-    object.summary$table2$upper <- object.summary$table2$estimate + object.summary$table2$se * qt(p=0.975, df = object.summary$table2$df)
+    object.summary$table2$lower <- object.summary$table2$estimate + object.summary$table2$se * stats::qt(p=0.025, df = object.summary$table2$df)
+    object.summary$table2$upper <- object.summary$table2$estimate + object.summary$table2$se * stats::qt(p=0.975, df = object.summary$table2$df)
     object.summary$table2$statistic <- tableS.all[name.param,"statistic"]
     object.summary$table2$p.value <- tableS.all[name.param,"p.value"]
 

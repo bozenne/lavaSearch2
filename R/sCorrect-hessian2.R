@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (15:07) 
+## Last-Updated: Jan 12 2022 (12:18) 
 ##           By: Brice Ozenne
-##     Update #: 126
+##     Update #: 136
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -56,11 +56,12 @@
 #' @concept small sample inference
 #' @export
 `hessian2` <-
-  function(object, cluster, as.lava, ssc, ...) UseMethod("hessian2")
+  function(object, indiv, cluster, as.lava, ...) UseMethod("hessian2")
 
 ## * hessian2.lvmfit
 #' @rdname hessian2
-hessian2.lvmfit <- function(object, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
+#' @export
+hessian2.lvmfit <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 
     return(hessian2(estimate2(object, ssc = ssc, hessian = TRUE, ...), cluster = cluster, as.lava = as.lava))
 
@@ -69,6 +70,7 @@ hessian2.lvmfit <- function(object, cluster = NULL, as.lava = TRUE, ssc = lava.o
 
 ## * hessian2.lvmfit2
 #' @rdname hessian2
+#' @export
 hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...){
     
     dots <- list(...)
@@ -129,11 +131,14 @@ hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TR
     }
 
     ## ** export
+    hessian <- hessian[names(object$sCorrect$skeleton$originalLink2param),
+                       names(object$sCorrect$skeleton$originalLink2param),
+                      ,
+                       drop=FALSE]
     if(as.lava == FALSE){
-        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),,drop=FALSE]
-        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
-                              as.character(object$sCorrect$skeleton$originalLink2param),
-                              NULL)
+        dimnames(hessian) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                                  as.character(object$sCorrect$skeleton$originalLink2param),
+                                  NULL)
     }
     if(indiv==FALSE){
         hessian <- apply(hessian, 1:2, sum)

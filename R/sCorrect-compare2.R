@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (16:06) 
+## Last-Updated: Jan 12 2022 (11:45) 
 ##           By: Brice Ozenne
-##     Update #: 868
+##     Update #: 900
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -28,9 +28,7 @@
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] should the output be similar to the one return by \code{lava::compare}?
 #' @param F.test [logical] should a joint test be performed?
-#' @param conf.level [numeric 0-1] the confidence level of the confidence interval.
-#' @param transform [function] function to backtransform the estimates and the associated confidence intervals
-#' (e.g. \code{exp} if the outcomes have been log-transformed).
+#' @param conf.level [numeric 0-1] level of the confidence intervals.
 #' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
 #' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
 #' Only relevant when using a \code{lvmfit} object. 
@@ -86,6 +84,7 @@
 
 ## * compare2.lvmfit
 #' @rdname compare2
+#' @export
 compare2.lvmfit <- function(object, linfct = NULL, rhs = NULL,
                             robust = FALSE, cluster = NULL,
                             as.lava = TRUE, F.test = TRUE,
@@ -100,14 +99,15 @@ compare2.lvmfit <- function(object, linfct = NULL, rhs = NULL,
 
 ## * compare2.lvmfit2
 #' @rdname compare2
+#' @export
 compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
                               as.lava = TRUE, F.test = TRUE,
                               conf.level = 0.95, ...){
     
     dots <- list(...)
-    if(length(dots)>0){
-        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
+    if(length(dots[names(dots) %in% "sep" == FALSE])>0){
+        warning("Argument(s) \'",paste(setdiff(names(dots),"sep"),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
     if(is.null(linfct)){ ## necessary for lava::gof to work
         return(lava::compare(object))
@@ -144,7 +144,13 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
 
     ## 3-order: derivative of the variance covariance matrices
     if(df == "satterthwaite"){
-        dVcov.param <- object$sCorrect$dVcov.param
+        dVcov.param <- object$sCorrect$dVcov.param[names(object$sCorrect$skeleton$originalLink2param),
+                                                   names(object$sCorrect$skeleton$originalLink2param),
+                                                   names(object$sCorrect$skeleton$originalLink2param),
+                                                   drop=FALSE]
+        dimnames(dVcov.param) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                                      as.character(object$sCorrect$skeleton$originalLink2param),
+                                      as.character(object$sCorrect$skeleton$originalLink2param))
         keep.param <- dimnames(dVcov.param)[[3]]
 
         if(robust && (lava.options()$df.robust != 1)){
@@ -159,14 +165,23 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                                               name.param = name.param)
                                               
             }else{
-                dRvcov.param <- object$sCorrect$dRvcov.param
+                dRvcov.param <- object$sCorrect$dRvcov.param[names(object$sCorrect$skeleton$originalLink2param),
+                                                             names(object$sCorrect$skeleton$originalLink2param),
+                                                             names(object$sCorrect$skeleton$originalLink2param),
+                                                             drop=FALSE]
+                dimnames(dRvcov.param) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                                               as.character(object$sCorrect$skeleton$originalLink2param),
+                                               as.character(object$sCorrect$skeleton$originalLink2param))
             }
         }
     }
 
     ## ** normalize linear hypotheses
     if(!is.matrix(linfct)){
-        res.C <- createContrast(object, linfct = linfct, rowname.rhs = FALSE)
+        res.C <- createContrast(object, linfct = linfct, rowname.rhs = FALSE, ...)
+        if(any(colnames(res.C$contrast)!=name.param) && all(colnames(res.C$contrast) == names(object$sCorrect$skeleton$originalLink2param))){
+            colnames(res.C$contrast) <- as.character(object$sCorrect$skeleton$originalLink2param)
+        }
         linfct <- res.C$contrast
         if(is.null(rhs)){
             rhs <- res.C$null
@@ -175,7 +190,7 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                 stop("Incorrect argument \'rhs\' \n",
                      "Must have length ",length(res.C$null),"\n")
             }
-            rhs <- setNames(rhs, names(res.C$null))
+            rhs <- stats::setNames(rhs, names(res.C$null))
         }
         name.hypoShort <- rownames(linfct)
         name.hypo <- paste0(name.hypoShort," = ",rhs)
@@ -202,13 +217,13 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
             stop("Argument \'linfct\' is singular \n")
         }
         if(is.null(rhs)){
-            rhs <- setNames(rep(0,NROW(linfct)),rownames(linfct))
+            rhs <- stats::setNames(rep(0,NROW(linfct)),rownames(linfct))
         }else if(length(rhs)!=NROW(linfct)){
             stop("The length of argument \'rhs\' must match the number of rows of argument \'linfct' \n")
         }
         if(is.null(rownames(linfct))){
             rownames(linfct) <- .contrast2name(linfct, null = rhs)
-            rhs <- setNames(rhs, rownames(linfct))
+            rhs <- stats::setNames(rhs, rownames(linfct))
         }
         name.hypo <- rownames(linfct)
         name.hypoShort <- sapply(strsplit(name.hypo, split = " = ", fixed = TRUE),"[[",1)
@@ -246,7 +261,7 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
     }else{
         df.Wald <- rep(Inf, n.hypo)
     }
-    
+
     ## ** Multivariate Wald test
     error <- NULL
     if(F.test){
@@ -305,8 +320,8 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
         df.estimate[,level.sup.label] <- df.estimate[,"Estimate"] + stats::qt(level.sup, df = df.estimate[,"df"]) * df.estimate[,"Std.Err"]
 
         dimnames(C.vcov.C) <- list(name.hypoShort,name.hypoShort)
-        out <- list(statistic = setNames(F.res["statistic"],"F-statistic"),
-                    parameter = setNames(round(F.res["df"],2), paste0("df1 = ",n.hypo,", df2")), ## NOTE: cannot not be change to coefficients because of lava
+        out <- list(statistic = stats::setNames(F.res["statistic"],"F-statistic"),
+                    parameter = stats::setNames(round(F.res["df"],2), paste0("df1 = ",n.hypo,", df2")), ## NOTE: cannot not be change to coefficients because of lava
                     p.value = F.res["p.value"],
                     method = c("- Wald test -", "", "Null Hypothesis:", name.hypo),
                     estimate = df.estimate,
@@ -391,7 +406,7 @@ dfSigma <- function(contrast, score, vcov, rvcov, dVcov, dRvcov, keep.param, typ
         
         K <- NROW(score)
         ls.Pi <- lapply(1:K, function(iC){as.double(tcrossprod(score[iC,]))})
-        M.Pi <- do.call(rbind,Pi)
+        M.Pi <- do.call(rbind,ls.Pi)
         M.Pi_center <- sweep(M.Pi, MARGIN = 2, STATS = colMeans(M.Pi), FUN = "-")
         ## M.Pi_center - M.Pi
         T <- t(M.Pi_center) %*% M.Pi_center / (K*(K-1))
@@ -405,7 +420,7 @@ dfSigma <- function(contrast, score, vcov, rvcov, dVcov, dRvcov, keep.param, typ
         
     }
     
-    return(setNames(df, rownames(contrast)))
+    return(stats::setNames(df, rownames(contrast)))
 }
 
 

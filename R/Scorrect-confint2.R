@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: Jan  4 2022 (10:59) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (15:00) 
+## Last-Updated: Jan 12 2022 (11:35) 
 ##           By: Brice Ozenne
-##     Update #: 67
+##     Update #: 99
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -63,63 +63,46 @@
 #' confint2(e.lvm, as.lava = FALSE)
 
 ## * confint2.lvmfit
-#' @rdname confint2
+#' @export
 confint2.lvmfit <- function(object, robust = FALSE, cluster = NULL,
-                            as.lava = TRUE, conf.level = 0.95, transform = NULL,
+                            transform = NULL, as.lava = TRUE, conf.level = 0.95, 
                             ssc = lava.options()$ssc, df = lava.options()$df, ...){
 
-    return(confint(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), robust = robust, cluster = cluster, as.lava = as.lava, conf.level = conf.level, transform = transform))
+    return(confint(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...),
+                   robust = robust, cluster = cluster, as.lava = as.lava, conf.level = conf.level,
+                   transform = transform))
 
 }
 
 ## * confint2.lvmfit2
-#' @rdname confint2
+#' @export
 confint2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL,
-                            as.lava = TRUE, conf.level = 0.95, transform = NULL, ...){
+                            transform = NULL, as.lava = TRUE, conf.level = 0.95,  ...){
 
-    dots <- list(...)
-    if(length(dots)>0){
-        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
-    }
-
-    ## ** new model parameters
-    param <- coef(object, as.lava = as.lava)
-    name.param <- names(param)
-    n.param <- length(name.param)
-
-    ## ** new Wald test
-    type <- object$sCorrect$skeleton$type
-    type <- type[!is.na(type$originalLink),]
-    null <- setNames(rep(0, n.param),name.param)
-    if(any(type$detail %in% c("Sigma_var","Psi_var"))){
-        param.var <- type[type$detail %in% c("Sigma_var","Psi_var"),"param"]
-        null[param.var] <- NA
-    }
-    table.all <- compare2(object,
-                          linfct = name.param,
-                          rhs = null,
-                          robust = robust,
-                          cluster = NULL,
-                          F.test = FALSE,
-                          as.lava = FALSE)
-    tableS.all <- summary(table.all, test = multcomp::adjusted("none"), transform = transform, conf.level = conf.level)$table2
-    rownames(tableS.all) <- name.param
+    out <- model.tables(object, robust = robust, cluster = cluster, transform = transform,
+                        as.lava = as.lava, conf.level = conf.level, ...)[,c("lower","upper"),drop=FALSE]
     
     if(as.lava){
-        out <- tableS.all[names(object$sCorrect$skeleton$originalLink2param),c("lower","upper"),drop=FALSE]
-        rownames(out) <- as.character(object$sCorrect$skeleton$originalLink2param)
         colnames(out) <- c(paste0(100*(1-conf.level)/2," %"),paste0(100*(1-(1-conf.level)/2)," %"))
-        repturn(out)
-    }else{
-        return(tableS.all)
     }
+    return(out)
 
 }
 
-## *  confint.lvmfit
-#' @rdname confint2
+## *  confint.lvmfit2
 #' @export
-confint.lvmfit2 <- confint2.lvmfit2
+confint.lvmfit2 <- function(object, parm = NULL, level = NULL, ...){ ## necessary as confint must contain arguments parm and level
+
+    if(!is.null(parm)){
+        warning("Argument \'parm\' is ignored. \n")
+    }
+    if(!is.null(level)){
+        warning("Argument \'level\' is ignored. \n")
+    }
+    
+    return(confint2(object, ...))
+
+}
 
 ##----------------------------------------------------------------------
 ### Scorrect-confint2.R ends here

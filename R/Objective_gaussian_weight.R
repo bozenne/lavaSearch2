@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 17 2020 (16:29) 
 ## Version: 
-## Last-Updated: feb 21 2020 (09:48) 
+## Last-Updated: Jan 11 2022 (18:33) 
 ##           By: Brice Ozenne
-##     Update #: 89
+##     Update #: 135
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -18,6 +18,18 @@
 ##' @title Estimate LVM With Weights
 ##' @description Estimate LVM with weights.
 ##' @name gaussian_weight
+##'
+##' @param x,object A latent variable model
+##' @param data dataset
+##' @param estimator name of the estimator to be used
+##' @param type must be "cond"
+##' @param p parameter value
+##' @param weights weight associated to each iid replicate.
+##' @param S empirical variance-covariance matrix between variable
+##' @param n number of iid replicates
+##' @param mu empirical mean
+##' @param debug,reindex,mean,constrain,indiv additional arguments not used
+##' @param ... passed to lower level functions.
 ##' 
 ##' @examples
 ##' #### linear regression with weights ####
@@ -35,41 +47,40 @@
 ##' ## using lvm
 ##' m <- lvm(Y~X)
 ##' e.GS <- estimate(m, df)
+##' ## e.lava.test <- estimate(m, df[df$missing==0,], weights = df[df$missing==0,"weights"])
+##' ## warnings!!
 ##' e.test <- estimate(m, data = df[df$missing==0,],
 ##'                    weights = df[df$missing==0,"weights"],
 ##'                    estimator = "gaussian_weight")
 ##' 
 
 ## * gaussian_weight.estimate.hook
-##' @name gaussian_weight
+##' @rdname gaussian_weight
 ##' @export
 gaussian_weight.estimate.hook <- function(x, data, estimator, ...){
     dots <- list(...)
     if(identical(estimator,"gaussian_weight")){
         xe <- suppressWarnings(estimate(x, data = data, control = list(iter.max = 0))) ## initialize coefficients
-        x$sCorrect <- conditionalMoment(xe, data = data, param = initCoef,
-                                        initialize = TRUE, first.order = TRUE, second.order = FALSE, usefit = FALSE)
+        x$sCorrect <- moments2(xe, data = data, param = NULL, ## initCoef,
+                               initialize = TRUE, usefit = FALSE, score = TRUE, information = TRUE, hessian = FALSE, vcov = TRUE, residuals = TRUE, leverage = FALSE, dVcov = FALSE, dVcov.robust = FALSE)
     }
     return( c(list(x=x, data=data, estimator = estimator),dots) )
 }
 
-##' @name gaussian_weight
 ##' @export
+##' @rdname gaussian_weight
 gaussian_weight_method.lvm <- "nlminb2"
 
 ## * gaussian_weight_logLik.lvm
-##' @name gaussian_weight
+##' @rdname gaussian_weight
 ##' @export
-`gaussian_weight_logLik.lvm` <- function(object,type="cond",p,data,weights,...) {
+`gaussian_weight_logLik.lvm` <- function(object, type="cond", p, data, weights,...) {
     ## ** compute mu and Omega
     if(type!="cond"){
         stop("Not implemented for other types than \"cond\"\n ")
     }
-    cM <- conditionalMoment(object,
-                            initialize = FALSE, first.order = FALSE, second.order = FALSE,
-                            usefit = TRUE, residuals = TRUE, leverage = FALSE,
-                            param = p,
-                            data = data)
+    cM <- moments2(object, param = p, data = data, weights = weights,
+                   initialize = FALSE, usefit = TRUE, score = FALSE, information = FALSE, hessian = FALSE, vcov = FALSE, residuals = TRUE, leverage = FALSE, dVcov = FALSE, dVcov.robust = FALSE)
     
     ## ** prepare
     name.pattern <- cM$missing$name.pattern
@@ -98,7 +109,7 @@ gaussian_weight_method.lvm <- "nlminb2"
     return(logLik)
 }
 
-##' @name gaussian_weight
+##' @rdname gaussian_weight
 ##' @export
 `gaussian_weight_objective.lvm` <- function(x, ...) {
     logLik <- gaussian_weight_logLik.lvm(object = x,...)
@@ -106,7 +117,7 @@ gaussian_weight_method.lvm <- "nlminb2"
 }
 
 ## * gaussian_weight_score.lvm
-##' @name gaussian_weight
+##' @rdname gaussian_weight
 ##' @export
 gaussian_weight_score.lvm <- function(x, data, p, S, n, mu=NULL, weights=NULL, debug=FALSE, reindex=FALSE, mean=TRUE, constrain=TRUE, indiv=FALSE,...) {
 
@@ -121,67 +132,35 @@ gaussian_weight_score.lvm <- function(x, data, p, S, n, mu=NULL, weights=NULL, d
     ## }
     
     ## ** compute moments
-    cM <- conditionalMoment(x,
-                            initialize = FALSE, first.order = TRUE, second.order = FALSE,
-                            usefit = TRUE, residuals = TRUE, leverage = FALSE,
-                            param = p,
-                            data = data)
-
-    ## ** compute score
-    score <- .score2(dmu = cM$dmoment$dmu,
-                     dOmega = cM$dmoment$dOmega,                    
-                     epsilon = cM$residuals,
-                     OmegaM1 = cM$moment$OmegaM1.missing.pattern,
-                     missing.pattern = cM$missing$pattern,
-                     unique.pattern = cM$missing$unique.pattern,
-                     name.pattern = cM$missing$name.pattern,
-                     name.param = cM$skeleton$Uparam,
-                     name.meanparam = cM$skeleton$Uparam.mean,
-                     name.varparam = cM$skeleton$Uparam.var,
-                     weights = weights[,1],
-                     n.cluster = cM$cluster$n.cluster)
+    cM <- moments2(x, param = p, data = data, weights = weights,
+                   initialize = FALSE, usefit = TRUE, score = TRUE, information = FALSE, hessian = FALSE, vcov = FALSE, residuals = FALSE, leverage = FALSE, dVcov = FALSE, dVcov.robust = FALSE)
 
     ## ** export
     if(indiv){
-        return(score)
+        return(cM$score)
     }else{
-        return(colSums(score))
+        return(colSums(cM$score))
     }
 }
 
-##' @name gaussian_weight
+## * gaussian_weight_gradient.lvm
+##' @rdname gaussian_weight
 ##' @export
 gaussian_weight_gradient.lvm <-  function(...) {
     return(-gaussian_weight_score.lvm(...))
 }
 
 ## * gaussian_weight_hessian.lvm
-##' @name gaussian_weight
+##' @rdname gaussian_weight
 ##' @export
-`gaussian_weight_hessian.lvm` <- function(x,p,n, weights=NULL,...) {
+`gaussian_weight_hessian.lvm` <- function(x, p, n, weights=NULL,...) {
 
     ## ** compute moments
-    cM <- conditionalMoment(x,
-                            initialize = FALSE, first.order = TRUE, second.order = FALSE,
-                            usefit = TRUE, residuals = FALSE, leverage = TRUE,
-                            param = p,
-                            data = data)
-    ## ** compute hessian
-    info <- .information2(dmu = cM$dmoment$dmu,
-                         dOmega = cM$dmoment$dOmega,
-                         OmegaM1 = cM$moment$OmegaM1.missing.pattern,
-                         missing.pattern = cM$missing$pattern,
-                         unique.pattern = cM$missing$unique.pattern,
-                         name.pattern = cM$missing$name.pattern,
-                         grid.mean = cM$skeleton$grid.dmoment$mean, 
-                         grid.var = cM$skeleton$grid.dmoment$var, 
-                         name.param = cM$skeleton$Uparam,
-                         leverage = cM$leverage,
-                         weights = weights[,1],
-                         n.cluster = cM$cluster$n.cluster)
+    cM <- moments2(x, param = p, weights = weights,
+                   initialize = FALSE, usefit = TRUE, score = FALSE, information = TRUE, hessian = FALSE, vcov = FALSE, residuals = FALSE, leverage = FALSE, dVcov = FALSE, dVcov.robust = FALSE)
 
     ## ** export
-    return(info)
+    return(cM$information)
 }
 
 ######################################################################

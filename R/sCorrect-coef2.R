@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: Jan  6 2022 (15:54) 
+## Last-Updated: Jan 12 2022 (11:55) 
 ##           By: Brice Ozenne
-##     Update #: 274
+##     Update #: 304
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -58,7 +58,7 @@
 #' coef2(e.lvm, as.lava = FALSE)
 
 ## * coef2.lvmfit
-#' @rdname coef2
+#' @export
 coef2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 
     return(coef(estimate2(object, ssc = ssc, ...), as.lava = as.lava))
@@ -66,9 +66,8 @@ coef2.lvmfit <- function(object, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 }
 
 ## * coef2.lvmfit2
-#' @rdname coef2
+#' @export
 coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
-
     dots <- list(...)
     if(any(names(dots) %in% c("type","symbol","labels") == FALSE)){
         if(length(dots)>0){
@@ -82,22 +81,20 @@ coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
         object0 <- object
         class(object0) <- setdiff(class(object), "lvmfit2")
         out <- do.call(stats::coef, args = c(list(object0),dots))
-        ## get the full name from lava
-        dots$symbol <- NULL
-        out.names <- rownames(do.call(stats::coef, args = c(list(object0),dots)))
-        ## extract value from lavaSearch2
-        res <- confint(object, as.lava = FALSE)[names(object$sCorrect$skeleton$originalLink2param),]
-        rownames(res) <- as.character(object$sCorrect$skeleton$originalLink2param)
 
-        out[,"Estimate"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"estimate"]
-        out[,"Std. Error"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"se"]
-        out[,"Z-value"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"statistic"]
-        colnames(out)[colnames(out)=="Z-value"] <- "t-value"
-        out[,"P-value"] <- res[match(out.names,object$sCorrect$skeleton$originalLink2param),"p.value"]
+        res <- model.tables(object, as.lava = TRUE)
+        ## rownames(res) <- as.character(object$sCorrect$skeleton$originalLink2param)
+        out[,"Estimate"] <- res[rownames(out),"estimate"]
+        out[,"Std. Error"] <- res[rownames(out),"se"]
+        out[,"Z-value"] <- res[rownames(out),"statistic"]
+        if(object$sCorrect$df=="satterthwaite"){ 
+            colnames(out)[colnames(out)=="Z-value"] <- "t-value"
+        }
+        out[,"P-value"] <- res[rownames(out),"p.value"]
+
     }else{        
-        out <- object$sCorrect$param
-        if(as.lava){
-            out <- out[names(object$sCorrect$skeleton$originalLink2param)]
+        out <- object$sCorrect$param[names(object$sCorrect$skeleton$originalLink2param)]
+        if(as.lava==FALSE){
             names(out) <- as.character(object$sCorrect$skeleton$originalLink2param)
         }
     }
@@ -105,7 +102,6 @@ coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
 }
 
 ## * coef.lvmfit2
-#' @rdname coef2
 #' @export
 coef.lvmfit2 <- coef2.lvmfit2
 

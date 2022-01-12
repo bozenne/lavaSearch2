@@ -2,47 +2,33 @@
 % Please edit documentation in R/sCorrect-coef2.R
 \name{coef2}
 \alias{coef2}
-\alias{coef2.lm}
-\alias{coef2.gls}
-\alias{coef2.lme}
 \alias{coef2.lvmfit}
-\alias{coef2.sCorrect}
-\title{Export Mean and Variance Coefficients}
+\title{Model Coefficients With Small Sample Correction}
 \usage{
-coef2(object, as.lava)
+coef2(object, as.lava, ...)
 
-\method{coef2}{lm}(object, as.lava = TRUE)
-
-\method{coef2}{gls}(object, as.lava = TRUE)
-
-\method{coef2}{lme}(object, as.lava = TRUE)
-
-\method{coef2}{lvmfit}(object, as.lava = TRUE)
-
-\method{coef2}{sCorrect}(object, as.lava = TRUE)
+\method{coef2}{lvmfit}(object, as.lava = TRUE, ssc = lava.options()$ssc, ...)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, \code{lvmfit} object.}
+\item{object}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
-\item{as.lava}{[logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-Only relevant for \code{lvmfit} objects.}
+\item{as.lava}{[logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.}
+
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
 }
 \value{
-A numeric vector named with the names of the coefficient with three attributes:
-\itemize{
-\item mean.coef: the name of the mean coefficients.
-\item var.coef: the name of the variance coefficients.
-\item cor.coef: the name of the correlation coefficients.
-}
+A numeric vector named with the names of the coefficients.
 }
 \description{
-Export mean and variance coefficients from a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit}.
-Similar to \code{coef} but extract all model coefficients, including variance, correlation, and random effects,
-possibly after application of the small sample correction.
+Extract the coefficients from a latent variable model.
+Similar to \code{lava::compare} but with small sample correction.
 }
 \details{
-For \code{gls} and \code{lme} models, the variance coefficients that are exported are the residual variance of each outcome. 
-This is \eqn{\sigma^2} for the first one and \eqn{k^2 \sigma^2} for the remaining ones.
+When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the model coefficients.
 }
 \examples{
 #### simulate data ####
@@ -52,30 +38,14 @@ set.seed(10)
 dL <- sampleRepeated(10, format = "long")
 dL$time2 <- paste0("visit",dL$time)
 
-#### linear model ####
-e.lm <- lm(Y1~X1, data = dW)
-coef2(e.lm)
-
-#### gls model ####
-e.gls1 <- gls(Y1~X1, data = dW)
-coef2(e.gls1)
-
-e.gls5 <- gls(Y~X1, weight = varIdent(form=~1|time2),
-              correlation = corSymm(form=~time|id), data = dL)
-coef2(e.gls5)
-
-#### lme model ####
-e.lme1 <- lme(Y~X1, random = ~1|id, data = dL)
-coef2(e.lme1)
-
-e.lme2 <- lme(Y~X1, random = ~1|id, data = dL,
-              weight = varIdent(form=~1|time2))
-coef2(e.lme2)
-
 #### latent variable models ####
 e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
-coef2(e.lvm)
 coef(e.lvm)
+coef2(e.lvm)
+coef2(e.lvm, as.lava = FALSE)
+}
+\seealso{
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
 \concept{extractor}
 \keyword{smallSampleCorrection}

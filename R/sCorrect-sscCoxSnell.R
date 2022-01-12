@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: aug  2 2019 (10:20) 
 ## Version: 
-## Last-Updated: jan 31 2020 (09:50) 
+## Last-Updated: Jan 11 2022 (17:36) 
 ##           By: Brice Ozenne
-##     Update #: 174
+##     Update #: 177
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,8 +21,8 @@
 }
 
 ## * .sscCoxSnell
-.sscCoxSnell <- function(object){
-    param <- object$sCorrect$ssc$param0
+.sscCoxSnell <- function(object, ssc){
+    param <- ssc$param0
     name.param <- names(param)
     
     ## ** compute JJK
@@ -41,7 +41,7 @@
     ## names(dd) <- c("Y",paste0("X",1:9))
     ## e.lm <- lm(Y ~ -1+X1+X2+X3+X4+X5+X6+X7+X8+X9, data = dd)
     
-    e.lm <- lm.fit(y = Y, x = X)
+    e.lm <- stats::lm.fit(y = Y, x = X)
     newparam <- param - e.lm$coefficient
     ## print(e.lm$coefficient)
     

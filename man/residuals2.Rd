@@ -2,15 +2,21 @@
 % Please edit documentation in R/sCorrect-residuals2.R
 \name{residuals2}
 \alias{residuals2}
-\alias{residuals2.sCorrect}
-\title{Extract Residuals After Small Sample Correction.}
+\alias{residuals2.lvmfit}
+\title{Residuals With Small Sample Correction.}
 \usage{
-residuals2(object, type, format)
+residuals2(object, type, format, ssc, ...)
 
-\method{residuals2}{sCorrect}(object, type = "response", format = "wide")
+\method{residuals2}{lvmfit}(
+  object,
+  type = "response",
+  format = "wide",
+  ssc = lava.options()$ssc,
+  ...
+)
 }
 \arguments{
-\item{object}{a \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} object.}
+\item{object}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
 \item{type}{[character] the type of residual to extract:
 \code{"response"} for raw residuals,
@@ -19,17 +25,23 @@ residuals2(object, type, format)
 
 \item{format}{[character] Use \code{"wide"} to return the residuals in the wide format (one row relative to each sample).
 Otherwise use \code{"long"} to return the residuals in the long format.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
+
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
 }
 \value{
 a matrix containing the residuals relative to each sample (in rows)
 and each endogenous variable (in column).
 }
 \description{
-Extract residuals from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-Similar to \code{residuals} but with small sample correction.
+Extract residuals from a latent variable model.
+Similar to \code{stats::residuals} but with small sample correction.
 }
 \details{
-If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the residuals. \cr
+When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the residuals.
 
 The raw residuals are defined by  observation minus the fitted value:
 \deqn{
@@ -45,52 +57,27 @@ The normalized residuals multiply the raw residuals by the inverse of the square
 }
 }
 \examples{
+#### simulate data ####
 set.seed(10)
 n <- 101
 
-#### linear regression ####
 Y1 <- rnorm(n, mean = 0)
 Y2 <- rnorm(n, mean = 0.3)
 Id <- findInterval(runif(n), seq(0.1,1,0.1))
 data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
            data.frame(Y=Y2,G="2",Id = Id)
            )
-m.lm <- lm(Y ~ G, data = data.df)
-residuals2(m.lm)
-
-#### mixed models ####
-library(nlme)
-m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = data.df)
-coef2(m.gls)
-m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
-coef2(m.lme)
 
 #### latent variable models ####
 library(lava)
 e.lvm <- estimate(lvm(Y ~ G), data = data.df)
-coef2(e.lvm)
-
-## simulate data
-set.seed(10)
-m <- lvm(Y1~eta,Y2~eta,Y3~eta)
-latent(m) <- ~eta
-d <- lava::sim(m,20, latent = FALSE)
-
-## standard linear model
-e.lm <- lm(Y1~Y2, data = d)
-sCorrect(e.lm) <- TRUE
-
-sigma(e.lm)^2
-mean(residuals(e.lm)^2)
-mean(residuals2(e.lm)^2)
-
-## latent variable model
-e.lvm <- estimate(m, data = d)
-sCorrect(e.lvm) <- TRUE
-mean(residuals2(e.lvm)^2)
+residuals(e.lvm)
+residuals2(e.lvm)
+residuals(e.lvm) - residuals2(e.lvm)
 
 }
 \seealso{
-\code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
-\concept{small sample inference}
+\concept{extractor}
+\keyword{smallSampleCorrection}

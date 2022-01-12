@@ -2,24 +2,50 @@
 % Please edit documentation in R/sCorrect-compare2.R
 \name{compare2}
 \alias{compare2}
-\alias{compare2.lm}
-\alias{compare2.gls}
-\alias{compare2.lme}
 \alias{compare2.lvmfit}
-\alias{compare2.sCorrect}
-\title{Test Linear Hypotheses with small sample correction}
+\alias{compare2.lvmfit2}
+\alias{compare.lvmfit2}
+\title{Test Linear Hypotheses With Small Sample Correction}
 \usage{
-compare2(object, ...)
+compare2(
+  object,
+  linfct,
+  rhs,
+  robust,
+  cluster,
+  as.lava,
+  F.test,
+  conf.level,
+  ...
+)
 
-\method{compare2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{compare2}{lvmfit}(
+  object,
+  linfct = NULL,
+  rhs = NULL,
+  robust = FALSE,
+  cluster = NULL,
+  as.lava = TRUE,
+  F.test = TRUE,
+  conf.level = 0.95,
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  ...
+)
 
-\method{compare2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{compare2}{lvmfit2}(
+  object,
+  linfct = NULL,
+  rhs = NULL,
+  robust = FALSE,
+  cluster = NULL,
+  as.lava = TRUE,
+  F.test = TRUE,
+  conf.level = 0.95,
+  ...
+)
 
-\method{compare2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{compare2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{compare2}{sCorrect}(
+\method{compare}{lvmfit2}(
   object,
   linfct = NULL,
   rhs = NULL,
@@ -32,14 +58,7 @@ compare2(object, ...)
 )
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}
-
-\item{...}{[logical] arguments passed to lower level methods.}
-
-\item{ssc}{[logical] should the standard errors of the coefficients be corrected for small sample bias? Argument passed to \code{sCorrect}.}
-
-\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?
-Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distribution is used instead of a Student's t distribution when computing the p-values.}
+\item{object}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
 \item{linfct}{[matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.}
 
@@ -53,22 +72,28 @@ Otherwise the degree of freedoms are set to \code{Inf}, i.e. a normal distributi
 
 \item{F.test}{[logical] should a joint test be performed?}
 
-\item{conf.level}{[numeric 0-1] the confidence level of the confidence interval.}
+\item{conf.level}{[numeric 0-1] level of the confidence intervals.}
 
-\item{transform}{[function] function to backtransform the estimates and the associated confidence intervals
-(e.g. \code{exp} if the outcomes have been log-transformed).}
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
+
+\item{df}{[character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+Only relevant when using a \code{lvmfit} object.}
 }
 \value{
 If \code{as.lava=TRUE} an object of class \code{htest}.
 Otherwise a \code{data.frame} object.
 }
 \description{
-Test Linear Hypotheses using a multivariate Wald statistic from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-Similar to \code{lava::compare} but with small sample correction (if any).
+Test Linear Hypotheses using Wald statistics in a latent variable model.
+Similar to \code{lava::compare} but with small sample correction.
 }
 \details{
-The \code{par} argument or the arguments \code{contrast} and \code{rhs} (or equivalenty \code{rhs})
-specify the set of linear hypotheses to be tested. They can be written:
+The \code{linfct} argument and \code{rhs} specify the set of linear hypotheses to be tested. They can be written:
 \deqn{
   linfct * \theta = rhs
 }
@@ -90,40 +115,17 @@ categorical(mSim, labels = c("a","b","c")) <- ~X1
 transform(mSim, Id~Y) <- function(x){1:NROW(x)}
 df.data <- lava::sim(mSim, 1e2)
 
-#### with lm ####
-## direct use of compare2
-e.lm <- lm(Y~X1+X2, data = df.data)
-anova(e.lm)
-compare2(e.lm, par = c("X1b=0","X1c=0"))
-
-## or first compute the derivative of the information matrix
-sCorrect(e.lm) <- TRUE
-
-## and define the contrast matrix
-C <- createContrast(e.lm, linfct = c("X1b=0","X1c=0"), add.variance = TRUE)
-
-## run compare2
-compare2(e.lm, linfct = C$contrast, rhs = C$null)
-compare2(e.lm, linfct = C$contrast, rhs = C$null, robust = TRUE)
-
-#### with gls ####
-library(nlme)
-e.gls <- gls(Y~X1+X2, data = df.data, method = "ML")
-
-## first compute the derivative of the information matrix
-sCorrect(e.gls, cluster = 1:NROW(df.data)) <- TRUE
-
-compare2(e.gls, par = c("5*X1b+2*X2 = 0","(Intercept) = 0"))
-
 #### with lvm ####
 m <- lvm(Y~X1+X2)
 e.lvm <- estimate(m, df.data)
 
-compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"))
-compare2(e.lvm, par = c("-Y","Y~X1b+Y~X1c"), robust = TRUE)
+compare2(e.lvm, linfct = c("Y~X1b","Y~X1c","Y~X2"))
+compare2(e.lvm, linfct = c("Y~X1b","Y~X1c","Y~X2"), robust = TRUE)
+
 }
 \seealso{
 \code{\link{createContrast}} to create contrast matrices. \cr
-\code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
-\concept{small sample inference}
+\concept{inference}
+\keyword{smallSampleCorrection}

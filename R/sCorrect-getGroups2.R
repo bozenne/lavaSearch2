@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: Jan  5 2022 (09:50) 
+## Last-Updated: Jan 11 2022 (16:47) 
 ##           By: Brice Ozenne
-##     Update #: 155
+##     Update #: 161
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,12 +19,12 @@
 #' @title Reconstruct the Cluster variable
 #' @description Reconstruct the cluster variable.
 #' Similar to \code{nlme::getGroups}.
-#' @name getGroup2-internal
+#' @noRd
 #'
 #' @param object a \code{lvmfit} object.
 #' @param data dataset.
-#' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' Only required for \code{gls} models with no correlation argument.
+#' @param index.Omega  [list] for each cluster, the position of the observed endogenous variables (i.e. how to subset the residual variance-covariance matrix).
+#' @param endogenous [character vector] name of the endogenous variables.
 #' @param ... [internal] Only used by the generic method.
 #'  
 #' @return A list containing:
@@ -34,12 +34,6 @@
 #' \item n.cluster: the number of clusters.
 #' }
 #' 
-#' @concept extractor
-#' @keywords internal
-`.getGroups2` <-
-    function(object, data, index.Omega, endogenous) UseMethod(".getGroups2")
-
-## * Examples
 #' @examples
 #' #### simulate data ####
 #' set.seed(10)
@@ -51,9 +45,13 @@
 #' #### latent variable model ####
 #' e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
 #' .getGroups2(e.lvm, data = dW)
+#' 
+#' @concept extractor
+#' @keywords internal
+`.getGroups2` <-
+    function(object, data, index.Omega, endogenous) UseMethod(".getGroups2")
 
 ## * .getGroups2.lvm
-#' @rdname getGroups2-internal
 .getGroups2.lvm <- function(object, data = NULL, index.Omega = NULL, endogenous = NULL){
     if(is.null(data)){
         data <- extractData(object)
@@ -83,13 +81,12 @@
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,
                 index.Omega = index.Omega,
-                index2endogenous = setNames(as.list(Uindex.Omega),Uindex.Omega)
+                index2endogenous = stats::setNames(as.list(Uindex.Omega),Uindex.Omega)
                 ))
     
 }
 
 ## * .getGroups2.lvmfit
-#' @rdname getGroups2-internal
 .getGroups2.lvmfit <- .getGroups2.lvm
 
 

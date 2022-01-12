@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: Jan 10 2022 (15:03) 
+## last-updated: Jan 11 2022 (19:59) 
 ##           By: Brice Ozenne
-##     Update #: 1771
+##     Update #: 1837
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -50,14 +50,18 @@
 #' e <- estimate(m, d)
 #'
 #' ## basic pre-computation
-#' res1 <- conditionalMoment(e, data = d, initialize = TRUE,
-#'                          first.order = FALSE, second.order = FALSE, usefit = FALSE)
+#' res1 <- moments2(e, data = d, initialize = TRUE, usefit = FALSE,
+#'                 score = TRUE, information = TRUE, hessian = TRUE, vcov = TRUE,
+#'                 dVcov = TRUE, dVcov.robust = TRUE, residuals = TRUE, leverage = FALSE,
+#'                 derivative = "analytic")
 #' res1$skeleton$param$Sigma
 #' 
 #' ## full pre-computation
-#' res2 <- conditionalMoment(e, param = coef(e), data = d, initialize = TRUE,
-#'                          first.order = FALSE, second.order = FALSE, usefit = TRUE)
-#' res2$value$Sigma
+#' res2 <- moments2(e, param = coef(e), data = d, initialize = TRUE, usefit = TRUE,
+#'                 score = TRUE, information = TRUE, hessian = TRUE, vcov = TRUE,
+#'                 dVcov = TRUE, dVcov.robust = TRUE, residuals = TRUE, leverage = FALSE,
+#'                 derivative = "analytic")
+#' res2$moment$Omega
 #'
 #' @concept small sample inference
 #' @concept derivative of the score equation
@@ -65,14 +69,14 @@
 #' @keywords internal
 #' @export
 `moments2` <-
-    function(object, param, data, Omega, Psi,
+    function(object, param, data, weights, Omega, Psi,
              initialize, usefit,
              update.dmoment, update.d2moment, score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage, derivative) UseMethod("moments2")
 
 ## * moments2.lvm
-#' @rdname moments
+#' @rdname moments2
 #' @export
-moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = NULL,
+moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omega = NULL, Psi = NULL,
                          initialize, usefit,
                          update.dmoment = TRUE, update.d2moment = TRUE, score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage,
                          derivative){
@@ -83,8 +87,10 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
         stop("Initialization of the moments missing. \n",
              "Consider setting the argument \'initialize\' to TRUE \n")
     }
-    derivative <- match.arg(derivative, choices = c("analytic","numeric"))
-
+    if(!missing(derivative)){
+        derivative <- match.arg(derivative, choices = c("analytic","numeric"))
+    }
+    
     ## ** initialize
     if(is.null(hessian)){
         hessian <- (derivative == "analytic") && dVcov.robust
@@ -116,7 +122,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
             out$data <- extractData(object, design.matrix = FALSE, as.data.frame = TRUE,
                                     envir = parent.env(environment()), rm.na = TRUE)
         }else{
-            out$data <- data
+            out$data <- as.data.frame(data)
         }
         out$X <- as.matrix(out$data[,lava::manifest(object),drop=FALSE])
         out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
@@ -131,11 +137,11 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
         X.latent <- matrix(NA, nrow = NROW(out$X), ncol = length(out$latent),
                            dimnames = list(NULL, out$latent))
 
-        X.long <- melt(data.frame(XXindexXX = 1:NROW(out$X), out$X, X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
-                       id.vars = c("XXclusterXX","XXindexXX"),
-                       measure.vars = c(out$endogenous,out$latent),
-                       variable.name = "XXendogenousXX",
-                       value.name = "XXvalueXX")
+        X.long <- reshape2::melt(data.frame(XXindexXX = 1:NROW(out$X), out$X, X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
+                                 id.vars = c("XXclusterXX","XXindexXX"),
+                                 measure.vars = c(out$endogenous,out$latent),
+                                 variable.name = "XXendogenousXX",
+                                 value.name = "XXvalueXX")
         X.long <- cbind(X.long,out$X[X.long$XXindexXX,,drop=FALSE]) ## add all variable (endo and exo) in case some endo are regressors
 
         X.wide <- out$X[,out$endogenous,drop=FALSE]
@@ -195,17 +201,25 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
     if(usefit){
         if(is.null(param)){
             param.tempo <- stats::coef(object, type = 2, labels = 1)
-            out$param <- setNames(param.tempo[,"Estimate"],rownames(param.tempo))[out$skeleton$Uparam]
-            out$name.param <- setNames(out$skeleton$type[!is.na(out$skeleton$type$originalLink),"param"],
-                                       out$skeleton$type[!is.na(out$skeleton$type$originalLink),"originalLink"])
+            out$param <- stats::setNames(param.tempo[,"Estimate"],rownames(param.tempo))[out$skeleton$Uparam]
             ## out$name.param <- out$name.param[names(stats::coef(object))]
         }else{
-            if(any(names(param) %in% out$skeleton$Uparam == FALSE)){
-                stop("Incorrect name for the model parameters \n",
-                     "Consider using the argument \'label\' set to 1 when calling stats::coef on the LVM \n")
+            if(all(names(param) %in% out$skeleton$Uparam)){ ## using user-defined names
+                ## e.g. mu1 mu2 Y1~X1 Y2~X1 sigma
+                out$param[names(param)] <- param
+            }else if(all(names(param) %in% names(out$skeleton$originalLink2param))){ ## using original link
+                ## e.g. Y1 Y2 Y1~X1 Y2~X1 Y1~~Y1
+                out$param[out$skeleton$Uparam[match(names(param),names(out$skeleton$originalLink2param))]] <- param
+            }else{
+                stop("Could not find model parameter(s) corresponding to the name(s): \"",paste(setdiff(names(param),c(out$skeleton$Uparam,names(out$skeleton$Uparam))), collapse="\" \""),"\" \n")
             }
-            out$param <- param[out$skeleton$Uparam]
         }
+        if(is.null(weights)){
+            weights <- object$weights[,1]
+        }
+        
+        out$name.param <- stats::setNames(out$skeleton$type[!is.na(out$skeleton$type$lava),"param"],
+                                   out$skeleton$type[!is.na(out$skeleton$type$lava),"originalLink"])
 
         ## *** conditional moments
         out$moment <- updateMoment(skeleton = out$skeleton$param,
@@ -217,8 +231,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                    endogenous = out$endogenous,
                                    latent = out$latent,
                                    n.cluster = out$cluster$n.cluster)
-    
-        
+
         ## *** first order derivatives
         if(update.dmoment && first.order){
             out$dmoment <- updateDMoment(moment = out$moment,
@@ -236,7 +249,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
         
 
         ## *** update residuals
-        if(residuals){
+        if(residuals || score || hessian || leverage){
             if(!is.null(attr(Omega,"Omega.residuals"))){
                 OOmega <- attr(Omega,"Omega.residuals")
             }else{
@@ -264,7 +277,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                  name.meanparam = out$skeleton$Uparam.mean,
                                  name.varparam = out$skeleton$Uparam.var,
                                  n.cluster = out$cluster$n.cluster,
-                                 weights = out$weights)
+                                 weights = weights)
         }
 
         ## *** leverage
@@ -299,7 +312,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
         }
 
         ## *** information matrix
-        if(information){
+        if(information || vcov){
             out$information <- .information2(dmu = out$dmoment$dmu,
                                              dOmega = out$dmoment$dOmega,
                                              OmegaM1 = out$moment$OmegaM1.missing.pattern,
@@ -311,8 +324,9 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                              name.param = out$skeleton$Uparam,
                                              leverage = out$leverage,
                                              n.cluster = out$cluster$n.cluster,
-                                             weights = out$weights)
+                                             weights = weights)
         }
+
         if(vcov){
             out$vcov.param  <- .info2vcov(out$information, attr.info = FALSE)
         }
@@ -334,11 +348,11 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                      name.param = out$skeleton$Uparam,
                                      leverage = out$leverage,
                                      n.cluster = out$cluster$n.cluster,
-                                     weights = out$weights)
+                                     weights = weights)
         }
 
         ## *** dVcov.param (model based variance, analytic)
-        if((derivative == "analytic") && (dVcov || dVcov.robust)){
+        if((dVcov || dVcov.robust) && (derivative == "analytic")){
             out$dInformation <- .dInformation2(dmu = out$dmoment$dmu,
                                                dOmega = out$dmoment$dOmega,
                                                d2mu = out$d2moment$d2mu,
@@ -354,7 +368,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                                name.param = out$skeleton$Uparam,
                                                leverage = out$leverage,
                                                n.cluster = out$cluster$n.cluster,
-                                               weights = out$weights)
+                                               weights = weights)
 
             ## delta method
             out$dVcov.param <- .dVcov.param(vcov.param = out$vcov.param,
@@ -363,8 +377,8 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
                                             name.param = out$skeleton$Uparam)
         }
 
-    ## *** dRvcov.param  (robust variance, analytic)
-    if((derivative == "analytic") && dVcov.robust){
+        ## *** dRvcov.param  (robust variance, analytic)
+        if(dVcov.robust && (derivative == "analytic")){
 
         out$dRvcov.param <- .dRvcov.param(score = out$score,
                                           hessian = out$hessian,
@@ -376,7 +390,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
     }
 
     ## *** dVcov.param and dRvcov.param (numeric derivatives)
-    if(derivative == "numeric" && (dVcov || dVcov.robust)){
+    if((dVcov || dVcov.robust) && derivative == "numeric"){
         test.package <- try(requireNamespace("numDeriv"), silent = TRUE)
         if(inherits(test.package,"try-error")){
             stop("There is no package \'numDeriv\' \n",
@@ -393,14 +407,14 @@ moments2.lvm <- function(object, param = NULL, data = NULL, Omega = NULL, Psi = 
         n.cluster <- out$cluster$n.cluster
         object2 <- object
         object2$sCorrect <- out
-        
+
         ## *** hessian
         num.hessian <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "score", method = "Richardson")
 
         out$hessian <- aperm(array(num.hessian, dim = c(n.cluster,n.param,n.param),
                                                dimnames = list(NULL, name.param, name.param)), perm = 3:1)
 
-        ## ## *** dInformation
+        ## ## *** dInformation        
         num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "information", method = "Richardson")
 
         out$dInformation <- array(num.information, dim = c(n.param,n.param,n.param),
@@ -439,64 +453,16 @@ moments2.lvmfit <- moments2.lvm
             
     ## update moments and their derivatives (and also residuals! This makes a difference when computing the hessian)
     cM <- moments2(object, param = value,
-                   initialize = FALSE, first.order = TRUE, second.order = (type == "hessian"),
-                   usefit = TRUE, residuals = TRUE, leverage = FALSE)
-
-    ## compute information matrix
-    if(type %in% c("score","vcov.robust")){
-        ss <- .score2(dmu = cM$dmoment$dmu,
-                      dOmega = cM$dmoment$dOmega,
-                      epsilon = cM$residuals,
-                      OmegaM1 = cM$moment$OmegaM1.missing.pattern,
-                      missing.pattern = object$sCorrect$missing$pattern,
-                      unique.pattern = object$sCorrect$missing$unique.pattern,
-                      name.pattern = object$sCorrect$missing$name.pattern,
-                      name.param = object$sCorrect$skeleton$Uparam,
-                      name.meanparam = object$sCorrect$skeleton$Uparam.mean,
-                      name.varparam = object$sCorrect$skeleton$Uparam.var,
-                      n.cluster = object$sCorrect$cluster$n.cluster,
-                      weights = object$sCorrect$weights)
-    }
-    if(type=="hessian"){
-        hh <- .hessian2(dmu = cM$dmoment$dmu,
-                        dOmega = cM$dmoment$dOmega,
-                        d2mu = cM$d2moment$d2mu,
-                        d2Omega = cM$d2moment$d2Omega,
-                        epsilon = cM$residuals,
-                        OmegaM1 = cM$moment$OmegaM1.missing.pattern,
-                        missing.pattern = object$sCorrect$missing$pattern,
-                        unique.pattern = object$sCorrect$missing$unique.pattern,
-                        name.pattern = object$sCorrect$missing$name.pattern,
-                        grid.mean = object$sCorrect$skeleton$grid.dmoment$mean,
-                        grid.var = object$sCorrect$skeleton$grid.dmoment$var,
-                        grid.hybrid = object$sCorrect$skeleton$grid.dmoment$hybrid,
-                        name.param = object$sCorrect$skeleton$Uparam,
-                        leverage = object$sCorrect$leverage,
-                        n.cluster = object$sCorrect$cluster$n.cluster,
-                        weights = object$sCorrect$weights)
-    }
-    if(type %in% c("information","vcov.model","vcov.robust")){
-        ## print(object$sCorrect$cluster$n.cluster - colSums(object$sCorrect$leverage))
-        ii <- .information2(dmu = cM$dmoment$dmu,
-                            dOmega = cM$dmoment$dOmega,
-                            OmegaM1 = cM$moment$OmegaM1.missing.pattern,
-                            missing.pattern = object$sCorrect$missing$pattern,
-                            unique.pattern = object$sCorrect$missing$unique.pattern,
-                            name.pattern = object$sCorrect$missing$name.pattern,
-                            grid.mean = object$sCorrect$skeleton$grid.dmoment$mean,
-                            grid.var = object$sCorrect$skeleton$grid.dmoment$var,
-                            name.param = object$sCorrect$skeleton$Uparam,
-                            leverage = object$sCorrect$leverage,
-                            n.cluster = object$sCorrect$cluster$n.cluster,
-                            weights = object$sCorrect$weights)
-    }
+                   initialize = FALSE, usefit = TRUE,
+                   score = (type %in% c("score","vcov.robust")), information = (type == "information"), hessian = (type == "hessian"), vcov = type %in% c("vcov.model","vcov.robust"),
+                   dVcov = FALSE, dVcov.robust = FALSE, residuals = FALSE, leverage = FALSE, derivative = "analytic")
 
     return(switch(type,
-                  "score" = ss,
-                  "hessian" = hh,
-                  "information" = ii,
-                  "vcov.model" = solve(ii),
-                  "vcov.robust" = crossprod(ss %*% solve(ii)))
+                  "score" = cM$score,
+                  "hessian" = cM$hessian,
+                  "information" = cM$information,
+                  "vcov.model" = cM$vcov.param,
+                  "vcov.robust" = crossprod(cM$score %*% cM$vcov.param))
            )
 }
 

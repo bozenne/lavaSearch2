@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (14:02) 
+## Last-Updated: Jan 11 2022 (17:31) 
 ##           By: Brice Ozenne
-##     Update #: 212
+##     Update #: 217
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,11 +16,14 @@
 ### Code:
 
 ## * updateMoment
-#' @rdname updateMoment
 updateMoment <- function(skeleton, value, toUpdate,
                          name.pattern, unique.pattern,
                          param, Omega, endogenous, latent, n.cluster){
     if(lava.options()$debug){cat("updateMoment \n")}
+    ## remove attributes used by moments2
+    attr(Omega,"Omega.residuals") <- NULL
+    attr(Omega,"Omega.leverage") <- NULL
+    attr(Omega,"dOmega") <- NULL
 
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)
@@ -106,7 +109,7 @@ updateMoment <- function(skeleton, value, toUpdate,
     }
 
     if(!is.null(Omega)){
-        value$Omega <- Omega
+        value$Omega <- Omega        
         attr(value$Omega,"discrepancy") <- Omega-Omega.param
     }else{
         value$Omega <- Omega.param
@@ -124,7 +127,6 @@ updateMoment <- function(skeleton, value, toUpdate,
 }
 
 ## * updateDMoment
-#' @rdname updateMoment
 updateDMoment <- function(moment, skeleton, param){
     if(lava.options()$debug){cat("updateDMoment \n")}
 
@@ -198,7 +200,6 @@ updateDMoment <- function(moment, skeleton, param){
 
 
 ## * updateD2Moment
-#' @rdname updateD2Moment
 updateD2Moment <- function(moment, skeleton, param){
     if(lava.options()$debug){cat("updateD2Moment \n")}
 

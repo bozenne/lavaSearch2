@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (09:39) 
 ## Version: 
-## Last-Updated: nov 25 2019 (10:07) 
+## Last-Updated: Jan 11 2022 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 13
+##     Update #: 14
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,7 +25,7 @@ formula.reStruct <- function(x, ...){
     n.random <- length(x)
     group.random <- names(x)
     ls.formula <- lapply(1:n.random, function(iN){ ## iN <- names(x)[1]
-        as.formula(paste0(deparse(attr(x[[iN]],"formula")),"|", group.random[iN]))
+        stats::as.formula(paste0(deparse(attr(x[[iN]],"formula")),"|", group.random[iN]))
     })
     return(ls.formula)
 }

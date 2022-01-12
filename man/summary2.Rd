@@ -2,43 +2,61 @@
 % Please edit documentation in R/sCorrect-summary2.R
 \name{summary2}
 \alias{summary2}
-\alias{summary2.lm}
-\alias{summary2.gls}
-\alias{summary2.lme}
 \alias{summary2.lvmfit}
-\alias{summary2.sCorrect}
-\title{Summary After Small Sample Correction}
+\alias{summary2.lvmfit2}
+\alias{summary.lvmfit2}
+\title{Latent Variable Model Summary After Small Sample Correction}
 \usage{
-summary2(object, ...)
+summary2(object, robust, cluster, digit, ...)
 
-\method{summary2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{summary2}{lvmfit}(
+  object,
+  robust = FALSE,
+  cluster = NULL,
+  digit = max(5, getOption("digit")),
+  ssc = lava.options()$ssc,
+  df = lava.options()$df,
+  ...
+)
 
-\method{summary2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{summary2}{lvmfit2}(
+  object,
+  robust = FALSE,
+  cluster = NULL,
+  digit = max(5, getOption("digit")),
+  ...
+)
 
-\method{summary2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{summary2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{summary2}{sCorrect}(object, robust = FALSE, digit = max(3, getOption("digit")), ...)
+\method{summary}{lvmfit2}(
+  object,
+  robust = FALSE,
+  cluster = NULL,
+  digit = max(5, getOption("digit")),
+  ...
+)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme} or \code{lvm} object.}
+\item{object}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
-\item{...}{[logical] argument passed to lower level methods.}
+\item{robust}{[logical] should robust standard errors be used instead of the model based standard errors? Should be \code{TRUE} if argument cluster is not \code{NULL}.}
 
-\item{ssc}{[logical] should the standard errors of the coefficients be corrected for small sample bias?}
-
-\item{df}{[logical] should the degree of freedoms of the Wald statistic be computed using the Satterthwaite correction?}
-
-\item{robust}{[logical] should the robust standard errors be used instead of the model based standard errors?}
+\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
 \item{digit}{[integer > 0] the number of decimal places to use when displaying the summary.}
 
-\item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
+\item{...}{[logical] arguments passed to lower level methods.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
+
+\item{df}{[character] method used to estimate the degree of freedoms of the Wald statistic: Satterthwaite \code{"satterthwaite"}. 
+Otherwise (\code{"none"}/code{FALSE}/code{NA}) the degree of freedoms are set to \code{Inf}.
+Only relevant when using a \code{lvmfit} object.}
 }
 \description{
-Summary of the estimates, standard errors, and p-values based on Wald tests for \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-Similar to \code{summary} but with small sample correction (if any).
+Summarize a fitted latent variable model.
+Similar to \code{stats::summary} with small sample correction.
 }
 \details{
 \code{summary2} is the same as \code{summary}
@@ -51,35 +69,20 @@ using \code{sCorrect} and then call \code{summary2}.
 upper and lower limits of the confidence intervals, test statistics, and p-values.
 }
 \examples{
+#### simulate data ####
 m <- lvm(Y~X1+X2)
 set.seed(10)
 d <- lava::sim(m, 2e1)
 
-## Gold standard
-summary(lm(Y~X1+X2, d))$coef
-
-## gls models
-library(nlme)
-e.gls <- gls(Y~X1+X2, data = d, method = "ML")
-summary(e.gls)$tTable
-sCorrect(e.gls, cluster = 1:NROW(d)) <- FALSE ## no small sample correction
-summary2(e.gls)$tTable
-
-sCorrect(e.gls, cluster = 1:NROW(d)) <- TRUE ## small sample correction
-summary2(e.gls)$tTable
-
-## lvm models
+#### latent variable models ####
 e.lvm <- estimate(m, data = d)
 summary(e.lvm)$coef
 
-sCorrect(e.lvm) <- FALSE ## no small sample correction
-summary2(e.lvm)$coef
-
-sCorrect(e.lvm) <- TRUE ## small sample correction
-summary2(e.lvm)$coef
+summary2(e.lvm)
+summary2(e.lvm, ssc = "none")
 
 }
 \seealso{
-\code{\link{sCorrect}} for more detail about the small sample correction.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
 \concept{small sample inference}

@@ -37,7 +37,8 @@ skeletonDtheta2(object)
 Pre-compute quantities that are necessary to compute the score of a lvm model.
 }
 \details{
-When the use specify names for the coefficients (e.g. Y1[mu:sigma]) or uses constrains (Y1~beta*X1), \code{as.lava=FALSE} will use the names specified by the user (e.g. mu, sigma, beta) while \code{as.lava=TRUE} will use the name of the first link defining the coefficient.
+When the user specifies names for the coefficients (e.g. Y1[mu:sigma]) or uses constraints (Y1~beta*X1), \code{as.lava=FALSE} will use the names specified by the user (e.g. mu, sigma, beta)
+while \code{as.lava=TRUE} will use the name of the first link defining the coefficient.
 }
 \examples{
 \dontrun{

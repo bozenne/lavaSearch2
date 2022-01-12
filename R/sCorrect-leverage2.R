@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (13:41) 
+## Last-Updated: Jan 11 2022 (19:43) 
 ##           By: Brice Ozenne
-##     Update #: 166
+##     Update #: 171
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -52,7 +52,6 @@
 #'
 #' #### latent variable models ####
 #' e.lvm <- estimate(m, data = d)
-#' sCorrect(e.lvm) <- TRUE
 #' leverage2(e.lvm)
 #' 
 #' @concept estimator
@@ -64,6 +63,7 @@
 
 ## * leverage2.lvmfit
 #' @rdname leverage2
+#' @export
 leverage2.lvmfit <- function(object, format = "wide", ssc = lava.options()$ssc, ...){
 
     return(leverage2(estimate2(object, ssc = ssc, ...), format = format))
@@ -72,6 +72,7 @@ leverage2.lvmfit <- function(object, format = "wide", ssc = lava.options()$ssc, 
 
 ## * leverage2.lvmfit2
 #' @rdname leverage2
+#' @export
 leverage2.lvmfit2 <- function(object, format = "wide", ...){
 
     dots <- list(...)
@@ -95,8 +96,10 @@ leverage2.lvmfit2 <- function(object, format = "wide", ...){
                                               timevar = "endogenous",
                                               v.names = "leverage"))
         rownames(outL) <- NULL
+
+        
         outL$endogenous <- factor(outL$endogenous, levels = 1:n.endogenous, labels = endogenous)
-        reorder <- match(interaction(original.order$XXclusterXX,original.order$XXendogenousXX),
+        reorder <- match(interaction(object$sCorrect$old2new.order$XXclusterXX.old,object$sCorrect$old2new.order$XXendogenousXX.old),
                          interaction(outL$cluster,outL$endogenous))
         return(outL[reorder,])
     }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: Jan  5 2022 (12:47) 
+## Last-Updated: Jan 11 2022 (17:54) 
 ##           By: Brice Ozenne
-##     Update #: 20
+##     Update #: 25
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,6 +15,15 @@
 ## 
 ### Code:
 
+#' @title Apply Transformation to Summary Table
+#' @description Update summary table according to a transformation, e.g. log-transformtion.
+#' P-values are left unchanged but estimates, standard errors, and confidence intervals are updated.
+#'
+#' @param object A data.frame with columns estimate, se, lower, upper.
+#' @param transform the name of a transformation or a function.
+#' @param conf.level level of the confidence intervals.
+#'
+#' @return a data.frame
 #' @export
 transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
     if(is.null(transform)){

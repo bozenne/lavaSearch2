@@ -43,6 +43,29 @@ gaussian_weight_gradient.lvm(...)
 
 gaussian_weight_hessian.lvm(x, p, n, weights = NULL, ...)
 }
+\arguments{
+\item{x, object}{A latent variable model}
+
+\item{data}{dataset}
+
+\item{estimator}{name of the estimator to be used}
+
+\item{...}{passed to lower level functions.}
+
+\item{type}{must be "cond"}
+
+\item{p}{parameter value}
+
+\item{weights}{weight associated to each iid replicate.}
+
+\item{S}{empirical variance-covariance matrix between variable}
+
+\item{n}{number of iid replicates}
+
+\item{mu}{empirical mean}
+
+\item{debug, reindex, mean, constrain, indiv}{additional arguments not used}
+}
 \description{
 Estimate LVM with weights.
 }
@@ -62,6 +85,8 @@ e.lm.test <- lm(Y~X, data = df[df$missing==0,], weights = df[df$missing==0,"weig
 ## using lvm
 m <- lvm(Y~X)
 e.GS <- estimate(m, df)
+## e.lava.test <- estimate(m, df[df$missing==0,], weights = df[df$missing==0,"weights"])
+## warnings!!
 e.test <- estimate(m, data = df[df$missing==0,],
                    weights = df[df$missing==0,"weights"],
                    estimator = "gaussian_weight")

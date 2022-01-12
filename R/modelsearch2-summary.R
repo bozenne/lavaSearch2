@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: aug 30 2017 (10:46) 
 ## Version: 
-## last-updated: jun 27 2019 (14:21) 
+## last-updated: Jan 11 2022 (16:44) 
 ##           By: Brice Ozenne
-##     Update #: 115
+##     Update #: 116
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,7 +66,7 @@ summary.modelsearch2 <- function(object, print = TRUE, ...){
         cat(out$message.pre,sep="")
         print(out$table)
         cat(out$message.post,sep="")
-        if(any(na.omit(out$table[,"dp.Info"])<1)){
+        if(any(stats::na.omit(out$table[,"dp.Info"])<1)){
             cat("WARNING: some of the score tests could not be correctly computed, probably because extended models are not all identifiable\n",
                 "        consider using the argument \'link\' to specify only identifiable models \n")
         }

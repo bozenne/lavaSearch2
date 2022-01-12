@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:38) 
 ## Version: 
-## last-updated: Jan  3 2022 (12:38) 
+## last-updated: Jan 11 2022 (09:55) 
 ##           By: Brice Ozenne
-##     Update #: 870
+##     Update #: 882
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -126,7 +126,7 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
     n.intercept <- length(object$mean)
     if(n.intercept>0){
         ls.name$intercept <- names(object$mean)    
-    
+
         ls.Y$intercept <- ls.name$intercept
         ls.X$intercept <- rep(NA, n.intercept)    
         ls.type$intercept <- rep("intercept", n.intercept)
@@ -282,7 +282,7 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
     ## ** original link
     coef.lava <- coef(object, labels = 0)
     coef2.lava <- coef(object, labels = 1)
-
+    
     ## ** merge with lava
     name.coef <- names(coef.lava)
 
@@ -295,7 +295,7 @@ coefType.lvm <- function(object, as.lava = TRUE, data = NULL, ...){
     df.param[df.param$factitious,c("param","lava")] <- as.character(NA)
     df.param <- df.param[order(df.param$type,df.param$detail,df.param$name),,drop=FALSE]
     df.param$originalLink[is.na(df.param$lava)] <- NA
-    df.param$param[is.na(df.param$lava)] <- NA
+    ## df.param$param[is.na(df.param$lava)] <- NA
     rownames(df.param) <- NULL
 
     ## ** export

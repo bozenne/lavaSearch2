@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (15:00) 
+## Last-Updated: Jan 11 2022 (17:58) 
 ##           By: Brice Ozenne
-##     Update #: 356
+##     Update #: 366
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -27,7 +27,8 @@
 #' i.e. the effect of the right variable (B) on the left variable (A). 
 #' @param robust [logical] should robust standard errors be used instead of the model based standard errors? Should be \code{TRUE} if argument cluster is not \code{NULL}.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
-#' @param conf.level [numeric, 0-1] confidence level of the interval.
+#' @param conf.level [numeric, 0-1] level of the confidence intervals.
+#' @param from,to alternative to argument \code{linfct}. See \code{lava::effects}.
 #' @param ssc [character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
 #' correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
 #' Only relevant when using a \code{lvmfit} object. 
@@ -44,23 +45,24 @@
 #' @keywords smallSampleCorrection
 #' @export
 `effects2` <-
-  function(object, linfct, robust, cluster, conf.level, df, ssc, ...) UseMethod("effects2")
+  function(object, linfct, robust, cluster, conf.level, ...) UseMethod("effects2")
 
 ## * effects2 (examples)
 ## TODO
 
 ## * effects2.lvmfit
 #' @rdname effects2
-effects2.lvmfit <- function(object, linfct, to = NULL, from = NULL, robust = FALSE, cluster = NULL, conf.level = 0.95, df = lava.options()$df, ssc = lava.options()$ssc, ...){
+#' @export
+effects2.lvmfit <- function(object, linfct, robust = FALSE, cluster = NULL, conf.level = 0.95, to = NULL, from = NULL, df = lava.options()$df, ssc = lava.options()$ssc, ...){
 
     return(effects2(estimate2(object, ssc = ssc, df = df, dVcov.robust = robust, ...), linfct = linfct, to = to, from = from, robust = robust, cluster = cluster, conf.level = conf.level))
 
 }
 
 ## * effects2.lvmfit2
-#' @rdname effects2p
+#' @rdname effects2
 #' @export
-effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FALSE, cluster = NULL, conf.level = 0.95, ...){
+effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, conf.level = 0.95, to = NULL, from = NULL, ...){
 
     dots <- list(...)
     if(length(dots)>0){
@@ -126,7 +128,7 @@ effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FA
             
             for(iCoef in 1:iN.param){ ## iCoef <- 1
                 ## extract all paths for each coefficient
-                pathEffect[[iH]][[iCoef]] <- effects(object0, as.formula(iLHS.hypo_coef[[iN.param]]))$path
+                pathEffect[[iH]][[iCoef]] <- effects(object0, stats::as.formula(iLHS.hypo_coef[[iN.param]]))$path
                 if(length(pathEffect[[iH]][[iCoef]])==0){
                     stop("Could not find path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
                 }else if(type[iH]=="direct" && any(sapply(pathEffect[[iH]][[iCoef]],length)>2)){
@@ -170,7 +172,7 @@ effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FA
 
             if(!is.null(cluster)){ ## update derivative according to cluster
                 object.dRvcov.param <- .dRvcov.param(score = object.score,
-                                                     hessian = hessian(object, cluster = cluster),
+                                                     hessian = hessian2(object, cluster = cluster),
                                                      vcov.param = object.vcov.param,
                                                      dVcov.param = object.dVcov.param,
                                                      n.param = n.param,
@@ -199,7 +201,7 @@ effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FA
     }
 
     ## ** point estimate
-    vec.beta <- setNames(rep(NA, length = n.hypo), names(pathEffect))
+    vec.beta <- stats::setNames(rep(NA, length = n.hypo), names(pathEffect))
     for(iH in 1:n.hypo){ ## iH <- 1
         iValue.param <- lapply(coefEffect[[iH]], function(iCoef){ ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
             iValue.path <- lapply(iCoef, function(iName){prod(object.param[iName])}) ## get effect through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
@@ -276,6 +278,7 @@ effects2.lvmfit2 <- function(object, linfct, to = NULL, from = NULL, robust = FA
 
 ## * effects.lvmfit2
 #' @rdname effects2
+#' @export
 effects.lvmfit2 <- effects2.lvmfit2
 
 ######################################################################

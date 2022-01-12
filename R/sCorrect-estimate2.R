@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (15:08) 
+## Last-Updated: Jan 11 2022 (17:27) 
 ##           By: Brice Ozenne
-##     Update #: 2108
+##     Update #: 2139
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -33,6 +33,7 @@
 #' @param iter.max [integer >0] the maximum number of iterations used to estimate the bias correction.
 #' @param derivative [character] should the first derivative of the information matrix be computed using a formula (\code{"analytic"}) or numerical derivative (\code{"numeric"})?
 #' @param hessian [logical] should the hessian be stored? Can be \code{NULL} to indicate only if computed during the small sample correction.
+#' @param dVcov.robust [logical] should the first derivative of robust variance-covariance matrix be stored?
 #' @param trace [logical] should the execution of the function be traced.
 #' @param ...  arguments passed to \code{lava::estimate} when using a \code{lvm} object.
 #'
@@ -56,16 +57,22 @@
 `estimate2` <-
     function(object, param, data,
              ssc, df,
-             derivative, hessian, iter.max, tol.max, trace , ...) UseMethod("estimate2")
+             derivative, hessian, dVcov.robust,
+             iter.max, tol.max, trace , ...) UseMethod("estimate2")
 
 
 ## * estimate2.lvm
 #' @rdname estimate2
-estimate2.lvm <- function(object, data = NULL,
+#' @export
+estimate2.lvm <- function(object, param = NULL, data = NULL,
                           ssc = lava.options()$ssc, df = lava.options()$df,
                           derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
                           iter.max = 100, tol.max = 1e-6, trace = 0, ...){
 
+    if(!is.null(param)){
+        warning("Argument \'param\' not used with lvm objects. \n")
+    }
+    
     out <- lava::estimate(x = object, data = data, ...)
     return(estimate2(out, param = NULL, data = NULL,
                      ssc = ssc, df = df,
@@ -76,6 +83,7 @@ estimate2.lvm <- function(object, data = NULL,
 
 ## * estimate2.lvmfit
 #' @rdname estimate2
+#' @export
 estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                              ssc = lava.options()$ssc, df = lava.options()$df,
                              derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
@@ -155,7 +163,7 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
             if(trace>0){cat("*")}
 
             ## bias correction
-            if(ssc=="Cox"){
+            if(ssc == "Cox"){
                 iParam <- .sscCoxSnell(object, ssc = object.ssc)
                 object.ssc$JJK <- attr(iParam,"JJK")
                 object.ssc$lm <- attr(iParam,"lm")
@@ -184,14 +192,13 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                                             score = TRUE, information = TRUE, hessian = NULL, vcov = TRUE,
                                             dVcov = (ssc == "cox"), dVcov.robust = FALSE,
                                             residuals = TRUE, leverage = TRUE, derivative = derivative)
-       
             }else{
                 object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, Omega = object.ssc$Omega, 
                                             initialize = FALSE, usefit = TRUE,
                                             score = TRUE, information = TRUE, hessian = hessian, vcov = TRUE,
                                             dVcov = (df == "satterthwaite"), dVcov.robust = dVcov.robust,
                                             residuals = TRUE, leverage = TRUE, derivative = derivative)
-               
+
                 object$sCorrect$ssc <- c(object.ssc,
                                          cv = iCV,
                                          iter = iIter,
@@ -261,15 +268,17 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
 
 ## * estimate2.list
 #' @rdname estimate2
+#' @export
 estimate2.list <- function(object, ...){
     object.class <- class(object)
-    object <- lapply(object, sCorrect, ...)
+    object <- lapply(object, estimate2, ...)
     class(object) <- object.class
     return(object)
 }
 
 ## * estimate2.mmm
 #' @rdname estimate2
+#' @export
 estimate2.mmm <- estimate2.list
 
 ##----------------------------------------------------------------------

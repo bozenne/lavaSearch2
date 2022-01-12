@@ -2,38 +2,10 @@
 % Please edit documentation in R/sCorrect-extractData.R
 \name{extractData}
 \alias{extractData}
-\alias{extractData.lm}
-\alias{extractData.coxph}
-\alias{extractData.cph}
 \alias{extractData.lvmfit}
-\alias{extractData.gls}
-\alias{extractData.lme}
-\alias{extractData.merMod}
-\title{Extract Data From a Model}
+\title{Extract Data From a Latent Variable Model}
 \usage{
 extractData(object, design.matrix, as.data.frame, envir, rm.na)
-
-\method{extractData}{lm}(
-  object,
-  design.matrix = FALSE,
-  as.data.frame = TRUE,
-  envir = environment(),
-  rm.na = TRUE
-)
-
-\method{extractData}{coxph}(
-  object,
-  design.matrix = FALSE,
-  as.data.frame = TRUE,
-  envir = environment()
-)
-
-\method{extractData}{cph}(
-  object,
-  design.matrix = FALSE,
-  as.data.frame = TRUE,
-  envir = environment()
-)
 
 \method{extractData}{lvmfit}(
   object,
@@ -42,24 +14,6 @@ extractData(object, design.matrix, as.data.frame, envir, rm.na)
   envir = environment(),
   rm.na = TRUE
 )
-
-\method{extractData}{gls}(
-  object,
-  design.matrix = FALSE,
-  as.data.frame = TRUE,
-  envir = environment(),
-  rm.na = TRUE
-)
-
-\method{extractData}{lme}(
-  object,
-  design.matrix = FALSE,
-  as.data.frame = TRUE,
-  envir = environment(),
-  rm.na = TRUE
-)
-
-\method{extractData}{merMod}(object, design.matrix = FALSE, as.data.frame = TRUE)
 }
 \arguments{
 \item{object}{the fitted model.}
@@ -77,61 +31,25 @@ Otherwise the original data will be returned.}
 a dataset.
 }
 \description{
-Extract data from a model using \code{nlme::getData}, \code{riskRegression::coxDesign} or \code{model.frame}.
-If it fails it will try to extract it by its name according to \code{model$call$data}.
+Extract data from a latent variable model.
 }
 \examples{
+#### simulate data ####
 set.seed(10)
 n <- 101
 
-#### linear regression ####
 Y1 <- rnorm(n, mean = 0)
 Y2 <- rnorm(n, mean = 0.3)
 Id <- findInterval(runif(n), seq(0.1,1,0.1))
 data.df <- rbind(data.frame(Y=Y1,G="1",Id = Id),
-           data.frame(Y=Y2,G="2",Id = Id)#'            
+           data.frame(Y=Y2,G="2",Id = Id)       
            )
-data.df$oh <- 1
-m.lm <- lm(Y ~ G, data = data.df)
-a <- extractData(m.lm, design.matrix = TRUE)
-b <- extractData(m.lm, design.matrix = FALSE)
 
-#### mixed models ####
-library(nlme)
-m.gls <- gls(Y ~ G, weights = varIdent(form = ~ 1|Id), data = data.df)
-c <- extractData(m.gls)
-m.lme <- lme(Y ~ G, random = ~ 1|Id, data = data.df)
-d <- extractData(m.lme)
-
-library(lme4)
-m.lmer <- lmer(Y ~ G + (1|Id), data = data.df)
-d <- extractData(m.lmer)
-
-#### latent variable models ####
+#### latent variable model ####
 library(lava)
 e.lvm <- estimate(lvm(Y ~ G), data = data.df)
-e <- extractData(e.lvm)
-e <- extractData(e.lvm, design.matrix = TRUE)
+extractData(e.lvm)
+extractData(e.lvm, design.matrix = TRUE)
 
-#### survival #### 
-library(survival)
-library(riskRegression) ## needs version >=1.4.3
-library(data.table)
-
-dt.surv <- sampleData(n, outcome = "survival")
-m.cox <- coxph(Surv(time, event) ~ X1 + X2, data = dt.surv, x = TRUE, y = TRUE)
-f <- extractData(m.cox, design.matrix = FALSE)
-f <- extractData(m.cox, design.matrix = TRUE)
-m.cox <- coxph(Surv(time, event) ~ strata(X1) + X2, data = dt.surv, x = TRUE, y = TRUE)
-f <- extractData(m.cox, design.matrix = TRUE)
-
-#### nested fuuctions ####
-fct1 <- function(m){
-   fct2(m)
-}
-fct2 <- function(m){ 
-   extractData(m)
-}
-g <- fct1(m.gls)
 }
 \concept{extractor}

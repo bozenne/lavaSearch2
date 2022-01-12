@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (10:38) 
+## Last-Updated: Jan 11 2022 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 1195
+##     Update #: 1197
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -195,8 +195,8 @@
 
     ## *** right hand side of the equation
     index.upper.tri <- ssc$index.upper.tri[,"index"]
-    eq.rhs <- setNames((Omega.adj-Omega.constrain)[index.upper.tri],
-                       ssc$name.rhs)
+    eq.rhs <- stats::setNames((Omega.adj-Omega.constrain)[index.upper.tri],
+                              ssc$name.rhs)
 
     ## *** left hand side of the equation
     index.Psi <- ssc$index.Psi

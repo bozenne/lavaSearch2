@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (17:25) 
+## Last-Updated: Jan 12 2022 (09:26) 
 ##           By: Brice Ozenne
-##     Update #: 479
+##     Update #: 485
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -107,10 +107,44 @@ createContrast.lvmfit <- function(object, linfct, ...){
     if(!identical(class(linfct),"character")){
         stop("Argument \'linfct\' must be of type character (or vector of character) \n")
     }
-    if(length(linfct)==1 && all(linfct %in% name.param == FALSE) & all(sapply(linfct, function(iL){any(grepl(iL, name.param, fixed = TRUE))}))){
-        linfct <- grep(linfct, name.param,  value = TRUE)
-    }
+    ## if(length(linfct)==1 && all(linfct %in% name.param == FALSE) & all(sapply(linfct, function(iL){any(grepl(iL, name.param, fixed = TRUE))}))){
+    ##     linfct <- grep(linfct, name.param,  value = TRUE)
+    ## }
     out <- .createContrast(linfct = linfct, name.param = name.param, ...)
+    return(out)
+    
+}
+
+## * createContrast.lvmfit
+#' @rdname createContrast
+#' @export
+createContrast.lvmfit2 <- function(object, linfct, ...){
+    if(!identical(class(linfct),"character")){
+        stop("Argument \'linfct\' must be of type character (or vector of character) \n")
+    }
+    ## if(length(linfct)==1){
+        ## name.param <- names(coef(object, as.lava = TRUE))
+        ## name.param2 <- names(coef(object, as.lava = FALSE))
+
+    ##     if(all(name.param != linfct) & all(sapply(linfct, function(iL){any(grepl(iL, name.param, fixed = TRUE))}))){
+    ##         linfct <- grep(linfct, name.param,  value = TRUE)
+    ##     }
+    ## }else{
+    ##     name.param <- names(coef(object))
+    ## }
+    name.param <- names(coef(object, as.lava = TRUE))
+    name.param2 <- names(coef(object, as.lava = FALSE))
+    if(any(name.param!=name.param2)){
+        if(any(sapply(setdiff(name.param2,name.param), function(iCoef){any(grepl(iCoef, linfct, fixed = TRUE))}))){
+            out <- .createContrast(linfct = linfct, name.param = name.param2, ...)
+        }else{
+            out <- .createContrast(linfct = linfct, name.param = name.param, ...)
+        }
+        
+    }else{
+        out <- .createContrast(linfct = linfct, name.param = name.param, ...)
+    }
+    
     return(out)
     
 }
@@ -327,7 +361,7 @@ createContrast.mmm <- createContrast.list
                 name.hypo <- .contrast2name(contrast, null = if(rowname.rhs){null}else{NULL}, sep = sep)
             }
             rownames(contrast) <- name.hypo
-            null <- setNames(null, name.hypo)
+            null <- stats::setNames(null, name.hypo)
         }
     }
     return(list(contrast = contrast,

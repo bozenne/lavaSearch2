@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: Jan  6 2022 (15:53) 
+## last-updated: Jan 12 2022 (09:16) 
 ##           By: Brice Ozenne
-##     Update #: 2393
+##     Update #: 2402
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' Similar to \code{lava::score} but with small sample correction.
 #' @name score2
 #'
-#' @param object a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
+#' @param object,x a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).
 #' @param indiv [logical] If \code{TRUE}, the score relative to each observation is returned. Otherwise the total score is returned.
 #' @param cluster [integer vector] the grouping variable relative to which the observations are iid.
 #' @param as.lava [logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.
@@ -68,6 +68,7 @@
 
 ## * score2.lvmfit
 #' @rdname score2
+#' @export
 score2.lvmfit <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 
     return(lava::score(estimate2(object, ssc = ssc, ...), indiv = indiv, cluster = cluster, as.lava = as.lava))
@@ -76,6 +77,7 @@ score2.lvmfit <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE,
 
 ## * score2.lvmfit2
 #' @rdname score2
+#' @export
 score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...){
     
     dots <- list(...)
@@ -112,8 +114,8 @@ score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE
     }
     
     ## ** export
-    if(as.lava){
-        score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+    score <- score[,names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
+    if(as.lava==FALSE){
         colnames(score) <- as.character(object$sCorrect$skeleton$originalLink2param)
     }
     if(!is.null(cluster)){
@@ -131,7 +133,9 @@ score2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TRUE
 ## * score.lvmfit2
 #' @rdname score2
 #' @export
-score.lvmfit2 <- score2.lvmfit2
+score.lvmfit2 <- function(x, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...){## necessary as first argument of score must be x 
+    score2(x, indiv = indiv, cluster = cluster, as.lava = as.lava, ...)
+}
 
 ## * .score2
 #' @title Compute the Corrected Score.

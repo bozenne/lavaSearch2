@@ -7,7 +7,7 @@
 iid2plot(object, param)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}
+\item{object}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
 \item{param}{[character] name of one of the model parameters.}
 }

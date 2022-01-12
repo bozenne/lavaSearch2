@@ -24,6 +24,6 @@
 \item{n.cluster}{[integer >0] the number of observations.}
 }
 \description{
-Compute the corrected score when there is no missing value.
+Compute the corrected score.
 }
 \keyword{internal}

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  5 2018 (10:23) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (16:43) 
+## Last-Updated: Jan 11 2022 (16:51) 
 ##           By: Brice Ozenne
-##     Update #: 848
+##     Update #: 852
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -49,7 +49,7 @@
 ##' Can also be \code{NULL}: in such a case the results are not exported.
 ##' @param F.test [logical] should a multivariate Wald test be perform testing simultaneously all the null hypotheses?
 ##' @param label.file [character] element to include in the file name.
-##' @param seed [integer, >0] seed value that will be set at the beginning of the simulation to enable eproducibility of the results.
+##' @param seed [integer, >0] value that will be set before adjustment for multiple comparisons to ensure reproducible results.
 ##' Can also be \code{NULL}: in such a case no seed is set.
 ##' @param cpus [integer >0] the number of processors to use.
 ##' If greater than 1, the simulations are performed in parallel. 
@@ -184,7 +184,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, correction = TRUE, warmu
     ## *** type of the coef of the fitted model
     df.type <- coefType(e.true, as.lava = FALSE)
     df.type <- df.type[df.type$name %in% name.coef,]
-    type.coef <- setNames(df.type$detail, df.type$name)
+    type.coef <- stats::setNames(df.type$detail, df.type$name)
 
     ## *** null hypothesis
     n.param <- length(param)
@@ -368,11 +368,7 @@ calibrateType1.lvm <- function(object, param, n.rep, n, correction = TRUE, warmu
         if(!is.null(dir.save)){
             if (dir.exists(dir.save) == FALSE) {
                 stop("Argument \'dir.save\' does not lead to an existing directory \n")
-            }
-            if (substr(dir.save, start = nchar(value1), stop = nchar(value1)) != "/") {
-                warning("Argument \'dir.save' may not be correct \n",
-                        "it should end with a fsep (e.g. \"/\") \n")
-            }
+            }            
         }
 
         if(!is.null(dir.save)){
@@ -539,7 +535,7 @@ calibrateType1.lvmfit <- function(object, param, n.rep, correction = TRUE, F.tes
     if(("convergence" %in% names(e.lvm$opt)) && (e.lvm$opt$convergence==1)){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm that has not converged
     if(any(eigen(getVarCov2(e.lvm, ssc = FALSE, df = FALSE))$values<=0)){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where the residual covariance matrix is not semipositive definite
     ratio_sd_beta <- sqrt(diag(vcov(e.lvm)))/(abs(coef(e.lvm))+1)
-    if(max(na.omit(ratio_sd_beta))>1e3){return(list(pvalue=NULL,estimate=NULL))} ## exclude if standard error much larger than coefficient
+    if(max(stats::na.omit(ratio_sd_beta))>1e3){return(list(pvalue=NULL,estimate=NULL))} ## exclude if standard error much larger than coefficient
     if(inherits(suppressWarnings(try(summary(e.lvm)$coef, silent = TRUE)), "try-error")){return(list(pvalue=NULL,estimate=NULL))} ## exclude lvm where we cannot compute the summary
 
     ## ** corrections

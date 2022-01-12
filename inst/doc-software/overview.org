@@ -202,7 +202,7 @@ system.time(
 
 #+RESULTS:
 :    user  system elapsed 
-:   0.114   0.000   0.115
+:   0.117   0.000   0.118
 
 In such a case one can pre-compute the main terms of the correction
 (e.g. the derivative of the variance-covariance matrix) once for all
@@ -562,12 +562,12 @@ Fit: estimate.lvm(x = lvm(Y ~ X1 + X2 + X3 + X4 + X5 + X6), data = df.data)
 
 Linear Hypotheses:
             Estimate Std. Error z value Pr(>|z|)   
-[Y~X1] == 0   0.3270     0.1589   2.058  0.20734   
-[Y~X2] == 0   0.4025     0.1596   2.523  0.06614 . 
-[Y~X3] == 0   0.5072     0.1383   3.669  0.00145 **
-[Y~X4] == 0   0.3161     0.1662   1.902  0.28584   
+[Y~X1] == 0   0.3270     0.1589   2.058  0.20725   
+[Y~X2] == 0   0.4025     0.1596   2.523  0.06611 . 
+[Y~X3] == 0   0.5072     0.1383   3.669  0.00144 **
+[Y~X4] == 0   0.3161     0.1662   1.902  0.28582   
 [Y~X5] == 0   0.3875     0.1498   2.586  0.05554 . 
-[Y~X6] == 0   0.3758     0.1314   2.859  0.02483 * 
+[Y~X6] == 0   0.3758     0.1314   2.859  0.02482 * 
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 (Adjusted p values reported -- single-step method)
@@ -593,16 +593,16 @@ Standard errors: Model-based
 
 Linear Hypotheses:
              estimate        se        df     lower     upper statistic p.value  
-[Y~X1] == 0  0.327006  0.174976 33.000000 -0.159034  0.813046    1.8689 0.32896  
-[Y~X2] == 0  0.402533  0.175670 33.000000 -0.085433  0.890500    2.2914 0.14824  
-[Y~X3] == 0  0.507242  0.152209 33.000000  0.084443  0.930041    3.3325 0.01232 *
-[Y~X4] == 0  0.316099  0.182995 33.000000 -0.192214  0.824413    1.7274 0.41284  
-[Y~X5] == 0  0.387459  0.164970 33.000000 -0.070786  0.845703    2.3487 0.13155  
-[Y~X6] == 0  0.375763  0.144712 33.000000 -0.026212  0.777738    2.5966 0.07616 .
+[Y~X1] == 0  0.327006  0.174976 33.000000 -0.158914  0.812926    1.8689 0.32895  
+[Y~X2] == 0  0.402533  0.175670 33.000000 -0.085313  0.890380    2.2914 0.14817  
+[Y~X3] == 0  0.507242  0.152209 33.000000  0.084548  0.929937    3.3325 0.01232 *
+[Y~X4] == 0  0.316099  0.182995 33.000000 -0.192089  0.824288    1.7274 0.41283  
+[Y~X5] == 0  0.387459  0.164970 33.000000 -0.070673  0.845590    2.3487 0.13153  
+[Y~X6] == 0  0.375763  0.144712 33.000000 -0.026113  0.777639    2.5966 0.07617 .
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 (Adjusted p values reported -- single step max-test) 
-Error when computing the p-value by numerical integration: 9.578e-05
+Error when computing the p-value by numerical integration: 0.00012125
 #+end_example
 
 The single step method is the appropriate correction when one wants to
@@ -627,10 +627,10 @@ Linear Hypotheses:
             estimate       se       df statistic p.value  
 [Y~X1] == 0  0.32701  0.17498 33.00000    1.8689 0.12911  
 [Y~X2] == 0  0.40253  0.17567 33.00000    2.2914 0.09129 .
-[Y~X3] == 0  0.50724  0.15221 33.00000    3.3325 0.01229 *
+[Y~X3] == 0  0.50724  0.15221 33.00000    3.3325 0.01242 *
 [Y~X4] == 0  0.31610  0.18299 33.00000    1.7274 0.12911  
 [Y~X5] == 0  0.38746  0.16497 33.00000    2.3487 0.09129 .
-[Y~X6] == 0  0.37576  0.14471 33.00000    2.5966 0.06458 .
+[Y~X6] == 0  0.37576  0.14471 33.00000    2.5966 0.06451 .
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 (Adjusted p values reported -- step down max-test)
@@ -707,7 +707,7 @@ We can then call =glht2= to apply the small sample corrections,
 generate a contrast matrix containing tests for all coefficient
 related to the treatment, and collect the results:
 #+BEGIN_SRC R :exports both :results output :session *R* :cache no
-lvm.glht2 <- glht2(mmm.lvm, linfct = "TreatmentSSRI", rhs = resC$null)
+lvm.glht2 <- glht2(mmm.lvm, linfct = "TreatmentSSRI")
 summary(lvm.glht2)
 #+END_SRC
 
@@ -720,15 +720,15 @@ Multiple Comparisons of Means (two sided tests)
 
 Linear Hypotheses:
                          estimate        se        df     lower     upper statistic
-X: [TreatmentSSRI] == 0  0.466150  0.253280 47.000000 -0.154796  1.087095    1.8405
-Y: [TreatmentSSRI] == 0 -0.542096  0.261321 47.000000 -1.182757  0.098565   -2.0744
-Z: [TreatmentSSRI] == 0 -0.619822  0.440397 47.000000 -1.699509  0.459865   -1.4074
+X: [TreatmentSSRI] == 0  0.466150  0.253280 47.000000 -0.155079  1.087379    1.8405
+Y: [TreatmentSSRI] == 0 -0.542096  0.261321 47.000000 -1.183050  0.098857   -2.0744
+Z: [TreatmentSSRI] == 0 -0.619822  0.440397 47.000000 -1.700002  0.460358   -1.4074
                         p.value
-X: [TreatmentSSRI] == 0  0.1865
+X: [TreatmentSSRI] == 0  0.1863
 Y: [TreatmentSSRI] == 0  0.1165
 Z: [TreatmentSSRI] == 0  0.3911
 (Adjusted p values reported -- single step max-test) 
-Error when computing the p-value by numerical integration: 0.00035764
+Error when computing the p-value by numerical integration: 0.0003985
 #+end_example
 
 This can be compared to the unadjusted p.values:

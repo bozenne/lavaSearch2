@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 27 2018 (14:32) 
 ## Version: 
-## Last-Updated: dec 13 2019 (09:16) 
+## Last-Updated: Jan 11 2022 (16:43) 
 ##           By: Brice Ozenne
-##     Update #: 160
+##     Update #: 161
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -161,7 +161,7 @@ combineFormula <- function(ls.formula, as.formula = TRUE, as.unique = FALSE){
     X <- unlist(ls.X[which(ls.endogeneous==endogenous[iterE])])
     if(as.unique){X <- unique(X)}
     txt <- paste(endogenous[iterE],"~",paste(X, collapse = " + "))
-    if(as.formula){ls.formula2[[iterE]] <- as.formula(txt)}else{ls.formula2[[iterE]] <- txt}
+    if(as.formula){ls.formula2[[iterE]] <- stats::as.formula(txt)}else{ls.formula2[[iterE]] <- txt}
   }
   
   return(ls.formula2)

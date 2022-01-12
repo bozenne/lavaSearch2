@@ -2,27 +2,42 @@
 % Please edit documentation in R/sCorrect-information2.R
 \name{information2}
 \alias{information2}
-\alias{information2.sCorrect}
-\title{Extract The Full Information Matrix After Small Sample Correction.}
+\alias{information2.lvmfit}
+\alias{information2.lvmfit2}
+\alias{information.lvmfit2}
+\title{Expected Information With Small Sample Correction.}
 \usage{
-information2(object, as.lava)
+information2(object, as.lava, ssc, ...)
 
-\method{information2}{sCorrect}(object, as.lava = TRUE)
+\method{information2}{lvmfit}(object, as.lava = TRUE, ssc = lava.options()$ssc, ...)
+
+\method{information2}{lvmfit2}(object, as.lava = TRUE, ...)
+
+\method{information}{lvmfit2}(x, ...)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}
+\item{object, x}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
-\item{as.lava}{[logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-Only relevant for \code{lvmfit} objects.}
+\item{as.lava}{[logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
+
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
 }
 \value{
-A matrix.
+A matrix with as many rows and columns as the number of coefficients.
 }
 \description{
-Extract the full information matrix from  from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
+Extract the expected information matrix from a latent variable model.
 Similar to \code{lava::information} but with small sample correction.
 }
+\details{
+When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the information matrix.
+}
 \examples{
+#### simulate data ####
 n <- 5e1
 p <- 3
 X.name <- paste0("X",1:p)
@@ -30,22 +45,22 @@ link.lvm <- paste0("Y~",X.name)
 formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 
 m <- lvm(formula.lvm)
-distribution(m,~Id) <- sequence.lvm(0)
+distribution(m,~Id) <- Sequence.lvm(0)
 set.seed(10)
 d <- lava::sim(m,n)
 
-## linear model
+#### linear models ####
 e.lm <- lm(formula.lvm,data=d)
-info.tempo <- vcov2(e.lm)
-info.tempo[names(coef(e.lm)),names(coef(e.lm))] - vcov(e.lm)
 
-## latent variable model
+#### latent variable models ####
 e.lvm <- estimate(lvm(formula.lvm),data=d)
-vcov.tempo <- vcov2(e.lvm)
-round(vcov.tempo \%*\% information(e.lvm), 5)
+information(e.lvm)
+information2(e.lvm)
+information2(e.lvm)[1:4,1:4] -  solve(vcov(e.lm))
 
 }
 \seealso{
-\code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
-\concept{small sample inference}
+\concept{extractor}
+\keyword{smallSampleCorrection}

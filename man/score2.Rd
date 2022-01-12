@@ -2,36 +2,54 @@
 % Please edit documentation in R/sCorrect-score2.R
 \name{score2}
 \alias{score2}
-\alias{score2.sCorrect}
-\title{Extract the Individual Score.}
+\alias{score2.lvmfit}
+\alias{score2.lvmfit2}
+\alias{score.lvmfit2}
+\title{Score With Small Sample Correction}
 \usage{
-score2(object, indiv, cluster, as.lava)
+score2(object, indiv, cluster, as.lava, ...)
 
-\method{score2}{sCorrect}(object, indiv = FALSE, cluster = NULL, as.lava = TRUE)
+\method{score2}{lvmfit}(
+  object,
+  indiv = FALSE,
+  cluster = NULL,
+  as.lava = TRUE,
+  ssc = lava.options()$ssc,
+  ...
+)
+
+\method{score2}{lvmfit2}(object, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...)
+
+\method{score}{lvmfit2}(x, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}
+\item{object, x}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
-\item{indiv}{[logical] If \code{TRUE}, the score relative to each observation is returned.
-Otherwise the total score is returned.}
+\item{indiv}{[logical] If \code{TRUE}, the score relative to each observation is returned. Otherwise the total score is returned.}
 
 \item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
-\item{as.lava}{[logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-Only relevant for \code{lvmfit} objects.}
+\item{as.lava}{[logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.}
+
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients: no correction (code{"none"}/\code{FALSE}/\code{NA}),
+correct the first order bias in the residual variance (\code{"residual"}), or correct the first order bias in the estimated coefficients \code{"cox"}).
+Only relevant when using a \code{lvmfit} object.}
 }
 \value{
-A matrix containing the score relative to each sample (in rows)
-and each model coefficient (in columns).
+When argument indiv is \code{TRUE}, a matrix containing the score relative to each sample (in rows)
+and each model coefficient (in columns). Otherwise a numeric vector of length the number of model coefficients.
 }
 \description{
-Extract the individual score from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-Similar to \code{lava::score} but compatible with small sample correction.
+Extract the (individual) score a the latent variable model.
+Similar to \code{lava::score} but with small sample correction.
 }
 \details{
-If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
+When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the confidence intervals.
 }
 \examples{
+#### simulate data ####
 n <- 5e1
 p <- 3
 X.name <- paste0("X",1:p)
@@ -39,24 +57,23 @@ link.lvm <- paste0("Y~",X.name)
 formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 
 m <- lvm(formula.lvm)
-distribution(m,~Id) <- sequence.lvm(0)
+distribution(m,~Id) <- Sequence.lvm(0)
 set.seed(10)
 d <- lava::sim(m,n)
 
-## linear model
-e.lm <- lm(formula.lvm,data=d)
-eS.lm <- sCorrect(e.lm, ssc = NA, df = NA)
-score.tempo <- score2(eS.lm, indiv = TRUE)
-colMeans(score.tempo)
+#### linear models ####
+e.lm <- lm(Y~X1+X2+X3, data = d)
 
-## latent variable model
-e.lvm <- estimate(lvm(formula.lvm),data=d)
-eS.lvm <- sCorrect(e.lvm, df = NA, ssc = NA)
-score.tempo <- score2(eS.lvm, indiv = TRUE)
-range(score.tempo-score(e.lvm, indiv = TRUE))
+#### latent variable models ####
+m.lvm <- lvm(formula.lvm)
+e.lvm <- estimate(m.lvm,data=d)
+e2.lvm <- estimate2(m.lvm,data=d)
+score.tempo <- score(e2.lvm, indiv = TRUE)
+colSums(score.tempo)
 
 }
 \seealso{
-\code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
-\concept{small sample inference}
+\concept{extractor}
+\keyword{smallSampleCorrection}

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 19 2019 (11:28) 
 ## Version: 
-## Last-Updated: dec 19 2019 (16:41) 
+## Last-Updated: Jan 11 2022 (17:38) 
 ##           By: Brice Ozenne
-##     Update #: 23
+##     Update #: 24
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,7 +46,7 @@ p.adjust2 <- function(p, method, vcov.param = NULL){
             }
 
             ## compute average correlation
-            M.rho <- cov2cor(vcov.param)
+            M.rho <- stats::cov2cor(vcov.param)
             diag(M.rho) <- NA
             r <- colMeans(abs(M.rho[,names(p),drop=FALSE]), na.rm = TRUE)
             k <- length(p)

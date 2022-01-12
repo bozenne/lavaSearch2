@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (17:18) 
+## Last-Updated: Jan 12 2022 (12:08) 
 ##           By: Brice Ozenne
-##     Update #: 790
+##     Update #: 800
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,8 +20,7 @@
 #' @description Test linear hypotheses on coefficients from a latent variable models with small sample corrections.
 #' @name glht2
 #' 
-#' @param object a \code{lvmfit} or \code{mmm} object.
-#' The \code{mmm} object can only contain lm/gls/lme/lvmfit objects.
+#' @param object a \code{lvmfit}, \code{lvmfit2}, or \code{mmm} object.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param robust [logical] should robust standard error be used? 
@@ -46,7 +45,7 @@
 #' 
 #' @seealso
 #' \code{\link{createContrast}} to create contrast matrices. \cr
-#' \code{\link{sCorrect}} to pre-compute quantities for the small sample correction.
+#' \code{\link{estimate2}} to pre-compute quantities for the small sample correction.
 #' 
 #' @concept multiple comparisons
 #'
@@ -67,19 +66,19 @@
 #' 
 #' #### Inference on separate models ####
 #' ## fit separate models
-#' lmX <- lm(Z1 ~ E, data = df.data)
+#' lvmX <- estimate(lvm(Z1 ~ E), data = df.data)
 #' lvmY <- estimate(lvm(Z2 ~ E + Age), data = df.data)
 #' lvmZ <- estimate(lvm(c(Y1,Y2,Y3) ~ eta, eta ~ E), 
 #'                  data = df.data)
 #'
 #' #### create mmm object #### 
-#' e.mmm <- mmm(X = lmX, Y = lvmY, Z = lvmZ)
+#' e.mmm <- mmm(X = lvmX, Y = lvmY, Z = lvmZ)
 #'
 #' #### create contrast matrix ####
 #' resC <- createContrast(e.mmm, linfct = "E")
 #'
 #' #### adjust for multiple comparisons ####
-#' e.glht2 <- glht2(e.mmm, linfct = resC$contrast, df = FALSE)
+#' e.glht2 <- glht2(e.mmm, linfct = c(X="E"), df = FALSE)
 #' summary(e.glht2)
 #'
 #' @concept multiple comparison
@@ -118,7 +117,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
                        robust = FALSE, cluster = NULL,
                        ...){
 
-    ### ** check the class of each model
+    ## ** check the class of each model
     n.object <- length(object)
     name.object <- names(object)    
     if(is.null(name.object)){
@@ -200,7 +199,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
         out$param <- coef(object[[iM]], as.lava = FALSE)
         name.param <- names(out$param)
         name.object.param <- paste0(name.object[iM],": ",name.param)
-        out$param <- setNames(out$param, name.object.param)
+        out$param <- stats::setNames(out$param, name.object.param)
         
         ## *** Compute df for each test
         if(!is.na(object[[iM]]$sCorrect$df)){
@@ -253,7 +252,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
     if(any(is.na(M.iid))){
        M.iid[is.na(M.iid)] <- 0
     }
-    vcov.object <- diag.se %*% cov2cor(crossprod(M.iid)) %*% diag.se ## same as multcomp:::vcov.mmm
+    vcov.object <- diag.se %*% stats::cov2cor(crossprod(M.iid)) %*% diag.se ## same as multcomp:::vcov.mmm
     dimnames(vcov.object) <- list(colnames(M.iid), colnames(M.iid))
     
     ## ** sanity check

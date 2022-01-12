@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:00) 
 ## Version: 
-## Last-Updated: Jan  6 2022 (12:48) 
+## Last-Updated: Jan 11 2022 (16:29) 
 ##           By: Brice Ozenne
-##     Update #: 79
+##     Update #: 82
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -51,10 +51,11 @@
 #' @keywords smallSampleCorrection
 #' @export
 `getVarCov2` <-
-    function(object, ssc, ...) UseMethod("getVarCov2")
+    function(object, ...) UseMethod("getVarCov2")
 
 ## * getVarCov2.lvmfit
 #' @rdname getVarCov2
+#' @export
 getVarCov2.lvmfit <- function(object, ssc = lava.options()$ssc, ...){
 
     return(getVarCov2(estimate2(object, ssc = ssc, ...)))
@@ -63,8 +64,15 @@ getVarCov2.lvmfit <- function(object, ssc = lava.options()$ssc, ...){
 
 ## * getVarCov2.lvmfit2
 #' @rdname getVarCov2
-getVarCov2.lvmfit2 <- function(object){
+#' @export
+getVarCov2.lvmfit2 <- function(object, ...){
+
+    dots <- list(...)
+    if(length(dots)>0){
+        warning("Argument(s) \'",paste(names(dots),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
+    }
     
+
     Omega <- object$sCorrect$moment$Omega
     attr(Omega, "detail") <- NULL
     return(Omega)

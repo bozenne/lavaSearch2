@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (15:37) 
 ## Version: 
-## Last-Updated: nov 18 2019 (16:14) 
+## Last-Updated: Jan 11 2022 (17:39) 
 ##           By: Brice Ozenne
-##     Update #: 18
+##     Update #: 20
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -46,18 +46,18 @@ sampleRepeated <- function(n, n.Xcont = 2, n.Xcat = 2, n.rep = 5, format = "long
     idvars <- "id"
     distribution(m, ~id) <- function(n, ...){return(1:n)}    
     for(iY in 1:n.rep){ ## iY <- 1
-        regression(m) <- as.formula(paste0("Y",iY,"~eta"))
+        regression(m) <- stats::as.formula(paste0("Y",iY,"~eta"))
     }
     if(n.Xcont>0){
         for(iXcont in 1:n.Xcont){ ## iY <- 1
-            regression(m) <- as.formula(paste0("eta~X",iXcont))
+            regression(m) <- stats::as.formula(paste0("eta~X",iXcont))
         }
         idvars <- c(idvars,paste0("X",1:n.Xcont))
     }
     
     if(n.Xcat>0){
         for(iXcat in 1:n.Xcat){ ## iY <- 1
-            regression(m) <- as.formula(paste0("eta~Z",iXcat))
+            regression(m) <- stats::as.formula(paste0("eta~Z",iXcat))
             categorical(m, labels=c("a","b","c")) <- paste0("Z",iXcat)
         }
         idvars <- c(idvars,paste0("Z",1:n.Xcat))
@@ -68,12 +68,12 @@ sampleRepeated <- function(n, n.Xcont = 2, n.Xcat = 2, n.rep = 5, format = "long
     if(format == "wide"){
         return(dW)
     }else{
-        dL <- reshape(dW,
-                      direction = "long",
-                      idvar = idvars,
-                      varying = list(paste0("Y",1:n.rep)),
-                      v.names = "Y",
-                      timevar = "time")
+        dL <- stats::reshape(dW,
+                             direction = "long",
+                             idvar = idvars,
+                             varying = list(paste0("Y",1:n.rep)),
+                             v.names = "Y",
+                             timevar = "time")
         rownames(dL) <- NULL
         return(dL)
     }

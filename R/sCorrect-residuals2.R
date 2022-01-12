@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (11:17) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (12:19) 
+## Last-Updated: Jan 11 2022 (16:00) 
 ##           By: Brice Ozenne
-##     Update #: 138
+##     Update #: 140
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -81,7 +81,7 @@
 #'
 
 ## * residuals2.lvmfit
-#' @rdname residuals2
+#' @export
 residuals2.lvmfit <- function(object, type = "response", format = "wide", ssc = lava.options()$ssc, ...){
 
     return(residuals(estimate2(object, ssc = ssc, ...), type = type, format = format))
@@ -89,7 +89,7 @@ residuals2.lvmfit <- function(object, type = "response", format = "wide", ssc = 
 }
 
 ## * residuals2.lvmfit2
-#' @rdname residuals2
+#' @export
 residuals2.lvmfit2 <- function(object, type = "response", format = "wide", ...){
 
     dots <- list(...)
@@ -129,7 +129,6 @@ residuals2.lvmfit2 <- function(object, type = "response", format = "wide", ...){
 }
 
 ## * residuals.lvmfit2
-#' @rdname residuals2
 #' @export
 residuals.lvmfit2 <- residuals2.lvmfit2
 

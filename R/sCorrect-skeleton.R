@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: Jan 10 2022 (12:49) 
+## Last-Updated: Jan 11 2022 (16:48) 
 ##           By: Brice Ozenne
-##     Update #: 1680
+##     Update #: 1685
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -96,12 +96,12 @@ skeleton <- function(object, X,
     if("nu" %in% type.theta$detail){
         type.nu <- type.theta[type.theta$detail %in% "nu",,drop=FALSE]
 
-        theta.value$nu <- setNames(rep(NA, n.endogenous), endogenous)
+        theta.value$nu <- stats::setNames(rep(NA, n.endogenous), endogenous)
         if(any(!is.na(type.nu$value))){
             theta.value$nu[type.nu[!is.na(type.nu$value),"Y"]] <- type.nu[!is.na(type.nu$value),"value"]
         }
 
-        theta.param$nu <- setNames(rep(as.character(NA), n.endogenous), endogenous)
+        theta.param$nu <- stats::setNames(rep(as.character(NA), n.endogenous), endogenous)
         if(any(!is.na(type.nu$param))){
             theta.param$nu[type.nu[!is.na(type.nu$param),"Y"]] <- type.nu[!is.na(type.nu$param),"param"]
         }
@@ -115,8 +115,8 @@ skeleton <- function(object, X,
 
     if("alpha" %in% type.theta$detail){
         type.alpha <- type.theta[type.theta$detail %in% "alpha",,drop=FALSE]
-        theta.value$alpha <- setNames(rep(NA, n.latent), latent)
-        theta.param$alpha <- setNames(rep(as.character(NA), n.latent), latent)
+        theta.value$alpha <- stats::setNames(rep(NA, n.latent), latent)
+        theta.param$alpha <- stats::setNames(rep(as.character(NA), n.latent), latent)
         theta.param$Xalpha <- rep(1, times = n.cluster)
         
         if(any(!is.na(type.alpha$value))){
@@ -246,7 +246,7 @@ skeleton <- function(object, X,
 
     ## ** original link
     type.originalLink <- type[!is.na(type$originalLink),,drop=FALSE]
-    originalLink2param <- setNames(type.originalLink$param,type.originalLink$originalLink)
+    originalLink2param <- stats::setNames(type.originalLink$param,type.originalLink$originalLink)
     if(inherits(object,"lvm")){
         originalLink2param <- originalLink2param[coef(object)]
     }else if(inherits(object,"lvmfit")){
@@ -322,7 +322,7 @@ skeletonDtheta <- function(object, X,
         Utype.nu <- unique(type.nu$param)
         nUtype.nu <- length(Utype.nu)
 
-        dmat.dparam$nu <- setNames(vector(mode = "list", length = nUtype.nu), Utype.nu)
+        dmat.dparam$nu <- stats::setNames(vector(mode = "list", length = nUtype.nu), Utype.nu)
         
         for(iNu in Utype.nu){ ## iNu <- Utype.nu[1]
             dnu.dparam <- as.numeric(endogenous %in% type.nu[type.nu$param==iNu,"Y"])
@@ -342,7 +342,7 @@ skeletonDtheta <- function(object, X,
         type.alpha <- type[type$detail == "alpha",]
         Utype.alpha <- unique(type.alpha$param)
         nUtype.alpha <- length(Utype.alpha)
-        dmat.dparam$alpha <- setNames(vector(mode = "list", length = nUtype.alpha), Utype.alpha)
+        dmat.dparam$alpha <- stats::setNames(vector(mode = "list", length = nUtype.alpha), Utype.alpha)
 
         for(iAlpha in Utype.alpha){ ## iAlpha <- Utype.alpha[1]
             dmat.dparam$alpha[[iAlpha]] <- matrix(as.numeric(latent %in% type.alpha[type.alpha$param==iAlpha,"Y"]),
@@ -374,7 +374,7 @@ skeletonDtheta <- function(object, X,
         type.Gamma <- type[type$detail == "Gamma",]
         Utype.Gamma <- unique(type.Gamma$param)
         nUtype.Gamma <- length(Utype.Gamma)
-        dmat.dparam$Gamma <- setNames(vector(mode = "list", length = nUtype.Gamma), Utype.Gamma)
+        dmat.dparam$Gamma <- stats::setNames(vector(mode = "list", length = nUtype.Gamma), Utype.Gamma)
 
         for(iGamma in Utype.Gamma){ ## iGamma <- Utype.Gamma[1]
             iType.Gamma <- type.Gamma[type.Gamma$param==iGamma,]
@@ -393,7 +393,7 @@ skeletonDtheta <- function(object, X,
         type.Lambda <- type[type$detail == "Lambda",]
         Utype.Lambda <- unique(type.Lambda$param)
         nUtype.Lambda <- length(Utype.Lambda)
-        dmat.dparam$Lambda <- setNames(vector(mode = "list", length = nUtype.Lambda), Utype.Lambda)
+        dmat.dparam$Lambda <- stats::setNames(vector(mode = "list", length = nUtype.Lambda), Utype.Lambda)
 
         for(iLambda in Utype.Lambda){ ## iLambda <- Utype.Lambda[1]
             dmat.dparam$Lambda[[iLambda]] <- matrix(as.double(object$param$Lambda %in% iLambda),
@@ -406,7 +406,7 @@ skeletonDtheta <- function(object, X,
         type.B <- type[type$detail == "B",]
         Utype.B <- unique(type.B$param)
         nUtype.B <- length(Utype.B)
-        dmat.dparam$B <- setNames(vector(mode = "list", length = nUtype.B), Utype.B)
+        dmat.dparam$B <- stats::setNames(vector(mode = "list", length = nUtype.B), Utype.B)
 
         for(iB in Utype.B){ ## iB <- Utype.B[1]
             dmat.dparam$B[[iB]] <- matrix(as.double(object$param$B %in% iB),
@@ -419,7 +419,7 @@ skeletonDtheta <- function(object, X,
         type.Sigma <- type[type$detail %in% c("Sigma_var","Sigma_cov"),]
         Utype.Sigma <- unique(type.Sigma$param)
         nUtype.Sigma <- length(Utype.Sigma)
-        dmat.dparam$Sigma <- setNames(vector(mode = "list", length = nUtype.Sigma), Utype.Sigma)
+        dmat.dparam$Sigma <- stats::setNames(vector(mode = "list", length = nUtype.Sigma), Utype.Sigma)
 
         for(iSigma in Utype.Sigma){ ## iSigma <- Utype.Sigma[1]
             dmat.dparam$Sigma[[iSigma]] <- matrix(as.double(object$param$Sigma %in% iSigma),
@@ -432,7 +432,7 @@ skeletonDtheta <- function(object, X,
         type.Psi <- type[type$detail %in% c("Psi_var","Psi_cov"),]
         Utype.Psi <- unique(type.Psi$param)
         nUtype.Psi <- length(Utype.Psi)
-        dmat.dparam$Psi <- setNames(vector(mode = "list", length = nUtype.Psi), Utype.Psi)
+        dmat.dparam$Psi <- stats::setNames(vector(mode = "list", length = nUtype.Psi), Utype.Psi)
 
         for(iPsi in Utype.Psi){ ## iB <- Utype.B[1]
             dmat.dparam$Psi[[iPsi]] <- matrix(as.double(object$param$Psi %in% iPsi),

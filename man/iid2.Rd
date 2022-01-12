@@ -2,47 +2,53 @@
 % Please edit documentation in R/sCorrect-iid2.R
 \name{iid2}
 \alias{iid2}
-\alias{iid2.lm}
-\alias{iid2.gls}
-\alias{iid2.lme}
 \alias{iid2.lvmfit}
-\alias{iid2.sCorrect}
-\title{Extract i.i.d. Decomposition After Small Sample Correction.}
+\alias{iid2.lvmfit2}
+\alias{iid.lvmfit2}
+\title{Influence Function With Small Sample Correction.}
 \usage{
 iid2(object, ...)
 
-\method{iid2}{lm}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{iid2}{lvmfit}(
+  object,
+  robust = TRUE,
+  cluster = NULL,
+  as.lava = TRUE,
+  ssc = lava.options()$ssc,
+  ...
+)
 
-\method{iid2}{gls}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
+\method{iid2}{lvmfit2}(object, robust = TRUE, cluster = NULL, as.lava = TRUE, ...)
 
-\method{iid2}{lme}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{iid2}{lvmfit}(object, ssc = lava.options()$ssc, df = lava.options()$df, ...)
-
-\method{iid2}{sCorrect}(object, robust = TRUE, cluster = NULL, as.lava = TRUE, ...)
+\method{iid}{lvmfit2}(x, robust = TRUE, cluster = NULL, as.lava = TRUE, ...)
 }
 \arguments{
-\item{object}{a \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} object.}
+\item{object, x}{a \code{lvmfit} or \code{lvmfit2} object (i.e. output of \code{lava::estimate} or \code{lavaSearch2::estimate2}).}
 
-\item{robust}{[logical] if \code{FALSE}, the i.i.d. decomposition is rescaled such its the squared sum equals the model-based standard error (instead of the robust standard error).}
+\item{...}{additional argument passed to \code{estimate2} when using a \code{lvmfit} object.}
+
+\item{robust}{[logical] if \code{FALSE}, the influence function is rescaled such its the squared sum equals the model-based standard error (instead of the robust standard error).
+Do not match the model-based correlation though.}
 
 \item{cluster}{[integer vector] the grouping variable relative to which the observations are iid.}
 
-\item{as.lava}{[logical] Should the order and the name of the coefficient be the same as those obtained using coef with type = -1.
-Only relevant for \code{lvmfit} objects.}
+\item{as.lava}{[logical] if \code{TRUE}, uses the same names as when using \code{stats::coef}.}
+
+\item{ssc}{[character] method used to correct the small sample bias of the variance coefficients (\code{"none"}, \code{"residual"}, \code{"cox"}). Only relevant when using a \code{lvmfit} object.}
 }
 \value{
 A matrix containing the 1st order influence function relative to each sample (in rows)
 and each model coefficient (in columns).
 }
 \description{
-Extract corrected i.i.d. decomposition from \code{lm}, \code{gls}, \code{lme}, or \code{lvmfit} objects.
-It is similar to \code{lava::iid} but with small sample correction (if any).
+Extract the influence function from a latent variable model.
+It is similar to \code{lava::iid} but with small sample correction.
 }
 \details{
-If argument \code{p} or \code{data} is not null, then the small sample size correction is recomputed to correct the influence function.
+When argument object is a \code{lvmfit} object, the method first calls \code{estimate2} and then extract the variance-covariance matrix.
 }
 \examples{
+#### simulate data ####
 n <- 5e1
 p <- 3
 X.name <- paste0("X",1:p)
@@ -50,28 +56,18 @@ link.lvm <- paste0("Y~",X.name)
 formula.lvm <- as.formula(paste0("Y~",paste0(X.name,collapse="+")))
 
 m <- lvm(formula.lvm)
-distribution(m,~Id) <- sequence.lvm(0)
+distribution(m,~Id) <- Sequence.lvm(0)
 set.seed(10)
 d <- sim(m,n)
 
-## linear model
-e.lm <- lm(formula.lvm,data=d)
-iid.tempo <- iid2(e.lm, bias.correct = FALSE)
-range(iid.tempo[,1:4]-iid(e.lm))
-
-## latent variable model
+#### latent variable model ####
 e.lvm <- estimate(lvm(formula.lvm),data=d)
-iid.tempo <- iid2(e.lvm, bias.correct = FALSE)
-range(iid.tempo-iid(e.lvm))
-## difference due to the use of the observed info matrix vs. the expected one.
+iid.tempo <- iid2(e.lvm)
 
-## rescale i.i.d using model-based standard error
-iid.tempo <- iid2(e.lvm, robust = FALSE, bias.correct = FALSE)
-diag(crossprod(iid.tempo))-diag(vcov(e.lvm))
 
 }
 \seealso{
-\code{\link{sCorrect}} to obtain \code{lm2}, \code{gls2}, \code{lme2}, or \code{lvmfit2} objects.
+\code{\link{estimate2}} to obtain \code{lvmfit2} objects.
 }
-\concept{iid decomposition}
-\concept{small sample inference}
+\concept{extractor}
+\keyword{smallSampleCorrection}

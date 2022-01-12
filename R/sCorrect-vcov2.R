@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (13:55) 
 ## Version: 
-## Last-Updated: Jan  6 2022 (15:54) 
+## Last-Updated: Jan 12 2022 (09:13) 
 ##           By: Brice Ozenne
-##     Update #: 92
+##     Update #: 97
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -68,6 +68,7 @@
 
 ## * vcov2.lvmfit
 #' @rdname vcov2
+#' @export
 vcov2.lvmfit <- function(object, robust = FALSE, cluster = NULL, as.lava = TRUE, ssc = lava.options()$ssc, ...){
 
     return(vcov(estimate2(object, ssc = ssc, ...), robust = robust, cluster = cluster, as.lava = as.lava))
@@ -76,6 +77,7 @@ vcov2.lvmfit <- function(object, robust = FALSE, cluster = NULL, as.lava = TRUE,
 
 ## * vcov2.lvmfit2
 #' @rdname vcov2
+#' @export
 vcov2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, as.lava = TRUE, ...){
 
     dots <- list(...)
@@ -92,9 +94,13 @@ vcov2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, as.lava = TRUE
         }
         out <- object$sCorrect$vcov.param
     }
-    if(as.lava){
-        out <- out[names(object$sCorrect$skeleton$originalLink2param),names(object$sCorrect$skeleton$originalLink2param),drop=FALSE]
-        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param), as.character(object$sCorrect$skeleton$originalLink2param))
+
+    out <- out[names(object$sCorrect$skeleton$originalLink2param),
+               names(object$sCorrect$skeleton$originalLink2param),
+               drop=FALSE]
+    if(as.lava==FALSE){
+        dimnames(out) <- list(as.character(object$sCorrect$skeleton$originalLink2param),
+                              as.character(object$sCorrect$skeleton$originalLink2param))
     }
 
     return(out)

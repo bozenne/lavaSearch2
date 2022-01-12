@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: Jan  3 2022 (09:53) 
+## Last-Updated: Jan 12 2022 (12:13) 
 ##           By: Brice Ozenne
-##     Update #: 92
+##     Update #: 99
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,7 +19,7 @@
 #' @title Identify the Endogenous Variables
 #' @description Identify the endogenous variables, i.e., returns a vector with length the number of observations,
 #' whose values are the index of the repetitions.
-#' @name getIndexOmega-internal
+#' @name getIndexOmega
 #'
 #' @param object a \code{lvmfit} object.
 #' @param data dataset.
@@ -32,6 +32,7 @@
 
 ## * Examples
 #' @examples
+#' \dontrun{
 #' #### simulate data ####
 #' set.seed(10)
 #' dW <- sampleRepeated(10, format = "wide")
@@ -41,11 +42,11 @@
 #' 
 #' #### lvm model ####
 #' e.lvm <- estimate(lvm(c(Y1,Y2,Y3) ~ 1*eta + X1, eta ~ Z1), data = dW)
-#' .getIndexOmega(e.lvm, data = dW)
-#' 
+#' ## lavaSearch2:::.getIndexOmega(e.lvm, data = dW)
+#' }
 
 ## * .getIndexOmega.lvm
-#' @rdname getIndexOmega-internal
+#' @rdname getIndexOmega
 .getIndexOmega.lvm <- function(object, data, ...){
 
     ## ** check missing value in exogenous variables
@@ -53,7 +54,7 @@
     missing.var <- name.exogenous[name.exogenous %in% names(data) == FALSE]
 
     if(length(missing.var)>0){
-        cat2bin <- var2dummy(object$model, var = names(dW), data = dW)
+        cat2bin <- var2dummy(object$model, var = names(data), data = data)
         name.exogenous[name.exogenous %in% missing.var] <- names(cat2bin)[cat2bin %in% missing.var]
         name.exogenous <- unique(name.exogenous)
     }
@@ -77,7 +78,7 @@
 }
 
 ## * .getIndexOmega.lvmfit
-#' @rdname getIndexOmega-internal
+#' @rdname getIndexOmega
 .getIndexOmega.lvmfit <- .getIndexOmega.lvm
 
 ######################################################################

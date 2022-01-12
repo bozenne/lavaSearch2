@@ -41,7 +41,6 @@
 
 
 ## * extractData.lvmfit
-#' @rdname extractData
 #' @export
 extractData.lvmfit <- function(object, design.matrix = FALSE, as.data.frame = TRUE,
                                envir = environment(), rm.na = TRUE){
