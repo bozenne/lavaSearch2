@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: Jan 11 2022 (19:59) 
+## last-updated: Jan 12 2022 (18:11) 
 ##           By: Brice Ozenne
-##     Update #: 1837
+##     Update #: 1904
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -92,9 +92,6 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
     }
     
     ## ** initialize
-    if(is.null(hessian)){
-        hessian <- (derivative == "analytic") && dVcov.robust
-    }
     if(score || information || hessian || vcov || dVcov || dVcov.robust){
         first.order <- TRUE
     }else{
@@ -249,7 +246,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         
 
         ## *** update residuals
-        if(residuals || score || hessian || leverage){
+        if(residuals || score || information || vcov || hessian || leverage){
             if(!is.null(attr(Omega,"Omega.residuals"))){
                 OOmega <- attr(Omega,"Omega.residuals")
             }else{
@@ -281,14 +278,14 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         }
 
         ## *** leverage
-        if(leverage){
+        if((leverage || information || vcov) && !is.null(previous.vcov.param)){
             if(!is.null(attr(Omega,"Omega.leverage"))){
                 OOmega <- attr(Omega,"Omega.leverage")
             }else{
                 OOmega <- out$moment$Omega
             }
-            if(!is.null(attr(Omega,"dOmega"))){
-                ddOOmega <- attr(Omega,"dOmega")
+            if(!is.null(attr(Omega,"dOmega.leverage"))){
+                ddOOmega <- attr(Omega,"dOmega.leverage")
             }else{
                 ddOOmega <- out$dmoment$dOmega
                 ## sum(abs(unlist(out$dmoment$dOmega)))
@@ -313,6 +310,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
 
         ## *** information matrix
         if(information || vcov){
+
             out$information <- .information2(dmu = out$dmoment$dmu,
                                              dOmega = out$dmoment$dOmega,
                                              OmegaM1 = out$moment$OmegaM1.missing.pattern,
@@ -332,7 +330,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         }
     
         ## *** hessian
-        if(hessian){
+        if(hessian || (derivative == "analytic") && dVcov.robust){
             out$hessian <- .hessian2(dmu = out$dmoment$dmu,
                                      dOmega = out$dmoment$dOmega,
                                      d2mu = out$d2moment$d2mu,
@@ -409,26 +407,29 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         object2$sCorrect <- out
 
         ## *** hessian
-        num.hessian <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "score", method = "Richardson")
+        ## print(range(.warper.numDev(param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "score")-out$score))
+        num.hessian <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "score", method = "Richardson")
 
         out$hessian <- aperm(array(num.hessian, dim = c(n.cluster,n.param,n.param),
                                                dimnames = list(NULL, name.param, name.param)), perm = 3:1)
-
-        ## ## *** dInformation        
-        num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "information", method = "Richardson")
+        
+        ## *** dInformation
+        ## print(range(.warper.numDev(param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "information")-out$information))
+        num.information <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "information", method = "Richardson")
 
         out$dInformation <- array(num.information, dim = c(n.param,n.param,n.param),
                                               dimnames = list(name.param, name.param, name.param))
 
         ## *** dVcov.param
-        num.dVcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "vcov.model", method = "Richardson")
+        ## print(range(.warper.numDev(param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "vcov")-out$vcov.param))
+        num.dVcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "vcov", method = "Richardson")
 
         out$dVcov.param <- array(num.dVcov.param, dim = c(n.param,n.param,n.param),
                                              dimnames = list(name.param, name.param, name.param))
 
 
         ## *** dRvcov.param
-        num.dRvcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, type = "vcov.robust", method = "Richardson")
+        num.dRvcov.param <- numDeriv::jacobian(.warper.numDev, x = param, object = object2, weights = weights, Omega = Omega, Psi = Psi, type = "vcov.robust", method = "Richardson")
 
         out$dRvcov.param <- array(num.dRvcov.param, dim = c(n.param,n.param,n.param),
                                               dimnames = list(name.param, name.param, name.param))
@@ -447,24 +448,72 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
 moments2.lvmfit <- moments2.lvm
 
 ## * .wraper.numDev (helper)
-.warper.numDev <- function(value, object, type){ # x <- p.obj
+.warper.numDev <- function(value, object, type, weights, Psi = NULL, Omega = NULL){ # x <- p.obj
+    ## CANNOT DO DIRECTLY VIA moments2
+    ## (because Omega should not be fixed in updateMoment but it should be fixed (as well as Psi) when updating the residuals)
+    
+    out <- object$sCorrect
+    out$moment <- updateMoment(skeleton = out$skeleton$param,
+                               value = out$skeleton$value,
+                               toUpdate = out$skeleton$toUpdate.moment,
+                               param = value, Omega = NULL,
+                               name.pattern = out$missing$name.pattern,
+                               unique.pattern = out$missing$unique.pattern,
+                               endogenous = out$endogenous,
+                               latent = out$latent,
+                               n.cluster = out$cluster$n.cluster)
 
-    type <- match.arg(type, c("score","hessian","information","vcov.model","vcov.robust"))
-            
-    ## update moments and their derivatives (and also residuals! This makes a difference when computing the hessian)
-    cM <- moments2(object, param = value,
-                   initialize = FALSE, usefit = TRUE,
-                   score = (type %in% c("score","vcov.robust")), information = (type == "information"), hessian = (type == "hessian"), vcov = type %in% c("vcov.model","vcov.robust"),
-                   dVcov = FALSE, dVcov.robust = FALSE, residuals = FALSE, leverage = FALSE, derivative = "analytic")
+    out$dmoment <- updateDMoment(moment = out$moment,
+                                 skeleton = out$skeleton,
+                                 param = out$param)
 
-    return(switch(type,
-                  "score" = cM$score,
-                  "hessian" = cM$hessian,
-                  "information" = cM$information,
-                  "vcov.model" = cM$vcov.param,
-                  "vcov.robust" = crossprod(cM$score %*% cM$vcov.param))
-           )
+    if(type %in% c("score","vcov.robust")){
+        out$residuals <- .adjustResiduals(epsilon = out$skeleton$param$endogenous - out$moment$mu,
+                                          Omega = Omega, Psi = Psi, ## FIXED
+                                          name.pattern = out$missing$name.pattern, missing.pattern = out$missing$pattern, unique.pattern = out$missing$unique.pattern,
+                                          endogenous = out$endogenous, n.cluster = out$cluster$n.cluster)
+
+        out$score <- .score2(dmu = out$dmoment$dmu,
+                             dOmega = out$dmoment$dOmega,                    
+                             epsilon = out$residuals,
+                             OmegaM1 = out$moment$OmegaM1.missing.pattern,
+                             missing.pattern = out$missing$pattern,
+                             unique.pattern = out$missing$unique.pattern,
+                             name.pattern = out$missing$name.pattern,
+                             name.param = out$skeleton$Uparam,
+                             name.meanparam = out$skeleton$Uparam.mean,
+                             name.varparam = out$skeleton$Uparam.var,
+                             n.cluster = out$cluster$n.cluster,
+                             weights = weights)
+    }
+
+    if(type %in% c("information","vcov","vcov.robust")){
+        out$information <- .information2(dmu = out$dmoment$dmu,
+                                         dOmega = out$dmoment$dOmega,
+                                         OmegaM1 = out$moment$OmegaM1.missing.pattern,
+                                         missing.pattern = out$missing$pattern,
+                                         unique.pattern = out$missing$unique.pattern,
+                                         name.pattern = out$missing$name.pattern,
+                                         grid.mean = out$skeleton$grid.dmoment$mean, 
+                                         grid.var = out$skeleton$grid.dmoment$var, 
+                                         name.param = out$skeleton$Uparam,
+                                         leverage = out$leverage, ## FIXED
+                                         n.cluster = out$cluster$n.cluster,
+                                         weights = weights)
+    }
+
+    if(type %in% c("vcov","vcov.robust")){
+        out$vcov  <- .info2vcov(out$information, attr.info = FALSE)
+    }
+
+    if(type %in% c("vcov.robust")){
+        out$vcov.robust  <- out$vcov %*% crossprod(out$score) %*% out$vcov
+    }
+
+
+    return(out[[type]])
 }
+
 
 ## * .info2vcov (helper)
 #' @title Inverse the Information Matrix

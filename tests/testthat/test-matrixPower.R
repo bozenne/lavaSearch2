@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 24 2017 (09:21) 
 ## Version: 
-## last-updated: dec 17 2019 (09:34) 
+## last-updated: Jan 12 2022 (14:47) 
 ##           By: Brice Ozenne
-##     Update #: 17
+##     Update #: 19
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,8 +16,8 @@
 ### Code:
 
 ## * header
-rm(list = ls())
-if(TRUE){ ## already called in test-all.R
+## rm(list = ls())
+if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)    
 }

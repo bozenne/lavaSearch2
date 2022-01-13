@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: feb 20 2020 (10:55) 
+## Last-Updated: Jan 12 2022 (15:41) 
 ##           By: Brice Ozenne
-##     Update #: 108
+##     Update #: 119
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -54,81 +54,71 @@ e.lvm <- estimate(lvm(Y1~X1+X2), data = d)
 
 
 test_that("linear regression - residual correction equivalent to REML", {
-    eSSC1.lm <- sCorrect(e.lm, ssc = "residuals")
-    eSSC1.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
-    ## summary2(eSSC1.lm)$table2
-    ## summary2(eSSC1.gls)$table2
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
     
     ## comapre parameters
     GS <- c(coef(e.lm), sigma(e.lm)^2)
-    expect_equal(unname(eSSC1.lm$sCorrect$param),
-                 unname(GS), tol = 1e-6)
     expect_equal(unname(eSSC1.lvm$sCorrect$param),
                  unname(GS), tol = 1e-6)
 
     ## compare vcov
     GS <- vcov(e.lm)
-    expect_equal(unname(eSSC1.lm$sCorrect$vcov.param[1:3,1:3]),
-                 unname(GS), tol = 1e-6)
     expect_equal(unname(eSSC1.lvm$sCorrect$vcov.param[1:3,1:3]),
                  unname(GS), tol = 1e-6)
         
     ## model based
-    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.71117546), 
-                     "std.error" = c(0.19577922, 0.18717083, 0.20041228, 0.37551973), 
+    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.82039942), 
+                     "se" = c(0.19577922, 0.18717083, 0.20041228, 0.37551973), 
                      "df" = c(47, 47, 47, 11.75), 
-                     "ci.lower" = c(-0.24275594, 0.70579577, -0.83311225, 0.89105335), 
-                     "ci.upper" = c(0.54495805, 1.45887406, -0.02675726, 2.53129757), 
-                     "statistic" = c(0.77179308, 5.78260466, -2.14525157, 4.55681908), 
+                     "lower" = c(-0.24275594, 0.70579577, -0.83311225, 1.00027731), 
+                     "upper" = c(0.54495805, 1.45887406, -0.02675726, 2.64052153), 
+                     "statistic" = c(0.77179308, 5.78260466, -2.14525157, NA), 
                      "p.value" = c(0.44410038, 5.7e-07, 0.03713074, NA))
-
+    
     expect_equivalent(GS,
                       summary2(eSSC1.lvm)$table2, tol = 1e-6)
     
     ## robust
-    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.71117546), 
-                     "std.error" = c(0.1806237, 0.23395087, 0.15458464, 0.3626631), 
+    GS <- data.frame("estimate" = c(0.15110105, 1.08233491, -0.42993475, 1.82039942), 
+                     "se" = c(0.18025537, 0.2334738, 0.15426941, 0.3611838), 
                      "df" = c(47, 47, 47, 11.75), 
-                     "ci.lower" = c(-0.21226696, 0.61168647, -0.74091893, 0.91913178), 
-                     "ci.upper" = c(0.51446906, 1.55298335, -0.11895058, 2.50321914), 
-                     "statistic" = c(0.83655163, 4.62633424, -2.78122563, 4.7183611), 
-                     "p.value" = c(0.40707794, 2.939e-05, 0.0077684, NA))
+                     "lower" = c(-0.21152598, 0.61264622, -0.74028477, 1.03158648), 
+                     "upper" = c(0.51372808, 1.55202361, -0.11958474, 2.60921236), 
+                     "statistic" = c(0.83826102, 4.63578753, -2.78690869, NA), 
+                     "p.value" = c(0.40612711, 2.848e-05, 0.00765275, NA))
     expect_equivalent(GS,
                       summary2(eSSC1.lvm, robust = TRUE)$table2, tol = 1e-6)
 
 })
 
-test_that("linear regression - Cox correction equivalent to REML", {
-    eSSC2.lm <- sCorrect(e.lm, ssc = "Cox")
-    eSSC2.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "Cox")
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+## test_that("linear regression - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- estimate2(e.lvm, ssc = "Cox")
 
-    ## compare coef
-    GS <- c(coef(e.lm), sigma(e.lm)^2)
-    expect_equal(unname(eSSC2.lm$sCorrect$param),
-                 unname(GS), tol = 1e-6)
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 1e-6)
+##     ## compare coef
+##     GS <- c(coef(e.lm), sigma(e.lm)^2)
+##     expect_equal(unname(eSSC2.lm$sCorrect$param),
+##                  unname(GS), tol = 1e-6)
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param),
+##                  unname(GS), tol = 1e-6)
     
-    ## compare vcov
-    GS <- vcov(e.lm)
-    expect_equal(unname(eSSC2.lm$sCorrect$vcov.param[1:3,1:3]),
-                 unname(GS), tol = 1e-6)
-    expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:3,1:3]),
-                 unname(GS), tol = 1e-6)
+##     ## compare vcov
+##     GS <- vcov(e.lm)
+##     expect_equal(unname(eSSC2.lm$sCorrect$vcov.param[1:3,1:3]),
+##                  unname(GS), tol = 1e-6)
+##     expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:3,1:3]),
+##                  unname(GS), tol = 1e-6)
 
-    ## compare JJK
-    name.param <- c(names(coef(e.lm)),"sigma2")
-    p <- length(name.param)
-    JJK <- array(0, dim = rep(p,3), dimnames = list(name.param,name.param,name.param))
-    X <- model.matrix(e.lm)
+##     ## compare JJK
+##     name.param <- c(names(coef(e.lm)),"sigma2")
+##     p <- length(name.param)
+##     JJK <- array(0, dim = rep(p,3), dimnames = list(name.param,name.param,name.param))
+##     X <- model.matrix(e.lm)
 
-    JJK[name.param[1:3],name.param[1:3],"sigma2"] <- -crossprod(X)/sigma(e.lm)^4
-    JJK[name.param[1:3],"sigma2",name.param[1:3]] <- -crossprod(X)/sigma(e.lm)^4
-    JJK["sigma2",name.param[1:3],name.param[1:3]] <- crossprod(X)/sigma(e.lm)^4
-    expect_equal(JJK, eSSC2.lm$sCorrect$ssc$JJK, tol = 1e-5)
-})
+##     JJK[name.param[1:3],name.param[1:3],"sigma2"] <- -crossprod(X)/sigma(e.lm)^4
+##     JJK[name.param[1:3],"sigma2",name.param[1:3]] <- -crossprod(X)/sigma(e.lm)^4
+##     JJK["sigma2",name.param[1:3],name.param[1:3]] <- crossprod(X)/sigma(e.lm)^4
+##     expect_equal(JJK, eSSC2.lm$sCorrect$ssc$JJK, tol = 1e-5)
+## })
 
 
 ## ** multiple, no constrain
@@ -142,8 +132,7 @@ e.lvm <- estimate(lvm(Y1 ~ X1,
                   data = d)
 
 test_that("multiple linear regression - residual correction equivalent to REML", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
-    eSSC1.gls <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
 
     ## lvm
     GS <- c(intervals(e.gls)$coef[,2],
@@ -157,40 +146,36 @@ test_that("multiple linear regression - residual correction equivalent to REML",
     expect_equal(unname(eSSC1.lvm$sCorrect$vcov.param[1:6,1:6]),
                  unname(GS), tol = 1e-6)
 
-    ## gls
-    GS <- c(intervals(e.gls)$coef[,2],
-            intervals(e.gls)$varStruct[,2])
-    expect_equal(eSSC1.gls$sCorrect$ssc$param0[names(GS)], GS, tol = 1e-6)
 })
 
-test_that("multiple linear regression - Cox correction equivalent to REML", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
-    ## eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
-    ## eSSC2.glsN <- sCorrect(e.gls, ssc = "Cox", derivative = "numeric")
+## test_that("multiple linear regression - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- estimate2(e.lvm, ssc = "Cox")
+##     ## eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
+##     ## eSSC2.glsN <- sCorrect(e.gls, ssc = "Cox", derivative = "numeric")
 
-    ## range(eSSC2.gls$sCorrect$hessian-eSSC2.glsN$sCorrect$hessian)
-    ## eSSC2.gls$sCorrect$information
-    ## eSSC2.glsN$sCorrect$information
+##     ## range(eSSC2.gls$sCorrect$hessian-eSSC2.glsN$sCorrect$hessian)
+##     ## eSSC2.gls$sCorrect$information
+##     ## eSSC2.glsN$sCorrect$information
 
-    ## lvm
-    GS <- c(intervals(e.gls)$coef[,2],
-            c(Y1 = 1, intervals(e.gls)$varStruct[,2]^2)*intervals(e.gls)$sigma[2]^2
-            )
+##     ## lvm
+##     GS <- c(intervals(e.gls)$coef[,2],
+##             c(Y1 = 1, intervals(e.gls)$varStruct[,2]^2)*intervals(e.gls)$sigma[2]^2
+##             )
     
-    expect_equal(unname(eSSC2.lvm$sCorrect$param[c("Y1","Y2","Y3","Y1~X1","Y2~X1","Y3~X1","Y1~~Y1","Y2~~Y2","Y3~~Y3")]),
-                 unname(GS), tol = 1e-6)
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param[c("Y1","Y2","Y3","Y1~X1","Y2~X1","Y3~X1","Y1~~Y1","Y2~~Y2","Y3~~Y3")]),
+##                  unname(GS), tol = 1e-6)
     
-    GS <- vcov(e.gls)
-    expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:6,1:6]),
-                 unname(GS), tol = 1e-6)
+##     GS <- vcov(e.gls)
+##     expect_equal(unname(eSSC2.lvm$sCorrect$vcov.param[1:6,1:6]),
+##                  unname(GS), tol = 1e-6)
 
-    ## gls
-    ## GS <- c(intervals(e.gls)$coef[,2],
-    ##         sigma2 = as.double(intervals(e.gls)$sigma[2]^2),
-    ##         intervals(e.gls)$varStruct[,2]
-    ##         )
+##     ## gls
+##     ## GS <- c(intervals(e.gls)$coef[,2],
+##     ##         sigma2 = as.double(intervals(e.gls)$sigma[2]^2),
+##     ##         intervals(e.gls)$varStruct[,2]
+##     ##         )
     
-})
+## })
 
 ## ** multiple, with constrains
 e.gls0 <- gls(value ~ variable-1 + X1,
@@ -213,7 +198,7 @@ e.lvm <- estimate(lvm(Y1[mu1:sigma1]~ beta1*X1,
 
 
 test_that("multiple linear regression - residual correction equivalent to REML", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
 
     GS <- c(intervals(e.gls)$coef[,2],
             (c(Y1 = 1, intervals(e.gls)$varStruct[,2]) * intervals(e.gls)$sigma[2])^2)
@@ -223,17 +208,17 @@ test_that("multiple linear regression - residual correction equivalent to REML",
                  unname(GS), tol = 1e-3)
 })
 
-test_that("multiple linear regression - Cox correction equivalent to REML", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+## test_that("multiple linear regression - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
 
-    GS <- c(intervals(e.gls)$coef[,2],
-            (c(Y1 = 1, intervals(e.gls)$varStruct[,2]) * intervals(e.gls)$sigma[2])^2)
+##     GS <- c(intervals(e.gls)$coef[,2],
+##             (c(Y1 = 1, intervals(e.gls)$varStruct[,2]) * intervals(e.gls)$sigma[2])^2)
 
-    ## not precisely the same but better
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 1e-3)
+##     ## not precisely the same but better
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param),
+##                  unname(GS), tol = 1e-3)
 
-})
+## })
 
 
 ## * mixed model
@@ -254,7 +239,7 @@ e.gls <- nlme::gls(value ~ X1 + X2,
                    data = dLred, method = "REML")
  
 test_that("mixed model (CS) - residual correction equivalent to REML", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
     ## eSSC1.lvm <- sCorrect(update(e.gls, method = "ML"), ssc = "residuals")
 
     GS <- c(intervals(e.lme)$fixed[,2],
@@ -267,29 +252,27 @@ test_that("mixed model (CS) - residual correction equivalent to REML", {
     ## eSSC.lvm$sCorrect$param - GS
 })
 
-test_that("mixed model (CS) - Cox correction equivalent to REML", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
-    eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
-    eSSC2.lme <- sCorrect(e.lme, ssc = "Cox")
-    ## coef(eSSC2.lvm) - coef(e.lvm)
-    ## GS - coef(e.lvm)
+## test_that("mixed model (CS) - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+##     ## coef(eSSC2.lvm) - coef(e.lvm)
+##     ## GS - coef(e.lvm)
     
-    GS <- c(intervals(e.lme)$fixed[,2],
-            sigma2 = as.double(intervals(e.lme)$sigma[2])^2,
-            tau = intervals(e.lme)$reStruct$Id[,2,]^2)
-    GS2 <- c(intervals(e.gls)$coef[,2],
-            sigma2 = sigma(e.gls)^2,
-            corCoef1 = intervals(e.gls)$corStruct[1,2])
+##     GS <- c(intervals(e.lme)$fixed[,2],
+##             sigma2 = as.double(intervals(e.lme)$sigma[2])^2,
+##             tau = intervals(e.lme)$reStruct$Id[,2,]^2)
+##     GS2 <- c(intervals(e.gls)$coef[,2],
+##             sigma2 = sigma(e.gls)^2,
+##             corCoef1 = intervals(e.gls)$corStruct[1,2])
 
-    ## not precisely the same but better
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 1e-4)
-    expect_equal(unname(eSSC2.lme$sCorrect$param),
-                 unname(GS), tol = 1e-4)
-    expect_equal(unname(eSSC2.gls$sCorrect$param),
-                 unname(GS2), tol = 1e-2)
-    ## eSSC.lvm$sCorrect$param - GS
-})
+##     ## not precisely the same but better
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param),
+##                  unname(GS), tol = 1e-4)
+##     expect_equal(unname(eSSC2.lme$sCorrect$param),
+##                  unname(GS), tol = 1e-4)
+##     expect_equal(unname(eSSC2.gls$sCorrect$param),
+##                  unname(GS2), tol = 1e-2)
+##     ## eSSC.lvm$sCorrect$param - GS
+## })
 
 ## ** CS with different variances
 m <- lvm(c(Y1[0:sigma1]~1*eta,
@@ -309,43 +292,43 @@ e.gls <- nlme::gls(value ~ X1 + X2,
                    weights = varIdent(form =~ 1|variable),
                    data = dLred, method = "REML")
 
-test_that("mixed model (CS,weight) - residual correction equivalent to REML", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+test_that("mixed model (CS,weight) - residual correction differs from REML", {
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
 
-    GS <- c(intervals(e.lme)$fixed[,2],
-            Y1 = as.double(intervals(e.lme)$sigma[2])^2,
-            tau = intervals(e.lme)$reStruct$Id[,2,]^2,
-            intervals(e.lme)$varStruct[,2]^2 * as.double(intervals(e.lme)$sigma[2])^2)
+    GS.lme <- c(intervals(e.lme)$fixed[,2],
+                Y1 = as.double(intervals(e.lme)$sigma[2])^2,
+                tau = intervals(e.lme)$reStruct$Id[,2,]^2,
+                intervals(e.lme)$varStruct[,2]^2 * as.double(intervals(e.lme)$sigma[2])^2)
 
-    ## not precisely the same but better
+    GS <- c("eta" = 0.37740319, "eta~X1" = 1.32095068, "eta~X2" = -0.02166077, "Y1~~Y1" = 1.07114383, "Y2~~Y2" = 1.50935967, "Y3~~Y3" = 1.78871997, "eta~~eta" = 0.90068904)
     expect_equal(unname(eSSC1.lvm$sCorrect$param),
-                 unname(GS), tol = 5e-3)
+                 unname(GS), tol = 1e-6)
     ## eSSC.lvm$sCorrect$param - GS
     ## coef(e.lvm) - GS
 })
 
-test_that("mixed model (CS,weight) - Cox correction equivalent to REML", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
-    eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
-    eSSC2.lme <- sCorrect(e.lme, ssc = "Cox")
-    ## GS - coef(e.lvm)
-    ## coef(eSSC2.lvm) - coef(e.lvm)
+## test_that("mixed model (CS,weight) - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+##     eSSC2.gls <- sCorrect(e.gls, ssc = "Cox")
+##     eSSC2.lme <- sCorrect(e.lme, ssc = "Cox")
+##     ## GS - coef(e.lvm)
+##     ## coef(eSSC2.lvm) - coef(e.lvm)
     
-    GS <- c(intervals(e.lme)$fixed[,2],
-            Y1 = as.double(intervals(e.lme)$sigma[2])^2,
-            tau = intervals(e.lme)$reStruct$Id[,2,]^2,
-            intervals(e.lme)$varStruct[,2]^2 * as.double(intervals(e.lme)$sigma[2])^2)
+##     GS <- c(intervals(e.lme)$fixed[,2],
+##             Y1 = as.double(intervals(e.lme)$sigma[2])^2,
+##             tau = intervals(e.lme)$reStruct$Id[,2,]^2,
+##             intervals(e.lme)$varStruct[,2]^2 * as.double(intervals(e.lme)$sigma[2])^2)
 
-    GS2 <- c(intervals(e.lme)$fixed[,2],
-             c(Y1 = 1,intervals(e.lme)$varStruct[,2])^2 * as.double(intervals(e.lme)$sigma[2])^2,
-             tau = intervals(e.lme)$reStruct$Id[1,2])
+##     GS2 <- c(intervals(e.lme)$fixed[,2],
+##              c(Y1 = 1,intervals(e.lme)$varStruct[,2])^2 * as.double(intervals(e.lme)$sigma[2])^2,
+##              tau = intervals(e.lme)$reStruct$Id[1,2])
 
-    ## not precisely the same but better
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 5e-3)
-    eSSC2.lme$sCorrect$param - GS2
-    ## eSSC.lvm$sCorrect$param - GS
-})
+##     ## not precisely the same but better
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param),
+##                  unname(GS), tol = 5e-3)
+##     eSSC2.lme$sCorrect$param - GS2
+##     ## eSSC.lvm$sCorrect$param - GS
+## })
 
 
 ## ** UN
@@ -368,8 +351,8 @@ e.lme <- nlme::lme(value ~ X1 + X2,
                    weight = varIdent(form =~ 1|variable),
                    data = dLred, method = "REML")
 
-test_that("mixed model (UN) - residual correction equivalent to REML", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals") 
+test_that("mixed model (UN) - residual correction differs from REML", {
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals") 
     ## eSSC1.lvm$sCorrect$param - coef(e.lvm)
     
     gls_sigma2 <- as.double(intervals(e.gls)$sigma[2])^2
@@ -379,46 +362,46 @@ test_that("mixed model (UN) - residual correction equivalent to REML", {
     ## getVarCov2(eSSC1.lvm)
     ## eSSC1.lvm$sCorrect$param
 
-    GS <- c(intervals(e.gls)$coef[,2],
-            Y1 = as.double(gls_var["Y1"]) - gls_tau,
-            "eta~~eta" = gls_tau,
-            Y2 = as.double(gls_var["Y2"] - gls_tau),
-            Y3 = as.double(gls_var["Y3"] - gls_tau),
-            "Y1~~Y2" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y2"] * intervals(e.gls)$corStruct[1,2] - gls_tau),
-            "Y1~~Y3" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[2,2] - gls_tau)
-            )
+    GS.gls <- c(intervals(e.gls)$coef[,2],
+                Y1 = as.double(gls_var["Y1"]) - gls_tau,
+                "eta~~eta" = gls_tau,
+                Y2 = as.double(gls_var["Y2"] - gls_tau),
+                Y3 = as.double(gls_var["Y3"] - gls_tau),
+                "Y1~~Y2" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y2"] * intervals(e.gls)$corStruct[1,2] - gls_tau),
+                "Y1~~Y3" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[2,2] - gls_tau)
+                )
+
+    GS <- c("eta" = 0.40605248, "eta~X1" = 1.34876061, "eta~X2" = 0.03171814, "Y1~~Y1" = 1.36038582, "Y2~~Y2" = 1.59213818, "Y3~~Y3" = 1.8781554, "Y1~~Y2" = 0.20120537, "Y1~~Y3" = 0.23243999, "eta~~eta" = 0.73014581)
 
     ## not precisely the same but better
     expect_equal(unname(eSSC1.lvm$sCorrect$param),
                  unname(GS), tol = 5e-3)
-    ## eSSC1.lvm$sCorrect$param - GS
-    ## coef(e.lvm) - GS
 })
 
-test_that("mixed model (UN) - Cox correction equivalent to REML", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+## test_that("mixed model (UN) - Cox correction equivalent to REML", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
 
-    ## eSSC2.lvm$sCorrect$param - coef(e.lvm)
+##     ## eSSC2.lvm$sCorrect$param - coef(e.lvm)
     
-    gls_sigma2 <- as.double(intervals(e.gls)$sigma[2])^2
-    gls_var <- c(Y1 = gls_sigma2, gls_sigma2 * intervals(e.gls)$varStruct[,2]^2)
-    gls_tau <- as.double(sqrt(gls_var)["Y2"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[3,2])
+##     gls_sigma2 <- as.double(intervals(e.gls)$sigma[2])^2
+##     gls_var <- c(Y1 = gls_sigma2, gls_sigma2 * intervals(e.gls)$varStruct[,2]^2)
+##     gls_tau <- as.double(sqrt(gls_var)["Y2"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[3,2])
 
-    GS <- c(intervals(e.gls)$coef[,2],
-            Y1 = as.double(gls_var["Y1"]) - gls_tau,
-            "eta~~eta" = gls_tau,
-            Y2 = as.double(gls_var["Y2"] - gls_tau),
-            Y3 = as.double(gls_var["Y3"] - gls_tau),
-            "Y1~~Y2" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y2"] * intervals(e.gls)$corStruct[1,2] - gls_tau),
-            "Y1~~Y3" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[2,2] - gls_tau)
-            )
+##     GS <- c(intervals(e.gls)$coef[,2],
+##             Y1 = as.double(gls_var["Y1"]) - gls_tau,
+##             "eta~~eta" = gls_tau,
+##             Y2 = as.double(gls_var["Y2"] - gls_tau),
+##             Y3 = as.double(gls_var["Y3"] - gls_tau),
+##             "Y1~~Y2" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y2"] * intervals(e.gls)$corStruct[1,2] - gls_tau),
+##             "Y1~~Y3" = as.double(sqrt(gls_var)["Y1"] * sqrt(gls_var)["Y3"] * intervals(e.gls)$corStruct[2,2] - gls_tau)
+##             )
 
-    ## not precisely the same but better
-    expect_equal(unname(eSSC2.lvm$sCorrect$param),
-                 unname(GS), tol = 5e-3)
-    ## eSSC2.lvm$sCorrect$param - GS
-    ## coef(e.lvm) - GS
-})
+##     ## not precisely the same but better
+##     expect_equal(unname(eSSC2.lvm$sCorrect$param),
+##                  unname(GS), tol = 5e-3)
+##     ## eSSC2.lvm$sCorrect$param - GS
+##     ## coef(e.lvm) - GS
+## })
 
 ## * latent variable model
 ## ** factor model
@@ -432,53 +415,54 @@ e.lvm <- estimate(m, d)
 ## round(coef(estimate(m, sim(m,1e4))),1) ## truth
 
 test_that("factor model - residuals correction", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
     ## coef(eSSC1.lvm) - coef(e.lvm)
-    
-    GS <- c("eta" = 0.23990945, "Y2" = 0.28804288, "Y3" = 0.17076884, "Z1" = 0.36590889, "eta~X1" = 1.1654944, "eta~X3" = 0.11297345, "Y2~eta" = 0.91569218, "Y2~X2" = 0.52324123, "Y3~eta" = 1.77781303, "Z1~eta" = 0.10836302, "Y1~~Y1" = 1.15857402, "eta~~eta" = 0.60432377, "Y2~~Y2" = 1.50666181, "Y3~~Y3" = 0.3155824, "Z1~~Z1" = 1.97827662, "Y1~~Z1" = 0.24216573, "Y2~~Z1" = 0.34997935)
+
+    GS <- c("eta" = 0.23990945, "Y2" = 0.28804288, "Y3" = 0.17076884, "Z1" = 0.36590889, "eta~X1" = 1.1654944, "eta~X3" = 0.11297345, "Y2~eta" = 0.91569218, "Y2~X2" = 0.52324123, "Y3~eta" = 1.77781303, "Z1~eta" = 0.10836302, "Y1~~Y1" = 1.19866024, "eta~~eta" = 0.56519188, "Y2~~Y2" = 1.47124191, "Y3~~Y3" = 0.28971122, "Z1~~Z1" = 1.97973864, "Y1~~Z1" = 0.24896398, "Y2~~Z1" = 0.35357228)
     expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)
 })
 
-test_that("factor model - Cox correction", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
-    ## coef(eSSC2.lvm) - coef(e.lvm)
+## test_that("factor model - Cox correction", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+##     ## coef(eSSC2.lvm) - coef(e.lvm)
     
-    GS <- c("eta" = 0.23991104, "Y2" = 0.29144175, "Y3" = 0.17832511, "Z1" = 0.36554264, "eta~X1" = 1.16545963, "eta~X3" = 0.11297009, "Y2~eta" = 0.90409861, "Y2~X2" = 0.52324125, "Y3~eta" = 1.75203851, "Z1~eta" = 0.10961229, "Y1~~Y1" = 1.20351764, "eta~~eta" = 0.5603901, "Y2~~Y2" = 1.47834635, "Y3~~Y3" = 0.30540849, "Z1~~Z1" = 1.99182361, "Y1~~Z1" = 0.25025483, "Y2~~Z1" = 0.3555143)
-    expect_equal(coef(eSSC2.lvm),GS, tol = 1e-6)
-})
+##     GS <- c("eta" = 0.23991104, "Y2" = 0.29144175, "Y3" = 0.17832511, "Z1" = 0.36554264, "eta~X1" = 1.16545963, "eta~X3" = 0.11297009, "Y2~eta" = 0.90409861, "Y2~X2" = 0.52324125, "Y3~eta" = 1.75203851, "Z1~eta" = 0.10961229, "Y1~~Y1" = 1.20351764, "eta~~eta" = 0.5603901, "Y2~~Y2" = 1.47834635, "Y3~~Y3" = 0.30540849, "Z1~~Z1" = 1.99182361, "Y1~~Z1" = 0.25025483, "Y2~~Z1" = 0.3555143)
+##     expect_equal(coef(eSSC2.lvm),GS, tol = 1e-6)
+## })
 
-## ** two factors model (correlation)
+## ** two factors model (regression)
 m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,
            Z1~eta2,Z2~eta2,Z3~eta2+X3,
            eta1~eta2))
 
-e.lvm <- estimate(m, d)
+e.lvm <- lava::estimate(m, d)
 
 test_that("two factors model (correlation) - residuals correction", {
-    eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+    eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
+    ## summary2(e.lvm, ssc = "residuals")
 
-    GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.82498637, "eta1~~eta1" = 2.19604428, "Y2~~Y2" = 1.67543559, "Y3~~Y3" = 0.90484948, "Z1~~Z1" = 1.20086385, "eta2~~eta2" = 0.7944319, "Z2~~Z2" = 1.41920933, "Z3~~Z3" = 0.21553652)
+    GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.84489487, "eta1~~eta1" = 2.201649, "Y2~~Y2" = 1.66547564, "Y3~~Y3" = 0.8429522, "Z1~~Z1" = 1.23373245, "eta2~~eta2" = 0.77442115, "Z2~~Z2" = 1.40526018, "Z3~~Z3" = 0.13550962)
     expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)
 })
 
-test_that("two factors model (correlation) - Cox correction", {
-    eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
+## test_that("two factors model (correlation) - Cox correction", {
+##     eSSC2.lvm <- sCorrect(e.lvm, ssc = "Cox")
 
-    GS <- c("eta1" = 0.15334368, "Y2" = 0.19799503, "Y3" = 0.37775788, "eta2" = 0.39767751, "Z2" = -0.18562638, "Z3" = -0.75078602, "eta1~eta2" = 0.35160357, "Y2~eta1" = 0.8409626, "Y3~eta1" = 0.86679841, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.89498429, "Z3~eta2" = 1.76979176, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.88673054, "eta1~~eta1" = 2.22027337, "Y2~~Y2" = 1.7069357, "Y3~~Y3" = 0.87527537, "Z1~~Z1" = 1.26455176, "eta2~~eta2" = 0.74360185, "Z2~~Z2" = 1.43772669, "Z3~~Z3" = 0.31131063)
+##     GS <- c("eta1" = 0.15334368, "Y2" = 0.19799503, "Y3" = 0.37775788, "eta2" = 0.39767751, "Z2" = -0.18562638, "Z3" = -0.75078602, "eta1~eta2" = 0.35160357, "Y2~eta1" = 0.8409626, "Y3~eta1" = 0.86679841, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.89498429, "Z3~eta2" = 1.76979176, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.88673054, "eta1~~eta1" = 2.22027337, "Y2~~Y2" = 1.7069357, "Y3~~Y3" = 0.87527537, "Z1~~Z1" = 1.26455176, "eta2~~eta2" = 0.74360185, "Z2~~Z2" = 1.43772669, "Z3~~Z3" = 0.31131063)
 
-    expect_equal(coef(eSSC2.lvm), GS, tol = 1e-6)
-})
+##     expect_equal(coef(eSSC2.lvm), GS, tol = 1e-6)
+## })
 
 ## ## ** two factors model (covariance)
-## m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,eta1~X1,
-##            Z1~eta2,Z2~eta2,Z3~eta2+X3,eta2~X2,
-##            eta1~~eta2))
+m <- lvm(c(Y1~eta1,Y2~eta1,Y3~eta1+X1,eta1~X1,
+           Z1~eta2,Z2~eta2,Z3~eta2+X3,eta2~X2,
+           eta1~~eta2))
 
-## e.lvm <- estimate(m, d)
-## coef(e.lvm)
+## e.lvm <- estimate(m, d) ## not done due to lack of convergence
+## ## coef(e.lvm)
 
 ## test_that("two factors model (correlation) - residuals correction", {
-##     eSSC1.lvm <- sCorrect(e.lvm, ssc = "residuals")
+##     eSSC1.lvm <- estimate2(e.lvm, ssc = "residuals")
 
 ##     GS <- c("eta1" = 0.1478569, "Y2" = 0.19515562, "Y3" = 0.37384111, "eta2" = 0.39767751, "Z2" = -0.19934296, "Z3" = -0.82545231, "eta1~eta2" = 0.36540063, "Y2~eta1" = 0.85064787, "Y3~eta1" = 0.88015853, "Y3~X1" = 1.29882077, "Z2~eta2" = 0.92947602, "Z3~eta2" = 1.95754764, "Z3~X3" = 1.22777389, "Y1~~Y1" = 0.82498637, "eta1~~eta1" = 2.19604428, "Y2~~Y2" = 1.67543559, "Y3~~Y3" = 0.90484948, "Z1~~Z1" = 1.20086385, "eta2~~eta2" = 0.7944319, "Z2~~Z2" = 1.41920933, "Z3~~Z3" = 0.21553652)
 ##     expect_equal(coef(eSSC1.lvm),GS, tol = 1e-6)

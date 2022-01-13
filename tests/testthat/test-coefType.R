@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (14:52) 
 ## Version: 
-## last-updated: dec 17 2019 (09:33) 
+## last-updated: Jan 12 2022 (12:32) 
 ##           By: Brice Ozenne
-##     Update #: 80
+##     Update #: 82
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(TRUE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -141,7 +141,7 @@ m.sim <- lvm(Y1 ~ 1)
 categorical(m.sim, labels = c("control","concussion")) <- ~group
 
 test_that("coefType - lm with extra variable", {
-    coefType(m.sim)
+    expect_equal(unname(coefType(m.sim)), c("intercept", "variance", "extra"))    
 })
 
 ## m.sim <- lvm(Y1 ~ 1, group ~ 1) ## ERROR

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (11:55) 
+## Last-Updated: Jan 12 2022 (12:51) 
 ##           By: Brice Ozenne
-##     Update #: 304
+##     Update #: 306
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -80,17 +80,20 @@ coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
         ## extract structure from lava
         object0 <- object
         class(object0) <- setdiff(class(object), "lvmfit2")
-        out <- do.call(stats::coef, args = c(list(object0),dots))
+        out <- do.call(stats::coef, args = c(list(object0),dots)) ## this does not necessarily output the full parameter name
+        ## Y1~~Y1 may be abreviated into Y1 which is confusion with Y1 the intercept
+        dots$symbol <- NULL
+        out.names <- rownames(do.call(stats::coef, args = c(list(object0),dots))) ## full name
 
         res <- model.tables(object, as.lava = TRUE)
         ## rownames(res) <- as.character(object$sCorrect$skeleton$originalLink2param)
-        out[,"Estimate"] <- res[rownames(out),"estimate"]
-        out[,"Std. Error"] <- res[rownames(out),"se"]
-        out[,"Z-value"] <- res[rownames(out),"statistic"]
+        out[,"Estimate"] <- res[out.names,"estimate"]
+        out[,"Std. Error"] <- res[out.names,"se"]
+        out[,"Z-value"] <- res[out.names,"statistic"]
         if(object$sCorrect$df=="satterthwaite"){ 
             colnames(out)[colnames(out)=="Z-value"] <- "t-value"
         }
-        out[,"P-value"] <- res[rownames(out),"p.value"]
+        out[,"P-value"] <- res[out.names,"p.value"]
 
     }else{        
         out <- object$sCorrect$param[names(object$sCorrect$skeleton$originalLink2param)]

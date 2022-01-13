@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 17 2020 (16:29) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (18:33) 
+## Last-Updated: Jan 12 2022 (12:31) 
 ##           By: Brice Ozenne
-##     Update #: 135
+##     Update #: 136
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -67,8 +67,8 @@ gaussian_weight.estimate.hook <- function(x, data, estimator, ...){
     return( c(list(x=x, data=data, estimator = estimator),dots) )
 }
 
-##' @export
 ##' @rdname gaussian_weight
+##' @export
 gaussian_weight_method.lvm <- "nlminb2"
 
 ## * gaussian_weight_logLik.lvm

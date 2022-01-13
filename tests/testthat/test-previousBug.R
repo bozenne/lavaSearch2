@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 19 2019 (10:17) 
 ## Version: 
-## Last-Updated: apr 15 2020 (11:19) 
+## Last-Updated: Jan 12 2022 (14:55) 
 ##           By: Brice Ozenne
-##     Update #: 26
+##     Update #: 29
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -15,23 +15,16 @@
 ## 
 ### Code:
 
+## * header
+## rm(list = ls(all.names = TRUE))
+if(TRUE){ ## already called in test-all.R
+    library(testthat)
+    library(lavaSearch2)
+}
 
-## * Brice, 11/19/19 10:18, summary2 (name coef)
-long <- data.frame("id" = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20"), 
-                   "visit" = c(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4), 
-                   "weight" = c(127.2, 165.2, 109.7, 146.2, 113.1, 158.8, 115.4, 123.8, 105.8, 118.0, 137.7, 129.0, 117.4, 118.0, 115.0, 131.2, 122.4, 151.6, 173.0, 100.9, 120.7, 153.4, 101.6, 142.4, 105.6, 143.6, 108.8, 115.1, 102.0, 105.3, 131.9, 120.7, 108.5, 113.4, 109.7, 127.3, 113.9, 143.0, 162.2,  95.7, 115.5, 149.2,  97.7, 136.7,  99.9, 134.6, 103.0, 112.2,  98.0,  99.3, 126.3, 116.6, 104.5, 108.3, 103.5, 119.5, 109.0, 135.3, 155.0,  89.9, 108.1, 132.0,  87.1, 123.0,  87.7, 108.7,  88.9,  97.6,  86.6,  90.9, 105.4, 100.0,  95.4,  93.6,  94.1, 103.5,  99.4, 118.5, 148.0,  78.8), 
-                   "glucagonAUC" = c( 5032.50, 12142.50, 10321.35,  6693.00,  7090.50, 10386.00, 10258.80, 16797.75,  2500.50, 11862.00,  5199.00,  5146.50,  3642.00,  4372.95,  5410.50,  7015.50,  6673.50,  5485.50,  6879.00, 14299.50,  4942.50, 14083.50,  6202.50,  6631.50, NA,  7609.50,  8424.60, 16300.50,  2376.00,  8212.50,  5502.00,  5217.00,  5911.50,  4520.10,  7833.00,  5497.50,  4857.00,  5010.00,  7953.00,  8739.00, 20421.00, 10945.50, 20121.00, 13090.50, 19155.00, 11778.00, 29979.75, 11040.00, 13657.50, 22875.00,  7906.50, 12897.00, 26555.10, 12903.90, NA, 16290.00, 17560.50, 16269.00, 12036.00, 26638.50,  9249.45,  7612.50, 17704.50,  4551.00, 12345.00,  8014.80, 11837.70,  6163.50, 11286.00, 12339.00,  6543.00, 11499.00, 23245.50, 12536.10, 18148.50, 10536.00,  8434.95,  7441.50, 10362.00, 11410.50), 
-                   "time" = c("-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month"), 
-                   "time2" = c("-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-3 month", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "-1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+1 week", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month", "+3 month"))
+lava.options(symbols = c("~","~~"))
 
-## long$time3 <- as.factor(as.numeric(long$time))
-fit.time <- gls(weight~time3,
-                data=long,
-                correlation=corSymm(form=~visit|id),
-                weights=varIdent(form=~1|time),
-                na.action=na.exclude,
-                control=glsControl(opt="optim"))
-summary2(fit.time)
+context("Previous bugs")
 
 
 ## * Brice, 01/23/20 1:41 , sCorrect
@@ -52,37 +45,23 @@ e.GS <- gls(neocortex.log ~ group-1, method = "REML", weight = varIdent(form =~1
 e.lm1 <- lm(neocortex.log ~ 1, ddW[ddW$group==1, ]) 
 e.lm2 <- lm(neocortex.log ~ 1, ddW[ddW$group==2, ]) 
 
-ddL <- dcast(ddW, value.var = "neocortex.log", id~group)
+ddL <- reshape2::dcast(ddW, value.var = "neocortex.log", id~group)
 names(ddL) <- c("id","G1","G2")
 m <- lvm(G1~1,G2~1)
 e.lvm <- estimate(m, ddL)
 
 test_that("sCorrect in stratified GLS equivalent to separate LM", {
-    eSSC.GS <- sCorrect(e.GS, ssc = "Cox")
-    eSSC0.GS <- sCorrect(e.GS, ssc = "residuals")
-    
-    eSSC.lm1 <- sCorrect(e.lm1, ssc = "Cox")
-    eSSC.lm2 <- sCorrect(e.lm2, ssc = "Cox")
-    eSSC.lvm <- sCorrect(e.lvm, ssc = "Cox")
+    eSSC.res <- estimate2(e.lvm)
+
+    ## eSSC.cox <- estimate2(e.lvm, ssc = "Cox")
 
     GS <- c(mu1 = mean(ddL$G1, na.rm = TRUE),
             mu2 = mean(ddL$G2, na.rm = TRUE),
             sigma1 = var(ddL$G1, na.rm = TRUE),
             sigma2 = var(ddL$G2, na.rm = TRUE))
-    expect_equivalent(coef2(eSSC.lvm), GS, tol = 1e-6)
+    expect_equivalent(coef2(eSSC.res), GS, tol = 1e-6)
     ## sigma(e.GS)^2
     expect_equivalent(vcov2(eSSC.lvm)[1:2,1:2], vcov(e.GS), tol = 1e-6)
-
-    eSSC.GS$sCorrect$ssc$param0
-    diag(eSSC.GS$sCorrect$ssc$Psi)
-
-    eSSC.lm1$sCorrect$ssc$param0
-    eSSC.lm1$sCorrect$ssc$Psi
-    eSSC.lm1$sCorrect$param
-
-    eSSC.lvm$sCorrect$ssc$param0
-    coef2(eSSC.GS)
-    coef2(eSSC.lvm)
 
     expect_equal(vcov2(eSSC.GS)[1:2,1:2],vcov(e.GS)[1:2,1:2], tol = 1e-6)
     expect_equal(vcov2(eSSC.lm1)[1,1],vcov(e.lm1)[1,1], tol = 1e-6)
@@ -110,8 +89,8 @@ e <- estimate(m, dd)
 
 test_that("bug in version 1.5.4 (incorrect handling of the constrain when computing Omega)", {
     
-    test.res1 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
-    test.cox1 <- sCorrect(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
+    test.res1 <- estimate2(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
+    ## test.cox1 <- estimate2(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
 
     expect_equal(test.res1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.54761303, "Y2~~Y2" = 1.01146135),
                  tol = 1e-6)
@@ -143,11 +122,11 @@ set.seed(10)
 d <- lava::sim(mSim, n)
 dNA <- rbind(d,c(Y1=NA,X1=1,Y2=2))
 dNA$id <- 1:26
-ls.lmALL <- list("Y1" = lm(Y1~X1, data = d),
-                 "Y2" = lm(Y2~X1, data = d))
-ls.lmRED <- list("Y1" = lm(Y1~X1, data = d))
-ls.lmNA <- list("Y1" = lm(Y1~X1, data = dNA),
-                 "Y2" = lm(Y2~X1, data = dNA))
+ls.lmALL <- list("Y1" = estimate(lvm(Y1~X1), data = d),
+                 "Y2" = estimate(lvm(Y2~X1), data = d))
+ls.lmRED <- list("Y1" = estimate(lvm(Y1~X1), data = d))
+ls.lmNA <- list("Y1" = estimate(lvm(Y1~X1), data = dNA),
+                 "Y2" = estimate(lvm(Y2~X1), data = dNA))
 class(ls.lmALL) <- "mmm"
 class(ls.lmRED) <- "mmm"
 class(ls.lmNA) <- "mmm"

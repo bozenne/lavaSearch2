@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:21) 
 ## Version: 
-## Last-Updated: apr  4 2018 (14:20) 
+## Last-Updated: Jan 12 2022 (16:35) 
 ##           By: Brice Ozenne
-##     Update #: 28
+##     Update #: 30
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -39,19 +39,14 @@ dL <- reshape2::melt(d, id.vars = c("Id","X1","X2","X3","Gender"),
                      measure.vars = c("Y1","Y2","Y3","Z1","Z2","Z3"))
 dLred <- dL[dL$variable %in% c("Y1","Y2","Y3"),]
 
-## * linear regression [lm,gls,lvm]
+## * linear regression [lvm]
 ## ** model fit and sCorrect
 e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
 e.lm <- lm(Y1~X1+X2+Gender, data = d)
 e.gls <- gls(Y1~X1+X2+Gender, data = d, method = "ML")
 
-e2.lvm <- e.lvm
-e2.gls <- e.gls
-e2.lm <- e.lm
+e2.lvm <- estimate2(e.lvm)
 
-sCorrect(e2.lvm) <- TRUE
-sCorrect(e2.gls, cluster = 1:n) <- TRUE
-sCorrect(e2.lm) <- TRUE
 
 ## ** test adjusted residuals
 test_that("residuals2 match residuals.lm (lm adjusted)", {
@@ -74,12 +69,8 @@ test_that("residuals2 match residuals.lm (lm adjusted)", {
 
     ## match individual components
     factor <- sqrt(NROW(epsilon.lm)/(NROW(epsilon.lm) - length(coef(e.lm))))
-    expect_equal(as.double(e2.lm$sCorrect$residuals),
+    expect_equal(as.double(e2.lvm$sCorrect$residuals),
                  as.double(epsilon.lm)*factor)
-    expect_equal(e2.lvm$sCorrect$residuals,
-                 e2.lm$sCorrect$residuals)
-    expect_equal(unname(e2.gls$sCorrect$residuals),
-                 unname(e2.lm$sCorrect$residuals)) 
 })
 
 ## * multivariate linear models
@@ -87,7 +78,7 @@ test_that("residuals2 match residuals.lm (lm adjusted)", {
 ls.lm <- list(lm(Y1~X1,d),lm(Y2~X2,d),lm(Y3~X1+X3,d))
 e.lvm <- estimate(lvm(Y1~X1,Y2~X2,Y3~X1+X3), data = d)
 
-sCorrect(e.lvm) <- TRUE
+e2.lvm <- estimate2(e.lvm)
 
 test_that("residuals2 match residuals.lm", {
 
@@ -101,12 +92,12 @@ test_that("residuals2 match residuals.lm", {
     ## })
 
     ## match expectation
-    expect_equal(as.double(colMeans(e.lvm$sCorrect$residuals)),
+    expect_equal(as.double(colMeans(e2.lvm$sCorrect$residuals)),
                  c(0,0,0),
                  tol = 1e-8)
     
     ## match variance
-    expect_equal(unname(colMeans(e.lvm$sCorrect$residuals^2)),
+    expect_equal(unname(colMeans(e2.lvm$sCorrect$residuals^2)),
                  sapply(ls.lm,sigma)^2,
                  tol = 1e-8)
 
@@ -118,11 +109,11 @@ test_that("residuals2 match residuals.lm", {
     })
 
     
-    expect_equal(unname(e.lvm$sCorrect$residuals),
+    expect_equal(unname(e2.lvm$sCorrect$residuals),
                  unname(do.call(cbind,ls.GS)))
 })
 
-## * mixed model: CS [lvm,gls,lme]
+## * mixed model: CS [lvm]
 m <- lvm(c(Y1[0:sigma]~1*eta,
            Y2[0:sigma]~1*eta,
            Y3[0:sigma]~1*eta,
@@ -136,28 +127,19 @@ e.lme <- nlme::lme(value ~ X1 + X2,
 
 e.gls <- nlme::gls(value ~ X1 + X2,
                    correlation = corCompSymm(form = ~1| Id),
-                   data = dLred, method = "ML")
+                   data = dlred, method = "ML")
 
-sCorrect(e.lvm) <-  TRUE
-sCorrect(e.lme) <-  TRUE
-sCorrect(e.gls) <-  TRUE
+e2.lvm <- estimate2(e.lvm)
 
 test_that("residuals2 in mixed models", {
 
     ## mean
-    expect_equal(colSums(e.lvm$sCorrect$residuals),
+    expect_equal(colSums(e2.lvm$sCorrect$residuals),
                  colSums(residuals(e.lvm)))
 
     ## variance
-    ## e.lvm$sCorrect$Omega
-    crossprod(e.lvm$sCorrect$residuals)/NROW(e.lvm$sCorrect$residuals)
-    ## getVarCov2(e.lvm)
-    crossprod(residuals(e.lvm))/NROW(e.lvm$sCorrect$residuals)
-        
-    expect_equal(unname(e.lvm$sCorrect$residuals),
-                 unname(e.lme$sCorrect$residuals))
-    expect_equal(unname(e.lvm$sCorrect$residuals),
-                 unname(e.gls$sCorrect$residuals))
+    getVarCov2(e.lvm)/var(e2.lvm$sCorrect$residuals)
+    ## not 1....
     
 })
 

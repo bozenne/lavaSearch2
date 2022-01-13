@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (17:31) 
+## Last-Updated: Jan 12 2022 (16:33) 
 ##           By: Brice Ozenne
-##     Update #: 217
+##     Update #: 218
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -23,7 +23,7 @@ updateMoment <- function(skeleton, value, toUpdate,
     ## remove attributes used by moments2
     attr(Omega,"Omega.residuals") <- NULL
     attr(Omega,"Omega.leverage") <- NULL
-    attr(Omega,"dOmega") <- NULL
+    attr(Omega,"dOmega.leverage") <- NULL
 
     n.endogenous <- length(endogenous)
     n.latent <- length(latent)

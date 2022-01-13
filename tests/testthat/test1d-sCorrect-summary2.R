@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: apr  4 2018 (13:29) 
 ## Version: 
-## Last-Updated: mar  4 2019 (18:52) 
+## Last-Updated: Jan 13 2022 (00:07) 
 ##           By: Brice Ozenne
-##     Update #: 51
+##     Update #: 56
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -16,7 +16,7 @@
 ### Code:
 
 ## * header
-rm(list = ls())
+## rm(list = ls())
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
@@ -59,34 +59,30 @@ e.lvm <- estimate(lvm(Y1~X1+X2+Gender), data = d)
 
 ## ** test df
 test_that("linear regression: Satterthwaite (df)", {
-    ## printDF(e.lvm, bias.correct = FALSE)
     df <- c("Y1~X1" = 50,
             "Y1~X2" = 50,
             "Y1~GenderFemale" = 50,
             "Y1~~Y1" = 12.5,
             "Y1" = 50)
     expect_equal(as.double(df),
-                 summary2(e.lvm, bias.correct = FALSE)$coef$df)
+                 summary2(e.lvm, ssc = "none")$coef$df)
 })
 
 test_that("linear regression: Satterthwaite + SSC (df)", {
-    ## printDF(e.lvm, bias.correct = TRUE)
     df <- c("Y1~X1" =   46,
             "Y1~X2" =   46,
             "Y1~GenderFemale" =   46,
             "Y1~~Y1" = 11.5,
             "Y1" =   46)
     expect_equal(as.double(df),
-                 summary2(e.lvm, bias.correct = TRUE)$coef$df)
+                 summary2(e.lvm, ssc = "residuals")$coef$df)
 })
 
 ## ** robust standard error
 test_that("linear regression: robust SE", {
     ## printDF(e.lvm, bias.correct = TRUE)
-    eS0 <- summary2(e.lvm, robust = TRUE, df = TRUE)$coef
-    eS1 <- summary2(e.lvm, robust = TRUE, df = 2)$coef
-    eS2 <- summary2(e.lvm, robust = TRUE, df = 2, cluster = 1:n)$coef
-    expect_equal(eS1,eS2)
+    lava.options(df.robust = 1)
+    eS0 <- summary2(e.lvm, robust = TRUE, df = "satterthwaite")$coef
     
     df <- c("Y1~X1" =   46,
             "Y1~X2" =   46,
@@ -96,13 +92,10 @@ test_that("linear regression: robust SE", {
     expect_equal(as.double(df),
                  eS0$df, tol = 1e-2)
     
-    df <- c("Y1~X1" = 43.194962,   
-            "Y1~X2" = 48.765588,
-            "Y1~GenderFemale" = 52.687514,
-            "Y1~~Y1" = 9.694972,
-            "Y1" = 42.373871)
-    expect_equal(as.double(df),
-                 eS1$df, tol = 1e-2)
+    eS1 <- summary2(e.lvm, robust = TRUE, df = "satterthwaite")$coef
+    eS2 <- summary2(e.lvm, robust = TRUE, df = "satterthwaite", cluster = 1:n)$coef
+    expect_equal(eS1,eS2)
+   
 })
 
 ## * linear regression with constrains 
@@ -120,7 +113,7 @@ test_that("linear regression with constrains: Satterthwaite (df)", {
             "Y1~X2" =   NA,
             "Y1~~Y1" = 12.5,
             "Y1" =   50)
-    expect_equal(summary2(e.lvm2, bias.correct = FALSE)$coef$df,
+    expect_equal(summary2(e.lvm2, ssc = "none")$coef$df,
                  as.double(df))
 })
 
@@ -131,7 +124,7 @@ test_that("linear regression with constrains: Satterthwaite + SSC (df)", {
             "Y1~X2" =   NA,
             "Y1~~Y1" = 12,
             "Y1" =   48)
-    expect_equal(summary2(e.lvm2, bias.correct = TRUE)$coef$df,
+    expect_equal(summary2(e.lvm2)$coef$df,
                  as.double(df))
 })
 
@@ -153,7 +146,7 @@ test_that("multiple linear regression: Satterthwaite (df)", {
             "Y1" =   50,
             "Y2" =   50,
             "Y3" =   50)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
                  as.double(df)) ## 
     
 })
@@ -170,7 +163,7 @@ test_that("multiple linear regression: Satterthwaite + SSC (df)", {
             "Y1" =    48,
             "Y2" =    48,
             "Y3" =    47)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
+    expect_equal(summary2(e.lvm)$coef$df,
                  as.double(df)) ## 
     
 })
@@ -193,10 +186,11 @@ test_that("multiple linear regression with constrains: Satterthwaite (df)", {
             "Y1" =   50,
             "Y2" =   50,
             "Y3" =   50)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
                  as.double(df)) ## 
     
 })
+
 test_that("multiple linear regression with constrains: Satterthwaite + SSC (df)", {
     ## printDF(e.lvm, bias.correct = TRUE)
     df <- c("Y1~X1" =    48,
@@ -210,7 +204,7 @@ test_that("multiple linear regression with constrains: Satterthwaite + SSC (df)"
             "Y1" =    48,
             "Y2" =    49,
             "Y3" =    48)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
+    expect_equal(summary2(e.lvm)$coef$df,
                  as.double(df)) ## 
     
 })
@@ -234,8 +228,8 @@ test_that("multiple linear regression with covariance: Satterthwaite (df)", {
             "Y1" = 51.0449669789772,
             "Y2" = 50.0000667169911,
             "Y3" =               50)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
     
 })
 
@@ -253,8 +247,8 @@ test_that("multiple linear regression with covariance: Satterthwaite +SSC (df)",
             "Y1" = 47.9656506208306,
             "Y2" = 47.0000617288762,
             "Y3" =               48)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-6) ## 
     
 })
 
@@ -282,8 +276,8 @@ test_that("compound symmetry: Satterthwaite (df)", {
             "eta" = 91.8352861647611,
             "Y2" = 99.9999999999999,
             "Y3" =              100)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
     
 })
 
@@ -302,8 +296,8 @@ test_that("compound symmetry: Satterthwaite + SSC (df)", {
             "eta" = 87.2184581017777,
             "Y2" = 96.6666666666667,
             "Y3" = 96.6666666666667)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-6) ## 
     
 })
 
@@ -332,7 +326,7 @@ test_that("compound symmetry with different variances: Satterthwaite (df)", {
             "eta" =  62.670059576658,
             "Y2" = 61.7435858694498,
             "Y3" = 62.9968941834921)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
                  as.double(df)) ## 
     
 })
@@ -352,8 +346,8 @@ test_that("compound symmetry with different variances: Satterthwaite + SSC (df)"
             "eta" = 60.2494643343862,
             "Y2" = 59.2748591852783,
             "Y3" = 60.5251223192755)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-1) ## 
     
 })
 
@@ -385,8 +379,8 @@ test_that("Unstructured: Satterthwaite (df)", {
             "eta" = 91.2264371148653,
             "Y2" = 53.4049195968228,
             "Y3" = 53.5959248802897)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
    
 })
 
@@ -407,8 +401,8 @@ test_that("Unstructured: Satterthwaite + SSC (df)", {
             "eta" = 86.6593055939208,
             "Y2" = 51.5324014285871,
             "Y3" = 51.7048594272516)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-1) ## 
    
 })
 
@@ -440,8 +434,8 @@ test_that("Unstructured with different variances: Satterthwaite (df)", {
             "eta" = 61.9919494846624,
             "Y2" =               50,
             "Y3" =               50)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
    
 })
 
@@ -462,8 +456,8 @@ test_that("Unstructured with different variances: Satterthwaite + SSC(df)", {
              "eta" = 59.5876907394727,
              "Y2" =  48.303327990695,
              "Y3" = 48.3503310393569)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-1) ## 
    
 })
 
@@ -491,8 +485,8 @@ test_that("factor model: Satterthwaite (df)", {
             "eta1" = 53.5326429983215,
             "Y2" = 33.8519195633547,
             "Y3" = 5.63733433999094)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-1) ## 
    
 })
 
@@ -512,8 +506,8 @@ test_that("factor model: Satterthwaite + SSC (df)", {
             "eta1" =  51.033476570524,
             "Y2" = 32.4702969907481,
             "Y3" = 5.69386974149653)
-    expect_equal(summary2(e.lvm, bias.correct = TRUE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm)$coef$df,
+                 as.double(df), tol = 1e-1) ## 
    
 })
 
@@ -543,8 +537,8 @@ test_that("factor model with constrains: Satterthwaite (df)", {
              "eta" = 65.4311665778315,
              "Y2" = 55.8228293621142,
              "Y3" = 65.2565795061356)
-    expect_equal(summary2(e.lvm, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
 
     ## printDF(e.lvm2, bias.correct = FALSE)
     df <-  c("Y1~eta" =               NA,
@@ -562,8 +556,8 @@ test_that("factor model with constrains: Satterthwaite (df)", {
              "eta" = 53.7056242594302,
              "Y2" = 33.2159634933677,
              "Y3" = 44.9825684761348)
-    expect_equal(summary2(e.lvm2, bias.correct = FALSE)$coef$df,
-                 as.double(df)) ## 
+    expect_equal(summary2(e.lvm2, ssc = "none")$coef$df,
+                 as.double(df), tol = 1e-6) ## 
 
 })
 

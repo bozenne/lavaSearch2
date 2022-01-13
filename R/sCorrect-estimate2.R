@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan  3 2018 (14:29) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (17:27) 
+## Last-Updated: Jan 12 2022 (18:33) 
 ##           By: Brice Ozenne
-##     Update #: 2139
+##     Update #: 2159
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -66,7 +66,7 @@
 #' @export
 estimate2.lvm <- function(object, param = NULL, data = NULL,
                           ssc = lava.options()$ssc, df = lava.options()$df,
-                          derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
+                          derivative = "analytic", hessian = FALSE, dVcov.robust = FALSE,
                           iter.max = 100, tol.max = 1e-6, trace = 0, ...){
 
     if(!is.null(param)){
@@ -86,7 +86,7 @@ estimate2.lvm <- function(object, param = NULL, data = NULL,
 #' @export
 estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                              ssc = lava.options()$ssc, df = lava.options()$df,
-                             derivative = "analytic", hessian = NULL, dVcov.robust = FALSE,
+                             derivative = "analytic", hessian = FALSE, dVcov.robust = FALSE,
                              iter.max = 100, tol.max = 1e-6, trace = 0, ...){
 
     ## ** preliminary tests
@@ -118,12 +118,12 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
     if(identical(df,FALSE) || identical(df,NA)){
         df <- "none"
     }
-    ssc <- match.arg(tolower(ssc), c("none","residuals","cox"))
+    ssc <- match.arg(tolower(ssc), c("none","residuals","residuals0","cox"))
     df <- match.arg(tolower(df), c("none","satterthwaite"))
 
     if(df %in% "satterthwaite" || ssc %in% "cox"){
         second.order <- TRUE
-    }else if(ssc %in% "residuals"){
+    }else if(ssc %in% c("residuals","residuals0")){
         second.order <- FALSE
     }else{
         second.order <- FALSE
@@ -147,7 +147,7 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
             object.ssc <- list(type = "Cox",
                                param0 = object$sCorrect$param,
                                Omega0 = object$sCorrect$moment$Omega)
-        }else if(ssc %in% "residuals"){
+        }else if(ssc %in% c("residuals","residuals0")){
             object.ssc <- .init_sscResiduals(object)
         }
         
@@ -168,12 +168,13 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
                 object.ssc$JJK <- attr(iParam,"JJK")
                 object.ssc$lm <- attr(iParam,"lm")
                 object.ssc$Psi <- object$sCorrect$moment$Omega - object.ssc$Omega0
-            }else if(ssc %in% "residuals"){
+            }else if(ssc %in% c("residuals","residuals0")){
                 iParam <- .sscResiduals(object, ssc = object.ssc)
                 object.ssc$Omega <- attr(iParam,"Omega")
                 object.ssc$Psi <- attr(iParam,"Psi")
+                ## use previous Omega to compute leverage and residuals
                 attr(object.ssc$Omega,"Omega.leverage") <- object$sCorrect$moment$Omega
-                attr(object.ssc$Omega,"dOmega") <- object$sCorrect$dmoment$dOmega
+                attr(object.ssc$Omega,"dOmega.leverage") <- object$sCorrect$dmoment$dOmega
                 attr(object.ssc$Omega,"Omega.residuals") <- object$sCorrect$moment$Omega
             }
             ## object.ssc$Omega0 + object.ssc$Psi - object.ssc$Omega
@@ -186,14 +187,15 @@ estimate2.lvmfit <- function(object, param = NULL, data = NULL,
             iCV <- iTol <= tol.max
 
             ## update moments
+            ## if ssc=="residuals0" then do not rescale the residuals according the the bias
             if(iCV==FALSE && iIter < iter.max){
-                object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, Omega = object.ssc$Omega, 
+                object$sCorrect <- moments2(object, param = iParam, Psi = if(ssc!="residuals0"){object.ssc$Psi}else{NULL}, Omega = object.ssc$Omega, 
                                             initialize = FALSE, usefit = TRUE,
-                                            score = TRUE, information = TRUE, hessian = NULL, vcov = TRUE,
+                                            score = TRUE, information = TRUE, hessian = FALSE, vcov = TRUE,
                                             dVcov = (ssc == "cox"), dVcov.robust = FALSE,
                                             residuals = TRUE, leverage = TRUE, derivative = derivative)
             }else{
-                object$sCorrect <- moments2(object, param = iParam, Psi = object.ssc$Psi, Omega = object.ssc$Omega, 
+                object$sCorrect <- moments2(object, param = iParam, Psi = if(ssc!="residuals0"){object.ssc$Psi}else{NULL}, Omega = object.ssc$Omega, 
                                             initialize = FALSE, usefit = TRUE,
                                             score = TRUE, information = TRUE, hessian = hessian, vcov = TRUE,
                                             dVcov = (df == "satterthwaite"), dVcov.robust = dVcov.robust,

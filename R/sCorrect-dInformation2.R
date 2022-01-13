@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: Jan  4 2022 (17:23) 
+## Last-Updated: Jan 12 2022 (18:28) 
 ##           By: Brice Ozenne
-##     Update #: 345
+##     Update #: 347
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -258,6 +258,7 @@
             term1 <- matrix(0, nrow = n.param, ncol = n.param)
         }
         term2 <- vcov.param %*% hessian[iP,,] %*% score_vcov.param
+        ## dRvcov.param[,,iP] <- term2 + t(term2) ## (what was lavaSearch2 doing before version 2.0.0)
         dRvcov.param[,,iP] <- term1 + t(term1) + term2 + t(term2)
     }
 
@@ -315,7 +316,7 @@
 
             test.mu1a <- !is.null(d2mu[[iNameD]][[iName1]]) && !is.null(dmu[[iName2]])
             test.mu1b <- !is.null(d2mu[[iName1]][[iNameD]]) && !is.null(dmu[[iName2]])
-            test.mu2a <- !is.null(d2mu[[iNameD]][[iName2]]) && !is.null(dmu[[iName1]])
+            test.mu2a <- !is.null(d2mu[[iNameD]][[iName2nn]]) && !is.null(dmu[[iName1]])
             test.mu2b <- !is.null(d2mu[[iName2]][[iNameD]]) && !is.null(dmu[[iName1]])
             test.mu3 <- !is.null(dOmega[[iNameD]]) && !is.null(dmu[[iName1]]) && !is.null(dmu[[iName2]])
 

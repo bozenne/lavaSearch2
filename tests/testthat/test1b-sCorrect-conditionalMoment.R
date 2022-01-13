@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (11:58) 
+## Last-Updated: Jan 12 2022 (15:14) 
 ##           By: Brice Ozenne
-##     Update #: 91
+##     Update #: 95
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -160,13 +160,10 @@ test_that("linear regression - constrains and covariance",{
 
 test_that("linear regression (ML+1) - constrains and covariance",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- estimate2(e.lvm, param = coef2(e.lvm)+1, ssc = "none", df = "none")
-    ## coef(estimate2(e.lvm, ssc = "none", df = "none"))
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
 
-    expect_equal(coef(test.lvm), coef2(e.lvm)+1, tol = 1e-8)
-    ## lava::score(e.lvm, p = newcoef, indiv = FALSE)
-    ## score2(test.lvm, indiv = FALSE)
-    
+    expect_equal(coef(test.lvm), newcoef, tol = 1e-8)
+
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
                  tol = 1e-8)
@@ -178,77 +175,6 @@ test_that("linear regression (ML+1) - constrains and covariance",{
                  tol = 1e-8)
 })
 
-## ** gls with heterogenous variance
-e.gls <- gls(value ~ 0+variable*X1 + X2, weight = varIdent(form =~ 1 | variable), data = dL[dL$variable %in% c("Y1","Y2"),],
-             method = "ML")
-e.lvm <- estimate(lvm(Y1[mu1:sigma1] ~ X1 + b*X2, Y2[mu2:sigma2] ~ X1 + b*X2), data = d)
-## logLik(e.gls)
-## logLik(e.lvm)
-
-test_that("gls",{
-    expect_equal(as.double(logLik(e.lvm)), as.double(logLik(e.gls)), tol = 1e-3)
-    expect_equal(as.double(logLik(e.lvm)), -179.2554, tol = 1e-6)
-
-    test.gls <- sCorrect(e.gls, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
-    test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
-
-    expect_equal(unname(getVarCov2(test.gls)),
-                 unname(getVarCov2(test.lvm)),
-                 tol = 1e-3)
-    expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
-                 unname(score2(test.lvm, indiv = TRUE)),
-                 tol = 1e-8)
-    expect_equal(lava::information(e.lvm),
-                 unname(information2(test.lvm)),
-                 tol = 1e-8)
-    expect_equal(unname(coef(e.lvm)),
-                 unname(coef2(test.lvm)),
-                 tol = 1e-8)
-    expect_equal(unname(residuals(e.lvm)),
-                 unname(residuals2(test.lvm, type = "response")),
-                 tol = 1e-8)
-    test <- residuals2(test.gls, type = "response")
-    GS <- residuals2(test.lvm, type = "response")
-    expect_equal(as.vector(na.omit(as.double(test))),
-                 as.double(GS),
-                 tol = 1e-4)
-    
-    if(test.secondOrder){
-        testN.gls <- sCorrect(e.gls, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-        testN.lvm <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-
-        expect_equal(test.lvm$sCorrect$hessian,testN.lvm$sCorrect$hessian, tol = 1e-7)
-        expect_equal(test.lvm$sCorrect$dVcov.param,testN.lvm$sCorrect$dVcov.param, tol = 1e-7)
-        expect_equal(test.lvm$sCorrect$dRvcov.param,testN.lvm$sCorrect$dRvcov.param, tol = 1e-7)
-
-        expect_equal(test.gls$sCorrect$hessian,testN.gls$sCorrect$hessian, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dVcov.param,testN.gls$sCorrect$dVcov.param, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dRvcov.param,testN.gls$sCorrect$dRvcov.param, tol = 1e-7)
-
-        ## compare to previous versions
-        GS <- matrix(c(0.00027028, 0.00027028, -1.22e-05, 0.00126055, -1.22e-05, 0, 0, 0.00027028, 0.02031147, -1.22e-05, 0.00126055, -0.00090249, 0, 0, -1.22e-05, -1.22e-05, 5.5e-07, -5.691e-05, 5.5e-07, 0, 0, 0.00126055, 0.00126055, -5.691e-05, 0.00587905, -5.691e-05, 0, 0, -1.22e-05, -0.00090249, 5.5e-07, -5.691e-05, 0.01924312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.16350761), 
-                     nrow = 7, 
-                     ncol = 7, 
-                     dimnames = list(c("Y1", "Y2", "Y1~X1", "Y1~X2", "Y2~X1", "Y1~~Y1", "Y2~~Y2"),c("Y1", "Y2", "Y1~X1", "Y1~X2", "Y2~X1", "Y1~~Y1", "Y2~~Y2")) 
-                     ) 
-        expect_equal(test.lvm$sCorrect$dVcov.param[,,"Y2~~Y2"],GS,tol = 1e-6)
-    }
-})
-
-test_that("linear regression (ML+1) - gls",{
-    newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
-    
-    expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
-                 unname(score2(test.lvm, indiv = TRUE)),
-                 tol = 1e-8)
-    expect_equal(unname(lava::information(e.lvm, p = newcoef)),
-                 unname(information2(test.lvm)),
-                 tol = 1e-8)
-    expect_equal(unname(residuals(e.lvm, p = newcoef)),
-                 unname(residuals2(test.lvm, type = "response")),
-                 tol = 1e-8)
-})
 
 ## * mixed model
 cat("- mixed model \n")
@@ -275,15 +201,11 @@ test_that("Compound symmetry", {
     expect_equal(as.double(logLik(e.gls)),as.double(logLik(e.lvm)), tol = 1e-3)
     expect_equal(as.double(logLik(e.lvm)), -259.8317, tol = 1e-6)
 
-    test.gls <- sCorrect(e.gls, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
-    test.lme <- sCorrect(e.lme, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
-    test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
+    test.lvm <- estimate2(e.lvm, ssc = "none", df = if(test.secondOrder){"Satterthwaite"}else{"none"},
+                          derivative = "analytic", hessian = TRUE, dVcov.robust = TRUE)
 
-    expect_equal(unname(getVarCov2(test.gls)),
-                 unname(getVarCov2(test.lvm)),
-                 tol = 1e-3)
-    expect_equal(unname(getVarCov2(test.lme)),
-                 unname(getVarCov2(test.lvm)),
+    expect_equal(as.double(getVarCov(e.gls)),
+                 as.double(getVarCov2(test.lvm)),
                  tol = 1e-3)
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -297,17 +219,10 @@ test_that("Compound symmetry", {
     expect_equal(unname(residuals(e.lvm)),
                  unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    expect_equal(unname(residuals2(test.gls, type = "response")),
-                 unname(residuals2(test.lvm, type = "response")),
-                 tol = 1e-8)
 
     if(test.secondOrder){
-        testN.gls <- sCorrect(e.gls, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-        testN.lvm <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-
-        expect_equal(test.gls$sCorrect$hessian,testN.gls$sCorrect$hessian, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dVcov.param,testN.gls$sCorrect$dVcov.param, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dRvcov.param,testN.gls$sCorrect$dRvcov.param, tol = 1e-7)
+        testN.lvm <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                               derivative = "numeric", hessian = TRUE, dVcov.robust = TRUE)
 
         expect_equal(test.lvm$sCorrect$hessian,testN.lvm$sCorrect$hessian, tol = 1e-7)
         expect_equal(test.lvm$sCorrect$dVcov.param,testN.lvm$sCorrect$dVcov.param, tol = 1e-7)
@@ -319,13 +234,13 @@ test_that("Compound symmetry", {
                      ncol = 7, 
                      dimnames = list(c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta"),c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta")) 
                      )
-        expect_equal(test.lvm$sCorrect$dVcov.param[,,"Y1~~Y1"],GS,tol = 1e-6)
+        expect_equal(test.lvm$sCorrect$dVcov.param[rownames(GS),colnames(GS),"Y1~~Y1"],GS,tol = 1e-6)
     }
 })
 
 test_that("mixed model (ML+1) - CS",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -365,15 +280,11 @@ test_that("Unstructured", {
     expect_equal(as.double(logLik(e.gls)),as.double(logLik(e.lvm)), tol = 1e-3)
     expect_equal(as.double(logLik(e.lvm)), -258.8121, tol = 1e-6)
 
-    test.gls <- sCorrect(e.gls, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
-    test.lme <- sCorrect(e.lme, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic") ## error: overparametrized model
-    test.lvm <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
+    test.lvm <- estimate2(e.lvm, ssc = "none", df = if(test.secondOrder){"Satterthwaite"}else{NA},
+                          derivative = "analytic", hessian = TRUE, dVcov.robust = TRUE)
 
-    expect_equal(unname(getVarCov2(test.gls)),
-                 unname(getVarCov2(test.lvm)),
-                 tol = 1e-3)
-    expect_equal(unname(getVarCov2(test.lme)),
-                 unname(getVarCov2(test.lvm)),
+    expect_equal(as.double(getVarCov(e.gls)),
+                 as.double(getVarCov2(test.lvm)),
                  tol = 1e-3)
     expect_equal(unname(lava::score(e.lvm, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -387,17 +298,10 @@ test_that("Unstructured", {
     expect_equal(unname(residuals(e.lvm)),
                  unname(residuals2(test.lvm, type = "response")),
                  tol = 1e-8)
-    expect_equal(unname(residuals2(test.gls, type = "response")),
-                 unname(residuals2(test.lvm, type = "response")),
-                 tol = 1e-3)
 
     if(test.secondOrder){
-        testN.gls <- sCorrect(e.gls, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-        testN.lvm <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
-
-        expect_equal(test.gls$sCorrect$hessian,testN.gls$sCorrect$hessian, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dVcov.param,testN.gls$sCorrect$dVcov.param, tol = 1e-7)
-        expect_equal(test.gls$sCorrect$dRvcov.param,testN.gls$sCorrect$dRvcov.param, tol = 1e-7)
+        testN.lvm <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                               derivative = "numeric", hessian = TRUE, dVcov.robust = TRUE)
 
         expect_equal(test.lvm$sCorrect$hessian,testN.lvm$sCorrect$hessian, tol = 1e-7)
         expect_equal(test.lvm$sCorrect$dVcov.param,testN.lvm$sCorrect$dVcov.param, tol = 1e-7)
@@ -409,14 +313,14 @@ test_that("Unstructured", {
                      ncol = 11, 
                      dimnames = list(c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta", "Y2~~Y2", "Y3~~Y3", "Y1~~Y2", "Y1~~Y3"),c("eta", "Y2", "Y3", "eta~X1", "eta~GenderFemale", "Y1~~Y1", "eta~~eta", "Y2~~Y2", "Y3~~Y3", "Y1~~Y2", "Y1~~Y3")) 
                      ) 
-        expect_equal(test.lvm$sCorrect$dVcov.param[,,"Y1~~Y1"],GS,tol = 1e-6)
+        expect_equal(test.lvm$sCorrect$dVcov.param[rownames(GS),colnames(GS),"Y1~~Y1"],GS,tol = 1e-6)
     }
 
 })
 
 test_that("mixed model (ML+1) - UN",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -442,7 +346,8 @@ e.lvm <- estimate(m, d)
 test_that("factor model",{
     expect_equal(as.double(logLik(e.lvm)), -334.2583, tol = 1e-6)
 
-    test <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
+    test <- estimate2(e.lvm, ssc = "none", df = if(test.secondOrder){"Satterthwaite"}else{NA},
+                      derivative = "analytic", hessian = TRUE, dVcov.robust = TRUE)
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
                  score2(test, indiv = TRUE),
@@ -458,7 +363,8 @@ test_that("factor model",{
                  tol = 1e-8)
 
     if(test.secondOrder){
-        testN <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
+        testN <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                           derivative = "numeric", hessian = TRUE, dVcov.robust = TRUE)
 
         expect_equal(test$sCorrect$hessian,testN$sCorrect$hessian, tol = 1e-7)
         expect_equal(test$sCorrect$dVcov.param,testN$sCorrect$dVcov.param, tol = 1e-7)
@@ -476,7 +382,7 @@ test_that("factor model",{
 
 test_that("factor model (ML+1)",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -502,7 +408,8 @@ e.lvm <- estimate(m, d)
 test_that("two factor model - correlation",{
     expect_equal(as.double(logLik(e.lvm)), -518.3538, tol = 1e-6)
 
-    test <- sCorrect(e.lvm, ssc = NA, df = if(test.secondOrder){"Satterthwaite"}else{NA}, derivative = "analytic")
+    test <- estimate2(e.lvm, ssc = "none", df = if(test.secondOrder){"Satterthwaite"}else{NA},
+                      derivative = "analytic", hessian = TRUE, dVcov.robust = TRUE)
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
                  score2(test, indiv = TRUE),
@@ -518,7 +425,8 @@ test_that("two factor model - correlation",{
                  tol = 1e-8)
 
     if(test.secondOrder){
-        testN <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
+        testN <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                          derivative = "numeric", hessian = TRUE, dVcov.robust = TRUE)
 
         expect_equal(test$sCorrect$hessian,testN$sCorrect$hessian, tol = 1e-7)
         expect_equal(test$sCorrect$dVcov.param,testN$sCorrect$dVcov.param, tol = 1e-7)
@@ -537,7 +445,7 @@ test_that("two factor model - correlation",{
 
 test_that("two factor model (ML+1) - correlation",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
@@ -560,7 +468,8 @@ e.lvm <- estimate(m, d)
 test_that("two factor model - covariance",{
     expect_equal(as.double(logLik(e.lvm)), -502.7317, tol = 1e-6)
 
-    test <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "analytic")
+    test <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                      derivative = "analytic", hessian = TRUE, dVcov.robust = TRUE)
     
     expect_equal(lava::score(e.lvm, indiv = TRUE),
                  score2(test, indiv = TRUE),
@@ -576,7 +485,8 @@ test_that("two factor model - covariance",{
                  tol = 1e-8)
 
     if(test.secondOrder){
-        testN <- sCorrect(e.lvm, ssc = NA, df = "Satterthwaite", derivative = "numeric")
+        testN <- estimate2(e.lvm, ssc = "none", df = "Satterthwaite",
+                           derivative = "numeric", hessian = TRUE, dVcov.robust = TRUE)
     
         expect_equal(test$sCorrect$hessian,testN$sCorrect$hessian, tol = 1e-7)
         expect_equal(test$sCorrect$dVcov.param,testN$sCorrect$dVcov.param, tol = 1e-7)
@@ -594,7 +504,7 @@ test_that("two factor model - covariance",{
 
 test_that("two factor model (ML+1) - covariance",{
     newcoef <- coef(e.lvm)+1
-    test.lvm <- sCorrect(e.lvm, param = .coef2(e.lvm)+1, ssc = NA, df = NA)
+    test.lvm <- estimate2(e.lvm, param = newcoef, ssc = "none", df = "none")
     
     expect_equal(unname(lava::score(e.lvm, p = newcoef, indiv = TRUE)),
                  unname(score2(test.lvm, indiv = TRUE)),
