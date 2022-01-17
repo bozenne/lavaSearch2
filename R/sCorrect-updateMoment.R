@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 10 2019 (09:58) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (16:33) 
+## Last-Updated: jan 17 2022 (14:57) 
 ##           By: Brice Ozenne
-##     Update #: 218
+##     Update #: 232
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -114,7 +114,7 @@ updateMoment <- function(skeleton, value, toUpdate,
     }else{
         value$Omega <- Omega.param
     }
-    
+
     value$Omega.missing.pattern <- lapply(1:length(name.pattern), function(iM){ ## iM <- 1
         iIndex <- which(unique.pattern[iM,]==1)
         return(value$Omega[iIndex,iIndex,drop=FALSE])
@@ -141,8 +141,11 @@ updateDMoment <- function(moment, skeleton, param){
     tLambda.tiIB.Psi.iIB <- moment$tLambda.tiIB.Psi.iIB
     Sigma <- moment$Sigma
     attr(Sigma,"detail") <- NULL
-        
+
     ## ** Compute partial derivative regarding the mean
+    ## NOTE: no "nu", "K", or "Gamma" as the partial derivative is independent of the parameter values
+    ##       and can therefore be computed once for all
+    
     if("alpha" %in% names(skeleton$dmat.dparam)){
         iName.param <- names(skeleton$dmat.dparam$alpha)
         for(iParam in iName.param){ ## iParam <- iName.param[1]
@@ -151,7 +154,7 @@ updateDMoment <- function(moment, skeleton, param){
     }
 
     if("Gamma" %in% names(skeleton$dmat.dparam)){
-        iName.param <- names(skeleton$dmat.dparam$Gamma)
+        iName.param <- names(skeleton$dmat.dparam$Gamma)   
         for(iParam in iName.param){ ## iParam <- iName.param[1]
             dmu[[iParam]] <- skeleton$dmat.dparam$Gamma[[iParam]] %*% iIB.Lambda
         }
@@ -230,6 +233,8 @@ updateD2Moment <- function(moment, skeleton, param){
     names.grid.var <- names(grid.var)
     
     ## ** Compute partial derivative regarding the mean
+    ## NOTE: no "nu", "K", or "Gamma" as the partial derivative is 0
+
     if("alpha.B" %in% names.grid.mean){
         for(iP in 1:NROW(grid.mean$alpha.B)){ # iP <- 1
             iName1 <- grid.mean$alpha.B[iP,"alpha"]

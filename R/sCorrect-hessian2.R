@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (12:18) 
+## Last-Updated: jan 17 2022 (17:06) 
 ##           By: Brice Ozenne
-##     Update #: 136
+##     Update #: 141
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -119,6 +119,11 @@ hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TR
                              leverage = object$sCorrect$leverage,
                              n.cluster = object$sCorrect$cluster$n.cluster,
                              weights = object$sCorrect$weights)
+
+        hessian.name <- setNames(names(object$sCorrect$skeleton$originalLink2param),object$sCorrect$skeleton$originalLink2param)[object$sCorrect$skeleton$Uparam]
+        dimnames(hessian) <- list(as.character(hessian.name),
+                                  as.character(hessian.name),
+                                  NULL)
     }
 
     if(!is.null(cluster)){ ## aggregate hessian by cluster

@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (11:37) 
+## Last-Updated: jan 17 2022 (16:42) 
 ##           By: Brice Ozenne
-##     Update #: 532
+##     Update #: 550
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -95,21 +95,6 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     previous.summary <- object.summary$coef
     object.summary$coef <- tableS.all[name.param,c("estimate","se","statistic","df","p.value"),drop=FALSE]
 
-    if(!is.null(object$cluster) || inherits(object,"lvm.missing")){
-        
-        ## if(robust == FALSE){
-        ##     stop("Can only print summary for robust standard errors \n",
-        ##          "when the object contain a cluster variable \n")
-        ## }
-        colnames(object.summary$coef) <- c("Estimate","Std. Error","t-value","df","P-value")
-        object.summary$coef[,"t-value"] <- NA
-
-        colnames(object.summary$coefmat) <- c("Estimate","Std. Error","t-value","P-value", "std.xy")
-        object.summary$coefmat[,"t-value"] <- ""
-        
-    }else{
-        colnames(object.summary$coef) <- c("Estimate", "Std. Error", "t-value", "df", "P-value")
-    }
 
     ## find digit
     vec.char <- setdiff(object.summary$coefmat[,"Estimate"],"")
@@ -121,22 +106,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
 
     ## *** coef
     lava.rownames <- rownames(previous.summary)
-    ## add rows corresponding to reference parameters
-    missing.rows <- setdiff(lava.rownames,rownames(object.summary$coef))
-    if(length(missing.rows)>0){
-        addon <- previous.summary[missing.rows,
-                                  c("Estimate","Std. Error","Z-value","P-value"),
-                                  drop=FALSE]
-        colnames(addon)[3] <- "t-value"
-        object.summary$coef <- rbind(object.summary$coef, cbind(addon,df=NA))
-    }
-
-    ## re-order table according to lava
-    object.summary$coef <- object.summary$coef[rownames(previous.summary),,drop=FALSE]
-    ## remove unappropriate p.values
-    lava.NApvalue <- which(is.na(previous.summary[,"P-value"]))
-    object.summary$coef[lava.NApvalue,"P-value"] <- NA
-
+    
     ## *** coefmat
     name.label0 <- trimws(rownames(CoefMat(object0, labels = 0, level = 9)), which = "both")
     index.titleVariance <- which(name.label0=="Residual Variances:")
@@ -146,29 +116,32 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
         index.var <- setdiff(index.vcov,grep("~~",name.label0,fixed=TRUE)) ## exclude covariance parameters that are already correctly named
         name.label0[index.var] <- paste0(name.label0[index.var],lava.options()$symbols[2],name.label0[index.var])
     }
-
     table.coefmat <- object.summary$coefmat
-    colnames(table.coefmat)[3:5] <- c("t-value","P-value","df")
-    
+    if(object$sCorrect$df=="satterthwaite"){
+        colnames(table.coefmat)[3:5] <- c("t-value","P-value","df")
+    }else{
+        colnames(table.coefmat)[3:5] <- c("Z-value","P-value","df")
+    }
+
     ## mimic lava:::CoefMat (called by lava:::summary.lvmfit)
     table.coef <- object.summary$coef
-    e2add <- format(round(table.coef[,"Estimate"], max(1, digit - 1)), digits = digit - 1)
+    e2add <- format(round(table.coef[,"estimate"], max(1, digit - 1)), digits = digit - 1)
     e2add <- gsub(" NA","",e2add)
-    sd2add <- format(round(table.coef[,"Std. Error"], max(1, digit - 1)), digits = digit - 1)
+    sd2add <- format(round(table.coef[,"se"], max(1, digit - 1)), digits = digit - 1)
     sd2add <- gsub(" NA","",sd2add)
     df2add <- as.character(round(table.coef[,"df"],2))    
     df2add[is.na(df2add)] <- ""
-    t2add <- format(round(table.coef[,"t-value"], max(1, digit - 1)), digits = digit - 1)
+    t2add <- format(round(table.coef[,"statistic"], max(1, digit - 1)), digits = digit - 1)
     t2add <- gsub(" NA","",t2add)
 
-    p2add <- formatC(table.coef[,"P-value"], digits = digit - 1, format = "g",  preserve.width = "common", flag = "")
+    p2add <- formatC(table.coef[,"p.value"], digits = digit - 1, format = "g",  preserve.width = "common", flag = "")
     p2add <- gsub(" NA","",p2add)
-    p2add[table.coef[,"P-value"] < 1e-12] <- "  <1e-12"
+    p2add[table.coef[,4] < 1e-12] <- "  <1e-12"
 
     M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)
     table.coefmat[match(rownames(table.coef), name.label0),] <- M2add
 
-    table.coefmat[object.summary$coefmat[,"P-value"]=="","P-value"] <- ""
+    table.coefmat[object.summary$coefmat[,4]=="",4] <- ""
     object.summary$coefmat <- table.coefmat
 
     ## ** Export

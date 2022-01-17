@@ -38,13 +38,12 @@ Imports:
 Suggests:
     data.table,
     foreach,
-    lava.tobit,
     lme4,
     lmerTest,
     numDeriv,
     pbapply,
     pbkrtest,
-	R.rsp,
+    R.rsp,
     riskRegression,
     survival,
     testthat

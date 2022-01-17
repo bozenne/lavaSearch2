@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (14:17) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (09:51) 
+## Last-Updated: jan 17 2022 (12:40) 
 ##           By: Brice Ozenne
-##     Update #: 430
+##     Update #: 441
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -158,7 +158,10 @@ information.lvmfit2 <- function(x, ...){ ## necessary as first argument of infor
             iP1 <- grid.var[iG,1]
             iP2 <- grid.var[iG,2]
 
+            ## NOTE: normally tr(ABAC)=tr(ACAB) but because of the factor n.correct this is no more the case
+            ##       so the information may slightly dependent on the ordering of the parameters
             iDiag <- diag(iOmegaM1 %*% dOmega[[iP1]][iY,iY,drop=FALSE] %*% iOmegaM1 %*% dOmega[[iP2]][iY,iY,drop=FALSE])
+                        
             Info[iP1,iP2] <- Info[iP1,iP2] + 1/2*sum(iDiag*iN.corrected)
         }        
     }

@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (16:47) 
+## Last-Updated: jan 17 2022 (14:30) 
 ##           By: Brice Ozenne
-##     Update #: 161
+##     Update #: 169
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,13 +70,8 @@
     missing <- any(is.na(index.Omega))
     index.cluster <- unlist(lapply(name.cluster, rep, times = n.endogenous))
 
-    if(missing){
-        index.cluster <- index.cluster[!is.na(index.Omega)]
-        index.Omega <- tapply(index.Omega[!is.na(index.Omega)], index.cluster, list)
-    }else{
-        index.Omega <- tapply(index.Omega, index.cluster, list)
-    }
-    Uindex.Omega <- unique(index.Omega)
+    index.Omega <- tapply(index.Omega, index.cluster, function(iVec){list(na.omit(iVec))})
+    Uindex.Omega <- unique(index.Omega[sapply(index.Omega,length)>0])
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,
                 n.cluster = n.cluster,

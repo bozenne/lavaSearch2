@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:14) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (12:51) 
+## Last-Updated: jan 17 2022 (15:06) 
 ##           By: Brice Ozenne
-##     Update #: 306
+##     Update #: 320
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -74,8 +74,10 @@ coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
             warning("Argument(s) \'",paste(setdiff(names(dots), c("type","symbol","labels")), collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
         }
     }
-    
     if(length(dots)>1){ ## for the print function
+
+        ## new values
+        res <- model.tables(object, as.lava = TRUE)
 
         ## extract structure from lava
         object0 <- object
@@ -83,17 +85,21 @@ coef2.lvmfit2 <- function(object, as.lava = TRUE, ...){
         out <- do.call(stats::coef, args = c(list(object0),dots)) ## this does not necessarily output the full parameter name
         ## Y1~~Y1 may be abreviated into Y1 which is confusion with Y1 the intercept
         dots$symbol <- NULL
-        out.names <- rownames(do.call(stats::coef, args = c(list(object0),dots))) ## full name
+        out.names <- intersect(rownames(do.call(stats::coef, args = c(list(object0),dots))), ## full name
+                               rownames(res))
+        index.out.names <- match(out.names, rownames(do.call(stats::coef, args = c(list(object0),dots))))
 
-        res <- model.tables(object, as.lava = TRUE)
         ## rownames(res) <- as.character(object$sCorrect$skeleton$originalLink2param)
-        out[,"Estimate"] <- res[out.names,"estimate"]
-        out[,"Std. Error"] <- res[out.names,"se"]
-        out[,"Z-value"] <- res[out.names,"statistic"]
+        out[index.out.names,"Estimate"] <- res[out.names,"estimate"]
+        out[index.out.names,"Std. Error"] <- res[out.names,"se"]
+        out[index.out.names,3] <- res[out.names,"statistic"] ## use 3 instead of Z value / Z-value
         if(object$sCorrect$df=="satterthwaite"){ 
-            colnames(out)[colnames(out)=="Z-value"] <- "t-value"
+            colnames(out)[3] <- "t value"
+            if(colnames(out)[4]=="Pr(>|z|)"){ 
+                colnames(out)[4] <- "Pr(>|t|)"
+            }
         }
-        out[,"P-value"] <- res[out.names,"p.value"]
+        out[index.out.names,4] <- res[out.names,"p.value"] ## use 4 instead of P-value / Pr(>|z|)
 
     }else{        
         out <- object$sCorrect$param[names(object$sCorrect$skeleton$originalLink2param)]

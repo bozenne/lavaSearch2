@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 19 2018 (17:58) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (18:36) 
+## Last-Updated: jan 17 2022 (11:56) 
 ##           By: Brice Ozenne
-##     Update #: 176
+##     Update #: 177
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -156,12 +156,13 @@ leverage2.lvmfit2 <- function(object, format = "wide", ...){
 
         ## leverage
         for(iiY in iY){ ## iiY <- iY[2]
+            
             if(length(param.mean)==1){
-                leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * (scoreY[iIndex,iiY,] %*% vcov.param)[,param.mean]
+                leverage[iIndex,iiY] <- dmu[param.mean,iiY,iIndex] * (scoreY[iIndex,iiY,] %*% vcov.param)[,param.mean]
             }else if(n.param==1){
-                leverage[iIndex,iiY] <- dmu[,iiY,iIndex] * vcov.param * scoreY[iIndex,iiY,]
+                leverage[iIndex,iiY] <- dmu[param.mean,iiY,iIndex] * vcov.param * scoreY[iIndex,iiY,]
             } else{
-                leverage[iIndex,iiY] <- rowSums(t(dmu[,iiY,iIndex]) * (scoreY[iIndex,iiY,] %*% vcov.param)[,param.mean,drop=FALSE] )
+                leverage[iIndex,iiY] <- rowSums(t(dmu[param.mean,iiY,iIndex]) * (scoreY[iIndex,iiY,] %*% vcov.param)[,param.mean,drop=FALSE] )
             }
             ## dmu2 <- matrix(0, nrow = n.param, ncol = length(iIndex), dimnames = list(param,NULL))
             ## dmu2[param.mean,] <- dmu[param.mean,iiY,iIndex]

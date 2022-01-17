@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (16:48) 
+## Last-Updated: jan 17 2022 (14:44) 
 ##           By: Brice Ozenne
-##     Update #: 1685
+##     Update #: 1697
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -153,13 +153,12 @@ skeleton <- function(object, X,
     if("Gamma" %in% type.theta$detail){
         type.Gamma <- type.theta[type.theta$detail %in% "Gamma",,drop=FALSE]
         Gamma.exogenous <- unique(type.Gamma$X)
-        
+
         theta.value$Gamma <- matrix(0, nrow = length(Gamma.exogenous), ncol = n.latent,
                                     dimnames = list(Gamma.exogenous, latent))
         theta.param$Gamma <- matrix(as.character(NA), nrow = length(Gamma.exogenous), ncol = n.latent,
                                     dimnames = list(Gamma.exogenous, latent))
         theta.param$XGamma <- lapply(obsByEndoInX[latent], function(iIndex){as.matrix(X[iIndex,Gamma.exogenous,drop=FALSE])})
-
         for(iGamma in 1:NROW(type.Gamma)){ ## iGamma <- 1
             theta.value$Gamma[type.Gamma[iGamma,"X"],type.Gamma[iGamma,"Y"]] <- type.Gamma[iGamma,"value"]
             theta.param$Gamma[type.Gamma[iGamma,"X"],type.Gamma[iGamma,"Y"]] <- type.Gamma[iGamma,"param"]
@@ -362,10 +361,10 @@ skeletonDtheta <- function(object, X,
                                           nrow = n.cluster, ncol = n.endogenous,
                                           dimnames = list(NULL,endogenous))
 
-            for(iY in 1:NROW(iType.K)){ ## iY <- 5
-                iEndo <- match(iType.K$Y[iY],endogenous)
-                dmat.dparam$K[[iK]][,iEndo] <- NA
-                dmat.dparam$K[[iK]][X[X$XXendogenousXX==endogenous[iEndo],"XXclusterXX"],iEndo] <- X[X$XXendogenousXX==endogenous[iEndo],iType.K$X[1]]
+            for(iX in 1:NROW(iType.K)){ ## iY <- 5
+                iY <- match(iType.K$Y[iX],endogenous)
+                iIndex <- which(X$XXendogenousXX==endogenous[iY])
+                dmat.dparam$K[[iK]][X[iIndex,"XXclusterXX"],iY] <- dmat.dparam$K[[iK]][X[iIndex,"XXclusterXX"],iY] + X[X$XXendogenousXX==endogenous[iY],iType.K$X[iX]]
             }
         }
     }
@@ -382,9 +381,9 @@ skeletonDtheta <- function(object, X,
                                                   nrow = n.cluster, ncol = n.latent,
                                                   dimnames = list(NULL,latent))
 
-            for(iEta in 1:NROW(iType.Gamma)){ ## iLatent <- 5
-                iLatent <- match(iType.Gamma$Y[iEta],latent)
-                dmat.dparam$Gamma[[iGamma]][,iLatent] <- X[X$XXendogenousXX==latent[iLatent],iType.Gamma$X[1]]
+            for(iX in 1:NROW(iType.Gamma)){ ## iLatent <- 5
+                iLatent <- match(iType.Gamma$Y[iX],latent)
+                dmat.dparam$Gamma[[iGamma]][,iLatent] <- dmat.dparam$Gamma[[iGamma]][,iLatent] + X[X$XXendogenousXX==latent[iLatent],iType.Gamma$X[iX]]
             }
         }
     }

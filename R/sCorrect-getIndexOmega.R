@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 25 2019 (10:52) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (12:13) 
+## Last-Updated: jan 17 2022 (14:26) 
 ##           By: Brice Ozenne
-##     Update #: 99
+##     Update #: 103
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -60,8 +60,8 @@
     }
     test.na <- Reduce("+",lapply(name.exogenous, function(iCol){is.na(data[[iCol]])}))
     if(any(test.na>0)){
-        stop("Does not support missing values in \"lm\" objects. \n",
-             "Remove rows in the dataset with missing values. \n")
+        stop("Does not support missing values in exogenous variables. \n",
+             "Consider removing the corresponding rows in the dataset. \n")
     }
 
     ## ** index.Omega

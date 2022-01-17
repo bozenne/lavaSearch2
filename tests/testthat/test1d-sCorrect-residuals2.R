@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:21) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (16:35) 
+## Last-Updated: jan 17 2022 (14:11) 
 ##           By: Brice Ozenne
-##     Update #: 30
+##     Update #: 32
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -127,7 +127,7 @@ e.lme <- nlme::lme(value ~ X1 + X2,
 
 e.gls <- nlme::gls(value ~ X1 + X2,
                    correlation = corCompSymm(form = ~1| Id),
-                   data = dlred, method = "ML")
+                   data = dLred, method = "ML")
 
 e2.lvm <- estimate2(e.lvm)
 

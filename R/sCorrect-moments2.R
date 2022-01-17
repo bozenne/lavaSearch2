@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: Jan 12 2022 (18:11) 
+## last-updated: jan 17 2022 (17:02) 
 ##           By: Brice Ozenne
-##     Update #: 1904
+##     Update #: 1943
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -77,9 +77,9 @@
 #' @rdname moments2
 #' @export
 moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omega = NULL, Psi = NULL,
-                         initialize, usefit,
-                         update.dmoment = TRUE, update.d2moment = TRUE, score, information, hessian, vcov, dVcov, dVcov.robust, residuals, leverage,
-                         derivative){
+                         initialize = TRUE, usefit = TRUE,
+                         update.dmoment = TRUE, update.d2moment = TRUE, score = TRUE, information = TRUE, hessian = TRUE, vcov = TRUE, dVcov = TRUE, dVcov.robust = TRUE, residuals = TRUE, leverage = TRUE,
+                         derivative = "analytic"){
     if(lava.options()$debug){cat("moments2 \n")}
     
     ## ** sanity checks
@@ -124,7 +124,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         out$X <- as.matrix(out$data[,lava::manifest(object),drop=FALSE])
         out$cluster <- .getGroups2(object, data = out$data, endogenous = out$endogenous)
 
-        reserved.name <- c("XXindexXX","XXvalueXX","XXendogenousXX","XXendogenousXX.index","XXclusterXX")
+        reserved.name <- c("XXvalueXX","XXendogenousXX","XXendogenousXX.index","XXclusterXX")
         if(any(colnames(out$X) %in% reserved.name)){
             stop("\"",paste(reserved.name[colnames(out$X) %in% reserved.name], collapse="\" \""),"\" should not correspond to variable names \n",
                  "It is used internally for data manipulation \n")
@@ -134,12 +134,12 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         X.latent <- matrix(NA, nrow = NROW(out$X), ncol = length(out$latent),
                            dimnames = list(NULL, out$latent))
 
-        X.long <- reshape2::melt(data.frame(XXindexXX = 1:NROW(out$X), out$X, X.latent, XXclusterXX = unique(out$cluster$index.cluster)),
-                                 id.vars = c("XXclusterXX","XXindexXX"),
+        X.long <- reshape2::melt(data.frame(XXclusterXX = out$cluster$name.cluster, out$X, X.latent),
+                                 id.vars = "XXclusterXX",
                                  measure.vars = c(out$endogenous,out$latent),
                                  variable.name = "XXendogenousXX",
                                  value.name = "XXvalueXX")
-        X.long <- cbind(X.long,out$X[X.long$XXindexXX,,drop=FALSE]) ## add all variable (endo and exo) in case some endo are regressors
+        X.long <- cbind(X.long,out$X[X.long$XXclusterXX,,drop=FALSE]) ## add all variable (endo and exo) in case some endo are regressors
 
         X.wide <- out$X[,out$endogenous,drop=FALSE]
 
@@ -155,7 +155,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         pattern[!is.na(pattern)] <- 1
         pattern[is.na(pattern)] <- 0
 
-        unique.pattern <- unique(pattern)
+        unique.pattern <- unique(pattern[rowSums(pattern==1)>0,,drop=FALSE])
         name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
         rownames(unique.pattern) <- name.pattern
 
@@ -252,6 +252,7 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
             }else{
                 OOmega <- out$moment$Omega
             }
+
             out$residuals <- .adjustResiduals(epsilon = out$skeleton$param$endogenous - out$moment$mu,
                                               Omega = OOmega, Psi = Psi, ## Note: if Psi is null returns epsilon i.e. no adjustment
                                               name.pattern = out$missing$name.pattern, missing.pattern = out$missing$pattern, unique.pattern = out$missing$unique.pattern,
@@ -288,8 +289,6 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
                 ddOOmega <- attr(Omega,"dOmega.leverage")
             }else{
                 ddOOmega <- out$dmoment$dOmega
-                ## sum(abs(unlist(out$dmoment$dOmega)))
-                ## sum(abs(unlist(previous.dOmega)))
             }
 
             out$leverage <- .leverage2(Omega = OOmega, 
@@ -310,9 +309,14 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
 
         ## *** information matrix
         if(information || vcov){
+            if(!is.null(attr(Omega,"dOmega.leverage"))){
+                ddOOmega <- attr(Omega,"dOmega.leverage")
+            }else{
+                ddOOmega <- out$dmoment$dOmega
+            }
 
             out$information <- .information2(dmu = out$dmoment$dmu,
-                                             dOmega = out$dmoment$dOmega,
+                                             dOmega = ddOOmega,##out$dmoment$dOmega,
                                              OmegaM1 = out$moment$OmegaM1.missing.pattern,
                                              missing.pattern = out$missing$pattern,
                                              unique.pattern = out$missing$unique.pattern,

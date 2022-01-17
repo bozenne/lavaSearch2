@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb 16 2018 (16:38) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (18:32) 
+## Last-Updated: jan 17 2022 (14:06) 
 ##           By: Brice Ozenne
-##     Update #: 1199
+##     Update #: 1226
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -57,21 +57,30 @@
                               dimnames = list(endogenous,endogenous))
 
     if(NROW(type.var.constrain)>0){
+        ## extract parameters with value fixed by the user
         value <- object$sCorrect$skeleton$value
-        Sigma.constrain <- value$Sigma
-        Lambda.constrain <- value$Lambda
-        if("B" %in% names(value)){
-            iIB.constrain <- solve(diag(1, nrow = n.latent, ncol = n.latent) - value$B)
-        }else{
-            iIB.constrain <- diag(1, nrow = n.latent, ncol = n.latent)
-        }
-        Psi.constrain <- value$Psi
+
+        ## add fixed Sigma value
         if(any(c("Sigma_var","Sigma_cov") %in% type.var.constrain$detail)){
-            addSigma <- Sigma.constrain
+            addSigma <- value$Sigma
             addSigma[is.na(addSigma)] <- 0
             Omega.constrain <- Omega.constrain + addSigma
         }
-        if(any(c("Lambda","B","Psi_var","Psi_cov") %in% type.var.constrain$detail)){
+        if(any(c("Psi_var","Psi_cov") %in% type.var.constrain$detail)){
+            Psi.constrain <- value$Psi
+            Lambda.constrain <- value$Lambda
+            if(any(is.na(value$B))){
+                stop("Current implementation cannot handle constraints in Psi when there are B parameters.\n")
+            }
+            if(any(is.na(value$Lambda))){
+                stop("Current implementation cannot handle constraints in Psi when there are lambda parameters.\n")
+            }
+            if("B" %in% names(value)){
+                iIB.constrain <- solve(diag(1, nrow = n.latent, ncol = n.latent) - value$B)
+            }else{
+                iIB.constrain <- diag(1, nrow = n.latent, ncol = n.latent)
+            }
+
             addPsi <- t(Lambda.constrain) %*% t(iIB.constrain) %*% Psi.constrain %*% iIB.constrain %*% Lambda.constrain
             addPsi[is.na(addPsi)] <- 0
             Omega.constrain <- Omega.constrain + addPsi
@@ -186,7 +195,7 @@
     
     ## ** Step (iii): compute corrected residuals and effective sample size
     ## done in estimate2 via moments2
-        
+    
     ## ** Step (iv): bias-corrected residual covariance matrix
     Omega.adj <- Omega0 + Psi
 
@@ -209,11 +218,14 @@
         ## A = t(Z) Psi Z + Sigma
         ## (t(Z) Psi Z)_{ij} = \sum_{k,l} Z_{k,i} Psi_{k,l} Z_{l,j}
         ## (t(Z) Psi Z)_{ij} regarding param_(k,l) = Z_{k,i} Z_{l,j}
-        for(iPsi in 1:n.index.Psi){ ## iPsi <- 1
+        for(iPsi in 1:n.index.Psi){ ## iPsi <- 3
             iNamePsi <- rownames(index.Psi)[iPsi]
             iRowPsi <- index.Psi[iPsi,"row"]
             iColPsi <- index.Psi[iPsi,"col"]
             A[,iNamePsi] <- A[,iNamePsi] + (tZ[,index.Psi[iPsi,"row"]] %o% Z[index.Psi[iPsi,"col"],])[index.upper.tri]
+            if(iRowPsi!=iColPsi){
+                A[,iNamePsi] <- A[,iNamePsi] + (tZ[,index.Psi[iPsi,"col"]] %o% Z[index.Psi[iPsi,"row"],])[index.upper.tri]
+            }
         }
         
     }
