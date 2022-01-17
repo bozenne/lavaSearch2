@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 18 2019 (10:58) 
 ## Version: 
-## Last-Updated: jan 17 2022 (14:30) 
+## Last-Updated: Jan 17 2022 (18:43) 
 ##           By: Brice Ozenne
-##     Update #: 169
+##     Update #: 170
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -70,7 +70,7 @@
     missing <- any(is.na(index.Omega))
     index.cluster <- unlist(lapply(name.cluster, rep, times = n.endogenous))
 
-    index.Omega <- tapply(index.Omega, index.cluster, function(iVec){list(na.omit(iVec))})
+    index.Omega <- tapply(index.Omega, index.cluster, function(iVec){list(stats::na.omit(iVec))})
     Uindex.Omega <- unique(index.Omega[sapply(index.Omega,length)>0])
     return(list(index.cluster = index.cluster,
                 name.cluster = name.cluster,

@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 20 2017 (10:22) 
 ## Version: 
-## last-updated: Jan 12 2022 (16:27) 
+## last-updated: Jan 17 2022 (23:26) 
 ##           By: Brice Ozenne
-##     Update #: 234
+##     Update #: 235
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -197,7 +197,7 @@ test_that("mixed model: Satterthwaite ",{
     expect_equal(as.double(GS$df),
                  as.double(df.lvm$df[1:5]), tol = 1e-4) ## needed for CRAN
     expect_equal(as.double(GS$statistic),
-                 as.double(abs(summary(df.lvm, test = adjusted("none"))$table2[1:5,"statistic"])), tol = 1e-8) ## needed for CRAN
+                 as.double(abs(summary(df.lvm, test = multcomp::adjusted("none"))$table2[1:5,"statistic"])), tol = 1e-8) ## needed for CRAN
 
     ## F test
     GS <- lmerTest::contestMD(e.lmer, L = diag(1,5,5), rhs = 0, ddf = "Satterthwaite")
@@ -231,7 +231,7 @@ test_that("mixed model: KR-like correction",{
                                  "upper" = c(0.26438879, 0.63007304, 0.87750189, 1.78484328, 1.54462201, 1.88579304, 1.17959131), 
                                  "statistic" = c(-0.97751933, 0.62761531, 1.65351113, 9.78942913, 2.99389387, 6.95221787, 2.71414157), 
                                  "p.value" = c(0.3310157, 0.53173576, 0.10147095, 0, 0.00433193, 3.3e-07, 0.01654271))
-    expect_equivalent(previous.value, summary(df.lvm, test = adjusted("none"))$table2, tol = 1e-5)
+    expect_equivalent(previous.value, summary(df.lvm, test = multcomp::adjusted("none"))$table2, tol = 1e-5)
 })
 
 ### ** compare to SAS
@@ -317,7 +317,7 @@ test_that("UN mixed model: df",{
                                  "upper" = c(0.23864531, 0.60293442, 0.85810706, 1.74424227, 1.52213734, 2.23705035, 1.08105378, 2.5624169, 2.78815472, 0.90335192, 0.9609878), 
                                  "statistic" = c(-1.02871942, 0.6732956, 1.74395338, 9.89149902, 3.08046963, 3.13051333, 1.42014364, 3.68874764, 3.84992537, 0.67687572, 0.78147601), 
                                  "p.value" = c(0.30760871, 0.50385966, 0.08731285, 0, 0.00335522, 0.00392319, 0.16980825, 0.00244472, 0.00185058, 0.50492415, 0.44221192))
-    expect_equivalent(previous.value, summary(df.lvm, test = adjusted("none"))$table2, tol = 1e-5)
+    expect_equivalent(previous.value, summary(df.lvm, test = multcomp::adjusted("none"))$table2, tol = 1e-5)
 })
 
 

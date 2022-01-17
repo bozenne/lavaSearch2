@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 27 2017 (16:59) 
 ## Version: 
-## last-updated: jan 17 2022 (17:02) 
+## last-updated: Jan 17 2022 (19:13) 
 ##           By: Brice Ozenne
-##     Update #: 1943
+##     Update #: 1953
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,7 +155,18 @@ moments2.lvm <- function(object, param = NULL, data = NULL, weights = NULL, Omeg
         pattern[!is.na(pattern)] <- 1
         pattern[is.na(pattern)] <- 0
 
-        unique.pattern <- unique(pattern[rowSums(pattern==1)>0,,drop=FALSE])
+        if(!is.null(object$call$missing) && object$call$missing==FALSE){
+            unique.pattern <- unique(pattern[rowSums(pattern==0)==0,,drop=FALSE])
+            if(length(unique.pattern)==0){
+                stop("All clusters contain at least one missing value - cannot perform complete case analysis. \n",
+                     "Consider setting the argument \'missing\' to TRUE. \n")
+            }
+            XXclusterXX.NA <- unique(X.long$XXclusterXX[rowSums(is.na(X.long[,out$endogenous,drop=FALSE]))>0])
+            X.long[X.long$XXclusterXX %in% XXclusterXX.NA,c("XXvalueXX",out$endogenous)] <- NA ## add missing value to the other observation of the same cluster
+        }else{
+            unique.pattern <- unique(pattern[rowSums(pattern==1)>0,,drop=FALSE])
+        }
+        
         name.pattern <- apply(unique.pattern, MARGIN = 1, FUN = paste0, collapse = "")
         rownames(unique.pattern) <- name.pattern
 

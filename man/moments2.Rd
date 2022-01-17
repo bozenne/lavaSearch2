@@ -35,19 +35,19 @@ moments2(
   weights = NULL,
   Omega = NULL,
   Psi = NULL,
-  initialize,
-  usefit,
+  initialize = TRUE,
+  usefit = TRUE,
   update.dmoment = TRUE,
   update.d2moment = TRUE,
-  score,
-  information,
-  hessian,
-  vcov,
-  dVcov,
-  dVcov.robust,
-  residuals,
-  leverage,
-  derivative
+  score = TRUE,
+  information = TRUE,
+  hessian = TRUE,
+  vcov = TRUE,
+  dVcov = TRUE,
+  dVcov.robust = TRUE,
+  residuals = TRUE,
+  leverage = TRUE,
+  derivative = "analytic"
 )
 
 \method{moments2}{lvmfit}(
@@ -57,19 +57,19 @@ moments2(
   weights = NULL,
   Omega = NULL,
   Psi = NULL,
-  initialize,
-  usefit,
+  initialize = TRUE,
+  usefit = TRUE,
   update.dmoment = TRUE,
   update.d2moment = TRUE,
-  score,
-  information,
-  hessian,
-  vcov,
-  dVcov,
-  dVcov.robust,
-  residuals,
-  leverage,
-  derivative
+  score = TRUE,
+  information = TRUE,
+  hessian = TRUE,
+  vcov = TRUE,
+  dVcov = TRUE,
+  dVcov.robust = TRUE,
+  residuals = TRUE,
+  leverage = TRUE,
+  derivative = "analytic"
 )
 }
 \arguments{

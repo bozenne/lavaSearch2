@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: dec 11 2019 (14:09) 
 ## Version: 
-## Last-Updated: jan 17 2022 (17:06) 
+## Last-Updated: Jan 17 2022 (23:21) 
 ##           By: Brice Ozenne
-##     Update #: 141
+##     Update #: 143
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -120,7 +120,7 @@ hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TR
                              n.cluster = object$sCorrect$cluster$n.cluster,
                              weights = object$sCorrect$weights)
 
-        hessian.name <- setNames(names(object$sCorrect$skeleton$originalLink2param),object$sCorrect$skeleton$originalLink2param)[object$sCorrect$skeleton$Uparam]
+        hessian.name <- stats::setNames(names(object$sCorrect$skeleton$originalLink2param),object$sCorrect$skeleton$originalLink2param)[object$sCorrect$skeleton$Uparam]
         dimnames(hessian) <- list(as.character(hessian.name),
                                   as.character(hessian.name),
                                   NULL)
@@ -178,7 +178,7 @@ hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TR
     n.param <- length(name.param)
     n.pattern <- length(name.pattern)
 
-    hessian <- array(0, dim = c(n.param, n.param, n.cluster),
+    hessian <- array(NA, dim = c(n.param, n.param, n.cluster),
                      dimnames = list(name.param,name.param,NULL))
     if(length(dmu)>0){
         index.mean <- 1:n.grid.mean
@@ -211,6 +211,7 @@ hessian2.lvmfit2 <- function(object, indiv = FALSE, cluster = NULL, as.lava = TR
         if(!is.null(leverage)){
             iLeverage <- leverage[iIndex,iY,drop=FALSE]
         }
+        hessian[,,iIndex] <- 0 ##  ## initialize (keep NA for missing values)
 
         ## *** second derivative relative to the mean parameters
         for(iG in index.mean){ # iG <- 1

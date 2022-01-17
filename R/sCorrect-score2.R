@@ -3,9 +3,9 @@
 ## author: Brice Ozenne
 ## created: okt 12 2017 (16:43) 
 ## Version: 
-## last-updated: Jan 12 2022 (09:16) 
+## last-updated: Jan 17 2022 (23:21) 
 ##           By: Brice Ozenne
-##     Update #: 2402
+##     Update #: 2407
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -152,7 +152,7 @@ score.lvmfit2 <- function(x, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...)
     if(lava.options()$debug){cat(".score2\n")}
 
     ## ** Prepare
-    out.score <- matrix(0, nrow = n.cluster, ncol = length(name.param),
+    out.score <- matrix(NA, nrow = n.cluster, ncol = length(name.param),
                         dimnames = list(NULL,name.param))
     n.pattern <- length(name.pattern)
     
@@ -164,6 +164,7 @@ score.lvmfit2 <- function(x, indiv = FALSE, cluster = NULL, as.lava = TRUE, ...)
         iY <- which(unique.pattern[iP,]==1)
 
         iEpsilon.OmegaM1 <- epsilon[iIndex,iY,drop=FALSE] %*% iOmegaM1
+        out.score[iIndex,] <- 0 ## initialize (keep NA for missing values)
 
         ## *** Compute score relative to the mean coefficients
         for(iP in name.meanparam){ # iP <- "Y3~eta"
