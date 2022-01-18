@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (17:58) 
+## Last-Updated: jan 18 2022 (17:52) 
 ##           By: Brice Ozenne
-##     Update #: 366
+##     Update #: 379
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -100,7 +100,7 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
 
         for(iH in 1:n.hypo){
 
-            if(grepl("|",linfct[iH])){
+            if(grepl("|",linfct[iH], fixed=TRUE)){
                 type[iH] <- base::trimws(strsplit(linfct[iH],split="|",fixed=TRUE)[[1]][2], which = "both")
                 type[iH] <- match.arg(type[iH], c("indirect","direct","total"))
                 linfct[iH] <- strsplit(linfct[iH],split="|",fixed=TRUE)[[1]][1]
@@ -150,6 +150,7 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
     ## ** extract information
     ## 0-order: param
     object.param <- coef(object, as.lava = FALSE)
+    object.paramAll <- coef2(object, type = 9, labels = 1)[,"Estimate"]
     name.param <- names(object.param)
     n.param <- length(name.param)
 
@@ -204,7 +205,7 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
     vec.beta <- stats::setNames(rep(NA, length = n.hypo), names(pathEffect))
     for(iH in 1:n.hypo){ ## iH <- 1
         iValue.param <- lapply(coefEffect[[iH]], function(iCoef){ ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
-            iValue.path <- lapply(iCoef, function(iName){prod(object.param[iName])}) ## get effect through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
+            iValue.path <- lapply(iCoef, function(iName){prod(object.paramAll[iName])}) ## get effect through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
             return(do.call("sum", iValue.path)) ## return total effect (e.g. \beta1 + \beta2*\beta3)
         })
         if(is.null(attr(coefEffect[[iH]],"factor"))){
@@ -218,10 +219,10 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
     ## *** partial derivative
     dbeta.dtheta <- matrix(NA, nrow = n.hypo, ncol = n.param, dimnames = list(names(pathEffect), name.param))
     for(iH in 1:n.hypo){ ## iH <- 1
-        iValue.param <- lapply(coefEffect[[iH]], function(iCoef){ ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
-            iDValue.path <- colSums(do.call(rbind,lapply(iCoef, function(iName){ ## get derivative through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
+        iValue.param <- lapply(coefEffect[[iH]], function(iCoef){  ## iCoef <- coefEffect[[iH]][[1]] ## for each coefficient (e.g. Y~E1 - Y~E2 = 0)
+            iDValue.path <- colSums(do.call(rbind,lapply(iCoef, function(iName){ ## iName <- iCoef[[1]] ## get derivative through each path corresponding to a coefficient (e.g. Y~E: Y~E and Y~X and X~E, i.e. \beta1 and \beta2*\beta3)
                 iDeriv <- stats::setNames(rep(0, n.param), name.param)
-                iDeriv[iName] <- prod(object.param[iName])/object.param[iName]
+                iDeriv[intersect(iName,name.param)] <- prod(object.paramAll[iName])/object.paramAll[intersect(iName,name.param)]
                 return(iDeriv)
             })))
         })

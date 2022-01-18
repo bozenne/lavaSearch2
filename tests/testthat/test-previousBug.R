@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 19 2019 (10:17) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (14:55) 
+## Last-Updated: jan 18 2022 (09:53) 
 ##           By: Brice Ozenne
-##     Update #: 29
+##     Update #: 35
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -19,6 +19,7 @@
 ## rm(list = ls(all.names = TRUE))
 if(TRUE){ ## already called in test-all.R
     library(testthat)
+    library(nlme)
     library(lavaSearch2)
 }
 
@@ -48,12 +49,12 @@ e.lm2 <- lm(neocortex.log ~ 1, ddW[ddW$group==2, ])
 ddL <- reshape2::dcast(ddW, value.var = "neocortex.log", id~group)
 names(ddL) <- c("id","G1","G2")
 m <- lvm(G1~1,G2~1)
-e.lvm <- estimate(m, ddL)
+e.lvm <- estimate(m, data = ddL, missing = TRUE)
 
 test_that("sCorrect in stratified GLS equivalent to separate LM", {
     eSSC.res <- estimate2(e.lvm)
-
-    ## eSSC.cox <- estimate2(e.lvm, ssc = "Cox")
+    ## GS1 <- estimate2(lvm(G1~1), data = ddL[!is.na(ddL$G1),])
+    ## GS2 <- estimate2(lvm(G2~1), data = ddL[!is.na(ddL$G2),])
 
     GS <- c(mu1 = mean(ddL$G1, na.rm = TRUE),
             mu2 = mean(ddL$G2, na.rm = TRUE),
@@ -61,12 +62,7 @@ test_that("sCorrect in stratified GLS equivalent to separate LM", {
             sigma2 = var(ddL$G2, na.rm = TRUE))
     expect_equivalent(coef2(eSSC.res), GS, tol = 1e-6)
     ## sigma(e.GS)^2
-    expect_equivalent(vcov2(eSSC.lvm)[1:2,1:2], vcov(e.GS), tol = 1e-6)
-
-    expect_equal(vcov2(eSSC.GS)[1:2,1:2],vcov(e.GS)[1:2,1:2], tol = 1e-6)
-    expect_equal(vcov2(eSSC.lm1)[1,1],vcov(e.lm1)[1,1], tol = 1e-6)
-    expect_equal(vcov2(eSSC.lm2)[1,1],vcov(e.lm2)[1,1], tol = 1e-6)
-    expect_equal(vcov2(eSSC.lvm),vcov(e.GS),tol = 1e-6)
+    expect_equivalent(vcov2(eSSC.res)[1:2,1:2], vcov(e.GS), tol = 1e-6)
 })
 
 
@@ -85,34 +81,31 @@ m <- lvm(Y1[0:sigma1] ~ 1*eta,
          )
 latent(m) <- ~eta
 
+mm <- lvm(Y1[mu:sigma1] ~ 1*eta,
+         Y2[mu:sigma2] ~ 1*eta,
+         eta[0:1]  ~ 1
+         )
+latent(mm) <- ~eta
+
 e <- estimate(m, dd)
+ee <- estimate(mm, dd)
 
 test_that("bug in version 1.5.4 (incorrect handling of the constrain when computing Omega)", {
+
+    expect_equal(logLik(e), logLik(ee), tol = 1e-6)
+    expect_equal(as.double(vcov(e)), as.double(vcov2(e, ssc = FALSE)), tol = 1e-6)
+    expect_equal(as.double(vcov(ee)), as.double(vcov2(ee, ssc = FALSE)), tol = 1e-6)
     
     test.res1 <- estimate2(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
-    ## test.cox1 <- estimate2(e, df = "Satterthwaite", ssc = "Cox", derivative = "analytic")
+    test.res2 <- estimate2(ee, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
 
-    expect_equal(test.res1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.54761303, "Y2~~Y2" = 1.01146135),
+    expect_equal(test.res1$sCorrect$param, c("eta" = -0.583625694846817, "Y1~~Y1" = 0.548634987452149, "Y2~~Y2" = 1.01248330967465),
                  tol = 1e-6)
-    expect_equal(test.cox1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.50602817, "Y2~~Y2" = 0.95769503),
-                 tol = 1e-6)
+    ## expect_equal(test.cox1$sCorrect$param, c("eta" = -0.58362569, "Y1~~Y1" = 0.50602817, "Y2~~Y2" = 0.95769503),
+    ##              tol = 1e-6)
     
 })
 
-m <- lvm(Y1[mu:sigma1] ~ 1,
-         Y2[mu:sigma2] ~ 1)
-e <- estimate(m, dd)
-
-## test_that("bug in version 1.5.4 (incorrect handling of the constrain when computing Omega)", {
-    
-##     test.res1 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "analytic")
-##     test.res2 <- sCorrect(e, df = "Satterthwaite", ssc = "residuals", derivative = "numeric")
-##     summary2(test.res1)$table2
-##     summary2(test.res2)$table2
-##     range( test.res1$sCorrect$dInformation - test.res1$sCorrect$dInformation )
-    
-    
-## })
 
 ## * Brice 04/15/20 9:26 multcomp
 mSim <- lvm(Y1~X1,Y2~X1)
@@ -130,7 +123,6 @@ ls.lmNA <- list("Y1" = estimate(lvm(Y1~X1), data = dNA),
 class(ls.lmALL) <- "mmm"
 class(ls.lmRED) <- "mmm"
 class(ls.lmNA) <- "mmm"
-
 
 test_that("Stability by subset", {
     glht.ALL <- glht2(ls.lmALL, linfct = "X1=0")

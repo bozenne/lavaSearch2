@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 31 2018 (12:05) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (09:26) 
+## Last-Updated: jan 18 2022 (10:38) 
 ##           By: Brice Ozenne
-##     Update #: 485
+##     Update #: 491
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -333,18 +333,25 @@ createContrast.mmm <- createContrast.list
             
                 if(iName %in% name.param == FALSE){
                     txt.message <- paste0("unknown coefficient ",iName," in hypothesis ",iH,"\n")
-                    possibleMatch <- pmatch(iName, table = name.param)
-                    if(all(is.na(possibleMatch))){
-                        possibleMatch <- grep(iName, name.param, fixed = TRUE, value = TRUE)
+                    possibleMatch <- grep(iName, name.param, fixed = TRUE, value = TRUE)
+                    if(all(is.na(possibleMatch)) || length(possibleMatch)==0){
+                        possibleMatch <- pmatch(iName, table = name.param)
+                    }else if(length(linfct) == 1 && length(possibleMatch)>1){ ##
+                        message("Guessing the contrast based on the string \"",linfct,"\" (",length(possibleMatch)," coefficients found). \n")
+                        return(.createContrast(linfct = possibleMatch, name.param = name.param, diff.first = diff.first, add.rowname = add.rowname, rowname.rhs = rowname.rhs, sep = sep, ...))
                     }
-                    if(length(possibleMatch)==0){
+                    
+                    if(all(is.na(possibleMatch)) || length(possibleMatch)==0){
                         possibleMatch <- agrep(iName, name.param, ignore.case = TRUE,value = TRUE)
                     }
-                    if(length(possibleMatch)>0){
+                    if(all(!is.na(possibleMatch)) && length(possibleMatch)>0){
                         txt.message <- c(txt.message,
                                          paste0("candidates: \"",paste(possibleMatch, collapse = "\" \""),"\"\n"))
                     }
                     stop(txt.message)                    
+                    
+                    
+                    
                 }
 
                 ## identify if it is a minus sign

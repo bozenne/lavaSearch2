@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (12:08) 
+## Last-Updated: jan 18 2022 (09:40) 
 ##           By: Brice Ozenne
-##     Update #: 800
+##     Update #: 806
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -221,7 +221,7 @@ glht2.mmm <- function (object, linfct, rhs = 0,
             out$iid <- iid.tempo
         }
         colnames(out$iid) <- name.object.param
-        
+
         ## *** get se
         if(robust){
             out$se <- sqrt(diag(crossprod(iid.tempo)))

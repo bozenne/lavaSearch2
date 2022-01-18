@@ -4,9 +4,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 10 2017 (10:57) 
 ## Version: 
-## Last-Updated: jan 17 2022 (16:42) 
+## Last-Updated: jan 18 2022 (09:48) 
 ##           By: Brice Ozenne
-##     Update #: 550
+##     Update #: 552
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -139,6 +139,7 @@ summary2.lvmfit2 <- function(object, robust = FALSE, cluster = NULL, digit = max
     p2add[table.coef[,4] < 1e-12] <- "  <1e-12"
 
     M2add <- cbind(e2add,sd2add,t2add,p2add,df2add)
+    table.coefmat[,"df"] <- ""
     table.coefmat[match(rownames(table.coef), name.label0),] <- M2add
 
     table.coefmat[object.summary$coefmat[,4]=="",4] <- ""

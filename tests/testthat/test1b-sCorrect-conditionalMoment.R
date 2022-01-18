@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (15:14) 
+## Last-Updated: jan 18 2022 (18:00) 
 ##           By: Brice Ozenne
-##     Update #: 95
+##     Update #: 100
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -25,6 +25,7 @@
 if(FALSE){ ## already called in test-all.R
     library(testthat)
     library(lavaSearch2)
+    library(nlme)
 }
 lava.options(symbols = c("~","~~"))
 context("conditionalMoment")
@@ -154,7 +155,17 @@ test_that("linear regression - constrains and covariance",{
                      ncol = 10, 
                      dimnames = list(c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3"),c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3")) 
                      ) 
-        expect_equal(test$sCorrect$dVcov.param[,,"Y2~~Y3"],GS,tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y1","Y2~~Y3"],GS[,"Y1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y2","Y2~~Y3"],GS[,"Y2"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y3","Y2~~Y3"],GS[,"Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y1~X1","Y2~~Y3"],GS[,"Y1~X1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y2~X2","Y2~~Y3"],GS[,"Y2~X2"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~X1","Y2~~Y3"],GS[,"Y3~X1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~X3","Y2~~Y3"],GS[,"Y3~X3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y1~~Y1","Y2~~Y3"],GS[,"Y1~~Y1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~~Y3","Y2~~Y3"],GS[,"Y3~~Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,"Y2~~Y3","Y2~~Y3"],GS[,"Y2~~Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[,,"Y2~~Y3"],GS,tol = 1e-6)
     }
 })
 
