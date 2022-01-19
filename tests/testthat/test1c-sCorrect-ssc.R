@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  7 2018 (12:08) 
 ## Version: 
-## Last-Updated: jan 17 2022 (12:41) 
+## Last-Updated: jan 19 2022 (11:40) 
 ##           By: Brice Ozenne
-##     Update #: 121
+##     Update #: 122
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -14,11 +14,6 @@
 ##----------------------------------------------------------------------
 ## 
 ### Code:
-
-
-## TO ADD
-## -gls with 2*2 endogenous where the alphabetic order is not the same as the appearance orderr in the data --> sensitivity to data ordering
-## -gls with var and cor where each cluster only corresponds to one endo
 
 ## * header
 ## rm(list = ls())

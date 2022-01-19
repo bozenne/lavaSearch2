@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (12:06) 
+## Last-Updated: jan 19 2022 (11:49) 
 ##           By: Brice Ozenne
-##     Update #: 216
+##     Update #: 225
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -123,11 +123,12 @@ print.summary.glht2 <- function(x,
     alternative <- x$alternativ
     type <- x$test$type
     txt.type <- switch(type,
-                       "univariate" = "(Univariate p values reported)", 
-                       "single-step" = paste0("(Adjusted p values reported -- single step max-test)"), 
-                       "free" = paste0("(Adjusted p values reported -- step down max-test)"), 
-                       "Westfall" = paste0("(Adjusted p values reported -- step down max-test with logical restrictions)"), 
-                       paste0("(Adjusted p values reported -- ", type, " method)")
+                       "univariate" = "(CIs/p-values not adjusted for multiple comparisons)", 
+                       "none" = "(CIs/p-values not adjusted for multiple comparisons)", 
+                       "single-step" = paste0("(CIs/p-values adjusted for multiple comparisons -- single step max-test)"), 
+                       "free" = paste0("(CIs/p-values adjusted for multiple comparisons -- step down max-test)"), 
+                       "Westfall" = paste0("(CIs/p-values adjusted for multiple comparisons -- step down max-test with logical restrictions)"), 
+                       paste0("(CIs/p-values adjusted for multiple comparisons -- ", type, " method)")
                        )
     txt.robust <- switch(as.character(x$robust),
                          "TRUE" = "Robust",
@@ -162,10 +163,12 @@ print.summary.glht2 <- function(x,
                         P.values = "p.value" %in% columns,
                         eps.Pvalue = 10^{-digits.p.value})
 
-    cat(txt.type,"\n")
+    if(NROW(x$table2)>1){
+        cat(txt.type,"\n")
+    }
     error <- attr(x$test$pvalues,"error")
     if(!is.null(error) && error > 1e-12 && "p.value" %in% columns){
-        txt.error <- paste0("Error when computing the p-value by numerical integration: ", signif(error, digits = digits))
+        txt.error <- paste0("Error when computing the adjusted p-value by numerical integration: ", signif(error, digits = digits))
         if(!is.null(x$seed)){
             txt.error <- paste0(txt.error," (seed ",x$seed,")")
         }

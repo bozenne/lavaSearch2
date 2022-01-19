@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar 27 2018 (09:50) 
 ## Version: 
-## Last-Updated: jan 18 2022 (18:00) 
+## Last-Updated: jan 19 2022 (11:00) 
 ##           By: Brice Ozenne
-##     Update #: 100
+##     Update #: 102
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -155,17 +155,17 @@ test_that("linear regression - constrains and covariance",{
                      ncol = 10, 
                      dimnames = list(c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3"),c("Y1", "Y2", "Y3", "Y1~X1", "Y2~X2", "Y3~X1", "Y3~X3", "Y1~~Y1", "Y3~~Y3", "Y2~~Y3")) 
                      ) 
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y1","Y2~~Y3"],GS[,"Y1"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y2","Y2~~Y3"],GS[,"Y2"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y3","Y2~~Y3"],GS[,"Y3"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y1~X1","Y2~~Y3"],GS[,"Y1~X1"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y2~X2","Y2~~Y3"],GS[,"Y2~X2"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~X1","Y2~~Y3"],GS[,"Y3~X1"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~X3","Y2~~Y3"],GS[,"Y3~X3"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y1~~Y1","Y2~~Y3"],GS[,"Y1~~Y1"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y3~~Y3","Y2~~Y3"],GS[,"Y3~~Y3"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,"Y2~~Y3","Y2~~Y3"],GS[,"Y2~~Y3"],tol = 1e-6)
-        expect_equivalent(test$sCorrect$dVcov.param[,,"Y2~~Y3"],GS,tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y1","Y2~~Y3"],GS[,"Y1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y2","Y2~~Y3"],GS[,"Y2"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y3","Y2~~Y3"],GS[,"Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y1~X1","Y2~~Y3"],GS[,"Y1~X1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y2~X2","Y2~~Y3"],GS[,"Y2~X2"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y3~X1","Y2~~Y3"],GS[,"Y3~X1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y3~X3","Y2~~Y3"],GS[,"Y3~X3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y1~~Y1","Y2~~Y3"],GS[,"Y1~~Y1"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y3~~Y3","Y2~~Y3"],GS[,"Y3~~Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),"Y2~~Y3","Y2~~Y3"],GS[,"Y2~~Y3"],tol = 1e-6)
+        expect_equivalent(test$sCorrect$dVcov.param[rownames(GS),colnames(GS),"Y2~~Y3"],GS,tol = 1e-6)
     }
 })
 
