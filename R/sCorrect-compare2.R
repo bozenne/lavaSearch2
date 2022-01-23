@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (11:45) 
+## Last-Updated: Jan 22 2022 (14:02) 
 ##           By: Brice Ozenne
-##     Update #: 900
+##     Update #: 901
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -104,8 +104,11 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
                               as.lava = TRUE, F.test = TRUE,
                               conf.level = 0.95, ...){
-    
+   
     dots <- list(...)
+    if(any(names(dots)=="par")){
+        stop("Argument \'par\' is no longer used as it has been replaced by \'linfct\'. \n")
+    }
     if(length(dots[names(dots) %in% "sep" == FALSE])>0){
         warning("Argument(s) \'",paste(setdiff(names(dots),"sep"),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
