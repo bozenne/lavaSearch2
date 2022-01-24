@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: jan 19 2022 (11:49) 
+## Last-Updated: jan 24 2022 (10:40) 
 ##           By: Brice Ozenne
-##     Update #: 225
+##     Update #: 226
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -101,8 +101,7 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     
     ## ** transformation
     output$table2 <- transformSummaryTable(output$table2,
-                                           transform = transform,
-                                           conf.level = conf.level)
+                                           transform = transform)
 
     ## ** export    
     class(output) <- append(c("summary.glht2","summary.glht"),keep.class)

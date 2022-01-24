@@ -1,11 +1,11 @@
-### transform.R --- 
+### transformSummaryTable.R --- 
 ##----------------------------------------------------------------------
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: Jan 11 2022 (17:54) 
+## Last-Updated: jan 24 2022 (10:40) 
 ##           By: Brice Ozenne
-##     Update #: 25
+##     Update #: 27
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,11 +21,10 @@
 #'
 #' @param object A data.frame with columns estimate, se, lower, upper.
 #' @param transform the name of a transformation or a function.
-#' @param conf.level level of the confidence intervals.
 #'
 #' @return a data.frame
 #' @export
-transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
+transformSummaryTable <- function(object, transform = NULL){
     if(is.null(transform)){
         return(object)
     }else if(identical(transform,"atanh")){
@@ -60,4 +59,4 @@ transformSummaryTable <- function(object, transform = NULL, conf.level = 0.95){
 }
 
 ######################################################################
-### transform.R ends here
+### transformSummaryTable.R ends here
