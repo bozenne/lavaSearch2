@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: mar  4 2019 (10:28) 
 ## Version: 
-## Last-Updated: jan 18 2022 (17:52) 
+## Last-Updated: jan 24 2022 (12:03) 
 ##           By: Brice Ozenne
-##     Update #: 379
+##     Update #: 384
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -78,7 +78,6 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
         if(!missing(linfct)){
             stop("Cannot specify argument \'linfct\' at the same time as argument \'from\' or \'to\'. \n")
         }
-
         e.effects <- effects(object0, from = from, to = to)
         pathEffect <- stats::setNames(list(stats::setNames(list(e.effects$path), paste0(e.effects["to"],"~",e.effects["from"]))),paste0(e.effects["to"],"~",e.effects["from"]))
         type <- "total"
@@ -128,18 +127,18 @@ effects2.lvmfit2 <- function(object, linfct, robust = FALSE, cluster = NULL, con
             
             for(iCoef in 1:iN.param){ ## iCoef <- 1
                 ## extract all paths for each coefficient
-                pathEffect[[iH]][[iCoef]] <- effects(object0, stats::as.formula(iLHS.hypo_coef[[iN.param]]))$path
+                pathEffect[[iH]][[iCoef]] <- effects(object0, stats::as.formula(iLHS.hypo_coef[[iCoef]]))$path
                 if(length(pathEffect[[iH]][[iCoef]])==0){
-                    stop("Could not find path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                    stop("Could not find path relative to coefficient ",iLHS.hypo_coef[[iCoef]]," (linfct=",linfct[iH],"). \n")
                 }else if(type[iH]=="direct" && any(sapply(pathEffect[[iH]][[iCoef]],length)>2)){
                     pathEffect[[iH]][[iCoef]] <- pathEffect[[iH]][[iCoef]][sapply(pathEffect[[iH]][[iCoef]],length)==2]
                     if(length(pathEffect[[iH]][[iCoef]])==0){
-                        stop("Could not find direct path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                        stop("Could not find direct path relative to coefficient ",iLHS.hypo_coef[[iCoef]]," (linfct=",linfct[iH],"). \n")
                     }
                 }else if(type[iH]=="indirect" && any(sapply(pathEffect[[iH]][[iCoef]],length)>2)){
                     pathEffect[[iH]][[iCoef]] <- pathEffect[[iH]][[iCoef]][sapply(pathEffect[[iH]][[iCoef]],length)>2]
                     if(length(pathEffect[[iH]][[iCoef]])==0){
-                        stop("Could not find indirect path relative to coefficient ",iLHS.hypo_coef[[iN.param]]," (linfct=",linfct[iH],"). \n")
+                        stop("Could not find indirect path relative to coefficient ",iLHS.hypo_coef[[iCoef]]," (linfct=",linfct[iH],"). \n")
                     }
                 }
             }

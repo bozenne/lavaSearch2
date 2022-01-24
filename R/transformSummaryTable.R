@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: feb  3 2020 (18:29) 
 ## Version: 
-## Last-Updated: jan 24 2022 (10:40) 
+## Last-Updated: jan 24 2022 (10:47) 
 ##           By: Brice Ozenne
-##     Update #: 27
+##     Update #: 29
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -54,6 +54,12 @@ transformSummaryTable <- function(object, transform = NULL){
     }
     if("upper" %in% names(object)){
         object[,"upper"] <- transform(object[,"upper"])
+    }
+    if("null" %in% names(object)){
+        object[,"null"] <- transform(object[,"null"])
+    }
+    if("null" %in% names(object)){
+        object[,"null"] <- transform(object[,"null"])
     }
     return(object)
 }

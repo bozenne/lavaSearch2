@@ -21,7 +21,7 @@
 
 \item{conf.level}{[numeric 0-1] level of the confidence intervals.}
 
-\item{transform}{[function] function to backtransform the estimates and the associated confidence intervals
+\item{transform}{[function] function to backtransform the estimates, standard errors, null hypothesis, and the associated confidence intervals
 (e.g. \code{exp} if the outcomes have been log-transformed).}
 
 \item{seed}{[integer] value that will be set before adjustment for multiple comparisons to ensure reproducible results.
