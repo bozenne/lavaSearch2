@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: Jan 12 2022 (11:45) 
+## Last-Updated: feb  1 2022 (14:12) 
 ##           By: Brice Ozenne
-##     Update #: 900
+##     Update #: 902
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -109,8 +109,10 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
     if(length(dots[names(dots) %in% "sep" == FALSE])>0){
         warning("Argument(s) \'",paste(setdiff(names(dots),"sep"),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
-    if(is.null(linfct)){ ## necessary for lava::gof to work
-        return(lava::compare(object))
+    if(is.null(linfct)){ ## necessary for lava::gof to wo
+        object0 <- object
+        class(object0) <- setdiff(class(object0),"lvmfit2")
+        return(lava::compare(object0))
     }
     if(!is.logical(robust)){ 
         stop("Argument \'robust\' should be TRUE or FALSE \n")
