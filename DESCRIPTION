@@ -15,7 +15,6 @@ Description: Tools for model specification in the latent variable framework
     and adjustment for multiple comparisons when doing inference for multiple latent variable models. 
 License: GPL-3
 Encoding: UTF-8
-VignetteBuilder: R.rsp
 Depends:
     R (>= 2.10),
     ggplot2,
@@ -50,5 +49,6 @@ Suggests:
     survival,
     testthat
 LinkingTo: Rcpp, RcppArmadillo
+VignetteBuilder: R.rsp
 NeedsCompilation: yes
 RoxygenNote: 7.2.1
