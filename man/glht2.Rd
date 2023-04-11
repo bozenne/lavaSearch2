@@ -25,10 +25,10 @@ glht2(object, ...)
 
 \method{glht2}{mmm}(object, linfct, rhs = 0, robust = FALSE, cluster = NULL, ...)
 
-\method{glht}{lvmfit2}(object, linfct, rhs = NULL, robust = FALSE, cluster = NULL, ...)
+\method{glht}{lvmfit2}(model, linfct, rhs = NULL, robust = FALSE, cluster = NULL, ...)
 }
 \arguments{
-\item{object}{a \code{lvmfit}, \code{lvmfit2}, or \code{mmm} object.}
+\item{object, model}{a \code{lvmfit}, \code{lvmfit2}, or \code{mmm} object.}
 
 \item{...}{[logical] arguments passed to lower level methods.}
 
