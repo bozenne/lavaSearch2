@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov 29 2017 (12:56) 
 ## Version: 
-## Last-Updated: jan 18 2022 (09:40) 
+## Last-Updated: apr 11 2023 (10:50) 
 ##           By: Brice Ozenne
-##     Update #: 806
+##     Update #: 810
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -20,7 +20,7 @@
 #' @description Test linear hypotheses on coefficients from a latent variable models with small sample corrections.
 #' @name glht2
 #' 
-#' @param object a \code{lvmfit}, \code{lvmfit2}, or \code{mmm} object.
+#' @param object,model a \code{lvmfit}, \code{lvmfit2}, or \code{mmm} object.
 #' @param linfct [matrix or vector of character] the linear hypotheses to be tested. Same as the argument \code{par} of \code{\link{createContrast}}.
 #' @param rhs [vector] the right hand side of the linear hypotheses to be tested.
 #' @param robust [logical] should robust standard error be used? 
@@ -288,7 +288,16 @@ glht2.mmm <- function (object, linfct, rhs = 0,
 ## * glht.lvmfit2
 #' @rdname glht2
 #' @export
-glht.lvmfit2 <- glht2.lvmfit2
+glht.lvmfit2 <- function(model, linfct, rhs = NULL,
+                         robust = FALSE, cluster = NULL,
+                         ...){
+
+    out <- compare2(model, linfct = linfct, rhs = rhs,
+                    robust = robust, cluster = cluster,
+                    as.lava = FALSE, F.test = FALSE, ...)
+        
+    return(out)
+}
 
 ## * .calcClosure
 .calcClosure <- function(name, estimate, covariance, type, df){

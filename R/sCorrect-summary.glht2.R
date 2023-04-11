@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: maj  2 2018 (09:20) 
 ## Version: 
-## Last-Updated: jan 19 2022 (11:49) 
+## Last-Updated: jan 24 2022 (11:11) 
 ##           By: Brice Ozenne
-##     Update #: 225
+##     Update #: 228
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -21,7 +21,7 @@
 #' @param object a \code{glht2} object.
 #' @param confint [logical] should confidence intervals be output
 #' @param conf.level [numeric 0-1] level of the confidence intervals.
-#' @param transform [function] function to backtransform the estimates and the associated confidence intervals
+#' @param transform [function] function to backtransform the estimates, standard errors, null hypothesis, and the associated confidence intervals
 #' (e.g. \code{exp} if the outcomes have been log-transformed).
 #' @param seed [integer] value that will be set before adjustment for multiple comparisons to ensure reproducible results.
 #' Can also be \code{NULL}: in such a case no seed is set.
@@ -100,9 +100,9 @@ summary.glht2 <- function(object, confint = TRUE, conf.level = 0.95, transform =
     output$seed <- seed
     
     ## ** transformation
+    output$transform <- transform
     output$table2 <- transformSummaryTable(output$table2,
-                                           transform = transform,
-                                           conf.level = conf.level)
+                                           transform = transform)
 
     ## ** export    
     class(output) <- append(c("summary.glht2","summary.glht"),keep.class)
