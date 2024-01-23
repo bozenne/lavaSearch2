@@ -30,8 +30,6 @@ skeletonDtheta2(object)
 \item{latent}{[character vector] the name of the latent variables.}
 
 \item{endogeneous}{[character vector] the name of the endogeneous variables.}
-
-\item{...}{[internal] only used by the generic method.}
 }
 \description{
 Pre-compute quantities that are necessary to compute the score of a lvm model.
