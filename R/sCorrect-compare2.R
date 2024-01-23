@@ -3,7 +3,7 @@
 ## Author: Brice Ozenne
 ## Created: jan 30 2018 (14:33) 
 ## Version: 
-## Last-Updated: jan 23 2024 (10:23) 
+## Last-Updated: jan 23 2024 (10:31) 
 ##           By: Brice Ozenne
 ##     Update #: 904
 ##----------------------------------------------------------------------
@@ -104,8 +104,11 @@ compare2.lvmfit2 <- function(object, linfct = NULL, rhs = NULL,
                               robust = FALSE, cluster = NULL,
                               as.lava = TRUE, F.test = TRUE,
                               conf.level = 0.95, ...){
-    
+   
     dots <- list(...)
+    if(any(names(dots)=="par")){
+        stop("Argument \'par\' is no longer used as it has been replaced by \'linfct\'. \n")
+    }
     if(length(dots[names(dots) %in% "sep" == FALSE])>0){
         warning("Argument(s) \'",paste(setdiff(names(dots),"sep"),collapse="\' \'"),"\' not used by ",match.call()[1],". \n")
     }
