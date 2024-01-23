@@ -3,9 +3,9 @@
 ## Author: Brice Ozenne
 ## Created: nov  8 2017 (10:35) 
 ## Version: 
-## Last-Updated: jan 23 2024 (10:29) 
+## Last-Updated: jan 23 2024 (13:46) 
 ##           By: Brice Ozenne
-##     Update #: 1698
+##     Update #: 1699
 ##----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -22,7 +22,7 @@
 #' 
 #' @param object a \code{lvm} object.
 #' @param X [matrix] design matrix containing the covariates for each endogeneous and latent variable.
-#' @param endogeneous [character vector] the name of the endogeneous variables.
+#' @param endogenous [character vector] the name of the endogeneous variables.
 #' @param latent [character vector] the name of the latent variables.
 #' 
 #' @details
