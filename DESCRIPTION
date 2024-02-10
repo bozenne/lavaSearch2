@@ -2,7 +2,7 @@ Package: lavaSearch2
 Type: Package
 Title: Tools for Model Specification in the Latent Variable Framework
 Version: 2.0.2
-Date: 2024-01-23
+Date: 2024-02-10
 Authors@R: c(
     person("Brice", "Ozenne", role = c("aut", "cre"), email = "brice.mh.ozenne@gmail.com", comment = c(ORCID = "0000-0001-9694-2956"))
 	)
@@ -23,7 +23,7 @@ Imports:
     abind,
     doParallel,
     MASS,
-    Matrix (>=1.6-4),
+    Matrix,
     methods,
     multcomp,
     mvtnorm,
@@ -39,7 +39,7 @@ Suggests:
     data.table,
     foreach,
     emmeans,
-    lme4 (>= 1.1-35.1),
+    lme4,
     lmerTest,
     numDeriv,
     pbapply,
